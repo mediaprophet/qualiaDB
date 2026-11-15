@@ -141,6 +141,7 @@ pub enum FlowType {
     Supercritical,
 }
 impl FluidAnalyzer {
+    /// Creates an analyzer with default CFD and pipe/channel flow state.
     pub fn new() -> Self {
         Self {
             computational_fluid_dynamics: ComputationalFluidDynamics::new(),
@@ -149,6 +150,7 @@ impl FluidAnalyzer {
         }
     }
 
+    /// Initializes CFD sub-components; `EngineeringError` propagates.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.computational_fluid_dynamics.initialize()?;
         Ok(())
@@ -174,6 +176,7 @@ impl FluidAnalyzer {
         &mut self.open_channel_flow
     }
 
+    /// Fails closed (`ValidationError`) when the model has no dimensions.
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -183,6 +186,7 @@ impl FluidAnalyzer {
         Ok(())
     }
 
+    /// Runs the real 2-D incompressible Navier–Stokes LBM/D2Q9 solver (`cfd::run_cfd`, 32×32 lid-driven-cavity defaults) and converts the solution to `AnalysisResults`. Drive `cfd::run_cfd` directly for other BCs/configs.
     pub fn analyze(
         &mut self,
         model: &EngineeringModel,
@@ -209,6 +213,7 @@ impl FluidAnalyzer {
 }
 
 impl ComputationalFluidDynamics {
+    /// Creates CFD state with default Navier–Stokes solver, turbulence model, and mesh generator.
     pub fn new() -> Self {
         Self {
             navier_stokes_solver: NavierStokesSolver::new(),
@@ -217,6 +222,7 @@ impl ComputationalFluidDynamics {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory state needs no setup.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -253,6 +259,7 @@ impl ComputationalFluidDynamics {
 }
 
 impl NavierStokesSolver {
+    /// Creates a default `NavierStokesSolver` state descriptor.
     pub fn new() -> Self {
         Self {
             solver_type: NSSolverType::FiniteVolume,
@@ -262,6 +269,7 @@ impl NavierStokesSolver {
 }
 
 impl TurbulenceModeling {
+    /// Creates default turbulence-modeling state.
     pub fn new() -> Self {
         Self {
             turbulence_model: TurbulenceModel::RANS,
@@ -271,6 +279,7 @@ impl TurbulenceModeling {
 }
 
 impl TurbulenceParameters {
+    /// Creates default `TurbulenceParameters`.
     pub fn new() -> Self {
         Self {
             reynolds_number: 10000.0,
@@ -281,6 +290,7 @@ impl TurbulenceParameters {
 }
 
 impl CFDMeshGenerator {
+    /// Creates a mesh generator with default refinement state.
     pub fn new() -> Self {
         Self {
             mesh_type: MeshType::Unstructured,
@@ -290,6 +300,7 @@ impl CFDMeshGenerator {
 }
 
 impl MeshRefinement {
+    /// Creates a default `MeshRefinement` descriptor.
     pub fn new() -> Self {
         Self {
             refinement_criteria: Vec::new(),
@@ -299,6 +310,7 @@ impl MeshRefinement {
 }
 
 impl PipeFlow {
+    /// Creates a pipe-flow model with default geometry.
     pub fn new() -> Self {
         Self {
             pipe_geometry: PipeGeometry::new(),
@@ -309,6 +321,7 @@ impl PipeFlow {
 }
 
 impl PipeGeometry {
+    /// Creates a default `PipeGeometry`.
     pub fn new() -> Self {
         Self {
             diameter: 0.1,
@@ -319,6 +332,7 @@ impl PipeGeometry {
 }
 
 impl OpenChannelFlow {
+    /// Creates an open-channel-flow model with default geometry.
     pub fn new() -> Self {
         Self {
             channel_geometry: ChannelGeometry::new(),
@@ -329,6 +343,7 @@ impl OpenChannelFlow {
 }
 
 impl ChannelGeometry {
+    /// Creates a default `ChannelGeometry`.
     pub fn new() -> Self {
         Self {
             cross_section: CrossSection::Rectangular,

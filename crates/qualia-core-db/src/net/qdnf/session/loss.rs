@@ -28,6 +28,7 @@ pub struct AckFrame {
 }
 
 impl AckFrame {
+    /// Creates a default `AckFrame`.
     pub const fn new() -> Self {
         Self {
             ranges: [AckRange { start: 0, end: 0 }; MAX_ACK_RANGES],
@@ -36,10 +37,12 @@ impl AckFrame {
         }
     }
 
+    /// Ack ranges carried in the frame.
     pub fn range_count(&self) -> usize {
         self.count as usize
     }
 
+    /// Range `i`, or `None` when out of bounds.
     pub fn range_at(&self, i: usize) -> Option<AckRange> {
         if i < self.range_count() {
             Some(self.ranges[i])
@@ -48,6 +51,7 @@ impl AckFrame {
         }
     }
 
+    /// `true` when packet number `pn` is covered by any range.
     pub fn contains(&self, pn: u64) -> bool {
         let n = self.range_count();
         let mut i = 0usize;
@@ -93,6 +97,7 @@ pub struct SentTable {
 }
 
 impl SentTable {
+    /// Creates a default `SentTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; SENT_HISTORY],
@@ -134,6 +139,7 @@ impl SentTable {
         Err(QdnfError::Malformed)
     }
 
+    /// Packets currently in flight.
     pub fn in_flight_count(&self) -> usize {
         let mut n = 0;
         let mut i = 0;
@@ -146,6 +152,7 @@ impl SentTable {
         n
     }
 
+    /// Packet number at table index `i`.
     pub fn packet_at(&self, i: usize) -> Option<u64> {
         if i < SENT_HISTORY {
             self.slots[i]
@@ -166,10 +173,12 @@ pub fn pto_us(rtt_us: u64, pto_count: u32) -> Result<u64, QdnfError> {
     rtt_us.checked_mul(factor).ok_or(QdnfError::Range)
 }
 
+/// Honest invariant probe: `false` — QDNF never reuses packet numbers on retransmit.
 pub fn reuse_packet_number_on_retransmit() -> bool {
     false
 }
 
+/// Maximum ack ranges per frame (`MAX_ACK_RANGES`).
 pub fn ack_range_cap() -> usize {
     MAX_ACK_RANGES
 }

@@ -8,6 +8,7 @@ use crate::solvers::linear_algebra::spectral::eigenvalues_general;
 use crate::solvers::linear_algebra::svd::svd as svd_decompose;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: linear-algebra multiply.
 pub fn multiply(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = matrix(args_v, "a", span)?;
     let b = matrix(args_v, "b", span)?;

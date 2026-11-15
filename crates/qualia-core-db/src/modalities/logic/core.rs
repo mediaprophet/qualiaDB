@@ -76,6 +76,7 @@ pub struct WebizenVM {
 }
 
 impl WebizenVM {
+    /// Creates `WebizenVM` with the given state.
     pub fn new() -> Self {
         Self {
             registers: [None; 16],
@@ -85,12 +86,14 @@ impl WebizenVM {
         }
     }
 
+    /// Builder: sets `scrubbing_lock`.
     pub fn with_scrubbing_lock(lock: std::sync::Arc<std::sync::atomic::AtomicBool>) -> Self {
         let mut vm = Self::new();
         vm.scrubbing_lock = Some(lock);
         vm
     }
 
+    /// Loads `bytecode`; error when absent/invalid.
     pub fn load_bytecode(&mut self, instructions: &[WebizenOpcode]) {
         self.bytecode_buffer.fill(None);
         for (i, &op) in instructions.iter().enumerate().take(64) {

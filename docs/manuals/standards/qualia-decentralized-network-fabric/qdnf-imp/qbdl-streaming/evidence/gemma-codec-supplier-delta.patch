@@ -1,0 +1,148 @@
+diff --git a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/blocks.rs b/C:/github/etalon/crates/etalon-model/src/ggml/blocks.rs
+index fa203bb..20e1ee3 100644
+--- a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/blocks.rs
++++ b/C:/github/etalon/crates/etalon-model/src/ggml/blocks.rs
+@@ -53,7 +53,7 @@ pub(super) fn dequant_q5_0(
+         let half = BLOCK_ELEMS / 2;
+         for j in 0..half {
+             let xh_0 = ((qh >> j) << 4) & 0x10;
+-            let xh_1 = (qh >> (j + 12)) & 0x10;
++            let xh_1 = ((qh >> (j + 16)) & 1) << 4;
+             let x0 = ((qs[j] & 0x0F) as u32 | xh_0) as i32 - 16;
+             let x1 = ((qs[j] >> 4) as u32 | xh_1) as i32 - 16;
+             let lo = b * BLOCK_ELEMS + j;
+@@ -69,6 +69,83 @@ pub(super) fn dequant_q5_0(
+     Ok(n_elems)
+ }
+ 
++pub(super) fn dequant_q5_1(
++    raw: &[u8],
++    n_elems: usize,
++    out: &mut [f32],
++) -> Result<usize, GgmlDequantError> {
++    const BLOCK_ELEMS: usize = 32;
++    const BLOCK_BYTES: usize = 24;
++    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
++    if raw.len() < n_blocks * BLOCK_BYTES {
++        return Err(GgmlDequantError::TruncatedInput);
++    }
++    for b in 0..n_blocks {
++        let bs = b * BLOCK_BYTES;
++        let d = half::f16::from_le_bytes([raw[bs], raw[bs + 1]]).to_f32();
++        let m = half::f16::from_le_bytes([raw[bs + 2], raw[bs + 3]]).to_f32();
++        let qh = u32::from_le_bytes([raw[bs + 4], raw[bs + 5], raw[bs + 6], raw[bs + 7]]);
++        let qs = &raw[bs + 8..bs + 24];
++        let half = BLOCK_ELEMS / 2;
++        for j in 0..half {
++            let xh_0 = ((qh >> j) << 4) & 0x10;
++            let xh_1 = ((qh >> (j + 16)) & 1) << 4;
++            let x0 = ((qs[j] & 0x0F) as u32 | xh_0) as f32;
++            let x1 = ((qs[j] >> 4) as u32 | xh_1) as f32;
++            let lo = b * BLOCK_ELEMS + j;
++            if lo < n_elems {
++                out[lo] = x0 * d + m;
++            }
++            let hi = lo + half;
++            if hi < n_elems {
++                out[hi] = x1 * d + m;
++            }
++        }
++    }
++    Ok(n_elems)
++}
++
++pub(super) fn dequant_mxfp4(
++    raw: &[u8],
++    n_elems: usize,
++    out: &mut [f32],
++) -> Result<usize, GgmlDequantError> {
++    const BLOCK_ELEMS: usize = 32;
++    const BLOCK_BYTES: usize = 17;
++    const KVALUES_MXFP4: [f32; 16] = [
++        0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0, 0.0, -1.0, -2.0, -3.0, -4.0, -6.0, -8.0, -12.0,
++    ];
++    let n_blocks = n_elems.div_ceil(BLOCK_ELEMS);
++    if raw.len() < n_blocks * BLOCK_BYTES {
++        return Err(GgmlDequantError::TruncatedInput);
++    }
++    for b in 0..n_blocks {
++        let bs = b * BLOCK_BYTES;
++        let e = raw[bs];
++        let d_bits = if e < 2 {
++            0x0020_0000u32 << u32::from(e)
++        } else {
++            u32::from(e - 1) << 23
++        };
++        let d = f32::from_bits(d_bits);
++        let qs = &raw[bs + 1..bs + 17];
++        let half = BLOCK_ELEMS / 2;
++        for (j, &byte) in qs.iter().enumerate() {
++            let x0 = KVALUES_MXFP4[(byte & 0x0F) as usize];
++            let x1 = KVALUES_MXFP4[(byte >> 4) as usize];
++            let lo = b * BLOCK_ELEMS + j;
++            if lo < n_elems {
++                out[lo] = x0 * d;
++            }
++            let hi = lo + half;
++            if hi < n_elems {
++                out[hi] = x1 * d;
++            }
++        }
++    }
++    Ok(n_elems)
++}
++
+ pub(super) fn dequant_q8_0(
+     raw: &[u8],
+     n_elems: usize,
+
+diff --git a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/layout.rs b/C:/github/etalon/crates/etalon-model/src/ggml/layout.rs
+index 47730d9..52e6ea6 100644
+--- a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/layout.rs
++++ b/C:/github/etalon/crates/etalon-model/src/ggml/layout.rs
+@@ -3,6 +3,7 @@ pub const GGML_TYPE_F32: u32 = 0;
+ pub const GGML_TYPE_F16: u32 = 1;
+ pub const GGML_TYPE_Q4_0: u32 = 2;
+ pub const GGML_TYPE_Q5_0: u32 = 6;
++pub const GGML_TYPE_Q5_1: u32 = 7;
+ pub const GGML_TYPE_Q8_0: u32 = 8;
+ pub const GGML_TYPE_Q4_K: u32 = 12;
+ /// GGML's 256-value K-quant block with a fifth high-bit plane. Qwen3.8
+@@ -21,6 +22,7 @@ pub const GGML_TYPE_IQ4_XS: u32 = 23;
+ /// Brain float16 (1 sign / 8 exp / 7 mantissa) — used by Gemma-4 and other modern GGUFs
+ /// for norms / residual scales alongside Q4_K weights (`ggml_type` enum value 30).
+ pub const GGML_TYPE_BF16: u32 = 30;
++pub const GGML_TYPE_MXFP4: u32 = 39;
+ /// FP8 E4M3 (1 sign / 4 exp / 3 mantissa) — 1 byte per element.
+ pub const GGML_TYPE_FP8_E4M3: u32 = 40;
+ /// Qualia conversion-time **SoA Q4_K** (not a stock GGML type).
+@@ -68,6 +70,14 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
+             block_elems: 32,
+             block_bytes: 22,
+         }),
++        GGML_TYPE_Q5_1 => Some(GgmlBlockLayout {
++            block_elems: 32,
++            block_bytes: 24,
++        }),
++        GGML_TYPE_MXFP4 => Some(GgmlBlockLayout {
++            block_elems: 32,
++            block_bytes: 17,
++        }),
+         GGML_TYPE_Q8_0 => Some(GgmlBlockLayout {
+             block_elems: 32,
+             block_bytes: 34,
+
+diff --git a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/mod.rs b/C:/github/etalon/crates/etalon-model/src/ggml/mod.rs
+index 65bf558..e63964d 100644
+--- a/C:/Users/Hp/.cargo/git/checkouts/etalon-853ee32392c1daca/6ace6cc/crates/etalon-model/src/ggml/mod.rs
++++ b/C:/github/etalon/crates/etalon-model/src/ggml/mod.rs
+@@ -41,6 +41,8 @@ pub fn dequantize_row_into(
+         GGML_TYPE_BF16 => dequant_bf16(raw, n_elems, out),
+         GGML_TYPE_Q4_0 => dequant_q4_0(raw, n_elems, out),
+         GGML_TYPE_Q5_0 => dequant_q5_0(raw, n_elems, out),
++        GGML_TYPE_Q5_1 => dequant_q5_1(raw, n_elems, out),
++        GGML_TYPE_MXFP4 => dequant_mxfp4(raw, n_elems, out),
+         GGML_TYPE_Q8_0 => dequant_q8_0(raw, n_elems, out),
+         GGML_TYPE_Q4_K => dequant_q4_k(raw, n_elems, out),
+         GGML_TYPE_Q5_K => dequant_q5_k(raw, n_elems, out),
+

@@ -13,7 +13,7 @@
   - `evidence.rs`: `browser_turn_interop_executed() -> bool { false }`.
   - `capability-scoped-connection-fabric.md` §6 Gate E: interop/fuzz/field tests + independent review; local tests do not satisfy B, C, or E on the public Internet.
   - Draft path class 4 Browser; architecture: “Browser WebTransport / WSS — Distinct profile; not native UDP NAT probing.”
-- Checks executed: source read on branch `0.0.38` at `b96304919f68d408cf067fab814fd4f01fc54255`. **No cargo test run** — this assignment forbids `.rs` edits and is a zero-dependency note. CSCP-05 WSS tests were not re-executed here; Wave 1 log already recorded `p2p::connectivity::cscp_wss` 1 passed.
+- Checks executed: source read on branch `0.0.40` at `b96304919f68d408cf067fab814fd4f01fc54255`. **No cargo test run** — this assignment forbids `.rs` edits and is a zero-dependency note. CSCP-05 WSS tests were not re-executed here; Wave 1 log already recorded `p2p::connectivity::cscp_wss` 1 passed.
 - Checks not executed: browser engine trial, WebTransport handshake, live TURN, public WSS/443, wasm UI. Blocked: no page origin, pod is not a public relay, local CA is not in a browser trust store.
 - Resource bounds: none added. Future browser engine buffers need an explicit contract; they are not the 42 MiB Sentinel hot path.
 - Review: not self-approved as Gate E. Independent reviewer is CSCP-11 for Wave 1 only; browser field tests remain Gate E outstanding.

@@ -472,6 +472,7 @@ pub enum ComplianceStatus {
     Flagged,
 }
 impl MedicalHistory {
+    /// Creates a default `MedicalHistory`.
     pub fn new() -> Self {
         Self {
             conditions: Vec::new(),
@@ -484,6 +485,7 @@ impl MedicalHistory {
 }
 
 impl FamilyHistory {
+    /// Creates a default `FamilyHistory`.
     pub fn new() -> Self {
         Self {
             conditions: Vec::new(),
@@ -493,6 +495,7 @@ impl FamilyHistory {
 }
 
 impl SocialHistory {
+    /// Creates a default `SocialHistory`.
     pub fn new() -> Self {
         Self {
             smoking_status: SmokingStatus::Never,
@@ -507,6 +510,7 @@ impl SocialHistory {
 }
 
 impl ExerciseHabits {
+    /// Creates a default `ExerciseHabits`.
     pub fn new() -> Self {
         Self {
             frequency: String::new(),
@@ -518,6 +522,7 @@ impl ExerciseHabits {
 }
 
 impl Diet {
+    /// Creates a default `Diet`.
     pub fn new() -> Self {
         Self {
             diet_type: String::new(),
@@ -527,6 +532,7 @@ impl Diet {
     }
 }
 impl Patient {
+    /// Creates a default `Patient`.
     pub fn new() -> Self {
         Self {
             patient_id: "patient_1".to_string(),
@@ -545,6 +551,7 @@ impl Patient {
 }
 
 impl Demographics {
+    /// Creates a default `Demographics`.
     pub fn new() -> Self {
         Self {
             name: "John Doe".to_string(),
@@ -559,6 +566,7 @@ impl Demographics {
 }
 
 impl ContactInfo {
+    /// Creates a default `ContactInfo`.
     pub fn new() -> Self {
         Self {
             phone: "555-123-4567".to_string(),
@@ -569,6 +577,7 @@ impl ContactInfo {
 }
 
 impl Address {
+    /// Creates a default `Address`.
     pub fn new() -> Self {
         Self {
             street: "123 Main St".to_string(),
@@ -581,6 +590,7 @@ impl Address {
 }
 
 impl EmergencyContact {
+    /// Creates a default `EmergencyContact`.
     pub fn new() -> Self {
         Self {
             name: "Jane Doe".to_string(),
@@ -592,6 +602,7 @@ impl EmergencyContact {
 }
 
 impl MedicalCondition {
+    /// Creates a default `MedicalCondition`.
     pub fn new() -> Self {
         Self {
             condition_id: "condition_1".to_string(),
@@ -606,6 +617,7 @@ impl MedicalCondition {
 }
 
 impl TreatmentPlan {
+    /// Creates a default `TreatmentPlan`.
     pub fn new() -> Self {
         Self {
             plan_id: "plan_1".to_string(),
@@ -617,6 +629,7 @@ impl TreatmentPlan {
 }
 
 impl Medication {
+    /// Creates a default `Medication`.
     pub fn new() -> Self {
         Self {
             medication_id: "med_1".to_string(),
@@ -635,6 +648,7 @@ impl Medication {
 }
 
 impl FollowUpCare {
+    /// Creates a default `FollowUpCare`.
     pub fn new() -> Self {
         Self {
             follow_up_id: "followup_1".to_string(),
@@ -647,6 +661,7 @@ impl FollowUpCare {
 }
 
 impl Surgery {
+    /// Creates a default `Surgery`.
     pub fn new() -> Self {
         Self {
             surgery_id: "surgery_1".to_string(),
@@ -662,6 +677,7 @@ impl Surgery {
 }
 
 impl Hospitalization {
+    /// Creates a default `Hospitalization`.
     pub fn new() -> Self {
         Self {
             hospitalization_id: "hospital_1".to_string(),
@@ -677,6 +693,7 @@ impl Hospitalization {
 }
 
 impl Allergy {
+    /// Creates a default `Allergy`.
     pub fn new() -> Self {
         Self {
             allergy_id: "allergy_1".to_string(),
@@ -690,6 +707,7 @@ impl Allergy {
 }
 
 impl VitalSigns {
+    /// Creates a default `VitalSigns`.
     pub fn new() -> Self {
         Self {
             vital_signs_id: "vitals_1".to_string(),
@@ -707,6 +725,7 @@ impl VitalSigns {
 }
 
 impl BloodPressure {
+    /// Creates a default `BloodPressure`.
     pub fn new() -> Self {
         Self {
             systolic: 120,
@@ -717,6 +736,7 @@ impl BloodPressure {
 }
 
 impl LabResult {
+    /// Creates a default `LabResult`.
     pub fn new() -> Self {
         Self {
             result_id: "lab_1".to_string(),
@@ -734,6 +754,7 @@ impl LabResult {
 }
 
 impl ReferenceRange {
+    /// Creates a default `ReferenceRange`.
     pub fn new() -> Self {
         Self {
             minimum: 4.0,
@@ -744,6 +765,7 @@ impl ReferenceRange {
 }
 
 impl ImagingStudy {
+    /// Creates a default `ImagingStudy`.
     pub fn new() -> Self {
         Self {
             study_id: "study_1".to_string(),
@@ -760,6 +782,7 @@ impl ImagingStudy {
 }
 
 impl MedicalImage {
+    /// Creates a default `MedicalImage`.
     pub fn new() -> Self {
         Self {
             image_id: "image_1".to_string(),
@@ -774,6 +797,7 @@ impl MedicalImage {
 }
 
 impl MedicalIdentifier {
+    /// Creates a default `MedicalIdentifier`.
     pub fn new() -> Self {
         Self {
             identifier_type: IdentifierType::SocialSecurity,
@@ -785,6 +809,8 @@ impl MedicalIdentifier {
     }
 }
 impl ClinicalAnalysis {
+/// Creates an empty `ClinicalAnalysis` — results are produced by
+    /// analysis passes, never pre-filled.
     pub fn new() -> Self {
         Self {
             analysis_id: "analysis_1".to_string(),
@@ -799,6 +825,7 @@ impl ClinicalAnalysis {
 }
 
 impl ProcessedImage {
+    /// Creates a default `ProcessedImage`.
     pub fn new() -> Self {
         Self {
             processed_image_id: "processed_1".to_string(),
@@ -811,6 +838,7 @@ impl ProcessedImage {
 }
 
 impl ScreeningResults {
+    /// Creates a default `ScreeningResults`.
     pub fn new() -> Self {
         Self {
             results_id: "screening_1".to_string(),
@@ -825,6 +853,8 @@ impl ScreeningResults {
 }
 
 impl ScreeningMetrics {
+/// Creates an empty `ScreeningMetrics` — counters populate from
+    /// actual screening runs, not defaults.
     pub fn new() -> Self {
         Self {
             total_compounds: 1000,
@@ -836,6 +866,9 @@ impl ScreeningMetrics {
 }
 
 impl ComplianceReport {
+/// Creates an empty `ComplianceReport` — no checks or scores are
+    /// populated until a real rule-evaluation pass runs (F24 history: this
+    /// type previously surfaced a hardcoded ~0.95 compliance claim).
     pub fn new() -> Self {
         Self {
             report_id: "report_1".to_string(),
@@ -849,6 +882,8 @@ impl ComplianceReport {
 }
 
 impl MedicalPerformanceMetrics {
+/// Creates a zeroed `MedicalPerformanceMetrics` — callers populate
+    /// real measurements; nothing is pre-filled with plausible values.
     pub fn new() -> Self {
         Self {
             total_patients: 0,

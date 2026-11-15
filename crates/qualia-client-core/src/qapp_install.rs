@@ -122,10 +122,12 @@ impl From<io::Error> for QappInstallError {
     }
 }
 
+/// Package ID from a manifest.
 pub fn package_id_from_manifest(manifest: &QappPackageManifest) -> String {
     manifest.name.trim().to_string()
 }
 
+/// Validates a package ID.
 pub fn validate_package_id(package_id: &str) -> Result<(), QappInstallError> {
     if package_id.is_empty() {
         return Err(QappInstallError::InvalidPackageId("empty".into()));
@@ -168,6 +170,7 @@ fn staging_root(storage: &Path) -> PathBuf {
     qapps_dir(storage).join(".staging")
 }
 
+/// Loads install-registry.
 pub fn load_install_registry(storage: &Path) -> Result<QappInstallRegistry, QappInstallError> {
     let path = registry_path(storage);
     if !path.is_file() {
@@ -178,6 +181,7 @@ pub fn load_install_registry(storage: &Path) -> Result<QappInstallRegistry, Qapp
     serde_json::from_str(&content).map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))
 }
 
+/// Saves install-registry.
 pub fn save_install_registry(
     storage: &Path,
     registry: &QappInstallRegistry,
@@ -192,6 +196,7 @@ pub fn save_install_registry(
     Ok(())
 }
 
+/// Resolves the active package dir.
 pub fn resolve_active_package_dir(storage: &Path, package_id: &str) -> PathBuf {
     let active = active_package_dir(storage, package_id);
     if active.join(QAPP_PACKAGE_MANIFEST).is_file() {
@@ -200,6 +205,7 @@ pub fn resolve_active_package_dir(storage: &Path, package_id: &str) -> PathBuf {
     active
 }
 
+/// `true` when package-revoked.
 pub fn is_package_revoked(storage: &Path, package_id: &str) -> bool {
     load_install_registry(storage)
         .ok()
@@ -530,6 +536,7 @@ pub fn install_package_atomic(
     install_result
 }
 
+/// Revokes a package.
 pub fn revoke_package(storage: &Path, package_id: &str) -> Result<(), QappInstallError> {
     validate_package_id(package_id)?;
     let mut registry = load_install_registry(storage)?;
@@ -541,6 +548,7 @@ pub fn revoke_package(storage: &Path, package_id: &str) -> Result<(), QappInstal
     save_install_registry(storage, &registry)
 }
 
+/// Lists registry entries.
 pub fn list_registry_entries(storage: &Path) -> Result<Vec<QappRegistryEntry>, QappInstallError> {
     Ok(load_install_registry(storage)?
         .packages
@@ -548,6 +556,7 @@ pub fn list_registry_entries(storage: &Path) -> Result<Vec<QappRegistryEntry>, Q
         .collect())
 }
 
+/// Reconciles the registry with disk.
 pub fn reconcile_registry_with_disk(
     storage: &Path,
 ) -> Result<QappInstallRegistry, QappInstallError> {
@@ -597,6 +606,37 @@ pub fn reconcile_registry_with_disk(
 
     save_install_registry(storage, &registry)?;
     Ok(registry)
+}
+
+/// Uninstall an installed package and remove its directory and registry entry.
+pub fn uninstall_package(
+    storage: &Path,
+    package_id: &str,
+    purge_data: bool,
+) -> Result<(), QappInstallError> {
+    validate_package_id(package_id)?;
+    let mut registry = load_install_registry(storage)?;
+    if !registry.packages.contains_key(package_id) {
+        return Err(QappInstallError::StagingFailed(format!(
+            "package '{package_id}' is not installed in registry"
+        )));
+    }
+    registry.packages.remove(package_id);
+    save_install_registry(storage, &registry)?;
+
+    let pkg_dir = active_package_dir(storage, package_id);
+    if pkg_dir.exists() {
+        fs::remove_dir_all(&pkg_dir)?;
+    }
+
+    if purge_data {
+        let data_dir = qapps_dir(storage).join(".data").join(package_id);
+        if data_dir.exists() {
+            fs::remove_dir_all(&data_dir)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -695,6 +735,23 @@ mod tests {
         );
         let registry = reconcile_registry_with_disk(&storage).unwrap();
         assert!(registry.packages.contains_key("LegacyApp"));
+        let _ = fs::remove_dir_all(&storage);
+    }
+
+    #[test]
+    fn uninstall_package_removes_entry_and_files() {
+        let storage = temp_storage();
+        let source = storage.join("source");
+        write_minimal_package(&source, "TestApp", "0.0.1");
+
+        install_package_atomic(&storage, &source, InstallPolicy::Development, None).unwrap();
+        assert!(active_package_dir(&storage, "TestApp").is_dir());
+
+        uninstall_package(&storage, "TestApp", false).unwrap();
+        assert!(!active_package_dir(&storage, "TestApp").exists());
+
+        let registry = load_install_registry(&storage).unwrap();
+        assert!(!registry.packages.contains_key("TestApp"));
         let _ = fs::remove_dir_all(&storage);
     }
 }

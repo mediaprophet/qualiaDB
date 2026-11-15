@@ -21,6 +21,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             version: 1,
@@ -30,6 +31,7 @@ impl Transaction {
         }
     }
 
+    /// Serializes.
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
 
@@ -62,6 +64,7 @@ impl Transaction {
     }
 }
 
+/// Encodes a varint.
 pub fn encode_varint(val: u64) -> Vec<u8> {
     if val < 0xfd {
         vec![val as u8]

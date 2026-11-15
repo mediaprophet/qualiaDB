@@ -90,6 +90,7 @@ impl Gam {
         s
     }
 
+    /// GAM predictions.
     pub fn predict(&self, x: &[f64], n: usize) -> Vec<f64> {
         (0..n)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))

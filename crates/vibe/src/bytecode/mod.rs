@@ -1,4 +1,4 @@
-﻿//! `vibe-bc-0.1` bytecode compiler, VM, and binary codec.
+//! `vibe-bc-0.1` bytecode compiler, VM, and binary codec.
 //!
 //! Stack-based bytecode for VibeScript 0.1. Compiles a checked `Program`
 //! AST into a `Chunk`, which can be executed by the `Vm` or serialized
@@ -14,6 +14,9 @@
 pub mod codec;
 pub mod compiler;
 pub mod op;
+mod task_admission;
+#[cfg(test)]
+mod task_admission_tests;
 pub mod vm;
 
 pub use codec::{decode_chunk, encode_chunk, ChunkDecodeError};

@@ -47,7 +47,10 @@ impl std::fmt::Display for InstrumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingField(name) => write!(f, "instrument: missing {name}"),
-            Self::InvalidCategory => write!(f, "instrument: content category is not Demo/Reference/Operational"),
+            Self::InvalidCategory => write!(
+                f,
+                "instrument: content category is not Demo/Reference/Operational"
+            ),
             Self::DemoUnlabelled => {
                 write!(f, "instrument: Demo category requires an explicit demonstration/development notice")
             }
@@ -62,19 +65,31 @@ impl std::fmt::Display for InstrumentError {
             Self::TooManyEntries { count } => {
                 write!(f, "instrument: {count} members exceeds the collectable cap")
             }
-            Self::DigestMismatch => write!(f, "instrument: content digest does not match canonical bytes"),
+            Self::DigestMismatch => write!(
+                f,
+                "instrument: content digest does not match canonical bytes"
+            ),
             Self::Bundle(msg) => write!(f, "instrument bundle: {msg}"),
             Self::Canonical(msg) => write!(f, "instrument canonical: {msg}"),
             Self::Graph(msg) => write!(f, "instrument graph: {msg}"),
             Self::InvalidAttestationKind => write!(f, "instrument: unknown attestation kind"),
             Self::SignatureAsTruth => {
-                write!(f, "instrument: a signature is origin, not substantive truth")
+                write!(
+                    f,
+                    "instrument: a signature is origin, not substantive truth"
+                )
             }
             Self::AwardIsInstrument => {
-                write!(f, "instrument: capability award subject must not be the instrument")
+                write!(
+                    f,
+                    "instrument: capability award subject must not be the instrument"
+                )
             }
             Self::RoleCollision => {
-                write!(f, "instrument: authorship/review/publication/issuance must stay distinct")
+                write!(
+                    f,
+                    "instrument: authorship/review/publication/issuance must stay distinct"
+                )
             }
             Self::Revoked => write!(f, "instrument: attestation is revoked for future reliance"),
             Self::Expired => write!(f, "instrument: attestation expired"),
@@ -97,7 +112,10 @@ impl std::fmt::Display for InstrumentError {
                 write!(f, "instrument: catalogue listing is not endorsement")
             }
             Self::IncompleteDownload => {
-                write!(f, "instrument: interrupted download cannot register as resolved")
+                write!(
+                    f,
+                    "instrument: interrupted download cannot register as resolved"
+                )
             }
             Self::UnauthorisedEquivalence => {
                 write!(f, "instrument: unauthorised capability equivalence")
@@ -106,7 +124,10 @@ impl std::fmt::Display for InstrumentError {
                 write!(f, "instrument: a runner pass is not an award issuance")
             }
             Self::PrivateEvidence => {
-                write!(f, "instrument: private evidence must not enter a public award")
+                write!(
+                    f,
+                    "instrument: private evidence must not enter a public award"
+                )
             }
         }
     }

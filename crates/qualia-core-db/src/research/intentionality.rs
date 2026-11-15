@@ -11,6 +11,7 @@ pub enum Intentionality {
 }
 
 impl Intentionality {
+    /// Stable string form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Intentional => "intentional",
@@ -33,6 +34,7 @@ pub enum MistakeType {
 }
 
 impl MistakeType {
+    /// Stable string form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Honest => "honest",

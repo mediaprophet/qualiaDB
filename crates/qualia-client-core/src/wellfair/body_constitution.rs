@@ -10,12 +10,14 @@ use wellfare_core::anatomy::{BodyConstitution, BodyFit, PhysiologicalState};
 /// Where the constitution lives (prefs-style, under the `wellfair/` prefix).
 pub const CONSTITUTION_FILE: &str = "wellfair/body_constitution.json";
 
+/// Loads.
 pub fn load(storage_root: impl AsRef<Path>) -> Option<BodyConstitution> {
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
     let bytes = std::fs::read(path).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
 
+/// Saves.
 pub fn save(storage_root: impl AsRef<Path>, body: &BodyConstitution) -> Result<(), String> {
     body.validate()?;
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
@@ -26,6 +28,7 @@ pub fn save(storage_root: impl AsRef<Path>, body: &BodyConstitution) -> Result<(
     std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
+/// Clears.
 pub fn clear(storage_root: impl AsRef<Path>) -> Result<(), String> {
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
     match std::fs::remove_file(path) {
@@ -33,6 +36,32 @@ pub fn clear(storage_root: impl AsRef<Path>) -> Result<(), String> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e.to_string()),
     }
+}
+
+/// Turn a person's constitution JSON into the fit the portal applies to the reference meshes.
+///
+/// An empty string is the identity fit: the published reference body, with the pack's
+/// male or female mesh set selected when the person has not declared a karyotype.
+/// QualiaPortal `set_body_fit_json` consumes the fit JSON and morphs decoded organ vertices.
+pub fn fit_json_for_reference(model: &str, constitution_json: &str) -> Result<(Vec<u8>, Vec<u8>), String> {
+    use wellfare_core::anatomy::Karyotype;
+    let mut constitution: BodyConstitution = if constitution_json.trim().is_empty() {
+        BodyConstitution::default()
+    } else {
+        serde_json::from_str(constitution_json).map_err(|e| format!("constitution: {e}"))?
+    };
+    if constitution.characteristics.karyotype.is_none() {
+        constitution.characteristics.karyotype = Some(match model {
+            "female" => Karyotype::Xx,
+            "male" => Karyotype::Xy,
+            _ => return Err("model must be male or female".into()),
+        });
+    }
+    constitution.validate()?;
+    let fit = constitution.fit();
+    let fit_bytes = serde_json::to_vec_pretty(&fit).map_err(|e| e.to_string())?;
+    let constitution_bytes = serde_json::to_vec_pretty(&constitution).map_err(|e| e.to_string())?;
+    Ok((fit_bytes, constitution_bytes))
 }
 
 /// Fit using the constitution plus a physiological state so pregnancy is one source of truth.

@@ -34,6 +34,7 @@ pub struct Fabric {
 }
 
 impl Fabric {
+    /// Creates a default `Fabric`.
     pub const fn new() -> Self {
         Self {
             kernel: Kernel::new(),
@@ -43,10 +44,12 @@ impl Fabric {
         }
     }
 
+    /// Active session, or `None`.
     pub fn session(&self) -> Option<SessionReady> {
         self.session
     }
 
+    /// Queues a payload for the session.
     pub fn enqueue(
         &mut self,
         op_id: u64,
@@ -70,6 +73,7 @@ impl Fabric {
         Ok(i)
     }
 
+    /// Replays queued payloads after reconnect.
     pub fn replay(
         &self,
         index: usize,
@@ -117,6 +121,7 @@ pub fn connect(
     })
 }
 
+/// Drives the fabric state machine on a `KernelEvent`.
 pub fn drive(fabric: &mut Fabric, event: KernelEvent, now_ms: u64) -> DriveOutcome {
     let effect = fabric.kernel.step(event, now_ms);
     match effect {
@@ -135,6 +140,7 @@ pub fn drive(fabric: &mut Fabric, event: KernelEvent, now_ms: u64) -> DriveOutco
     }
 }
 
+/// Binds a relay `lease`, extending connectivity.
 pub fn bind_lease(fabric: &mut Fabric, lease: &RelayLease, now_ms: u64) -> Result<(), FabricError> {
     if !lease.live(now_ms) {
         return Err(FabricError::LeaseDead);
@@ -143,6 +149,7 @@ pub fn bind_lease(fabric: &mut Fabric, lease: &RelayLease, now_ms: u64) -> Resul
     Ok(())
 }
 
+/// Admits a new session into the fabric.
 pub fn admit_session(
     fabric: &mut Fabric,
     path: super::evidence::PathEvidence,

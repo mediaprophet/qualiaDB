@@ -1,0 +1,18 @@
+[
+  {
+    "selector": "bundle::stream",
+    "exit_code": 0,
+    "summary": [
+      "test result: ok. 176 passed; 0 failed; 0 ignored; 0 measured; 10311 filtered out; finished in 21.42s"
+    ],
+    "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-bundle-stream-repair.log"
+  },
+  {
+    "selector": "gguf_bridge::gemma4::",
+    "exit_code": 0,
+    "summary": [
+      "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 10475 filtered out; finished in 10.43s"
+    ],
+    "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-gguf_bridge-gemma4--repair.log"
+  }
+]

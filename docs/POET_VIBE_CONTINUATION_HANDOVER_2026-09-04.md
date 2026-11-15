@@ -1,7 +1,7 @@
 # Poet + Vibe Script — Continuation Handover (2026-09-04)
 
 > For any bot / agent continuing this work. **Docs-only snapshot of locked decisions.**  
-> Repo: `https://github.com/mediaprophet/qualiaDB` · Branch: **`0.0.36-dev`**
+> Repo: `https://github.com/mediaprophet/qualiaDB` · Branch: **`0.0.40-dev`**
 
 **Ops owner (gates):** Capt. — any gate that blocks work is reported to Capt.; Capt. delegates the ungate job; owner reports back when done.
 
@@ -43,7 +43,7 @@ Also: `LANGUAGE_VERSION` / `host_version()` · versions `vibe-0.1` / `vibe-host-
 | 1 | Thin Poet facade | `poet` re-exports the four ops + versions; not stuck on tool-chest / `VibeScriptPayload`; no AST/lifetime bleed |
 | 2 | Pin Host | Expose `capability_invoke` + diagnose parity only — **not** the wide `Host` trait to UI |
 | 3 | Native ↔ WASM parity | Diagnose JSON shape + invoke error codes match (incl. E300) |
-| 4 | Stamp + EBNF | Crate stamp `0.0.35` → `0.0.36-dev`; EBNF ↔ `vibescript-core.md` §3 byte-level sync vs lexer/parser |
+| 4 | Stamp + EBNF | Crate stamp `0.0.40` → `0.0.40-dev`; EBNF ↔ `vibescript-core.md` §3 byte-level sync vs lexer/parser |
 
 **Gate:** A closes → Capt. marks freeze; creative polish + Marvin B shapes proceed against frozen host.
 
@@ -119,7 +119,7 @@ Poet = **live studio** over QualiaDB: graph as navigable stage, inference with p
 | Logic / modalities | `docs/logic-showcase.html`, `docs/modalities-showcase.html` |
 | Solid bridge | `crates/qualia-solid-bridge` |
 | Ontologies | `core-ontologies/`, `ontologies/`, `bundled/ontologies/` |
-| Marvin inventory (local mirror note) | Prefer repo docs; Marvin also held `/workspace/qualia-ontology-inventory-0.0.36-dev.md` on their machine |
+| Marvin inventory (local mirror note) | Prefer repo docs; Marvin also held `/workspace/qualia-ontology-inventory-0.0.40-dev.md` on their machine |
 
 ---
 
@@ -129,7 +129,7 @@ Poet = **live studio** over QualiaDB: graph as navigable stage, inference with p
 |---------|--------|------------|-------|--------|
 | G-A | `vibe-host-0.1` freeze + creative polish on frozen surface | Neo four closes | Neo | **in_progress** |
 | G-B-001 | Sanctuary save/open; commit-to-volume backing | Add + bind `GraphDatabase.volume_open` / `volume_commit` | Neo (+ Marvin Volume shape) | **done** (binds + seam; chrome ungate → davinci/monet) |
-| G-DOCS | Other bots continuing without chat | Land this handover + sprint deltas on `0.0.36-dev` | Neo | **done** (2026-09-04) |
+| G-DOCS | Other bots continuing without chat | Land this handover + sprint deltas on `0.0.40-dev` | Neo | **done** (2026-09-04) |
 
 When a gate closes: **report to Capt.** with what landed (PR / paths / ids). Capt. updates board and unblocks dependents.
 

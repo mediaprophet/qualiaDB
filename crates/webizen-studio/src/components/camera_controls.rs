@@ -4,7 +4,7 @@
 //! This is NOT traditional camera navigation - it's geometric examination of epistemic relationships.
 //! All UI state uses stack-allocated primitives (Copy types) for zero-heap compliance.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Manifold projection control state - zero-heap compliant (all Copy types)
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -18,6 +18,7 @@ pub struct CameraControlState {
 }
 
 impl CameraControlState {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             rotation_speed: 0.1,

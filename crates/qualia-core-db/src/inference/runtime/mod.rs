@@ -5,11 +5,29 @@
 //! work. A prepared backend's decode step is the Tier-1 zero-heap data plane.
 
 pub mod artifacts;
+pub mod budget;
 pub mod graph_assist;
 pub mod kv;
+pub mod memory_guard;
+#[cfg(target_os = "windows")]
+pub mod memory_windows;
 pub mod prepared;
 pub mod receipt;
 pub mod scheduler;
+pub mod stage;
+
+pub use budget::{
+    BlockGeometry, BudgetError, MemoryPoolBudget, ModelMemoryProfile, RequestReservation,
+};
+pub use memory_guard::{
+    HostMemorySample, MemoryPolicyError, MemoryPressureAction, MemoryPressureGuard,
+    MemoryPressurePolicy,
+};
+#[cfg(target_os = "windows")]
+pub use memory_windows::{
+    apply_windows_memory_pressure, sample_current_process, WindowsLowMemoryNotification,
+    WindowsMemoryError,
+};
 
 pub use artifacts::{
     cleanup_stale_runs, ArtifactError, ArtifactFinish, ArtifactRetention, ArtifactStats,
@@ -25,3 +43,10 @@ pub use receipt::{
     MANIFEST_SCHEMA_VERSION, RAW_GREEDY_DECODE_POLICY, RECEIPT_SCHEMA_VERSION,
 };
 pub use scheduler::{Admission, RequestScheduler, RequestState, RequestView, SchedulerError};
+pub use stage::{
+    last_stage_trace, set_last_stage_trace, take_last_stage_trace, InferenceStageKind, StageStatus,
+    StageTimingReceipt, StageTrace, ThinkingEvent, ThinkingTracker, STAGE_TRACE_CAPACITY,
+};
+
+#[cfg(test)]
+mod migration_contract_tests;

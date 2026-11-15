@@ -62,10 +62,12 @@ pub struct ValidationReport {
 }
 
 impl ValidationReport {
+    ///  when valid.
     pub fn is_valid(&self) -> bool {
         self.violations.is_empty()
     }
 
+    /// Converts to json.
     pub fn to_json(&self) -> String {
         let v: Vec<String> = self
             .violations

@@ -63,6 +63,7 @@ pub struct QpuJob {
 }
 
 impl QpuJob {
+    /// Creates `QpuJob` with the given state.
     pub fn new(job_id: String, problem_type: ProblemType, parameters: JobParameters) -> Self {
         Self {
             job_id,
@@ -120,6 +121,7 @@ pub struct QpuResult {
 }
 
 impl QpuResult {
+    /// `true` when the job failed.
     pub fn failed(job_id: String, msg: String) -> Self {
         Self {
             job_id,

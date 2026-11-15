@@ -83,6 +83,7 @@ pub struct Factor {
 }
 
 impl Factor {
+    /// Creates a new instance.
     pub fn new(id: impl Into<String>, kind: FactorKind, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),

@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 #[cfg(target_arch = "wasm32")]
@@ -177,6 +177,7 @@ fn CopyRow(label: &'static str, value: String) -> Element {
 }
 
 #[component]
+/// Aether `AboutPage` component.
 pub fn AboutPage() -> Element {
     let host_surface = match crate::endpoints::current_host_surface() {
         crate::endpoints::HostSurface::DesktopWebview => "Desktop webview".to_string(),

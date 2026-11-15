@@ -10,6 +10,7 @@ pub struct SuperBlockWriter {
 }
 
 impl SuperBlockWriter {
+    /// Creates a new instance.
     pub fn new(output_path: &std::path::Path) -> std::io::Result<Self> {
         let file = File::create(output_path)?;
         // Use a large system buffer to prevent constant OS context switches
@@ -24,6 +25,7 @@ impl SuperBlockWriter {
     }
 
     #[inline(always)]
+    /// Pushes a record.
     pub fn push(&mut self, quin: NQuin) -> std::io::Result<()> {
         self.buffer[self.cursor] = quin;
         self.cursor += 1;
@@ -34,6 +36,7 @@ impl SuperBlockWriter {
         Ok(())
     }
 
+    /// Flushes a block.
     pub fn flush_block(&mut self) -> std::io::Result<()> {
         if self.cursor == 0 {
             return Ok(());

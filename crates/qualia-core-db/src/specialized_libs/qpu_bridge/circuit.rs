@@ -67,6 +67,7 @@ pub enum QuantumGateType {
 }
 
 impl QuantumCircuit {
+    /// Builds `QuantumCircuit` from `params`.
     pub fn from_params(params: &QuantumCircuitParams) -> Result<Self, QPUBridgeError> {
         Ok(Self {
             circuit_type: params.circuit_type,
@@ -79,6 +80,7 @@ impl QuantumCircuit {
 
 impl QuantumGate {
     #[inline(always)]
+    /// Returns the default `QuantumGate`.
     pub const fn default() -> Self {
         Self {
             gate_type: QuantumGateType::H,

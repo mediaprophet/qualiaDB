@@ -15,10 +15,12 @@ mod gpu {
     use super::cpu::QuinField;
     use crate::NQuin;
 
+    /// `?::radix_sort_u64_indices_gpu`.
     pub fn radix_sort_u64_indices_gpu(_keys: &[u64]) -> Option<Vec<u32>> {
         None
     }
 
+    /// GPU sieve of equality indices.
     pub fn sieve_eq_indices_gpu(
         _quins: &[NQuin],
         _field: QuinField,
@@ -47,6 +49,9 @@ pub use sieve::{sieve_eq, sieve_eq_indices, SieveOutcome};
 pub use sort::{
     sort_quins_by_object, sort_quins_by_object_cpu_only, sort_u64_indices, SortOutcome,
 };
+
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_nquin::{GpuNQuinSieve, GpuQuinSieve, GpuRadixSorter, NQuinWire};
 
 #[cfg(test)]
 mod tests;

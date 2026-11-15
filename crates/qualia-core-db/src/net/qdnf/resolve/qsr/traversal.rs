@@ -23,6 +23,7 @@ pub struct QsrSnapshot {
 }
 
 impl QsrSnapshot {
+    /// Empty value.
     pub const fn empty(generation: Generation) -> Self {
         Self {
             keys: [StrongDigest::ZERO; SNAPSHOT_CAP],
@@ -33,11 +34,13 @@ impl QsrSnapshot {
     }
 
     #[inline]
+    /// `QsrSnapshot::len`.
     pub const fn len(&self) -> usize {
         self.len as usize
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> Generation {
         self.generation
     }

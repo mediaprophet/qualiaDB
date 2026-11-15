@@ -118,11 +118,13 @@ pub fn clone_layer_dict(layer: usize, k_not_v: bool) -> Option<KvDictionary> {
     dicts.get(layer).cloned().flatten()
 }
 
+/// Disables the KV dictionary runtime globally.
 pub fn disable() {
     ENABLED.store(false, Ordering::Relaxed);
 }
 
 #[inline]
+/// `true` when enabled.
 pub fn is_enabled() -> bool {
     ENABLED.load(Ordering::Relaxed)
 }

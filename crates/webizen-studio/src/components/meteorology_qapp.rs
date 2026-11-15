@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `MeteorologyQapp` component.
 pub fn MeteorologyQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -27,6 +27,7 @@ pub struct Beacon {
 impl Beacon {
     pub const WIRE_LEN: usize = 1 + 16 + 16 + 8 + 8 + 2;
 
+    /// Encodes into the caller buffer.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, QdnfError> {
         if out.len() < Self::WIRE_LEN {
             return Err(QdnfError::Capacity);
@@ -40,6 +41,7 @@ impl Beacon {
         Ok(Self::WIRE_LEN)
     }
 
+    /// Decodes; fails closed on malformed input.
     pub fn decode(src: &[u8]) -> Result<Self, QdnfError> {
         if src.len() < Self::WIRE_LEN {
             return Err(QdnfError::Truncated);
@@ -66,6 +68,7 @@ impl Beacon {
     }
 
     #[inline]
+    /// `true` when expired.
     pub fn is_expired(&self, now_unix: u64) -> bool {
         now_unix >= self.expiry_unix
     }

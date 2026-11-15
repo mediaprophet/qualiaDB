@@ -197,7 +197,7 @@ RelativeAnchored
 ### 7.4 `UiMode`
 
 ```rust
-NativeDioxus
+NativeAether
 IFrameSandbox
 ```
 

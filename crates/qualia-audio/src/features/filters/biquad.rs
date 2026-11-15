@@ -1,9 +1,8 @@
 //! Biquad (second-order IIR) engine — the shared core all EQ designs feed.
 //!
 //! `BiquadCoeffs` are normalized (a0 folded to 1). `BiquadState` runs Direct
-//! Form I: it keeps two input and two output history taps on the stack, so the
-//! hot path allocates nothing. Design helpers in sibling files produce coeffs
-//! via the RBJ Audio-EQ-Cookbook; this file only *runs* them.
+//! Form I via [`etalon_signal::filter::df1_step_f32`]: it keeps two input and
+//! two output history taps on the stack, so the hot path allocates nothing.
 
 use crate::types::AudioError;
 
@@ -29,6 +28,28 @@ impl BiquadCoeffs {
             a1: 0.0,
             a2: 0.0,
         }
+    }
+
+    /// Convert from `f64` [`etalon_signal::filter::BiquadCoeffs`].
+    #[inline]
+    pub const fn from_etalon(c: etalon_signal::filter::BiquadCoeffs) -> Self {
+        Self {
+            b0: c.b0 as f32,
+            b1: c.b1 as f32,
+            b2: c.b2 as f32,
+            a1: c.a1 as f32,
+            a2: c.a2 as f32,
+        }
+    }
+
+    /// Design a 2nd-order peaking EQ filter via `etalon_signal::filter::rbj_peaking_eq`.
+    pub fn design_peaking_eq(sample_rate: f32, center_hz: f32, q: f32, gain_db: f32) -> Self {
+        let sr = f64::from(if sample_rate > 1.0 { sample_rate } else { 1.0 });
+        let f0 = f64::from(center_hz).clamp(1.0e-4, sr * 0.5 * 0.999);
+        let q64 = f64::from(if q > 1.0e-4 { q } else { 1.0e-4 });
+        etalon_signal::filter::rbj_peaking_eq(sr, f0, q64, f64::from(gain_db))
+            .map(Self::from_etalon)
+            .unwrap_or_else(|_| Self::identity())
     }
 
     /// Build from raw (un-normalized) cookbook coefficients by dividing through
@@ -80,12 +101,18 @@ impl BiquadState {
     /// Process one sample; advances history. No allocation.
     #[inline]
     pub fn process_sample(&mut self, c: &BiquadCoeffs, x: f32) -> f32 {
-        let y = c.b0 * x + c.b1 * self.x1 + c.b2 * self.x2 - c.a1 * self.y1 - c.a2 * self.y2;
-        self.x2 = self.x1;
-        self.x1 = x;
-        self.y2 = self.y1;
-        self.y1 = y;
-        y
+        etalon_signal::filter::df1_step_f32(
+            c.b0,
+            c.b1,
+            c.b2,
+            c.a1,
+            c.a2,
+            &mut self.x1,
+            &mut self.x2,
+            &mut self.y1,
+            &mut self.y2,
+            x,
+        )
     }
 
     /// Process a whole block into a caller-supplied output buffer.

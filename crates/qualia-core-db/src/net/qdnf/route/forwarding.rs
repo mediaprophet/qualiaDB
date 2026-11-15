@@ -14,6 +14,7 @@ pub struct ForwardingGeneration {
 }
 
 impl ForwardingGeneration {
+    /// Empty value.
     pub const fn empty(id: u64) -> Self {
         Self {
             id,
@@ -22,6 +23,7 @@ impl ForwardingGeneration {
         }
     }
 
+    /// Publishes a new SPF table as the active generation.
     pub fn publish(&mut self, table: SpfTable) -> Result<(), QdnfError> {
         if table.nodes == 0 {
             return Err(QdnfError::Incomplete);
@@ -31,6 +33,7 @@ impl ForwardingGeneration {
         Ok(())
     }
 
+    /// Next hop toward `dest_node`; error when unreachable.
     pub fn lookup_next(&self, dest_node: u8) -> Result<u8, QdnfError> {
         if !self.published {
             return Err(QdnfError::Incomplete);
@@ -47,6 +50,7 @@ impl ForwardingGeneration {
     }
 }
 
+/// Decrements the hop limit; error at zero.
 pub fn decrement_hop(hop_limit: u8) -> Result<u8, QdnfError> {
     if hop_limit == 0 {
         Err(QdnfError::HopLimit)
@@ -55,6 +59,7 @@ pub fn decrement_hop(hop_limit: u8) -> Result<u8, QdnfError> {
     }
 }
 
+/// `Ok` when `next` is in `neighbors`; error otherwise.
 pub fn require_adjacency(neighbors: &[LinkId], next: LinkId) -> Result<(), QdnfError> {
     if neighbors.iter().any(|n| n.0 == next.0) {
         Ok(())

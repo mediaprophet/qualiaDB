@@ -1,7 +1,7 @@
 use super::policy::PolicyDecisionService;
 use super::vault::VaultService;
 use ed25519_dalek::SigningKey;
-use wellfare_core::projects::Contribution;
+use wellfare_core::projects::{parse_contribution_summary, Contribution};
 
 const QAPP_SHELL: &str = "wellfair-shell";
 const QAPP_LIFE: &str = "wellfair-life";
@@ -24,43 +24,15 @@ const SOURCE_COOPERATIVE: &str = "qualia:cooperative";
 const QAPP_GUARDIANSHIP: &str = "wellfair-guardianship";
 const SOURCE_GUARDIANSHIP: &str = "wellfair:guardianship";
 
-/// Reconstruct a `Contribution` from a stored/transmitted summary JSON. The record id (which
-/// is the dedup anchor for obligation derivation) is supplied by the caller — the journal row
-/// id locally, or the sync operation's `record_id` for an inbound op.
+/// Reconstruct a `Contribution` from a stored/transmitted summary JSON losslessly.
+/// The record id (which is the dedup anchor for obligation derivation) is supplied by the
+/// caller — the journal row id locally, or the sync operation's `record_id` for an inbound op.
 fn contribution_from_summary(
     id: String,
     summary: &str,
     occurred_at_unix: u32,
 ) -> Option<Contribution> {
-    let v: serde_json::Value = serde_json::from_str(summary).ok()?;
-    Some(Contribution {
-        id,
-        project_id: v
-            .get("project_id")
-            .and_then(|x| x.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        contributor_did: v
-            .get("contributor_did")
-            .and_then(|x| x.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        description: String::new(),
-        effort_minutes: v
-            .get("effort_minutes")
-            .and_then(|x| x.as_u64())
-            .unwrap_or(0) as u32,
-        capital_cents: v.get("capital_cents").and_then(|x| x.as_u64()).unwrap_or(0),
-        roi_multiplier: v
-            .get("roi_multiplier")
-            .and_then(|x| x.as_f64())
-            .map(|f| f as f32)
-            .unwrap_or(1.0),
-        privacy_level: Default::default(),
-        occurred_at_unix,
-        occurred_at_instant: None,
-        predecessor_id: None,
-    })
+    parse_contribution_summary(id, summary, occurred_at_unix)
 }
 
 /// A per-entry summary of a hypermedia library entry for the UI (drops the raw quins).
@@ -195,3 +167,31 @@ mod types;
 mod welfare_work;
 
 pub use types::*;
+
+#[cfg(test)]
+mod roundtrip_tests {
+    use super::*;
+    use wellfare_core::projects::{contribution_summary, ContributionPrivacy};
+    use wellfare_core::record::InstantBridge;
+
+    #[test]
+    fn contribution_from_summary_preserves_all_fields() {
+        let mut c = Contribution::new(
+            "proj-1",
+            "did:wf:alice",
+            "Design work",
+            90,
+            25_000,
+            1.5,
+            ContributionPrivacy::Private,
+            1_700_000_000,
+        );
+        c.occurred_at_instant = Some(InstantBridge::unix(1_700_000_000, 42));
+        c.predecessor_id = Some("urn:wellfair:contribution:prev".into());
+
+        let summary = contribution_summary(&c);
+        let restored =
+            contribution_from_summary(c.id.clone(), &summary, 1_700_000_000).expect("restored");
+        assert_eq!(restored, c);
+    }
+}

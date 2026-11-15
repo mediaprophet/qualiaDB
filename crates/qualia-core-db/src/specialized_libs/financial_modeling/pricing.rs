@@ -103,6 +103,7 @@ pub struct Assumption {
 }
 
 impl PricingEngine {
+    /// Creates a `PricingEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             pricing_models: HashMap::new(),
@@ -111,11 +112,14 @@ impl PricingEngine {
         }
     }
 
+    /// Readies the `PricingEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.valuation_engine.initialize()?;
         Ok(())
     }
 
+    /// Validates option parameters (positive strike, nonnegative
+    /// volatility/time) before pricing; errors with `ValidationError`.
     pub fn validate_option_parameters(
         &self,
         params: &OptionParameters,
@@ -143,12 +147,19 @@ impl PricingEngine {
         Ok(())
     }
 
+    /// Prices a European option via Black-Scholes (see
+    /// [`Self::black_scholes_price`]); returns the full `OptionPrice` with
+    /// Greeks.
     pub fn price_option(&self, params: &OptionParameters) -> Result<OptionPrice, FinancialError> {
         // Price option using Black-Scholes
         let option_price = self.black_scholes_price(params)?;
         Ok(option_price)
     }
 
+    /// Black-Scholes price + Greeks (delta, gamma, theta, vega, rho) for a
+    /// European option. Handles the degenerate edges analytically: `t<=0`
+    /// returns intrinsic value, `sigma<=0` returns the deterministic discounted
+    /// payoff, `s<=0` returns the worthless-call/discounted-put boundary.
     fn black_scholes_price(
         &self,
         params: &OptionParameters,
@@ -278,6 +289,8 @@ impl PricingEngine {
         }
     }
 
+    /// Standard normal CDF via the Abramowitz–Stegun rational approximation
+    /// (max abs error ~7.5e-8).
     fn normal_cdf(&self, x: f64) -> f64 {
         // Abramowitz and Stegun approximation for normal CDF (max error 7.5e-8)
         let t = 1.0 / (1.0 + 0.2316419 * x.abs());
@@ -294,10 +307,13 @@ impl PricingEngine {
         }
     }
 
+    /// Standard normal PDF `exp(-x²/2)/√(2π)`.
     fn normal_pdf(&self, x: f64) -> f64 {
         (-0.5 * x * x).exp() / (2.0 * std::f64::consts::PI).sqrt()
     }
 
+    /// Black-Scholes theta returned **per calendar day** (annualized
+    /// expression divided by 365), as conventionally quoted.
     fn calculate_theta(&self, params: &OptionParameters, _d1: f64, d2: f64, pdf_d1: f64) -> f64 {
         // Theta per calendar day (divided by 365). The annualized theta is the
         // standard Black-Scholes expression; reporting per-day matches how the
@@ -317,6 +333,8 @@ impl PricingEngine {
         annualized / 365.0
     }
 
+    /// Black-Scholes rho: `K·T·disc·N(d2)` for calls, negative for puts.
+    /// `disc` is the caller-computed `exp(-rT)`.
     fn calculate_rho(&self, params: &OptionParameters, d2: f64, disc: f64) -> f64 {
         match params.option_type {
             OptionType::Call => {
@@ -328,28 +346,34 @@ impl PricingEngine {
         }
     }
 
+    /// Registers `pricing model` in the registry (keyed by its id).
     pub fn add_pricing_model(&mut self, model: PricingModel) {
         self.pricing_models.insert(model.model_id.clone(), model);
     }
 
+    /// Looks up `pricing model` by id; `None` if not registered.
     pub fn get_pricing_model(&self, model_id: &str) -> Option<&PricingModel> {
         self.pricing_models.get(model_id)
     }
 
+    /// Iterates over all registered `pricing models` entries.
     pub fn list_pricing_models(&self) -> Vec<String> {
         self.pricing_models.keys().cloned().collect()
     }
 
+    /// Returns a reference to the inner `market_data` sub-component.
     pub fn market_data(&self) -> &MarketData {
         &self.market_data
     }
 
+    /// Mutable access to the inner `market_data` sub-component.
     pub fn market_data_mut(&mut self) -> &mut MarketData {
         &mut self.market_data
     }
 }
 
 impl ValuationEngine {
+    /// Creates a `ValuationEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             valuation_methods: HashMap::new(),
@@ -358,36 +382,44 @@ impl ValuationEngine {
         }
     }
 
+    /// Readies the `ValuationEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Registers `valuation method` in the registry (keyed by its id).
     pub fn add_valuation_method(&mut self, method: ValuationMethod) {
         self.valuation_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Looks up `valuation method` by id; `None` if not registered.
     pub fn get_valuation_method(&self, method_id: &str) -> Option<&ValuationMethod> {
         self.valuation_methods.get(method_id)
     }
 
+    /// Iterates over all registered `valuation methods` entries.
     pub fn list_valuation_methods(&self) -> Vec<String> {
         self.valuation_methods.keys().cloned().collect()
     }
 
+    /// Sets the discount rate used for cash-flow valuation.
     pub fn set_discount_rate(&mut self, name: &str, rate: f64) {
         self.discount_rates.insert(name.to_string(), rate);
     }
 
+    /// Looks up `discount rate` by id; `None` if not registered.
     pub fn get_discount_rate(&self, name: &str) -> Option<&f64> {
         self.discount_rates.get(name)
     }
 
+    /// Registers `cash flow projection` in the registry (keyed by its id).
     pub fn add_cash_flow_projection(&mut self, projection: CashFlowProjection) {
         self.cash_flow_projections
             .insert(projection.projection_id.clone(), projection);
     }
 
+    /// Looks up `cash flow projection` by id; `None` if not registered.
     pub fn get_cash_flow_projection(&self, projection_id: &str) -> Option<&CashFlowProjection> {
         self.cash_flow_projections.get(projection_id)
     }

@@ -24,6 +24,7 @@ pub struct PeerBuilder {
 }
 
 impl PeerBuilder {
+    /// Creates a default `PeerBuilder`.
     pub fn new(controller: &[u8], local_link: LinkId, cell_bytes: u64) -> Result<Self, QdnfError> {
         if cell_bytes == 0 || cell_bytes > MAX_ORDINARY_CELL {
             return Err(QdnfError::Capacity);
@@ -35,10 +36,12 @@ impl PeerBuilder {
         })
     }
 
+    /// Builder: sets `bearer`.
     pub fn with_bearer(self, bearer: IpcEndpoint) -> Result<NativePeer, QdnfError> {
         self.with_bearer_cell(bearer, None)
     }
 
+    /// Builder: sets `bearer_cell`.
     pub fn with_bearer_cell(
         self,
         bearer: IpcEndpoint,

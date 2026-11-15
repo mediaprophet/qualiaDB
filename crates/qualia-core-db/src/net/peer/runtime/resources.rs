@@ -14,6 +14,7 @@ pub struct ResourceGovernor {
 }
 
 impl ResourceGovernor {
+    /// Creates a default `ResourceGovernor`.
     pub const fn new(essential_floor_bytes: u64) -> Self {
         Self {
             essential_floor_bytes,

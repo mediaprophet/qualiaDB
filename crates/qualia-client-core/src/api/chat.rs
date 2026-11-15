@@ -6,12 +6,14 @@ use super::*;
 
 use std::path::Path;
 
+/// Creates chat-session.
 pub fn create_chat_session(title: Option<String>) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     crate::chat_session::create_session(Path::new(&storage), title, None).map_err(|e| e.to_string())
 }
 
+/// Lists chat sessions.
 pub fn list_chat_sessions() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -20,6 +22,7 @@ pub fn list_chat_sessions() -> Result<serde_json::Value, String> {
     serde_json::to_value(sessions).map_err(|e| e.to_string())
 }
 
+/// Loads chat-session.
 pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -28,6 +31,7 @@ pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
     serde_json::to_value(session).map_err(|e| e.to_string())
 }
 
+/// Appends a chat message.
 pub fn append_chat_message(
     session_id: String,
     role: String,
@@ -36,6 +40,7 @@ pub fn append_chat_message(
     append_chat_message_reply(session_id, role, content, None, None)
 }
 
+/// Appends a chat message reply.
 pub fn append_chat_message_reply(
     session_id: String,
     role: String,
@@ -60,6 +65,7 @@ pub fn append_chat_message_reply(
     .map_err(|e| e.to_string())
 }
 
+/// Compacts a chat session.
 pub fn compact_chat_session(session_id: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -68,12 +74,14 @@ pub fn compact_chat_session(session_id: String) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Deletes a chat session.
 pub fn delete_chat_session(session_id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     crate::chat_session::delete_session(Path::new(&storage), &session_id).map_err(|e| e.to_string())
 }
 
+/// Renames a chat session.
 pub fn rename_chat_session(session_id: String, title: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -81,14 +89,17 @@ pub fn rename_chat_session(session_id: String, title: String) -> Result<(), Stri
         .map_err(|e| e.to_string())
 }
 
+/// Gets last-chat-session-id.
 pub fn get_last_chat_session_id() -> Option<String> {
     crate::chat_session::get_last_session_id()
 }
 
+/// Sets last-chat-session-id.
 pub fn set_last_chat_session_id(session_id: String) -> Result<(), String> {
     crate::chat_session::set_last_session_id(&session_id).map_err(|e| e.to_string())
 }
 
+/// Compiles the session environment.
 pub fn compile_session_environment(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -102,6 +113,7 @@ pub fn compile_session_environment(session_id: String) -> Result<serde_json::Val
     serde_json::to_value(env).map_err(|e| e.to_string())
 }
 
+/// Updates the session environment.
 pub fn update_session_environment(
     session_id: String,
     ontology_ids: Vec<String>,
@@ -141,6 +153,7 @@ pub fn update_session_environment(
     serde_json::to_value(env).map_err(|e| e.to_string())
 }
 
+/// Gets session-environment.
 pub fn get_session_environment(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -149,12 +162,14 @@ pub fn get_session_environment(session_id: String) -> Result<serde_json::Value, 
     serde_json::to_value(session.environment).map_err(|e| e.to_string())
 }
 
+/// Lists installed ontology IDs for chat.
 pub fn list_installed_ontology_ids_for_chat() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     crate::context_binding::list_installed_ontology_ids(Path::new(&storage))
 }
 
+/// Runs chat inference.
 pub fn run_chat_inference(session_id: String, prompt: String) -> Result<String, String> {
     let result = run_chat_inference_dispatch(&session_id, &prompt);
     if result.committed {
@@ -166,6 +181,7 @@ pub fn run_chat_inference(session_id: String, prompt: String) -> Result<String, 
     }
 }
 
+/// Runs detailed chat inference.
 pub fn run_chat_inference_detailed(
     session_id: String,
     prompt: String,
@@ -259,6 +275,7 @@ fn run_chat_inference_dispatch(
     }
 }
 
+/// Cancels chat inference.
 pub fn cancel_chat_inference() {
     crate::chat_inference::request_cancel_inference();
 }

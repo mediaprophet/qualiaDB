@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::sync_channel;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
@@ -24,6 +24,7 @@ static CLI_SESSION: OnceLock<Mutex<Option<CliSession>>> = OnceLock::new();
 struct CliSession {
     record: ActiveModelRecord,
     agent: LocalLlmAgent,
+    authority: Option<Arc<qualia_core_db::llm_agent::native_request::NativeProductSession>>,
 }
 
 fn session_lock() -> &'static Mutex<Option<CliSession>> {
@@ -31,7 +32,19 @@ fn session_lock() -> &'static Mutex<Option<CliSession>> {
 }
 
 fn store_session(record: ActiveModelRecord, agent: LocalLlmAgent) {
-    *session_lock().lock().expect("cli session lock") = Some(CliSession { record, agent });
+    *session_lock().lock().expect("cli session lock") = Some(CliSession { record, agent, authority: None });
+}
+
+/// Explicit injection by an authenticated embedding after model load. CLI
+/// prompts, environment variables and model paths are never authority evidence.
+pub fn bind_session_authority(
+    authority: Arc<qualia_core_db::llm_agent::native_request::NativeProductSession>,
+) -> Result<(), String> {
+    authority.bind().map_err(|e| e.to_string())?;
+    let mut slot = session_lock().lock().map_err(|e| e.to_string())?;
+    let session = slot.as_mut().ok_or("Load a model before binding CLI inference authority")?;
+    session.authority = Some(authority);
+    Ok(())
 }
 
 fn with_session<F, T>(f: F) -> Result<T, String>
@@ -91,6 +104,7 @@ pub fn init_log_stream(enable_telemetry: bool) {
         .ok();
 }
 
+/// CLI: .
 pub fn run_list(vault_path: &Path) -> Result<(), String> {
     let entries = model_lifecycle::scan_vault_gguf(vault_path).map_err(|e| e.to_string())?;
     if entries.is_empty() {
@@ -119,6 +133,7 @@ pub fn run_list(vault_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_duplicate_audit(vault_path: &Path) -> Result<(), String> {
     let groups = model_lifecycle::audit_vault_duplicates(vault_path).map_err(|e| e.to_string())?;
     if groups.is_empty() {
@@ -151,6 +166,7 @@ pub fn run_duplicate_audit(vault_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
     let gguf =
         model_lifecycle::resolve_vault_model(vault_path, model_ref).map_err(|e| e.to_string())?;
@@ -197,6 +213,7 @@ pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_status() -> Result<(), String> {
     let orch = model_lifecycle::task_orchestrator();
     let lifecycle = model_lifecycle::get_model_lifecycle_state();
@@ -235,8 +252,14 @@ pub fn run_status() -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), String> {
     with_session(|session| {
+        let authority = session.authority.as_ref().ok_or(
+            "CLI inference requires a native host session: configure signed admission, log in with the selected identifier, install an evidence policy, then bind_session_authority after model load"
+        )?;
+        session.agent.bind_native_governed_request(authority.bind().map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
         if orchestrated {
             let intent = cli_read_intent();
             let orch = model_lifecycle::task_orchestrator();
@@ -291,6 +314,7 @@ pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), St
     })
 }
 
+/// CLI: .
 pub fn run_evict(model_id_ref: &str) -> Result<(), String> {
     let profile_id = parse_model_id_ref(model_id_ref)?;
     println!("Evicting model 0x{profile_id:016x} …");
@@ -346,13 +370,19 @@ fn cli_read_intent() -> AgentIntent {
 
 /// Default vault path when none is supplied (Windows-friendly).
 pub fn default_vault_path() -> PathBuf {
-    if let Ok(dir) = std::env::var("QUALIA_LLM_VAULT") {
+    if let Ok(dir) = std::env::var("QUALIA_LLM_VAULT").or_else(|_| std::env::var("QUALIA_MODEL_PATHS")) {
         let trimmed = dir.trim();
         if !trimmed.is_empty() {
             return PathBuf::from(trimmed);
         }
     }
-    let canonical = PathBuf::from("C:/LLM_Models");
+    for candidate in ["C:/LLM_files", "C:/LLM_Models", "C:/llmmodels"] {
+        let canonical = PathBuf::from(candidate);
+        if canonical.is_dir() {
+            return canonical;
+        }
+    }
+    let canonical = PathBuf::from("C:/LLM_files");
     if canonical.is_dir() {
         return canonical;
     }

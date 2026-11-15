@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `MediaEcologyQapp` component.
 pub fn MediaEcologyQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -8,7 +8,7 @@ pub mod types;
 
 use crate::components::experience_mode::{use_experience_mode, ExperienceModeSwitch};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use health::SetupHealthPanel;
 use host::invoke_json;
 use identity_plane::IdentityPlanePanel;
@@ -28,8 +28,31 @@ pub const SELECTED_ROW: &str = "width:100%;display:flex;align-items:center;gap:1
 pub const FIELD: &str = "width:100%;box-sizing:border-box;border:1px solid var(--qualia-border);border-radius:9px;background:color-mix(in srgb,var(--qualia-bg) 72%,transparent);color:var(--qualia-text);padding:10px 11px;font:inherit;font-size:.75rem;";
 
 #[component]
+/// Aether `SettingsShell` component.
 pub fn SettingsShell() -> Element {
-    let mut section = use_signal(SettingsSection::default);
+    let initial_section = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Ok(hash) = window.location().hash() {
+                    if hash.to_ascii_lowercase().contains("model") {
+                        SettingsSection::Models
+                    } else {
+                        SettingsSection::default()
+                    }
+                } else {
+                    SettingsSection::default()
+                }
+            } else {
+                SettingsSection::default()
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            SettingsSection::default()
+        }
+    };
+    let mut section = use_signal(move || initial_section);
     let mut search = use_signal(String::new);
     let mut snapshot = use_signal(|| Option::<AgentQaSnapshot>::None);
     let mut loading = use_signal(|| true);

@@ -16,6 +16,11 @@ use tempfile::TempDir;
 
 use crate::mini_parser::hash_token;
 use crate::q42_volume::{Q42Volume, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE};
+use crate::q_hash;
+use crate::query::ingest_formats::{
+    format_from_path, object_iri_hash, parse_triples_format, RawTriple, OBJECT_IRI_MASK,
+};
+use crate::query::integrity_omit::MAX_LEX_TERM_BYTES;
 
 const RECORD_BYTES: u64 = 32;
 const READ_BUFFER_BYTES: usize = 32 * 1024;
@@ -28,6 +33,19 @@ pub const DEFAULT_GRAPH_PROOF_MEMORY_BYTES: usize = 32 * 1024 * 1024;
 /// rather than exhausting an arbitrary temp volume.
 pub const DEFAULT_GRAPH_PROOF_TEMP_BYTES: u64 = 24 * 1024 * 1024 * 1024;
 
+/// Which encoder the proof claims to mirror.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EncoderProfile {
+    /// Whitespace-split N-Triples + [`hash_token`] (legacy `ingest semantic`).
+    LegacySemantic,
+    /// Rio + [`q_hash`] / inline object tags — same as `qualia-cli import` Complete.
+    #[default]
+    ImportComplete,
+    /// Same hashed quads as Complete; documents that the twin volume used StripLiterals (empty lex).
+    ImportStripLiterals,
+}
+
 /// Resource limits for [`prove_cli_ntriples_q42_equivalence`].
 #[derive(Clone, Copy, Debug)]
 pub struct GraphProofOptions {
@@ -38,10 +56,46 @@ pub struct GraphProofOptions {
 }
 
 impl Default for GraphProofOptions {
+    /// Sensible proof defaults (bounded temp budget, default limits).
     fn default() -> Self {
         Self {
             memory_limit_bytes: DEFAULT_GRAPH_PROOF_MEMORY_BYTES,
             temporary_byte_budget: DEFAULT_GRAPH_PROOF_TEMP_BYTES,
+        }
+    }
+}
+
+/// Options for [`prove_import_rdf_q42_equivalence`].
+#[derive(Clone, Debug)]
+pub struct ImportProofOptions {
+    pub memory_limit_bytes: usize,
+    pub temporary_byte_budget: u64,
+    /// Predicate FNV-1a hashes to drop (must match ingest omit list).
+    pub omit_predicate_hashes: Vec<u64>,
+    /// Label only — does not change hashing (StripLiterals still hashes all kept triples).
+    pub encoder_profile: EncoderProfile,
+}
+
+impl Default for ImportProofOptions {
+    /// Sensible import-proof defaults.
+    fn default() -> Self {
+        Self {
+            memory_limit_bytes: DEFAULT_GRAPH_PROOF_MEMORY_BYTES,
+            temporary_byte_budget: DEFAULT_GRAPH_PROOF_TEMP_BYTES,
+            omit_predicate_hashes: Vec::new(),
+            encoder_profile: EncoderProfile::ImportComplete,
+        }
+    }
+}
+
+impl ImportProofOptions {
+    /// Derive import-proof options from a graph-proof config.
+    pub fn from_graph_options(options: GraphProofOptions) -> Self {
+        Self {
+            memory_limit_bytes: options.memory_limit_bytes,
+            temporary_byte_budget: options.temporary_byte_budget,
+            omit_predicate_hashes: Vec::new(),
+            encoder_profile: EncoderProfile::ImportComplete,
         }
     }
 }
@@ -83,6 +137,19 @@ pub struct GraphProofReport {
     pub source_skipped_lines: u64,
     pub source_contains_blank_nodes: bool,
     pub rdf_isomorphism: RdfIsomorphismStatus,
+    /// Which encoder this report claims to have mirrored.
+    pub encoder_profile: EncoderProfile,
+    /// Triples seen in the source before omit filtering (import path).
+    pub source_triple_count: u64,
+    /// Triples dropped by omit-predicate (or legacy skipped lines mirrored here).
+    pub skipped_or_filtered: u64,
+    /// Terms that would hit [`crate::q42_lex::LexError::TermTooLong`].
+    pub oversize_literal_count: u64,
+    pub first_oversize_preview: Option<String>,
+    /// Lexicon byte length from the Q42 header (0 / 32 often means empty lex).
+    pub lexicon_length_bytes: u64,
+    pub lexicon_entry_count: Option<u64>,
+    pub lexicon_has_no_terms: bool,
 }
 
 impl GraphProofReport {
@@ -100,6 +167,8 @@ impl GraphProofReport {
 /// [`hash_token`] to each.  This proves the bytes that that ingest mode can
 /// encode, rather than pretending the current hash-only volume can recover
 /// lexical RDF values that it never stored.
+///
+/// Prefer [`prove_import_rdf_q42_equivalence`] for volumes built with `import`.
 pub fn prove_cli_ntriples_q42_equivalence(
     source_path: &Path,
     q42_path: &Path,
@@ -123,6 +192,112 @@ pub fn prove_cli_ntriples_q42_equivalence(
     let q42_run = merge_to_one(q42_runs, workspace.path(), "q42", &mut budget)?;
 
     let comparison = compare_unique_sets(&source_run.path, &q42_run.path)?;
+    let lex = read_lex_stats(q42_path)?;
+    Ok(finish_report(
+        source_records,
+        q42_records,
+        comparison,
+        source_skipped_lines,
+        source_contains_blank_nodes,
+        EncoderProfile::LegacySemantic,
+        source_records,
+        source_skipped_lines,
+        0,
+        None,
+        lex,
+    ))
+}
+
+/// Compare an RDF source to a Q42 volume using the same Rio + `q_hash` encoding
+/// as [`crate::query::ingest::streaming_import_rdf_with_report`].
+pub fn prove_import_rdf_q42_equivalence(
+    source_path: &Path,
+    q42_path: &Path,
+    options: ImportProofOptions,
+) -> io::Result<GraphProofReport> {
+    let memory = if options.memory_limit_bytes == 0 {
+        DEFAULT_GRAPH_PROOF_MEMORY_BYTES
+    } else {
+        options.memory_limit_bytes
+    };
+    let temp = if options.temporary_byte_budget == 0 {
+        DEFAULT_GRAPH_PROOF_TEMP_BYTES
+    } else {
+        options.temporary_byte_budget
+    };
+    let records_per_chunk = records_per_chunk(memory)?;
+    let workspace = TempDir::new()?;
+    let mut budget = TempBudget::new(temp);
+
+    let mut source_spool = DiskSpool::new(workspace.path(), "source", records_per_chunk);
+    let import_stats = stream_import_source_records(
+        source_path,
+        &options.omit_predicate_hashes,
+        &mut source_spool,
+        &mut budget,
+    )?;
+    let source_records = source_spool.record_count;
+    let source_runs = source_spool.finish(&mut budget)?;
+    let source_run = merge_to_one(source_runs, workspace.path(), "source", &mut budget)?;
+
+    let mut q42_spool = DiskSpool::new(workspace.path(), "q42", records_per_chunk);
+    stream_q42_records(q42_path, &mut q42_spool, &mut budget)?;
+    let q42_records = q42_spool.record_count;
+    let q42_runs = q42_spool.finish(&mut budget)?;
+    let q42_run = merge_to_one(q42_runs, workspace.path(), "q42", &mut budget)?;
+
+    let comparison = compare_unique_sets(&source_run.path, &q42_run.path)?;
+    let lex = read_lex_stats(q42_path)?;
+    Ok(finish_report(
+        source_records,
+        q42_records,
+        comparison,
+        import_stats.filtered,
+        import_stats.has_blank_nodes,
+        options.encoder_profile,
+        import_stats.seen,
+        import_stats.filtered,
+        import_stats.oversize,
+        import_stats.first_oversize_preview,
+        lex,
+    ))
+}
+
+struct LexStats {
+    length_bytes: u64,
+    entry_count: Option<u64>,
+    has_no_terms: bool,
+}
+
+/// Read the Q42 volume's lexicon statistics (term count, collision
+/// count) from its on-disk header.
+fn read_lex_stats(q42_path: &Path) -> io::Result<LexStats> {
+    let volume = Q42Volume::open(q42_path)?;
+    let length_bytes = volume.header().lex_length;
+    let entry_count = volume.lex_view().ok().map(|lex| lex.entry_count() as u64);
+    let has_no_terms = entry_count == Some(0) || length_bytes <= 32;
+    Ok(LexStats {
+        length_bytes,
+        entry_count,
+        has_no_terms,
+    })
+}
+
+/// Assemble the final `GraphProofReport` from the set comparison,
+/// import stats, and lexicon stats.
+fn finish_report(
+    source_records: u64,
+    q42_records: u64,
+    comparison: SetComparison,
+    source_skipped_lines: u64,
+    source_contains_blank_nodes: bool,
+    encoder_profile: EncoderProfile,
+    source_triple_count: u64,
+    skipped_or_filtered: u64,
+    oversize_literal_count: u64,
+    first_oversize_preview: Option<String>,
+    lex: LexStats,
+) -> GraphProofReport {
     let encoded_sets_match = comparison.missing == 0 && comparison.unexpected == 0;
     let rdf_isomorphism = if !encoded_sets_match {
         RdfIsomorphismStatus::Different
@@ -131,8 +306,7 @@ pub fn prove_cli_ntriples_q42_equivalence(
     } else {
         RdfIsomorphismStatus::GroundGraphProven
     };
-
-    Ok(GraphProofReport {
+    GraphProofReport {
         source_records,
         q42_records,
         source_unique_records: comparison.left_unique,
@@ -144,7 +318,96 @@ pub fn prove_cli_ntriples_q42_equivalence(
         source_skipped_lines,
         source_contains_blank_nodes,
         rdf_isomorphism,
-    })
+        encoder_profile,
+        source_triple_count,
+        skipped_or_filtered,
+        oversize_literal_count,
+        first_oversize_preview,
+        lexicon_length_bytes: lex.length_bytes,
+        lexicon_entry_count: lex.entry_count,
+        lexicon_has_no_terms: lex.has_no_terms,
+    }
+}
+
+/// Encode a raw parsed triple into the canonical 4×u64
+/// `QuadRecord` used for byte-level set comparison.
+fn encode_import_raw(raw: &RawTriple) -> QuadRecord {
+    let subject = q_hash(&raw.subject);
+    let predicate = q_hash(&raw.predicate);
+    let object = raw
+        .packed_object
+        .unwrap_or_else(|| object_iri_hash(&raw.object));
+    debug_assert_eq!(OBJECT_IRI_MASK, 0x0FFF_FFFF_FFFF_FFFF);
+    QuadRecord {
+        subject,
+        predicate,
+        object,
+        context: raw.context,
+    }
+}
+
+struct ImportStreamStats {
+    seen: u64,
+    filtered: u64,
+    oversize: u64,
+    first_oversize_preview: Option<String>,
+    has_blank_nodes: bool,
+}
+
+/// Stream triples from the import source, encoding each into
+/// `QuadRecord`s and spooling sorted runs under the temp budget.
+fn stream_import_source_records(
+    source_path: &Path,
+    omit_predicate_hashes: &[u64],
+    spool: &mut DiskSpool,
+    budget: &mut TempBudget,
+) -> io::Result<ImportStreamStats> {
+    let lower = source_path.to_string_lossy().to_ascii_lowercase();
+    let fmt = format_from_path(&lower);
+    let omit: std::collections::HashSet<u64> = omit_predicate_hashes.iter().copied().collect();
+    let file = File::open(source_path)?;
+    let reader = BufReader::with_capacity(READ_BUFFER_BYTES, file);
+    let mut stats = ImportStreamStats {
+        seen: 0,
+        filtered: 0,
+        oversize: 0,
+        first_oversize_preview: None,
+        has_blank_nodes: false,
+    };
+    let mut push_err: Option<io::Error> = None;
+    let mut on_triple = |raw: RawTriple| {
+        if push_err.is_some() {
+            return;
+        }
+        stats.seen += 1;
+        if omit.contains(&q_hash(&raw.predicate)) {
+            stats.filtered += 1;
+            return;
+        }
+        if raw.subject.starts_with("_:") || raw.object.starts_with("_:") {
+            stats.has_blank_nodes = true;
+        }
+        for part in [&raw.subject, &raw.predicate, &raw.object] {
+            if part.len() > MAX_LEX_TERM_BYTES {
+                stats.oversize += 1;
+                if stats.first_oversize_preview.is_none() {
+                    let preview: String = part.chars().take(80).collect();
+                    stats.first_oversize_preview =
+                        Some(format!("{preview}… ({} bytes)", part.len()));
+                }
+            }
+        }
+        if let Err(e) = spool.push(encode_import_raw(&raw), budget) {
+            push_err = Some(e);
+        }
+    };
+    if let Err(e) = parse_triples_format(fmt, reader, None, &mut on_triple) {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, e));
+    }
+    if let Some(e) = push_err {
+        return Err(e);
+    }
+    Ok(stats)
 }
 
 #[repr(C)]
@@ -157,12 +420,14 @@ struct QuadRecord {
 }
 
 impl QuadRecord {
+    /// Record as a `[u64; 4]` for lexicographic ordering.
     fn as_array(self) -> [u64; 4] {
         [self.subject, self.predicate, self.object, self.context]
     }
 }
 
 impl Ord for QuadRecord {
+    /// Lexicographic order over the record's u64 fields.
     fn cmp(&self, other: &Self) -> Ordering {
         (self.object, self.subject, self.predicate, self.context).cmp(&(
             other.object,
@@ -174,6 +439,7 @@ impl Ord for QuadRecord {
 }
 
 impl PartialOrd for QuadRecord {
+    /// Delegates to `Ord::cmp` (total order).
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -190,6 +456,7 @@ struct TempBudget {
 }
 
 impl TempBudget {
+    /// Budget with `maximum` bytes available.
     fn new(maximum: u64) -> Self {
         Self {
             maximum,
@@ -197,6 +464,8 @@ impl TempBudget {
         }
     }
 
+    /// Reserve `bytes`; error (fail closed) when the budget would
+    /// be exceeded.
     fn reserve(&mut self, bytes: u64) -> io::Result<()> {
         let next = self.current.checked_add(bytes).ok_or_else(|| {
             io::Error::new(
@@ -217,6 +486,7 @@ impl TempBudget {
         Ok(())
     }
 
+    /// Return `bytes` to the budget.
     fn release(&mut self, bytes: u64) {
         self.current = self.current.saturating_sub(bytes);
     }
@@ -232,6 +502,8 @@ struct DiskSpool {
 }
 
 impl DiskSpool {
+    /// Spool writing runs of `records_per_chunk` into `temp_dir`
+    /// files named with `prefix`.
     fn new(temp_dir: &Path, prefix: &'static str, records_per_chunk: usize) -> Self {
         Self {
             temp_dir: temp_dir.to_path_buf(),
@@ -243,6 +515,8 @@ impl DiskSpool {
         }
     }
 
+    /// Buffer a record; flush a sorted run to disk when the chunk
+    /// fills (budget-charged).
     fn push(&mut self, record: QuadRecord, budget: &mut TempBudget) -> io::Result<()> {
         self.records.push(record);
         self.record_count += 1;
@@ -252,6 +526,7 @@ impl DiskSpool {
         Ok(())
     }
 
+    /// Sort the buffered chunk and write it as a disk run.
     fn flush(&mut self, budget: &mut TempBudget) -> io::Result<()> {
         if self.records.is_empty() {
             return Ok(());
@@ -273,12 +548,15 @@ impl DiskSpool {
         Ok(())
     }
 
+    /// Flush any remainder and return the list of disk runs.
     fn finish(&mut self, budget: &mut TempBudget) -> io::Result<Vec<DiskRun>> {
         self.flush(budget)?;
         Ok(std::mem::take(&mut self.runs))
     }
 }
 
+/// Chunk size in records for the given memory limit; fails closed
+/// when the limit can't hold one record.
 fn records_per_chunk(memory_limit_bytes: usize) -> io::Result<usize> {
     let records = memory_limit_bytes / RECORD_BYTES as usize;
     if records == 0 {
@@ -290,6 +568,8 @@ fn records_per_chunk(memory_limit_bytes: usize) -> io::Result<usize> {
     Ok(records)
 }
 
+/// Stream `QuadRecord`s from an N-Triples source into sorted
+/// disk runs.
 fn stream_source_records(
     source_path: &Path,
     spool: &mut DiskSpool,
@@ -338,6 +618,8 @@ fn stream_source_records(
     Ok((skipped, has_blank_nodes))
 }
 
+/// Stream `QuadRecord`s from a single Q42 volume into sorted disk
+/// runs.
 fn stream_q42_records(
     q42_path: &Path,
     spool: &mut DiskSpool,
@@ -354,6 +636,8 @@ fn stream_q42_records(
     stream_q42_volume_records(&volume, spool, budget)
 }
 
+/// Stream `QuadRecord`s across a Q42 volume set (manifest
+/// children) into sorted disk runs.
 fn stream_q42_volume_records(
     volume: &Q42Volume,
     spool: &mut DiskSpool,
@@ -394,6 +678,7 @@ fn stream_q42_volume_records(
     Ok(())
 }
 
+/// Write records verbatim to `path` (fixed-width binary run).
 fn write_records(path: &Path, records: &[QuadRecord]) -> io::Result<()> {
     let mut writer = BufWriter::with_capacity(READ_BUFFER_BYTES, File::create(path)?);
     for record in records {
@@ -402,6 +687,8 @@ fn write_records(path: &Path, records: &[QuadRecord]) -> io::Result<()> {
     writer.flush()
 }
 
+/// K-way merge all runs into a single sorted output file
+/// (grouped merges when the fan-in exceeds limits).
 fn merge_to_one(
     mut runs: Vec<DiskRun>,
     temp_dir: &Path,
@@ -443,6 +730,8 @@ fn merge_to_one(
     Ok(runs.pop().expect("non-empty run list"))
 }
 
+/// Merge one group of runs into `output` via a min-heap over
+/// per-run readers.
 fn merge_group(group: &[DiskRun], output: &Path) -> io::Result<()> {
     let mut readers = Vec::with_capacity(group.len());
     for run in group {
@@ -473,6 +762,8 @@ struct RecordReader {
 }
 
 impl RecordReader {
+    /// Buffered reader over a sorted run file, positioned before
+    /// the first record.
     fn open(path: &Path) -> io::Result<Self> {
         let mut reader = Self {
             reader: BufReader::with_capacity(READ_BUFFER_BYTES, File::open(path)?),
@@ -482,6 +773,7 @@ impl RecordReader {
         Ok(reader)
     }
 
+    /// Advance to the next record (EOF sets `current` to `None`).
     fn advance(&mut self) -> io::Result<()> {
         let mut bytes = [0u8; RECORD_BYTES as usize];
         match self.reader.read_exact(&mut bytes) {
@@ -497,6 +789,8 @@ impl RecordReader {
         }
     }
 
+    /// Next record strictly greater than the previous emission —
+    /// skips duplicates in the sorted run.
     fn next_distinct(&mut self) -> io::Result<Option<QuadRecord>> {
         let Some(record) = self.peek else {
             return Ok(None);
@@ -518,6 +812,8 @@ struct SetComparison {
     first_unexpected: Option<QuadRecord>,
 }
 
+/// Two-pointer scan over the two sorted-unique runs — counts
+/// common, left-only, and right-only records.
 fn compare_unique_sets(left: &Path, right: &Path) -> io::Result<SetComparison> {
     let mut left_reader = RecordReader::open(left)?;
     let mut right_reader = RecordReader::open(right)?;

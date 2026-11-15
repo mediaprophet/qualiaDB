@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 // ── Domain types ──────────────────────────────────────────────────────────────
 
@@ -289,6 +289,7 @@ fn inforg_reply(q: &str) -> String {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
+/// Aether `ContextualWorkspace` component.
 pub fn ContextualWorkspace() -> Element {
     // Canvas state
     let mut pan_x = use_signal(|| 0.0_f64);

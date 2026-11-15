@@ -44,7 +44,7 @@ have a native below-IP QLink/QRoute stack. QDNF therefore has three categories:
 | `.q42` volumes | Content and indexes | Add signed swarm manifests/strong digests; keep topology records distinct from immutable content. |
 | `Q42Volume`, `Q42LexMmap`, BIDX/PIDX, range/cursor APIs, WAL | Shared semantic storage, compact indexes, bounded read and mutation primitives | Build scoped network adapters; preserve exact signed records and immutable handles, enforce expiry/revocation, and prove bounded crash recovery before settlement use. |
 | CBOR-LD/Q42 lexicon and agreement primitives | Semantic compaction, graph and rule infrastructure | Bind pinned contexts/ontologies/tables/shapes/rules; validate the exact selected CBOR-LD draft, signature semantics, and bounded contract compilation. |
-| Commons gates, `modalities/value_flow.rs`, swarm/ILP services | Local obligation arithmetic, resource hints, settlement instruction shapes | Verify independent access authority, attributable metering, accepted terms, payment finality, and durable reconciliation. `Sent` and obligation flags are insufficient; see the source review §7.1. |
+| Commons gates, `modalities/socioeconomics.rs`, swarm/ILP services | Local obligation arithmetic, resource hints, settlement instruction shapes | Verify independent access authority, attributable metering, accepted terms, payment finality, and durable reconciliation. `Sent` and obligation flags are insufficient; see the source review §7.1. |
 
 ## 3. New libraries
 
@@ -107,7 +107,7 @@ separate.
 Contract and economics support adds directory-backed `contracts/` and `economics/` libraries under
 the proposed QDNF tree. Separate semantic-bundle loading, CBOR-LD codecs, SHACL/N3 compilation,
 quantity validation, quote/obligation state, hot budget counters, durable receipts/reconciliation,
-and backend settlement adapters. Reuse existing agreement/value-flow primitives after verification;
+and backend settlement adapters. Reuse existing agreement/socioeconomics primitives after verification;
 keep external payment I/O and ontology construction outside packet/evaluator loops.
 
 The proposed [Qualia Peer Runtime](./peer-runtime.md) adds a `net/peer/` runtime/service library

@@ -102,6 +102,7 @@ pub struct AgentInCapacity {
 }
 
 impl AgentInCapacity {
+    /// Creates a new instance.
     pub fn new(name: impl Into<String>, capacity: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -244,6 +245,7 @@ pub fn government_letter(sender: &str, subject: &str, issued_unix: u32) -> Autho
         .with_representation(Representation::Pdf)
 }
 
+///  record ID.
 pub fn authority_attestation_record_id(uuid: &str) -> String {
     format!("urn:wellfair:authority_attestation:{uuid}")
 }

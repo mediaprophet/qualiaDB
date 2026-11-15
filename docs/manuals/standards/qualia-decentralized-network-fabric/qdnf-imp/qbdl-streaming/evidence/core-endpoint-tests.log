@@ -1,0 +1,16 @@
+
+running 11 tests
+test net::qdnf::session::handshake::endpoint::tests::fixture_tests::actual_intent_codec_and_client_transcript_match_independent_fixture ... ok
+test net::qdnf::session::handshake::endpoint::tests::independently_driven_actual_bearer_managed_keys_and_received_finished ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::fragment_source_scope_duplicate_trailing_order_and_intent_matrix ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::cryptographically_signed_wrong_role_or_commitment_refused ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::valid_signed_flight_local_revoke_and_second_clock_prevent_send ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::would_block_preserves_exact_next_frame_without_duplicate_send ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::pin_revocation_foreign_owner_and_expiry_between_steps_fail_closed ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::cancellation_and_unwind_clear_retained_ephemerals_and_release_reservation ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::local_revoke_before_send_and_late_signature_fail_closed ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::resource_budget_and_early_install_refuse ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::wrong_received_finished_proof_selection_and_share_matrix ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 10308 filtered out; finished in 6.83s
+

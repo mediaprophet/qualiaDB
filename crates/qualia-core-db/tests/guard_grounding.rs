@@ -9,6 +9,9 @@
 //! flag (a Deny) — observable via `has_quin`. No mocks: the real rule text, the real
 //! parse → register → fire path.
 
+use qualia_core_db::foundation::plane_feature_guard::{
+    validate_feature_bag, FeatureGuardError, KeyRoleTag, PlaneTag, TaggedFeature,
+};
 use qualia_core_db::modalities::logic::n3_parser::{N3Event, N3Parser};
 use qualia_core_db::webizen::SlgArena;
 use qualia_core_db::{q_hash, NQuin};
@@ -159,4 +162,172 @@ fn partial_premise_match_does_not_fire() {
         "ex:AcmeCorp",
         "values:PersonhoodCategoryError"
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Packet IDF-05: Plane Feature Guard & F6 §§8–15 Adversarial Pressure Tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn idf05_rejects_missing_plane_tag_and_owl_sameas_on_who_plane() {
+    let untagged = [TaggedFeature::new("living_agent_feature", None)];
+    assert_eq!(
+        validate_feature_bag(&untagged),
+        Err(FeatureGuardError::MissingPlaneTag)
+    );
+
+    let same_as_who = [TaggedFeature::new("owl:sameAs", Some(PlaneTag::Who)).with_same_as()];
+    assert_eq!(
+        validate_feature_bag(&same_as_who),
+        Err(FeatureGuardError::SameAsOnWhoPlane)
+    );
+
+    let qrc_to_who = [
+        TaggedFeature::new("did:q42:z6MkpTHR8VNs", Some(PlaneTag::SpatiotemporalHandle))
+            .with_target_plane(PlaneTag::Who),
+    ];
+    assert_eq!(
+        validate_feature_bag(&qrc_to_who),
+        Err(FeatureGuardError::QrcPromotedToWho)
+    );
+}
+
+#[test]
+fn idf05_enforces_closed_key_roles_and_blocks_dni_rar_qsession_collapse() {
+    // Unknown key role must fail closed to HeldUnknownKeyRole.
+    let unknown_role = [
+        TaggedFeature::new("RendezvousAuthorizationRecord", Some(PlaneTag::Instrument))
+            .with_key_role("InventedMasterKeyRole", None),
+    ];
+    assert_eq!(
+        validate_feature_bag(&unknown_role),
+        Err(FeatureGuardError::HeldUnknownKeyRole)
+    );
+
+    // QLinkEphemeralDh must never substitute for TransportAead; RouteUpdate != SessionAuthentication.
+    let dh_as_aead = [TaggedFeature::new("QSessionProof", Some(PlaneTag::Instrument))
+        .with_key_role("QLinkEphemeralDh", Some(KeyRoleTag::TransportAead))];
+    assert_eq!(
+        validate_feature_bag(&dh_as_aead),
+        Err(FeatureGuardError::KeyRoleMismatch {
+            actual: KeyRoleTag::QLinkEphemeralDh,
+            expected: KeyRoleTag::TransportAead,
+        })
+    );
+
+    let route_as_auth = [
+        TaggedFeature::new("RendezvousAuthorizationRecord", Some(PlaneTag::Instrument))
+            .with_key_role("RouteUpdate", Some(KeyRoleTag::SessionAuthentication)),
+    ];
+    assert_eq!(
+        validate_feature_bag(&route_as_auth),
+        Err(FeatureGuardError::KeyRoleMismatch {
+            actual: KeyRoleTag::RouteUpdate,
+            expected: KeyRoleTag::SessionAuthentication,
+        })
+    );
+
+    // Collapsing DNI + RAR + QSessionProof into one record must fail closed.
+    let collapsed = [
+        TaggedFeature::new("DNI", Some(PlaneTag::SpatiotemporalHandle))
+            .with_collapsed_dni_rar_qsession(),
+    ];
+    assert_eq!(
+        validate_feature_bag(&collapsed),
+        Err(FeatureGuardError::DniRarQSessionCollapsed)
+    );
+}
+
+#[test]
+fn idf05_f6_sections_8_to_15_adversarial_cross_plane_who_fusion_blocked() {
+    // F6 §8: Relation-scoped locators (`jane@bob.tld`, `jane@carol.tld`) are SpatiotemporalHandles, never Who.
+    for locator in ["jane@bob.tld", "jane@carol.tld", "RelationScopedLocator"] {
+        let bag = [TaggedFeature::new(locator, Some(PlaneTag::Who))];
+        assert_eq!(
+            validate_feature_bag(&bag),
+            Err(FeatureGuardError::CrossPlaneWhoFusion {
+                source_plane: PlaneTag::SpatiotemporalHandle
+            }),
+            "locator {locator} must not fuse into Who"
+        );
+    }
+
+    // F6 §9: Wallets, passwords, online accounts, biometrics are Instruments, never Who.
+    for inst in [
+        "Wallet",
+        "PasswordVerifier",
+        "OnlineAccount",
+        "BiometricFamily",
+        "BiometricInstance",
+    ] {
+        let bag = [TaggedFeature::new(inst, Some(PlaneTag::Instrument))
+            .with_target_plane(PlaneTag::Who)];
+        assert_eq!(
+            validate_feature_bag(&bag),
+            Err(FeatureGuardError::CrossPlaneWhoFusion {
+                source_plane: PlaneTag::Instrument
+            }),
+            "instrument {inst} must not fuse into Who"
+        );
+    }
+
+    // F6 §10: BLE proximity, ATM presence, geocache place-bound secrets are Instrument / Handle, never Who.
+    assert_eq!(
+        validate_feature_bag(&[TaggedFeature::new("BleProximitySensor", Some(PlaneTag::Who))]),
+        Err(FeatureGuardError::CrossPlaneWhoFusion {
+            source_plane: PlaneTag::Instrument
+        })
+    );
+    assert_eq!(
+        validate_feature_bag(&[TaggedFeature::new("AtmPresenceSensor", Some(PlaneTag::Who))]),
+        Err(FeatureGuardError::CrossPlaneWhoFusion {
+            source_plane: PlaneTag::Instrument
+        })
+    );
+    assert_eq!(
+        validate_feature_bag(&[TaggedFeature::new(
+            "GeocachePlaceSecret",
+            Some(PlaneTag::Who)
+        )]),
+        Err(FeatureGuardError::CrossPlaneWhoFusion {
+            source_plane: PlaneTag::SpatiotemporalHandle
+        })
+    );
+
+    // F6 §§11–15: RoleCapacityGrant, OrgRepresentativeBinding, RuleBreachClaim,
+    // RelationshipAssessmentClaim, RelianceRecord, AssumptionChain, RootCauseBundle,
+    // BlastRadiusMap, PseudonymAlias, and dense CounterpartNQuinGraph are Claims, never Who.
+    for claim_artifact in [
+        "RoleCapacityGrant",
+        "OrgRepresentativeBinding",
+        "RuleBreachClaim",
+        "RelationshipAssessmentClaim",
+        "RelianceRecord",
+        "AssumptionChain",
+        "RootCauseBundle",
+        "BlastRadiusMap",
+        "PseudonymAlias",
+        "CounterpartNQuinGraph",
+    ] {
+        let mislabeled = [TaggedFeature::new(claim_artifact, Some(PlaneTag::Who))];
+        assert_eq!(
+            validate_feature_bag(&mislabeled),
+            Err(FeatureGuardError::CrossPlaneWhoFusion {
+                source_plane: PlaneTag::Claim
+            }),
+            "claim artifact {claim_artifact} must never be classified as Who"
+        );
+    }
+
+    // Positive control: properly plane-separated feature bag passes.
+    let valid_bag = [
+        TaggedFeature::new("NaturalAgentSelfhood", Some(PlaneTag::Who)),
+        TaggedFeature::new("jane@bob.tld", Some(PlaneTag::SpatiotemporalHandle)),
+        TaggedFeature::new("Wallet", Some(PlaneTag::Instrument)).with_key_role(
+            "CapabilityPresentation",
+            Some(KeyRoleTag::CapabilityPresentation),
+        ),
+        TaggedFeature::new("RelianceRecord", Some(PlaneTag::Claim)),
+    ];
+    assert!(validate_feature_bag(&valid_bag).is_ok());
 }

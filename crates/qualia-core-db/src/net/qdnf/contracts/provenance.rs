@@ -17,6 +17,7 @@ pub struct ClaimRecord {
 }
 
 impl ClaimRecord {
+    /// `ClaimRecord::blank`.
     pub const fn blank() -> Self {
         Self {
             issuer: StrongDigest::ZERO,

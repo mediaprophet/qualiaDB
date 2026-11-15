@@ -45,6 +45,7 @@ pub struct CreditTable {
 }
 
 impl CreditTable {
+    /// Creates a default `CreditTable`.
     pub fn new(window_bytes: u32) -> Self {
         Self {
             client: StreamCredit {
@@ -165,6 +166,7 @@ impl CreditTable {
         })
     }
 
+    /// Closes `stream`.
     pub fn close_stream(
         &mut self,
         dir: u8,
@@ -225,6 +227,7 @@ impl CreditTable {
         }
     }
 
+    /// Credits the session.
     pub fn credit(&self, dir: u8) -> Result<StreamCredit, QdnfError> {
         match dir {
             DIR_CLIENT => Ok(self.client),
@@ -280,6 +283,7 @@ pub fn purchased_service_disables_congestion() -> bool {
     false
 }
 
+/// `CreditTable::ack_range_cap`.
 pub fn ack_range_cap() -> usize {
     MAX_ACK_RANGES
 }

@@ -4,7 +4,7 @@
 //! Never label a scaffold or experimental path as Ready.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Product honesty level for a capability surface.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -21,9 +21,12 @@ pub enum HonestyLevel {
     NeedsConsent,
     /// WASM profile, feature flag, or hardware missing.
     Unavailable,
+    /// Orbit / Mail Live·Planned honesty — capability not on yet (never "held theatre").
+    Planned,
 }
 
 impl HonestyLevel {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Ready => "Ready",
@@ -32,9 +35,11 @@ impl HonestyLevel {
             Self::NeedsModel => "held / not yet",
             Self::NeedsConsent => "Needs consent",
             Self::Unavailable => "held / not yet",
+            Self::Planned => "Planned",
         }
     }
 
+    /// Background/foreground colours for the chip.
     pub fn bg_fg(self) -> (&'static str, &'static str) {
         match self {
             Self::Ready => ("#064e3b", "#a7f3d0"),
@@ -43,6 +48,7 @@ impl HonestyLevel {
             Self::NeedsModel => ("#78350f", "#fde68a"),
             Self::NeedsConsent => ("#4c1d95", "#e9d5ff"),
             Self::Unavailable => ("#78350f", "#fde68a"),
+            Self::Planned => ("#334155", "#e2e8f0"),
         }
     }
 }
@@ -94,8 +100,20 @@ mod tests {
     #[test]
     fn needs_model_voice_is_held_not_yet() {
         assert_eq!(HonestyLevel::NeedsModel.label(), "held / not yet");
-        assert!(!HonestyLevel::NeedsModel.label().to_ascii_lowercase().contains("needs model"));
+        assert!(!HonestyLevel::NeedsModel
+            .label()
+            .to_ascii_lowercase()
+            .contains("needs model"));
         let (bg, _) = HonestyLevel::NeedsModel.bg_fg();
         assert_ne!(bg, "#450a0a", "held look is amber, not panic red");
+    }
+
+    #[test]
+    fn planned_chip_is_not_held_theatre() {
+        assert_eq!(HonestyLevel::Planned.label(), "Planned");
+        assert!(!HonestyLevel::Planned
+            .label()
+            .to_ascii_lowercase()
+            .contains("held"));
     }
 }

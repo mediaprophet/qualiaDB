@@ -13,24 +13,45 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::sync::OnceLock;
 
+#[cfg(test)]
+mod migration_contract_tests;
+mod reservation;
+pub use reservation::{GraphicsReservationError, VramReservation, VramResourceClass};
+
 // `caps` reports wgpu adapter capabilities, so it only compiles when `gpu-runtime`
 // pulls in the wgpu crate. `portal` / `wasm-llm` already enable `gpu-runtime`;
 // qdnf-only does not, and must not `use wgpu` here.
 #[cfg(feature = "gpu-runtime")]
 mod caps;
-#[cfg(all(feature = "gpu-runtime", feature = "wgsl-forge"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "gpu-runtime",
+    feature = "wgsl-forge"
+))]
 pub(crate) use caps::experimental_features_allowed;
 #[cfg(feature = "gpu-runtime")]
 pub(crate) use caps::requested_native_llm_features;
 #[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
 pub use caps::{
-    qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
-    GpuLimitCaps,
+    GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps, qualia_backend_override,
+    recommend_inference_backend,
 };
 #[cfg(all(feature = "gpu-runtime", target_arch = "wasm32"))]
-pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
+pub use caps::{GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps, recommend_inference_backend};
 
-/// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_agent::{
+    AccessRights as EtalonAccessRights, AccessRights, AllocationId as EtalonAllocationId,
+    AllocationId, BufferRegion as EtalonBufferRegion, BufferRegion,
+    CapabilityState as EtalonCapabilityState, CapabilityState,
+    HalComputeLane as EtalonHalComputeLane, HalComputeLane, MemoryTopology as EtalonMemoryTopology,
+    MemoryTopology, QualiaSlabAllocator as EtalonSlabAllocator, QualiaSlabAllocator,
+    QueueId as EtalonQueueId, QueueId, SiliconCapability as EtalonSiliconCapability,
+    SiliconCapability, SubmissionLease as EtalonSubmissionLease, SubmissionLease,
+    SubmissionToken as EtalonSubmissionToken, SubmissionToken,
+};
+
+/// Device-per-circuit registry — obtain a `etalon::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
 /// Native only; mirrors `try_shared_gpu` — never panics on a missing/failed device.
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
@@ -48,6 +69,8 @@ pub enum OperationalMode {
 }
 
 impl OperationalMode {
+    /// Mode from VRAM pressure ∈ [0, ~1.25]: `Reserve` ≥ 0.92,
+    /// `Eco` ≥ 0.72, else `Full`.
     #[inline]
     pub fn from_pressure(pressure: f32) -> Self {
         if pressure >= 0.92 {
@@ -59,6 +82,7 @@ impl OperationalMode {
         }
     }
 
+    /// Ambient-particle draw cap per mode (50k Full / 8k Eco / 0 Reserve).
     #[inline]
     pub fn max_particles(self) -> u32 {
         match self {
@@ -68,6 +92,7 @@ impl OperationalMode {
         }
     }
 
+    /// Whether the bloom post-process is enabled — `Full` only.
     #[inline]
     pub fn bloom_enabled(self) -> bool {
         matches!(self, Self::Full)
@@ -113,6 +138,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// Short display label (`"U0 LLM"`, …) for telemetry/receipts.
     #[inline]
     pub fn label(self) -> &'static str {
         match self {
@@ -123,6 +149,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// Preferred queue lane for this universe's work.
     #[inline]
     pub fn default_queue_lane(self) -> QueueLane {
         match self {
@@ -132,6 +159,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// The `VramLedgerSlot`s whose bytes count toward this universe.
     #[inline]
     pub fn ledger_slots(self) -> &'static [VramLedgerSlot] {
         match self {
@@ -152,7 +180,7 @@ pub enum VramLedgerSlot {
     Viewport = 3,
 }
 
-/// Preferred async queue on the single `wgpu::Device` (spatial concurrency, not MIG).
+/// Preferred async queue on the single `etalon::Device` (spatial concurrency, not MIG).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueueLane {
@@ -169,11 +197,13 @@ pub struct VramByteRange {
 }
 
 impl VramByteRange {
+    /// Zero-size range at offset 0.
     #[inline]
     pub const fn empty() -> Self {
         Self { offset: 0, size: 0 }
     }
 
+    /// Exclusive end offset (`offset + size`, saturating).
     #[inline]
     pub fn end(&self) -> u64 {
         self.offset.saturating_add(self.size)
@@ -234,6 +264,8 @@ impl UniverseOrchestrator {
         }
     }
 
+    /// Build one partition for `universe` spanning
+    /// `[offset, offset+size)` of the ledger under `mode`.
     fn partition_at_offset(
         universe: ComputeUniverse,
         mode: OperationalMode,
@@ -273,6 +305,8 @@ impl UniverseOrchestrator {
         Self::from_total_budget(total_bytes, OperationalMode::Full)
     }
 
+    /// The pinned partition for `universe` (U3 resolves to the U1
+    /// partition via `partition_index`).
     #[inline]
     pub fn partition(&self, universe: ComputeUniverse) -> &UniversePartition {
         &self.partitions[universe.partition_index()]
@@ -301,11 +335,15 @@ impl UniverseOrchestrator {
         }
     }
 
+    /// Particle cap for `universe` under `global` pressure (via
+    /// `effective_mode`).
     #[inline]
     pub fn max_particles(&self, universe: ComputeUniverse, global: OperationalMode) -> u32 {
         self.effective_mode(universe, global).max_particles()
     }
 
+    /// Whether bloom runs in `universe` under `global` pressure —
+    /// Viewport only, and only at effective `Full`.
     #[inline]
     pub fn bloom_enabled(&self, universe: ComputeUniverse, global: OperationalMode) -> bool {
         universe == ComputeUniverse::Viewport
@@ -356,12 +394,16 @@ pub struct VramLedger {
     kv_cache_bytes: AtomicU64,
     render_bytes: AtomicU64,
     llm_weight_staging_bytes: AtomicU64,
+    /// Live, owned allocations admitted through `try_reserve_graphics`.
+    graphics_reservations: etalon_resources::reservation::ReservationPool<6>,
     mode: AtomicU32,
 }
 
 impl VramLedger {
+    /// Hard cap on tracked KV-cache bytes (448 MiB).
     pub const KV_CACHE_CAP_BYTES: u64 = 448 * 1024 * 1024;
 
+    /// Bytes currently recorded in `slot` (relaxed read).
     #[inline]
     fn load_slot(&self, slot: VramLedgerSlot) -> u64 {
         match slot {
@@ -374,6 +416,8 @@ impl VramLedger {
         }
     }
 
+    /// Write `bytes` into `slot` (KV cache clamped to
+    /// `KV_CACHE_CAP_BYTES`) and refresh the operational mode.
     #[inline]
     fn store_slot(&self, slot: VramLedgerSlot, bytes: u64) {
         let bytes = match slot {
@@ -391,30 +435,44 @@ impl VramLedger {
         self.refresh_mode();
     }
 
+    /// Configured total budget in bytes.
     #[inline]
     pub fn budget(&self) -> u64 {
         self.budget_bytes.load(Ordering::Relaxed)
     }
 
+    /// Bytes currently recorded in `slot`.
     #[inline]
     pub fn used_in_slot(&self, slot: VramLedgerSlot) -> u64 {
         self.load_slot(slot)
     }
 
+    /// Record `bytes` as the new usage of `slot` (clamped for KV cache;
+    /// refreshes mode).
     #[inline]
     pub fn record_slot(&self, slot: VramLedgerSlot, bytes: u64) {
         self.store_slot(slot, bytes);
     }
 
+    /// Total recorded bytes across `universe`'s slots; the Viewport
+    /// universe additionally includes live `try_reserve_graphics`
+    /// reservations.
     #[inline]
     pub fn universe_used_bytes(&self, universe: ComputeUniverse) -> u64 {
-        universe
+        let recorded = universe
             .ledger_slots()
             .iter()
             .map(|s| self.load_slot(*s))
-            .sum()
+            .fold(0u64, u64::saturating_add);
+        if universe == ComputeUniverse::Viewport {
+            recorded.saturating_add(self.graphics_reservations.total_bytes())
+        } else {
+            recorded
+        }
     }
 
+    /// `universe` used-bytes ÷ its partition budget, clamped to
+    /// [0, 1.25] (0 when the partition has no budget).
     #[inline]
     pub fn universe_pressure(
         &self,
@@ -428,6 +486,8 @@ impl VramLedger {
         (self.universe_used_bytes(universe) as f32 / cap as f32).clamp(0.0, 1.25)
     }
 
+    /// Whether `extra_bytes` fits both inside `universe`'s partition
+    /// range (at the current usage offset) and the global budget.
     #[inline]
     pub fn can_allocate_in_universe(
         &self,
@@ -468,12 +528,14 @@ impl VramLedger {
         used_before
     }
 
+    /// Record `bytes` into `slot`, asserting it belongs to `universe`.
     #[inline]
     pub fn record_universe(&self, universe: ComputeUniverse, slot: VramLedgerSlot, bytes: u64) {
         debug_assert!(universe.ledger_slots().contains(&slot));
         self.store_slot(slot, bytes);
     }
 
+    /// Ledger with `budget_bytes` total and zeroed usage counters.
     #[inline]
     pub fn new(budget_bytes: u64) -> Self {
         Self {
@@ -482,16 +544,19 @@ impl VramLedger {
         }
     }
 
+    /// Overwrite the total budget (does not refresh mode).
     #[inline]
     pub fn set_budget(&self, bytes: u64) {
         self.budget_bytes.store(bytes, Ordering::Relaxed);
     }
 
+    /// Record Tensor10D (U1) usage bytes.
     #[inline]
     pub fn record_tensor(&self, bytes: u64) {
         self.record_universe(ComputeUniverse::Tensor10D, VramLedgerSlot::Tensor10D, bytes);
     }
 
+    /// Record LLM KV-cache usage bytes (clamped to `KV_CACHE_CAP_BYTES`).
     #[inline]
     pub fn record_kv_cache(&self, bytes: u64) {
         self.record_universe(
@@ -501,11 +566,13 @@ impl VramLedger {
         );
     }
 
+    /// Record Viewport (U2) render usage bytes.
     #[inline]
     pub fn record_render(&self, bytes: u64) {
         self.record_universe(ComputeUniverse::Viewport, VramLedgerSlot::Viewport, bytes);
     }
 
+    /// Record LLM weight-staging usage bytes.
     #[inline]
     pub fn record_llm_staging(&self, bytes: u64) {
         self.record_universe(
@@ -515,14 +582,27 @@ impl VramLedger {
         );
     }
 
+    /// Total used bytes — recorded slots plus live graphics
+    /// reservations.
     #[inline]
     pub fn used_bytes(&self) -> u64 {
-        self.tensor_bytes.load(Ordering::Relaxed)
-            + self.kv_cache_bytes.load(Ordering::Relaxed)
-            + self.render_bytes.load(Ordering::Relaxed)
-            + self.llm_weight_staging_bytes.load(Ordering::Relaxed)
+        self.recorded_used_bytes()
+            .saturating_add(self.graphics_reservations.total_bytes())
     }
 
+    /// Sum of the four recorded slot counters (excludes graphics
+    /// reservations).
+    #[inline]
+    fn recorded_used_bytes(&self) -> u64 {
+        self.tensor_bytes
+            .load(Ordering::Relaxed)
+            .saturating_add(self.kv_cache_bytes.load(Ordering::Relaxed))
+            .saturating_add(self.render_bytes.load(Ordering::Relaxed))
+            .saturating_add(self.llm_weight_staging_bytes.load(Ordering::Relaxed))
+    }
+
+    /// Global pressure = used ÷ budget, clamped to [0, 1.25] (0 with
+    /// no budget configured).
     #[inline]
     pub fn pressure(&self) -> f32 {
         let budget = self.budget_bytes.load(Ordering::Relaxed);
@@ -532,6 +612,8 @@ impl VramLedger {
         (self.used_bytes() as f32 / budget as f32).clamp(0.0, 1.25)
     }
 
+    /// Current operational mode (last `refresh_mode` result; `Full`
+    /// before any write).
     #[inline]
     pub fn mode(&self) -> OperationalMode {
         match self.mode.load(Ordering::Relaxed) {
@@ -541,22 +623,28 @@ impl VramLedger {
         }
     }
 
+    /// Recompute the operational mode from live pressure and store it.
     #[inline]
     pub fn refresh_mode(&self) {
         let m = OperationalMode::from_pressure(self.pressure());
         self.mode.store(m as u32, Ordering::Relaxed);
     }
 
+    /// Whether `extra_bytes` fits inside the global budget
+    /// (overflow-safe comparison).
     #[inline]
     pub fn can_allocate(&self, extra_bytes: u64) -> bool {
         let budget = self.budget_bytes.load(Ordering::Relaxed);
-        self.used_bytes() + extra_bytes <= budget
+        self.used_bytes()
+            .checked_add(extra_bytes)
+            .is_some_and(|required| required <= budget)
     }
 }
 
 /// Process-wide ledger (lazy static).
 static LEDGER: std::sync::OnceLock<VramLedger> = std::sync::OnceLock::new();
 
+/// Process-wide VRAM ledger (lazy static, 6 GiB default budget).
 #[inline]
 pub fn global_vram_ledger() -> &'static VramLedger {
     LEDGER.get_or_init(|| VramLedger::new(6 * 1024 * 1024 * 1024))
@@ -573,12 +661,15 @@ static CONTEXT_RING_DROP_MILLI: AtomicU32 = AtomicU32::new(0);
 static DRAFT_ACCEPT_MILLI: AtomicU32 = AtomicU32::new(0);
 static DRAFT_LEN_CUR: AtomicU32 = AtomicU32::new(0);
 
+/// Raise `atom` to at least `strength_milli` (monotonic-max pulse).
 #[inline]
 fn pulse(atom: &AtomicU32, strength_milli: u32) {
     let cur = atom.load(Ordering::Relaxed);
     atom.store(cur.max(strength_milli), Ordering::Relaxed);
 }
 
+/// Read `atom` as a [0,1] fraction, then subtract `decay`
+/// (saturating) — per-frame ambient telemetry decay.
 #[inline]
 fn sample_decay(atom: &AtomicU32, decay: u32) -> f32 {
     let v = atom.load(Ordering::Relaxed);
@@ -657,12 +748,13 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 
 #[cfg(feature = "gpu-runtime")]
 pub struct SharedGpuContext {
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub provider_lease: etalon_agent::device_lease::DeviceLease,
+    pub device: etalon::Device,
+    pub queue: etalon::Queue,
     /// The wgpu instance — needed to create surfaces (must be same instance as adapter).
-    pub instance: wgpu::Instance,
+    pub instance: etalon::Instance,
     /// The wgpu adapter — needed to create surfaces and query capabilities.
-    pub adapter: wgpu::Adapter,
+    pub adapter: etalon::Adapter,
     /// Immutable adapter capability snapshot for diagnostics and feature negotiation.
     pub adapter_caps: GpuAdapterCaps,
     /// Feature subset actually requested on the process-wide device.
@@ -677,16 +769,40 @@ pub struct SharedGpuContext {
 #[cfg(feature = "gpu-runtime")]
 impl SharedGpuContext {
     /// Logical queue lane for universe-tagged dispatch (B2.3).
-    /// Single physical `wgpu::Queue` today; lane tags preserve driver scheduling intent.
+    /// Single physical `etalon::Queue` today; lane tags preserve driver scheduling intent.
     #[inline]
-    pub fn queue_for_lane(&self, lane: QueueLane) -> &wgpu::Queue {
+    pub fn queue_for_lane(&self, lane: QueueLane) -> &etalon::Queue {
         let _ = lane;
         &self.queue
     }
 
+    /// Queue for `universe`'s default lane — same physical queue;
+    /// universe tagging is intent metadata today.
     #[inline]
-    pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &wgpu::Queue {
+    pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &etalon::Queue {
         self.queue_for_lane(universe.default_queue_lane())
+    }
+
+    /// Create an Etalon HAL compute lane borrowing this device and queue.
+    pub fn create_etalon_hal_lane(&self) -> etalon_agent::HalComputeLane {
+        etalon_agent::HalComputeLane::new(
+            std::sync::Arc::new(self.device.clone()),
+            std::sync::Arc::new(self.queue.clone()),
+            etalon_agent::QueueId(0),
+        )
+    }
+
+    /// Create an Etalon ring-slab allocator with the requested capacity.
+    pub fn create_etalon_slab_allocator(
+        &self,
+        capacity_bytes: u64,
+        label: &str,
+    ) -> etalon_agent::QualiaSlabAllocator {
+        let _ = (&self.device, label);
+        etalon_agent::QualiaSlabAllocator::new(
+            capacity_bytes as usize,
+            etalon_agent::slab::DEFAULT_BINDING_ALIGNMENT,
+        )
     }
 }
 
@@ -707,12 +823,18 @@ std::thread_local! {
 ///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
 ///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
 ///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
+///
+/// Resolution order documented above; returns the chosen compiler.
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "gpu-runtime",
+    feature = "gpu-native-dx12"
+))]
+fn resolve_dx12_compiler() -> etalon::Dx12Compiler {
     if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
         if !p.trim().is_empty() {
             log::info!("shared_gpu|dx12_compiler|DynamicDxc(env)={p}");
-            return wgpu::Dx12Compiler::DynamicDxc { dxc_path: p };
+            return etalon::Dx12Compiler::DynamicDxc { dxc_path: p };
         }
     }
     if let Ok(exe) = std::env::current_exe() {
@@ -723,15 +845,17 @@ fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
                     "shared_gpu|dx12_compiler|DynamicDxc(vendored)={}",
                     dll.display()
                 );
-                return wgpu::Dx12Compiler::DynamicDxc {
+                return etalon::Dx12Compiler::DynamicDxc {
                     dxc_path: dll.to_string_lossy().into_owned(),
                 };
             }
         }
     }
-    wgpu::Dx12Compiler::Auto
+    etalon::Dx12Compiler::Auto
 }
 
+/// Native init: request a high-performance adapter (falling back to
+/// the default), then build the `SharedGpuContext` for it.
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
@@ -745,26 +869,40 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
     // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
     // keep `Auto` (Vulkan stays the working default backend regardless).
-    let dx12_compiler = resolve_dx12_compiler();
-    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-    desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
+    #[cfg(feature = "gpu-native-dx12")]
+    {
+        let dx12_compiler = resolve_dx12_compiler();
+        desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    }
     if let Some(backends) = caps::qualia_backend_override() {
         log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
         desc.backends = backends;
     } else if cfg!(target_os = "windows") {
-        // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
-        // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
-        // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
-        // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
-        desc.backends = wgpu::Backends::DX12;
-        log::info!(
-            "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
-        );
+        #[cfg(feature = "gpu-native-dx12")]
+        {
+            // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
+            // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
+            // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
+            // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
+            desc.backends = etalon::Backends::DX12;
+            log::info!(
+                "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
+            );
+        }
+        #[cfg(not(feature = "gpu-native-dx12"))]
+        {
+            // Portable builds are intended for browser/viewport use. Keep the
+            // shared inference device on GLES rather than silently selecting
+            // the Vulkan path with its tracked native inference hang.
+            desc.backends = etalon::Backends::GL;
+            log::info!("shared_gpu|backend_default|windows->gles_portable_build");
+        }
     }
-    let instance = wgpu::Instance::new(desc);
+    let instance = etalon::Instance::new(desc);
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+        .request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         })
         .await
@@ -787,6 +925,9 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     init_shared_gpu_for_adapter(instance, adapter).await
 }
 
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub(crate) use etalon_resources::device_caps::webgpu_minimum_limits;
+
 /// Build a [`SharedGpuContext`] from a GIVEN instance + adapter — the reusable core shared by the
 /// process-wide primary device ([`init_shared_gpu_async`], which requests its own HighPerformance
 /// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
@@ -794,8 +935,8 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
 /// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
 #[cfg(feature = "gpu-runtime")]
 pub(crate) async fn init_shared_gpu_for_adapter(
-    instance: wgpu::Instance,
-    adapter: wgpu::Adapter,
+    instance: etalon::Instance,
+    adapter: etalon::Adapter,
 ) -> Result<SharedGpuContext, String> {
     let adapter_caps = GpuAdapterCaps::from_adapter(&adapter);
     log::info!(
@@ -831,7 +972,7 @@ pub(crate) async fn init_shared_gpu_for_adapter(
             "shared_gpu|cooperative_matrix_supported_but_disabled|set QUALIA_WGPU_EXPERIMENTAL_FEATURES=1 to request it"
         );
     }
-    let ts_supported = enabled_features.timestamp_query;
+    let _ts_supported = enabled_features.timestamp_query;
     // Modern weight tensors blow past the wgpu DEFAULTS (max_buffer_size = 256 MiB,
     // max_storage_buffer_binding_size = 128 MiB): the all-F16 Llama-3.2-3B tied lm_head
     // (token_embd, 3072×128256×2 = 751 MiB) is a single resident buffer that the defaults reject
@@ -839,47 +980,53 @@ pub(crate) async fn init_shared_gpu_for_adapter(
     // reported maximum — always valid for request_device, so this never fails on weaker GPUs (they
     // simply get their own, smaller, max). Vendor-neutral: pure wgpu limits, no CUDA / no extra
     // device feature. Other limits stay at the conservative defaults.
-    let adapter_limits = adapter.limits();
-    let required_limits = wgpu::Limits {
+    let adapter_limits = {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = &adapter;
+            webgpu_minimum_limits()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            adapter.limits()
+        }
+    };
+    let required_limits = etalon::Limits {
         max_buffer_size: adapter_limits.max_buffer_size,
         max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
-        ..wgpu::Limits::default()
+        ..etalon::Limits::default()
     };
     let experimental_features = if required_features.intersects(
-        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+        etalon::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | etalon::Features::EXPERIMENTAL_RAY_QUERY,
     ) {
         // Safety: experimental capabilities are requested only after intersecting
         // with the selected adapter's advertised feature set. Callers must also
         // explicitly opt in through QUALIA_WGPU_EXPERIMENTAL_FEATURES.
-        unsafe { wgpu::ExperimentalFeatures::enabled() }
+        unsafe { etalon::ExperimentalFeatures::enabled() }
     } else {
-        wgpu::ExperimentalFeatures::disabled()
+        etalon::ExperimentalFeatures::disabled()
     };
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor {
+    let context = etalon_agent::shared_device::DeviceContext::request(
+        instance,
+        adapter,
+        &etalon::DeviceDescriptor {
             required_features,
             required_limits,
             experimental_features,
             ..Default::default()
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let timestamp_period_ns = if ts_supported {
-        queue.get_timestamp_period()
-    } else {
-        0.0
-    };
-
+        },
+    )
+    .await?;
     Ok(SharedGpuContext {
-        device,
-        queue,
-        instance,
-        adapter,
-        adapter_caps,
-        enabled_features,
-        timestamps_supported: ts_supported,
-        timestamp_period_ns,
+        provider_lease: context.lease,
+        device: context.device,
+        queue: context.queue,
+        instance: context.instance,
+        adapter: context.adapter,
+        adapter_caps: context.adapter_caps,
+        enabled_features: context.enabled_features,
+        timestamps_supported: context.timestamps_supported,
+        timestamp_period_ns: context.timestamp_period_ns,
     })
 }
 
@@ -891,6 +1038,8 @@ pub(crate) async fn init_shared_gpu_for_adapter(
 /// machine probes once. (Init is lazy and reused by QTensorEngine + render.)
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+    crate::wgsl_forge::install_device_policy();
     SHARED_GPU
         .get_or_init(|| {
             let handle = match tokio::runtime::Handle::try_current() {
@@ -919,27 +1068,54 @@ pub async fn ensure_shared_gpu() -> Result<(), String> {
     if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
         return Ok(());
     }
+    etalon_wasm::readback::recover_browser_worker()
+        .map_err(|error| format!("Browser device recovery: {error:?}"))?;
     let ctx = init_shared_gpu_wasm().await?;
+    // Another initializer may have installed the shared device while we awaited the adapter.
+    if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
+        return Ok(());
+    }
     let leaked: &'static SharedGpuContext = Box::leak(Box::new(ctx));
     WASM_SHARED_GPU.with(|c| c.set(Some(leaked)));
+    let owner_identity = leaked as *const SharedGpuContext as usize;
+    let worker = etalon_wasm::readback::browser_worker();
+    leaked.device.set_device_lost_callback(move |reason, message| {
+        let retired = WASM_SHARED_GPU.with(|slot| {
+            if slot.get().is_some_and(|current| current as *const SharedGpuContext as usize == owner_identity) {
+                slot.set(None);
+                true
+            } else {
+                false
+            }
+        });
+        if retired {
+            worker.lock().unwrap().notify_device_lost();
+            crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| {
+                *slot.borrow_mut() = None;
+            });
+            log::warn!("shared_gpu|browser_device_lost|{reason:?}|{message}");
+        }
+    });
     Ok(())
 }
 
+/// WASM init: request a BROWSER_WEBGPU adapter (high-performance,
+/// falling back to default), then build the `SharedGpuContext` for it.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
-    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-    desc.backends = wgpu::Backends::BROWSER_WEBGPU;
-    let instance = wgpu::Instance::new(desc);
+    let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
+    desc.backends = etalon::Backends::BROWSER_WEBGPU;
+    let instance = etalon::Instance::new(desc);
     let adapter = match instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+        .request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         })
         .await
     {
         Ok(a) => a,
         Err(high_err) => instance
-            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .request_adapter(&etalon::RequestAdapterOptions::default())
             .await
             .map_err(|e| {
                 format!(
@@ -950,11 +1126,16 @@ async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
     init_shared_gpu_for_adapter(instance, adapter).await
 }
 
+/// The thread-local shared GPU context, `None` until
+/// `ensure_shared_gpu` succeeds (WASM: per-thread slot since `Device`
+/// is `!Send`/`!Sync`).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
     WASM_SHARED_GPU.with(|c| c.get())
 }
 
+/// Shared GPU context — **panics** if init hasn't run; prefer
+/// [`try_shared_gpu`] on fallible paths.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
     try_shared_gpu().expect("shared wgpu init failed — call ensure_shared_gpu() first")
@@ -966,6 +1147,13 @@ pub fn shared_gpu() -> &'static SharedGpuContext {
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
     try_shared_gpu().expect("shared wgpu init failed")
+}
+
+/// Convenience helper to obtain an Etalon HAL compute lane from the shared GPU context,
+/// or `None` if GPU runtime is unavailable or failed to initialize.
+#[cfg(feature = "gpu-runtime")]
+pub fn try_shared_etalon_hal_lane() -> Option<etalon_agent::HalComputeLane> {
+    try_shared_gpu().map(|g| g.create_etalon_hal_lane())
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "gpu-runtime"))]

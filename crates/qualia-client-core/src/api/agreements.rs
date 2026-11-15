@@ -81,6 +81,7 @@ pub fn set_agreement_consent(
     list_agreements()
 }
 
+/// Gets chat-graph.
 pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -103,6 +104,7 @@ pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
     .map_err(|e| e.to_string())
 }
 
+/// Creates chat-fragment.
 pub fn create_chat_fragment(
     session_id: String,
     message_lamport: u64,
@@ -130,6 +132,7 @@ pub fn create_chat_fragment(
     serde_json::to_value(fragment).map_err(|e| e.to_string())
 }
 
+/// Syncs the chat relay.
 pub fn sync_chat_relay(session_id: Option<String>) -> Result<u64, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -140,10 +143,12 @@ pub fn sync_chat_relay(session_id: Option<String>) -> Result<u64, String> {
     }
 }
 
+/// Starts the chat relay poller.
 pub fn start_chat_relay_poller() {
     crate::chat_relay::start_relay_poller();
 }
 
+/// Lists chat branch types.
 pub fn list_chat_branch_types() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -151,6 +156,7 @@ pub fn list_chat_branch_types() -> Result<serde_json::Value, String> {
     serde_json::to_value(types).map_err(|e| e.to_string())
 }
 
+/// Classifies a chat branch.
 pub fn classify_chat_branch(
     anchor_text: String,
     reply_text: String,
@@ -161,6 +167,7 @@ pub fn classify_chat_branch(
     serde_json::to_value(c).map_err(|e| e.to_string())
 }
 
+/// Toggles chat-reaction.
 pub fn toggle_chat_reaction(
     session_id: String,
     message_lamport: u64,
@@ -177,6 +184,7 @@ pub fn toggle_chat_reaction(
     serde_json::to_value(reactions).map_err(|e| e.to_string())
 }
 
+/// Lists chat reactions.
 pub fn list_chat_reactions(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -184,6 +192,7 @@ pub fn list_chat_reactions(session_id: String) -> Result<serde_json::Value, Stri
     serde_json::to_value(reactions).map_err(|e| e.to_string())
 }
 
+/// WordNet chat-ontology status.
 pub fn wordnet_chat_ontology_status() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -195,6 +204,7 @@ pub fn wordnet_chat_ontology_status() -> Result<serde_json::Value, String> {
     }))
 }
 
+/// Default chat-file sharing.
 pub fn default_chat_file_sharing(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -204,6 +214,7 @@ pub fn default_chat_file_sharing(session_id: String) -> Result<serde_json::Value
     serde_json::to_value(sharing).map_err(|e| e.to_string())
 }
 
+/// Attaches a file to a chat.
 pub fn attach_chat_file(
     session_id: String,
     source_path: String,
@@ -222,6 +233,7 @@ pub fn attach_chat_file(
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
+/// Lists chat files.
 pub fn list_chat_files(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -229,6 +241,7 @@ pub fn list_chat_files(session_id: String) -> Result<serde_json::Value, String> 
     serde_json::to_value(files).map_err(|e| e.to_string())
 }
 
+/// Sets chat-file-sharing.
 pub fn set_chat_file_sharing(
     session_id: String,
     file_id: String,
@@ -247,6 +260,7 @@ pub fn set_chat_file_sharing(
     serde_json::to_value(updated).map_err(|e| e.to_string())
 }
 
+/// Gets chat-file-local-path.
 pub fn get_chat_file_local_path(
     session_id: String,
     file_id: String,
@@ -264,6 +278,7 @@ pub fn get_chat_file_local_path(
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Parses chat-file-preview.
 pub fn parse_chat_file_preview(source_path: String) -> Result<serde_json::Value, String> {
     let path = Path::new(&source_path);
     if !path.is_file() {

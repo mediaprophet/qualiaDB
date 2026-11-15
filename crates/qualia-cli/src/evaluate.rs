@@ -7,6 +7,7 @@ use qualia_core_db::NQuin;
 use std::fs::File;
 use std::path::Path;
 
+/// Memory-maps the quin file.
 pub fn map_quins(path: &Path) -> std::io::Result<(memmap2::Mmap, usize)> {
     let file = File::open(path)?;
     let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
@@ -37,6 +38,7 @@ fn cast_quins(mmap: &memmap2::Mmap) -> &[NQuin] {
 
 // ── Existing modalities ───────────────────────────────────────────────────────
 
+/// CLI: deontic evaluation.
 pub fn run_deontic(dataset: &Path, contract_hash: u64) {
     let (mmap, len) = match map_quins(dataset) {
         Ok(r) => r,
@@ -71,6 +73,7 @@ pub fn run_deontic(dataset: &Path, contract_hash: u64) {
     }
 }
 
+/// CLI: epistemic evaluation.
 pub fn run_epistemic(dataset: &Path, agent_hash: u64) {
     let (mmap, len) = match map_quins(dataset) {
         Ok(r) => r,
@@ -94,6 +97,7 @@ pub fn run_epistemic(dataset: &Path, agent_hash: u64) {
     }
 }
 
+/// CLI: paraconsistent evaluation.
 pub fn run_paraconsistent(dataset: &Path) {
     let (mmap, len) = match map_quins(dataset) {
         Ok(r) => r,
@@ -119,6 +123,7 @@ pub fn run_paraconsistent(dataset: &Path) {
 
 // ── New modalities ────────────────────────────────────────────────────────────
 
+/// CLI: LTL evaluation.
 pub fn run_ltl(dataset: &Path, formula_type: &str, hash_a: u64, hash_b: u64) {
     use qualia_core_db::modalities::temporal_ltl::{evaluate_ltl_trace, LtlFormula};
 
@@ -151,6 +156,7 @@ pub fn run_ltl(dataset: &Path, formula_type: &str, hash_a: u64, hash_b: u64) {
     );
 }
 
+/// CLI: ASP evaluation.
 pub fn run_asp(dataset: &Path, base_index: usize) {
     use qualia_core_db::modalities::asp::{enumerate_stable_models, MAX_STABLE_MODELS};
 
@@ -176,6 +182,7 @@ pub fn run_asp(dataset: &Path, base_index: usize) {
     }
 }
 
+/// CLI: description-logic evaluation.
 pub fn run_dl(dataset: &Path, sub_class: u64, super_class: u64) {
     use qualia_core_db::modalities::dl::check_subsumption_quin;
 
@@ -199,6 +206,7 @@ pub fn run_dl(dataset: &Path, sub_class: u64, super_class: u64) {
     );
 }
 
+/// CLI: probabilistic evaluation.
 pub fn run_probabilistic(weight: f32, threshold: f32) {
     use qualia_core_db::modalities::probabilistic::evaluate_threshold;
     let result = evaluate_threshold(weight, threshold);
@@ -212,6 +220,7 @@ pub fn run_probabilistic(weight: f32, threshold: f32) {
     );
 }
 
+/// CLI: linear-logic evaluation.
 pub fn run_linear_logic(dataset: &Path, quin_index: usize) {
     use qualia_core_db::modalities::linear::{consume_quin, is_consumed};
 
@@ -254,6 +263,7 @@ pub fn run_linear_logic(dataset: &Path, quin_index: usize) {
     }
 }
 
+/// CLI: dialectical evaluation.
 pub fn run_dialectical(dataset: &Path, var1: u64, var2: u64) {
     use qualia_core_db::modalities::dialectical::{are_confounded, do_intervention};
 
@@ -278,6 +288,7 @@ pub fn run_dialectical(dataset: &Path, var1: u64, var2: u64) {
     }
 }
 
+/// CLI: .
 pub fn run_diffusion(graph_id: &str) {
     use qualia_core_db::modalities::diffusion::trigger_diffusion;
     let triggered = trigger_diffusion(graph_id);
@@ -292,6 +303,7 @@ pub fn run_diffusion(graph_id: &str) {
     );
 }
 
+/// CLI: .
 pub fn run_spatio_temporal(
     action: &str,
     ax1: f64,
@@ -362,6 +374,7 @@ pub fn run_spatio_temporal(
     }
 }
 
+/// CLI: .
 pub fn run_interval(action: &str, start1: i64, end1: i64, start2: i64, end2: i64, point: i64) {
     use qualia_core_db::modalities::interval_reasoning::TemporalInterval;
 
@@ -395,6 +408,7 @@ pub fn run_interval(action: &str, start1: i64, end1: i64, start2: i64, end2: i64
     }
 }
 
+/// CLI: .
 pub fn run_graph_topology(dataset: &Path, context: u64) {
     use qualia_core_db::modalities::graph_theory::analyze_graph_topology;
 
@@ -428,6 +442,7 @@ pub fn run_graph_topology(dataset: &Path, context: u64) {
     }
 }
 
+/// CLI: .
 pub fn run_argumentation(demo: bool, dataset: Option<&Path>) {
     use qualia_core_db::modalities::argumentation::{
         create_sanctuary_debate, ArgumentationFramework,
@@ -478,6 +493,7 @@ pub fn run_argumentation(demo: bool, dataset: Option<&Path>) {
     }
 }
 
+/// CLI: .
 pub fn run_control_feedback(kp: f64, ki: f64, kd: f64, setpoint: f64, measurement: f64) {
     use qualia_core_db::modalities::control_feedback::{FeedbackController, PidParameters};
 
@@ -496,6 +512,7 @@ pub fn run_control_feedback(kp: f64, ki: f64, kd: f64, setpoint: f64, measuremen
     println!("  Control output: {output:.6}");
 }
 
+/// CLI: .
 pub fn run_neuro_symbolic() {
     use qualia_core_db::neuro_symbolic_sieve::SieveLexSpec;
     use qualia_core_db::q_hash;

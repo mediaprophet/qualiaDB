@@ -15,6 +15,7 @@ pub struct SparqlEndpoint<'a> {
 }
 
 impl<'a> SparqlEndpoint<'a> {
+    /// Creates a default `SparqlEndpoint`.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self { quins }
     }
@@ -215,6 +216,7 @@ pub struct SparqlProtocolHandler<'a> {
 }
 
 impl<'a> SparqlProtocolHandler<'a> {
+    /// Creates a default `SparqlProtocolHandler`.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             endpoint: SparqlEndpoint::new(quins),

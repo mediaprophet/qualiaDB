@@ -238,12 +238,14 @@ impl Bart {
         mean_scaled * self.y_scale + self.y_center
     }
 
+    /// BART predictions.
     pub fn predict(&self, x: &[f64], n: usize) -> Vec<f64> {
         (0..n)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
             .collect()
     }
 
+    /// Posterior draw count.
     pub fn n_draws(&self) -> usize {
         self.draws.len()
     }

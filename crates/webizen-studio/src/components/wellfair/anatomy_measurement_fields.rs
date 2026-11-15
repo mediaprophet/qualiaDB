@@ -32,6 +32,7 @@ pub enum MeasureInput {
 }
 
 impl MeasureGroup {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::WholeBody => "Whole body",
@@ -44,6 +45,7 @@ impl MeasureGroup {
         }
     }
 
+    /// Hint text.
     pub fn hint(self) -> &'static str {
         match self {
             Self::WholeBody => {
@@ -62,6 +64,7 @@ impl MeasureGroup {
         }
     }
 
+    /// All entries.
     pub fn all() -> [MeasureGroup; 7] {
         [
             Self::WholeBody,
@@ -76,6 +79,7 @@ impl MeasureGroup {
 }
 
 impl MeasureInput {
+    /// Suffix.
     pub fn suffix(self) -> &'static str {
         match self {
             Self::Cm => "cm",
@@ -573,6 +577,7 @@ const fn f(
     }
 }
 
+/// Fields in scope.
 pub fn fields_in(group: MeasureGroup) -> impl Iterator<Item = &'static MeasureField> {
     MEASURE_FIELDS.iter().filter(move |f| f.group == group)
 }

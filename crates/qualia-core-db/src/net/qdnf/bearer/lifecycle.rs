@@ -26,6 +26,7 @@ pub struct BearerLifecycle {
 }
 
 impl BearerLifecycle {
+    /// Creates a default `BearerLifecycle`.
     pub const fn new(mtu: u16) -> Self {
         Self {
             phase: BearerPhase::Uninitialized,
@@ -113,11 +114,13 @@ impl BearerLifecycle {
     }
 
     #[inline]
+    /// Phase.
     pub const fn phase(&self) -> BearerPhase {
         self.phase
     }
 
     #[inline]
+    /// `BearerLifecycle::mtu`.
     pub const fn mtu(&self) -> u16 {
         self.mtu
     }

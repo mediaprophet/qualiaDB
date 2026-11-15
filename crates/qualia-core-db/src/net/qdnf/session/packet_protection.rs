@@ -11,7 +11,7 @@ use crate::net::qdnf::session::packet::{
     nonce_from_packet_number, PacketNumber, PacketSpace, AEAD_NONCE_LEN,
 };
 use crate::net::qdnf::types::Generation;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 pub const PN_LEN: usize = 8;
 pub const OVERHEAD: usize = PN_LEN + AEAD_TAG_LEN;
@@ -53,6 +53,7 @@ pub struct PacketProtection {
 }
 
 impl PacketProtection {
+    /// Builds `PacketProtection` from `keys`.
     pub fn from_keys(
         send_key: [u8; AEAD_KEY_LEN],
         recv_key: [u8; AEAD_KEY_LEN],
@@ -74,6 +75,7 @@ impl PacketProtection {
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> Generation {
         self.current.generation
     }
@@ -107,6 +109,25 @@ impl PacketProtection {
         Ok(need)
     }
 
+    /// Encrypt `plaintext` in place with transmission pacing and idle-watch validation.
+    pub fn seal_paced(
+        &mut self,
+        aad: &[u8],
+        plaintext: &mut [u8],
+        out: &mut [u8],
+        pacer: &mut crate::net::qdnf::session::pacing::Pacer,
+        idle: &mut crate::net::qdnf::session::pacing::IdleWatch,
+        now_us: u64,
+    ) -> Result<usize, QdnfError> {
+        idle.on_send(now_us)?;
+        let need = plaintext
+            .len()
+            .checked_add(OVERHEAD)
+            .ok_or(QdnfError::Range)?;
+        crate::net::qdnf::session::pacing::on_paced_send(pacer, need as u64, now_us)?;
+        self.seal(aad, plaintext, out)
+    }
+
     /// Decrypt into `out`. Replay/window updates happen only after AEAD success.
     /// Tries current recv key first; on AEAD failure only, tries previous.
     pub fn open(&mut self, aad: &[u8], sealed: &[u8], out: &mut [u8]) -> Result<usize, QdnfError> {
@@ -122,7 +143,7 @@ impl PacketProtection {
         }
         let pn_bytes: [u8; 8] = sealed[..PN_LEN].try_into().map_err(|_| QdnfError::Range)?;
         let pn = PacketNumber(u64::from_be_bytes(pn_bytes));
-        let mut body = [0u8; MAX_PROTECTED_BODY];
+        let mut body = Zeroizing::new([0u8; MAX_PROTECTED_BODY]);
         body[..body_len].copy_from_slice(&sealed[PN_LEN..PN_LEN + body_len]);
         let mut tag = [0u8; AEAD_TAG_LEN];
         tag.copy_from_slice(&sealed[PN_LEN + body_len..]);

@@ -123,6 +123,7 @@ pub struct GuardianshipProposalView {
 }
 
 impl GuardianshipProposalView {
+    /// Constructs from status.
     pub fn from_status(
         proposal: &wellfare_core::guardianship::GuardianshipProposal,
         status: &wellfare_core::guardianship::ProposalStatus,
@@ -205,6 +206,7 @@ pub fn fixture_host_snapshot() -> WellfairHostSnapshot {
     }
 }
 
+/// Demo host snapshot — `demo_mode: true`, self-marking.
 pub fn demo_host_snapshot() -> WellfairHostSnapshot {
     WellfairHostSnapshot {
         vault: VaultLifecycle::Unlocked,

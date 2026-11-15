@@ -96,6 +96,12 @@ fn test_medical_imaging() {
 }
 
 #[test]
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "portal",
+    feature = "wasm-logic",
+    feature = "wasm-scientific"
+))]
 fn test_compound_screening() {
     let mut library = MedicalComputingLibrary::new();
     library.initialize().unwrap();

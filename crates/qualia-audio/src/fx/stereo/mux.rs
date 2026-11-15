@@ -1,6 +1,6 @@
 //! Interleave two mono channels into an interleaved stereo buffer.
 //!
-//! `out[2i] = left[i]`, `out[2i+1] = right[i]`. Caller-buffered, **zero-alloc**.
+//! `out[2i] = left[i]`, `out[2i+1] = right[i]`. Delegated to [`etalon_signal::reverb::stereo_mux_into`].
 
 use crate::types::AudioError;
 
@@ -13,11 +13,7 @@ pub fn mux(left: &[f32], right: &[f32], out: &mut [f32]) -> Result<usize, AudioE
     if out.len() < n * 2 {
         return Err(AudioError::OutputBufferTooSmall);
     }
-    for i in 0..n {
-        out[i * 2] = left[i];
-        out[i * 2 + 1] = right[i];
-    }
-    Ok(n)
+    Ok(etalon_signal::reverb::stereo_mux_into(left, right, out))
 }
 
 #[cfg(test)]

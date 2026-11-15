@@ -96,9 +96,7 @@ mod tests {
             src.contains("TalkPeople"),
             "Directory launch must stay under Talk / People (no new top-level IA name)"
         );
-        let start = src
-            .find("id: \"directory\"")
-            .expect("directory QApp id");
+        let start = src.find("id: \"directory\"").expect("directory QApp id");
         let body = src.get(start..start.saturating_add(520)).unwrap_or("");
         assert!(
             body.contains("Stat::Active"),

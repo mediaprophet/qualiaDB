@@ -8,6 +8,7 @@ use crate::medical::comorbidity_eval::{
 use crate::{q_hash, NQuin};
 use vibe::{Diagnostic, Span, Value};
 
+/// Evaluates and returns the result.
 pub fn evaluate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let patient = args::rec_str(args_v, "patient")
         .ok_or_else(|| args::bad(span, "comorbidity evaluation needs `patient`"))?;

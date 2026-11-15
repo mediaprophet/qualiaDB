@@ -346,6 +346,7 @@ mod producer {
         let mut total_stl_bytes = 0usize;
         let mut per_system: BTreeMap<String, usize> = BTreeMap::new();
         let mut packed = 0usize;
+        eprintln!("bodyparts3d: {} structures", selected.len());
         // Concepts (id + compiled `.10d` digest + systems) → the ontology `.q42` after the loop.
         let mut concepts: Vec<super::super::bodyparts3d_ontology::OntologyConcept> = Vec::new();
         for (id, systems) in &selected {
@@ -401,6 +402,14 @@ mod producer {
                     packed += 1;
                 }
                 Err(e) => failed.push((id.clone(), format!("compile: {e}"))),
+            }
+            let done = packed + failed.len();
+            if done == selected.len() || done % 50 == 0 {
+                eprintln!(
+                    "bodyparts3d: {done}/{} ({} failed)",
+                    selected.len(),
+                    failed.len()
+                );
             }
         }
         if packed == 0 {

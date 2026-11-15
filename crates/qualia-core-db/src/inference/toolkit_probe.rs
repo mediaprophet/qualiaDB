@@ -170,6 +170,7 @@ mod tests {
     // ── Stage 4: Forge GEMM floor + TC selector ──────────────────────────────
 
     #[test]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     #[serial_test::serial(gpu)]
     fn stage4_forge_gemm_f32_and_tc_selector() {
         use crate::wgsl_forge::dispatch::{gemm_f32, gemm_f32_tc};

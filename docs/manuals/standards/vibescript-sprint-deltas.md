@@ -5,7 +5,7 @@
 > The `vibe-0.1` grammar is **current and may grow** when humans need a better form (versioned + documented). Four-op language contracts stay the authoring ABI until a dialect bump; new `Capability.method` ids land via Host-widen + catalog honesty — **do not invent** dotted `qualia.*` IRIs ahead of live `ALL_BOUND`.
 > Historical Sprint-B rows below keep their original notes (including period “no Host widen” / “freeze” wording); treat those as sprint-of-record, superseded by core for current policy. No leftover grammar-lock.
 
-**Repo / branch:** `mediaprophet/qualiaDB` @ `0.0.38`
+**Repo / branch:** `mediaprophet/qualiaDB` @ `0.0.40`
 **Catalog truth:** live `ALL_BOUND` / `vibe:InvokeId` (`Capability.method`) in
 `crates/qualia-core-db/src/poet_host/invoke/ids.rs` + `catalog_ttl.rs` (post–Wave 40 / `7928e3d` ≈ **1121** ids; count the tip, don’t hardcode forever).
 **Cite also:** `docs/work-in-progress/VIBE_HOST_CONSTRAINT_CORRECTION_2026-09-06.md`
@@ -99,8 +99,8 @@
 |--|--|
 | **priority** | `high` |
 | **status** | `done` |
-| **summary** | Branch `0.0.36-dev` vs crate stamp still `0.0.35` |
-| **notes** | Crate stamp is `0.0.36-dev` (`crates/vibe/Cargo.toml`). EBNF ↔ `vibescript-core.md` §3 is asserted by `vibe::grammar` tests. |
+| **summary** | Branch `0.0.40-dev` vs crate stamp still `0.0.40` |
+| **notes** | Crate stamp is `0.0.40-dev` (`crates/vibe/Cargo.toml`). EBNF ↔ `vibescript-core.md` §3 is asserted by `vibe::grammar` tests. |
 | **owner** | Neo + Vibe |
 | **gate** | Historical sprint note (crate stamp + EBNF sync). Not a grammar lock. `vibe-host-0.1` is an outcome, not an `ALL_BOUND` freeze. |
 | **landed** | 2026-09-05 Vibe Stage 0 |
@@ -197,7 +197,7 @@
 
 - 2026-09-05: Wishlist packets W1–W7 docs/shapes/fixtures: B-002/B-007/B-008 done; B-003–B-005 honesty notes; G-COORD shapes with bind gated.
 
-- 2026-09-05: Vibe Stage 0–1 — B-006 closed (crate `0.0.36-dev` + EBNF sync test); `GraphDatabase.volume_open` / `volume_commit` added to `vibe` catalog; diagnose JSON `errors[]` on failure; B-009 parked with accept criteria.
+- 2026-09-05: Vibe Stage 0–1 — B-006 closed (crate `0.0.40-dev` + EBNF sync test); `GraphDatabase.volume_open` / `volume_commit` added to `vibe` catalog; diagnose JSON `errors[]` on failure; B-009 parked with accept criteria.
 
 - 2026-09-05: Locked B-OWL-LIFE-UPLIFT — micro/macro living scale + life-science OWL convert/uplift (Timothy / Marvin).
 
@@ -207,5 +207,5 @@
 
 - 2026-09-04: Initial park from Capt / Vibe / Neo / davinci / monet / Marvin group session.
 
-- 2026-09-11: Header refresh — Host catalog grows (core §11.5); drop stale freeze/~885; branch cite → `0.0.38` (Vibe / Capt SPEC_UPDATED).
+- 2026-09-11: Header refresh — Host catalog grows (core §11.5); drop stale freeze/~885; branch cite → `0.0.40` (Vibe / Capt SPEC_UPDATED).
 - 2026-09-12: Confirm no grammar-lock leftover. `vibe-0.1` is the current dialect and may grow; B-006 “freeze” gate wording marked historical.

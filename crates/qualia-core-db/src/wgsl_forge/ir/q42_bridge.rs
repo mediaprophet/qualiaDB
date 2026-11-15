@@ -42,11 +42,43 @@ use crate::{q_hash, NQuin};
 
 // ── Predicates (the q42 data-flow namespace) ─────────────────────────────────────────
 const P_OPKIND: u64 = q_hash("urn:qualia:q42:opKind");
+pub const P_OPPAYLOAD: u64 = q_hash("urn:qualia:q42:opPayload");
 const P_SHAPE: u64 = q_hash("urn:qualia:q42:tensorShape");
 const P_DTYPE: u64 = q_hash("urn:qualia:q42:dtype");
 const P_SCHED: u64 = q_hash("urn:qualia:q42:scheduleHint");
 const P_FEEDS: u64 = q_hash("urn:qualia:q42:feedsInto");
 const P_OUTPUT: u64 = q_hash("urn:qualia:q42:graphOutput");
+
+// ── Etalon evaluation & oracle predicates (ETA-14 / ETA-16) ──────────────────────────
+pub const P_ETALON_EVAL_BACKEND: u64 = q_hash("urn:qualia:etalon:eval:deviceBackend");
+pub const P_ETALON_EVAL_QUIN_COUNT: u64 = q_hash("urn:qualia:etalon:eval:quinCount");
+pub const P_ETALON_EVAL_SIEVE_MATCH: u64 = q_hash("urn:qualia:etalon:eval:sieveMatchesCpu");
+pub const P_ETALON_EVAL_RADIX_MATCH: u64 = q_hash("urn:qualia:etalon:eval:radixOrderMatchesCpu");
+pub const P_ETALON_EVAL_PARITY_VERIFIED: u64 = q_hash("urn:qualia:etalon:eval:parityVerifiedAll");
+pub const P_ETALON_EVAL_DISQUALIFIED: u64 = q_hash("urn:qualia:etalon:eval:disqualified");
+pub const P_ETALON_ORACLE_MAX_ABS_ERR: u64 = q_hash("urn:qualia:etalon:oracle:verifiedMaxAbsError");
+pub const S_ETALON_ORACLE_CALIBRATION: u64 =
+    q_hash("urn:qualia:etalon:oracle:gpu_cpu_differential");
+pub const C_IDF_CLAIM_PLANE: u64 = q_hash("urn:qualia:idf:plane:ClaimOpinion");
+pub const C_IDF_INSTRUMENT_PLANE: u64 = q_hash("urn:qualia:idf:plane:Instrument");
+
+#[inline(always)]
+const fn make_quin(
+    subject: u64,
+    predicate: u64,
+    object: u64,
+    context: u64,
+    metadata: u64,
+) -> NQuin {
+    NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity: subject ^ predicate ^ object ^ context ^ metadata,
+    }
+}
 
 // ── Op-kind opcodes — reserved-modality range 0x10+ (no overlap with mini_parser 0x00–0x04
 //    or deontic 0x50+; core invariant §6). One per OpNode arm. ──────────────────────────
@@ -489,84 +521,64 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
     })
 }
 
-/// Pack an edge's rank/dtype/layout into one `u64` (the `parity` field of a quin).
+/// Pack an edge's rank/dtype/layout into a 24-bit value (stored in the upper 32 bits of `P_FEEDS.object`).
 fn pack_rank_dtype_layout(rank: u8, dtype: DType, layout: Layout) -> u64 {
     (rank as u64) | (dtype_code(dtype) << 8) | (layout_code(layout) << 16)
 }
 
 /// Serialize a [`ComputeGraph`] to a flat `Vec<NQuin>` (the persistence/provenance view). The
 /// in-arena graph remains the source of truth; this is byte-for-byte what a q42 superblock
-/// would store. Round-trips through [`deserialize_graph`] to an identical graph.
+/// would store. Every emitted [`NQuin`] satisfies canonical 5-field XOR parity
+/// (`subject ^ predicate ^ object ^ context ^ metadata == parity`) and round-trips through
+/// [`deserialize_graph`] to an identical graph.
 pub fn serialize_graph(graph: &ComputeGraph) -> Result<Vec<NQuin>, ForgeError> {
     let mut quins = Vec::with_capacity(graph.nodes.len() * 4 + graph.outputs.len());
     for (i, node) in graph.nodes.iter().enumerate() {
         let id = i as u64;
-        // op-kind + payload
+        // op-kind + payload (w0 in context, w1 in metadata; parity is canonical 5-field XOR)
         let (opcode, w0, w1) = encode_op(&node.op)?;
-        quins.push(NQuin {
-            subject: id,
-            predicate: P_OPKIND,
-            object: opcode,
-            context: w0,
-            metadata: 0,
-            parity: w1,
-        });
-        // output tensor shape
-        quins.push(NQuin {
-            subject: id,
-            predicate: P_SHAPE,
-            object: pack_dims(node.out.shape.dims)?,
-            context: 0,
-            metadata: 0,
-            parity: node.out.shape.rank as u64,
-        });
+        quins.push(make_quin(id, P_OPKIND, opcode, w0, w1));
+        // output tensor shape (rank in context; parity is canonical 5-field XOR)
+        quins.push(make_quin(
+            id,
+            P_SHAPE,
+            pack_dims(node.out.shape.dims)?,
+            node.out.shape.rank as u64,
+            0,
+        ));
         // output dtype
-        quins.push(NQuin {
-            subject: id,
-            predicate: P_DTYPE,
-            object: dtype_code(node.out.dtype),
-            context: 0,
-            metadata: 0,
-            parity: 0,
-        });
-        // schedule hint
-        quins.push(NQuin {
-            subject: id,
-            predicate: P_SCHED,
-            object: (node.sched.workgroup_size as u64)
+        quins.push(make_quin(id, P_DTYPE, dtype_code(node.out.dtype), 0, 0));
+        // schedule hint (vector_width in context; parity is canonical 5-field XOR)
+        quins.push(make_quin(
+            id,
+            P_SCHED,
+            (node.sched.workgroup_size as u64)
                 | ((node.sched.items_per_invocation as u64) << 32),
-            context: 0,
-            metadata: 0,
-            parity: node.sched.vector_width as u64,
-        });
-        // input edges (feedsInto)
+            node.sched.vector_width as u64,
+            0,
+        ));
+        // input edges (feedsInto: consumer in object[0..31], rank/dtype/layout in object[32..63])
         for slot in 0..node.n_in as usize {
             let inp = node.ins[slot].ok_or_else(|| err("q42: declared input missing"))?;
-            quins.push(NQuin {
-                subject: inp.producer.0 as u64,
-                predicate: P_FEEDS,
-                object: id,
-                context: (slot as u64) | ((inp.tensor.0 as u64) << 32),
-                metadata: pack_dims(inp.shape.dims)?,
-                parity: pack_rank_dtype_layout(inp.shape.rank, inp.dtype, inp.layout),
-            });
+            let rdl = pack_rank_dtype_layout(inp.shape.rank, inp.dtype, inp.layout);
+            quins.push(make_quin(
+                inp.producer.0 as u64,
+                P_FEEDS,
+                (id & 0xFFFF_FFFF) | (rdl << 32),
+                (slot as u64) | ((inp.tensor.0 as u64) << 32),
+                pack_dims(inp.shape.dims)?,
+            ));
         }
     }
     for out in &graph.outputs {
-        quins.push(NQuin {
-            subject: out.0 as u64,
-            predicate: P_OUTPUT,
-            object: 1,
-            context: 0,
-            metadata: 0,
-            parity: 0,
-        });
+        quins.push(make_quin(out.0 as u64, P_OUTPUT, 1, 0, 0));
     }
     Ok(quins)
 }
 
 fn input_tensorref_from_feeds(q: &NQuin) -> Result<(u32, u32, TensorRef), ForgeError> {
-    let consumer = q.object as u32;
+    let consumer = (q.object & 0xFFFF_FFFF) as u32;
+    let rdl = q.object >> 32;
     let slot = (q.context & 0xFFFF_FFFF) as u32;
     let tensor = (q.context >> 32) as u32;
     let producer = if q.subject == u32::MAX as u64 {
@@ -575,9 +587,9 @@ fn input_tensorref_from_feeds(q: &NQuin) -> Result<(u32, u32, TensorRef), ForgeE
         NodeId(q.subject as u32)
     };
     let dims = unpack_dims(q.metadata);
-    let rank = (q.parity & 0xFF) as u8;
-    let dtype = dtype_from((q.parity >> 8) & 0xFF)?;
-    let layout = layout_from((q.parity >> 16) & 0xFF)?;
+    let rank = (rdl & 0xFF) as u8;
+    let dtype = dtype_from((rdl >> 8) & 0xFF)?;
+    let layout = layout_from((rdl >> 16) & 0xFF)?;
     let tr = TensorRef {
         producer,
         tensor: TensorId(tensor),
@@ -590,8 +602,10 @@ fn input_tensorref_from_feeds(q: &NQuin) -> Result<(u32, u32, TensorRef), ForgeE
 
 /// Reconstruct a [`ComputeGraph`] from its [`NQuin`] encoding. The inverse of
 /// [`serialize_graph`]: `deserialize_graph(serialize_graph(g))` equals `g` node-for-node.
+/// Verifies canonical 5-field XOR parity on every input [`NQuin`].
 pub fn deserialize_graph(quins: &[NQuin]) -> Result<ComputeGraph, ForgeError> {
     let mut opkind: HashMap<u32, (u64, u64, u64)> = HashMap::new();
+    let mut oppayload: HashMap<u32, u64> = HashMap::new();
     let mut shape: HashMap<u32, ([u32; 4], u8)> = HashMap::new();
     let mut dtype: HashMap<u32, DType> = HashMap::new();
     let mut sched: HashMap<u32, Schedule> = HashMap::new();
@@ -599,26 +613,34 @@ pub fn deserialize_graph(quins: &[NQuin]) -> Result<ComputeGraph, ForgeError> {
     let mut outputs: Vec<u32> = Vec::new();
 
     for q in quins {
+        if !q.verify_ecc_parity() {
+            return Err(err("q42: NQuin 5-field ECC parity check failed"));
+        }
         match q.predicate {
             P_OPKIND => {
-                opkind.insert(q.subject as u32, (q.object, q.context, q.parity));
+                opkind.insert(q.subject as u32, (q.object, q.context, q.metadata));
+            }
+            P_OPPAYLOAD => {
+                oppayload.insert(q.subject as u32, q.object);
             }
             P_SHAPE => {
+                let rank_raw = if q.context != 0 { q.context } else { q.metadata };
                 shape.insert(
                     q.subject as u32,
-                    (unpack_dims(q.object), (q.parity & 0xFF) as u8),
+                    (unpack_dims(q.object), (rank_raw & 0xFF) as u8),
                 );
             }
             P_DTYPE => {
                 dtype.insert(q.subject as u32, dtype_from(q.object)?);
             }
             P_SCHED => {
+                let vw_raw = if q.context != 0 { q.context } else { q.metadata };
                 sched.insert(
                     q.subject as u32,
                     Schedule {
                         workgroup_size: (q.object & 0xFFFF_FFFF) as u32,
                         items_per_invocation: (q.object >> 32) as u32,
-                        vector_width: (q.parity & 0xFFFF_FFFF) as u32,
+                        vector_width: (vw_raw & 0xFFFF_FFFF) as u32,
                     },
                 );
             }
@@ -638,9 +660,12 @@ pub fn deserialize_graph(quins: &[NQuin]) -> Result<ComputeGraph, ForgeError> {
     let mut out_refs: Vec<TensorRef> = Vec::with_capacity(n_nodes);
     for i in 0..n_nodes {
         let iu = i as u32;
-        let (opcode, w0, w1) = *opkind
+        let (opcode, w0, mut w1) = *opkind
             .get(&iu)
             .ok_or_else(|| err(format!("q42: node {i} missing opKind quin")))?;
+        if let Some(&payload_w1) = oppayload.get(&iu) {
+            w1 = payload_w1;
+        }
         let op = decode_op(opcode, w0, w1)?;
         let (dims, rank) = *shape
             .get(&iu)
@@ -678,6 +703,268 @@ pub fn graph_merkle_root(quins: &[NQuin]) -> [u8; 32] {
     *blake3::hash(bytes).as_bytes()
 }
 
+// ── Packet ETA-14: Zero-Heap Etalon NQuin Evaluation Receipt & Enumeration ───────────
+
+/// Zero-heap evaluation receipt for `etalon-nquin` GPU warp-scan sieve and stable LSD radix sort.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EtalonNQuinEvalReceipt {
+    pub device_backend_hash: u64,
+    pub quin_count: u32,
+    pub sieve_matches_cpu: bool,
+    pub radix_order_matches_cpu: bool,
+    pub parity_verified_all: bool,
+    pub disqualified: bool,
+}
+
+impl EtalonNQuinEvalReceipt {
+    /// Construct an evaluation receipt and automatically mark `disqualified = true` if any check
+    /// failed, `quin_count == 0`, or the backend is unrun/noop/skipped.
+    #[inline]
+    pub const fn new(
+        device_backend_hash: u64,
+        quin_count: u32,
+        sieve_matches_cpu: bool,
+        radix_order_matches_cpu: bool,
+        parity_verified_all: bool,
+    ) -> Self {
+        let is_noop_or_skipped = device_backend_hash == 0
+            || device_backend_hash == q_hash("noop")
+            || device_backend_hash == q_hash("skipped")
+            || device_backend_hash == q_hash("unsupported");
+        let disqualified = is_noop_or_skipped
+            || quin_count == 0
+            || !sieve_matches_cpu
+            || !radix_order_matches_cpu
+            || !parity_verified_all;
+        Self {
+            device_backend_hash,
+            quin_count,
+            sieve_matches_cpu,
+            radix_order_matches_cpu,
+            parity_verified_all,
+            disqualified,
+        }
+    }
+
+    /// True only when all CPU-oracle and 5-field parity invariants hold on a qualified backend.
+    #[inline]
+    pub const fn is_qualified(&self) -> bool {
+        !self.disqualified
+            && self.quin_count > 0
+            && self.sieve_matches_cpu
+            && self.radix_order_matches_cpu
+            && self.parity_verified_all
+    }
+}
+
+/// Enumerate an [`EtalonNQuinEvalReceipt`] into 6 canonical 48-byte [`NQuin`]s with 5-field XOR
+/// parity under the `urn:qualia:etalon:eval:` vocabulary on the `Instrument` and `ClaimOpinion` planes.
+#[inline]
+pub fn enumerate_etalon_eval_receipt_to_quins(
+    receipt: &EtalonNQuinEvalReceipt,
+    out: &mut [NQuin; 6],
+) {
+    let disqualified = receipt.disqualified
+        || receipt.quin_count == 0
+        || !receipt.sieve_matches_cpu
+        || !receipt.radix_order_matches_cpu
+        || !receipt.parity_verified_all;
+    let s = receipt.device_backend_hash;
+    out[0] = make_quin(
+        s,
+        P_ETALON_EVAL_BACKEND,
+        receipt.device_backend_hash,
+        C_IDF_INSTRUMENT_PLANE,
+        receipt.quin_count as u64,
+    );
+    out[1] = make_quin(
+        s,
+        P_ETALON_EVAL_QUIN_COUNT,
+        crate::frame_layout::INLINE_TAG_INTEGER | (receipt.quin_count as u64),
+        C_IDF_CLAIM_PLANE,
+        0,
+    );
+    out[2] = make_quin(
+        s,
+        P_ETALON_EVAL_SIEVE_MATCH,
+        crate::frame_layout::INLINE_TAG_BOOLEAN | (receipt.sieve_matches_cpu as u64),
+        C_IDF_CLAIM_PLANE,
+        0,
+    );
+    out[3] = make_quin(
+        s,
+        P_ETALON_EVAL_RADIX_MATCH,
+        crate::frame_layout::INLINE_TAG_BOOLEAN | (receipt.radix_order_matches_cpu as u64),
+        C_IDF_CLAIM_PLANE,
+        0,
+    );
+    out[4] = make_quin(
+        s,
+        P_ETALON_EVAL_PARITY_VERIFIED,
+        crate::frame_layout::INLINE_TAG_BOOLEAN | (receipt.parity_verified_all as u64),
+        C_IDF_CLAIM_PLANE,
+        0,
+    );
+    out[5] = make_quin(
+        s,
+        P_ETALON_EVAL_DISQUALIFIED,
+        crate::frame_layout::INLINE_TAG_BOOLEAN | (disqualified as u64),
+        C_IDF_CLAIM_PLANE,
+        0,
+    );
+}
+
+/// Qualify a slice of [`NQuin`]s against `etalon_nquin` wire layout (`NQUIN_BYTES == 48`,
+/// `NQUIN_ALIGN == 16`), 5-field XOR parity, CPU equality sieve, and CPU stable LSD radix sort.
+pub fn qualify_nquin_wire_sieve_and_radix(
+    device_backend_hash: u64,
+    quins: &[NQuin],
+    field: etalon_nquin::QuinField,
+    needle: u64,
+    candidate_sieve: &[etalon_nquin::NQuinWire],
+    candidate_radix_keys: &[u64],
+    candidate_radix_indices: &[u32],
+) -> EtalonNQuinEvalReceipt {
+    assert_eq!(etalon_nquin::NQUIN_BYTES, 48);
+    assert_eq!(etalon_nquin::NQUIN_ALIGN, 16);
+    assert_eq!(core::mem::size_of::<NQuin>(), etalon_nquin::NQUIN_BYTES);
+    assert_eq!(core::mem::align_of::<NQuin>(), etalon_nquin::NQUIN_ALIGN);
+
+    let wire: &[etalon_nquin::NQuinWire] = bytemuck::cast_slice(quins);
+    let parity_verified_all = !wire.is_empty()
+        && wire
+            .iter()
+            .zip(quins.iter())
+            .all(|(w, q)| w.is_parity_valid() && q.verify_ecc_parity());
+
+    let mut cpu_sieve = vec![etalon_nquin::NQuinWire::new(0, 0, 0, 0, 0, 0); wire.len()];
+    let cpu_sieve_len = etalon_nquin::sieve_eq_cpu(wire, field, needle, &mut cpu_sieve);
+    let sieve_matches_cpu = &cpu_sieve[..cpu_sieve_len] == candidate_sieve;
+
+    let mut cpu_keys: Vec<u64> = wire.iter().map(|q| field.extract(q)).collect();
+    let mut cpu_indices: Vec<u32> = (0..wire.len() as u32).collect();
+    let _ = etalon_nquin::radix_sort_u64_cpu(&mut cpu_keys, &mut cpu_indices);
+    let radix_order_matches_cpu =
+        cpu_keys == candidate_radix_keys && cpu_indices == candidate_radix_indices;
+
+    EtalonNQuinEvalReceipt::new(
+        device_backend_hash,
+        quins.len() as u32,
+        sieve_matches_cpu,
+        radix_order_matches_cpu,
+        parity_verified_all,
+    )
+}
+
+// ── Packet ETA-16: CPU-Oracle Differential Tolerance Verification (`mismatches == 0`) ──
+
+/// Numerical comparison summary mirroring `etalon_qualification::NumericalComparison`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NumericalComparison {
+    pub compared: usize,
+    pub mismatches: usize,
+    pub max_absolute_error: f64,
+}
+
+/// Failure modes for GPU-vs-CPU oracle differential verification (`ADR 0003` / `ETA-16`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OracleVerificationError {
+    EmptyInput,
+    LengthMismatch,
+    InvalidTolerance,
+    NaN { index: usize },
+    Infinity { index: usize },
+    NonFiniteBound { index: usize },
+    /// `compare_f32` completed, but `comparison.mismatches > 0`. Never admit `.is_ok()` alone!
+    ToleranceExceeded {
+        mismatches: usize,
+        max_absolute_error_bits: u64,
+    },
+}
+
+/// Verified differential receipt pairing the `mismatches == 0` comparison with a 5-field parity
+/// capability-calibration [`NQuin`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OracleVerificationReceipt {
+    pub comparison: NumericalComparison,
+    pub compared: usize,
+    pub mismatches: usize,
+    pub max_absolute_error: f64,
+    pub calibration_quin: NQuin,
+}
+
+/// Compare a candidate GPU/approximate buffer against a CPU reference oracle using
+/// `etalon_qualification::compare_f32` semantics, strictly requiring `comparison.mismatches == 0`
+/// before emitting a 5-field XOR parity capability-calibration [`NQuin`].
+pub fn verify_gpu_against_cpu_oracle(
+    cpu_ref: &[f32],
+    gpu_out: &[f32],
+    abs_tol: f64,
+    rel_tol: f64,
+) -> Result<OracleVerificationReceipt, OracleVerificationError> {
+    if !abs_tol.is_finite() || !rel_tol.is_finite() || abs_tol < 0.0 || rel_tol < 0.0 {
+        return Err(OracleVerificationError::InvalidTolerance);
+    }
+    if cpu_ref.len() != gpu_out.len() {
+        return Err(OracleVerificationError::LengthMismatch);
+    }
+    if cpu_ref.is_empty() {
+        return Err(OracleVerificationError::EmptyInput);
+    }
+
+    let mut mismatches = 0usize;
+    let mut max_absolute_error = 0.0f64;
+    for (index, (&expected, &actual)) in cpu_ref.iter().zip(gpu_out.iter()).enumerate() {
+        if expected.is_nan() || actual.is_nan() {
+            return Err(OracleVerificationError::NaN { index });
+        }
+        if !expected.is_finite() || !actual.is_finite() {
+            return Err(OracleVerificationError::Infinity { index });
+        }
+        let difference = (f64::from(expected) - f64::from(actual)).abs();
+        let bound = abs_tol + rel_tol * f64::from(expected).abs();
+        if !bound.is_finite() {
+            return Err(OracleVerificationError::NonFiniteBound { index });
+        }
+        if difference > max_absolute_error {
+            max_absolute_error = difference;
+        }
+        if difference > bound {
+            mismatches += 1;
+        }
+    }
+
+    if mismatches != 0 {
+        return Err(OracleVerificationError::ToleranceExceeded {
+            mismatches,
+            max_absolute_error_bits: max_absolute_error.to_bits(),
+        });
+    }
+
+    let comparison = NumericalComparison {
+        compared: cpu_ref.len(),
+        mismatches: 0,
+        max_absolute_error,
+    };
+    let calibration_quin = make_quin(
+        S_ETALON_ORACLE_CALIBRATION,
+        P_ETALON_ORACLE_MAX_ABS_ERR,
+        crate::frame_layout::pack_float_object(max_absolute_error as f32),
+        C_IDF_CLAIM_PLANE,
+        (cpu_ref.len() as u64 & 0xFFFF_FFFF) | (((abs_tol as f32).to_bits() as u64) << 32),
+    );
+
+    Ok(OracleVerificationReceipt {
+        comparison,
+        compared: cpu_ref.len(),
+        mismatches: 0,
+        max_absolute_error,
+        calibration_quin,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -687,6 +974,12 @@ mod tests {
     /// Round-trip a graph → quins → graph and assert node-for-node identity (the contract).
     fn assert_roundtrips(g: &ComputeGraph) {
         let quins = serialize_graph(g).expect("serialize");
+        for (idx, q) in quins.iter().enumerate() {
+            assert!(
+                q.verify_ecc_parity(),
+                "quin {idx} failed canonical 5-field XOR parity"
+            );
+        }
         let g2 = deserialize_graph(&quins).expect("deserialize");
         assert_eq!(g2.nodes.len(), g.nodes.len(), "node count");
         for (i, (a, b)) in g.nodes.iter().zip(g2.nodes.iter()).enumerate() {
@@ -841,5 +1134,47 @@ mod tests {
     #[test]
     fn oversize_shape_dim_errors_not_truncates() {
         assert!(pack_dims([70000, 1, 1, 1]).is_err());
+    }
+
+    #[test]
+    fn deserialize_graph_rejects_corrupted_5_field_parity() {
+        let g = softmax_graph(16).unwrap();
+        let mut quins = serialize_graph(&g).unwrap();
+        quins[0].parity ^= 0x1;
+        assert!(matches!(
+            deserialize_graph(&quins),
+            Err(ForgeError::Serialization(_))
+        ));
+    }
+
+    #[test]
+    fn etalon_eval_receipt_enumerates_six_5_field_parity_quins() {
+        let receipt = EtalonNQuinEvalReceipt::new(0xABCD_1234, 64, true, true, true);
+        assert!(!receipt.disqualified);
+        let zero_quin = make_quin(0, 0, 0, 0, 0);
+        let mut out = [zero_quin; 6];
+        enumerate_etalon_eval_receipt_to_quins(&receipt, &mut out);
+        for (idx, q) in out.iter().enumerate() {
+            assert!(
+                q.verify_ecc_parity(),
+                "receipt quin {idx} failed canonical 5-field parity"
+            );
+        }
+    }
+
+    #[test]
+    fn verify_gpu_against_cpu_oracle_requires_zero_mismatches() {
+        let cpu = [1.0f32, 2.0, 3.0, 4.0];
+        let gpu_ok = [1.0f32, 2.0 + 1e-6, 3.0 - 1e-6, 4.0];
+        let ok = verify_gpu_against_cpu_oracle(&cpu, &gpu_ok, 1e-5, 1e-5).expect("within tol");
+        assert_eq!(ok.mismatches, 0);
+        assert_eq!(ok.comparison.mismatches, 0);
+        assert!(ok.calibration_quin.verify_ecc_parity());
+
+        let gpu_bad = [1.0f32, 2.5, 3.0, 4.0];
+        assert!(matches!(
+            verify_gpu_against_cpu_oracle(&cpu, &gpu_bad, 1e-5, 1e-5),
+            Err(OracleVerificationError::ToleranceExceeded { mismatches: 1, .. })
+        ));
     }
 }

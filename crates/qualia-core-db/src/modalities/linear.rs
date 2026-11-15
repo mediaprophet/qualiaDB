@@ -4,10 +4,13 @@ use crate::NQuin;
 // Canonical bit position lives in the FrameLayout ABI (single source of truth).
 pub use crate::frame_layout::CONSUMED_BIT;
 
+/// Mark a Quin as linearly consumed by setting `CONSUMED_BIT` in its
+/// metadata — the premise of a linear (`-o`) rule is spent on firing.
 pub fn consume_quin(q: &mut NQuin) {
     q.metadata |= CONSUMED_BIT;
 }
 
+/// True when `CONSUMED_BIT` is set — the quin's resource has been spent.
 pub fn is_consumed(q: &NQuin) -> bool {
     (q.metadata & CONSUMED_BIT) != 0
 }
@@ -158,6 +161,8 @@ pub const MAX_PN_NODES: usize = 32;
 /// Max `⅋` links (2^MAX_PN_PARS switchings enumerated).
 pub const MAX_PN_PARS: usize = 12;
 
+/// Union-find root of `x` with path halving — the connectivity check
+/// behind the bounded Danos–Regnier correctness criterion.
 #[inline]
 fn pn_find(parent: &mut [usize; MAX_PN_NODES], mut x: usize) -> usize {
     while parent[x] != x {

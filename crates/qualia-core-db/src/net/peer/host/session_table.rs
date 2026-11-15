@@ -20,11 +20,13 @@ pub struct SessionHandle {
 
 impl SessionHandle {
     #[inline]
+    /// Generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
 
     #[inline]
+    /// Slot.
     pub const fn slot(self) -> u8 {
         self.slot
     }
@@ -62,6 +64,7 @@ pub struct SessionTable {
 }
 
 impl SessionTable {
+    /// Creates a default `SessionTable`.
     pub const fn new() -> Self {
         Self {
             slots: [
@@ -76,6 +79,7 @@ impl SessionTable {
         }
     }
 
+    /// Live sessions.
     pub fn live_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -89,10 +93,12 @@ impl SessionTable {
     }
 
     #[inline]
+    /// `true` when full.
     pub fn is_full(&self) -> bool {
         self.live_count() >= MAX_SESSIONS
     }
 
+    /// `SessionTable::first_live`.
     pub fn first_live(&self) -> Option<SessionHandle> {
         let mut i = 0usize;
         while i < MAX_SESSIONS {
@@ -107,6 +113,7 @@ impl SessionTable {
         None
     }
 
+    /// First free slot; error when full.
     pub(crate) fn free_index(&self) -> Result<usize, QdnfError> {
         let mut i = 0usize;
         while i < MAX_SESSIONS {
@@ -171,6 +178,7 @@ impl SessionTable {
         })
     }
 
+    /// Mutable session for `h`; error on stale handle.
     pub fn get_mut(&mut self, h: SessionHandle) -> Result<&mut ProtectedAckSession, QdnfError> {
         self.slot_mut(h)?
             .protection
@@ -178,6 +186,7 @@ impl SessionTable {
             .ok_or(QdnfError::Unauthorized)
     }
 
+    /// Session binding for `h`.
     pub fn binding(&self, h: SessionHandle) -> Result<SessionBinding, QdnfError> {
         self.slot(h)?.binding.ok_or(QdnfError::Unauthorized)
     }
@@ -200,6 +209,7 @@ impl SessionTable {
         Ok(slot.stream.next_offset)
     }
 
+    /// Current send offset for `h`.
     pub fn send_offset(&self, h: SessionHandle) -> Result<u64, QdnfError> {
         Ok(self.slot(h)?.stream.next_offset)
     }

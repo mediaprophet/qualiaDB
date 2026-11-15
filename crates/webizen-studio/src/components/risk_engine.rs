@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;
@@ -10,6 +10,7 @@ struct RiskProps {
 }
 
 #[component]
+/// Aether `RiskEngine` component.
 pub fn RiskEngine() -> Element {
     let mut portfolio_value = use_signal(|| 1_000_000.0f64);
     let mut confidence_level = use_signal(|| 99.0f64);

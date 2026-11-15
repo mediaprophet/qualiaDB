@@ -9,6 +9,7 @@ pub enum WorkspaceError {
     BufferTooSmall { required: usize, available: usize },
 }
 
+/// `?::checked_workspace_bytes`.
 pub const fn checked_workspace_bytes<T>(elements: usize) -> Result<usize, WorkspaceError> {
     let Some(required) = elements.checked_mul(core::mem::size_of::<T>()) else {
         return Err(WorkspaceError::SizeOverflow);
@@ -25,27 +26,33 @@ pub struct Workspace<'a, T> {
 }
 
 impl<'a, T> Workspace<'a, T> {
+    /// Creates a default `Workspace`.
     pub fn new(storage: &'a mut [T]) -> Result<Self, WorkspaceError> {
         checked_workspace_bytes::<T>(storage.len())?;
         Ok(Self { storage, used: 0 })
     }
 
+    /// Maximum capacity.
     pub const fn capacity(&self) -> usize {
         self.storage.len()
     }
 
+    /// `Workspace::used`.
     pub const fn used(&self) -> usize {
         self.used
     }
 
+    /// Remaining amount.
     pub const fn remaining(&self) -> usize {
         self.storage.len() - self.used
     }
 
+    /// Resets state.
     pub fn reset(&mut self) {
         self.used = 0;
     }
 
+    /// `Workspace::take`.
     pub fn take(&mut self, elements: usize) -> Result<&mut [T], WorkspaceError> {
         let end = self
             .used

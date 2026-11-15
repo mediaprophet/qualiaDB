@@ -20,6 +20,7 @@ pub mod partition;
 pub mod qualification;
 pub mod review_packet;
 pub mod scenarios;
+pub mod tri_source_eval;
 pub mod two_process;
 
 pub use allocation::{record_alloc, take_alloc, HarnessLease, ReservationTracker};
@@ -32,4 +33,8 @@ pub use partition::PartitionGate;
 pub use qualification::{
     qualify, EvidenceClass, Instrument, InstrumentResult, InstrumentVerdict, BASELINE_COMMIT,
     LINUX_NATIVE_RUNNER, MSVC_RUNNER,
+};
+pub use tri_source_eval::{
+    EtalonSourceReceipt, NetworkSourceReceipt, QualiaDbInvariantsReceipt, SourcePlaneCounts,
+    TriSourceEvaluationReport, TriSourceSummaryCounts,
 };

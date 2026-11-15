@@ -1,7 +1,9 @@
 use super::*;
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Evaluates a program.
     pub fn eval_program(&mut self, program: &Program, env: &mut Env) -> Result<Value, Diagnostic> {
+        populate_import_aliases(env, &program.imports)?;
         self.granted = program.requires.iter().map(|c| c.id.clone()).collect();
         let mut last = Value::Null;
         let has_cells = program.items.iter().any(|i| matches!(i, Item::Cell(_)));
@@ -51,6 +53,13 @@ impl<'a, H: Host> Engine<'a, H> {
                     for prop in &m.properties {
                         let v = self.eval_expr(&prop.value, env)?;
                         rec.insert(prop.name.clone(), v);
+                    }
+                    // Words a cell uses: part, signature, facet. One physics stack.
+                    if rec.contains_key("part")
+                        || rec.contains_key("signature")
+                        || rec.contains_key("facet")
+                    {
+                        attach_part_signature(&mut rec, m.span)?;
                     }
                     env.materials.insert(m.name.clone(), Value::Record(rec));
                 }
@@ -168,6 +177,7 @@ impl<'a, H: Host> Engine<'a, H> {
         Ok(())
     }
 
+    /// Calls a function.
     pub fn call_function(
         &mut self,
         program: &Program,
@@ -186,14 +196,19 @@ impl<'a, H: Host> Engine<'a, H> {
                 format!("no function {name}"),
             )
         })?;
-        if let Some(steps) = budget_steps(&f.budget, env, self) {
+        if let Some(steps) = budget_steps(&f.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         // Inherit import aliases, enum declarations, and field/material/law
         // declarations from the calling env.
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
+        for item in &program.items {
+            if let Item::Enum(e) = item {
+                local.enums.entry(e.name.clone()).or_insert_with(|| e.clone());
+            }
+        }
         local.fields = env.fields.clone();
         local.materials = env.materials.clone();
         local.laws = env.laws.clone();
@@ -201,8 +216,8 @@ impl<'a, H: Host> Engine<'a, H> {
             local.vars.insert(p.name.clone(), a);
         }
         // Attach the program so nested calls can resolve sibling functions.
-        let prev = self.program;
-        self.program = Some(program as *const Program);
+        let prev = self.program.take();
+        self.program = Some(std::sync::Arc::new(program.clone()));
         let r = self.finish_block(&f.body, &mut local);
         self.program = prev;
         r
@@ -229,18 +244,26 @@ impl<'a, H: Host> Engine<'a, H> {
             Some(h) => h,
             None => return Ok(Value::Null),
         };
-        if let Some(steps) = budget_steps(&h.budget, env, self) {
+        if let Some(steps) = budget_steps(&h.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
+        for item in &program.items {
+            if let Item::Enum(e) = item {
+                local.enums.entry(e.name.clone()).or_insert_with(|| e.clone());
+            }
+        }
+        local.fields = env.fields.clone();
+        local.materials = env.materials.clone();
+        local.laws = env.laws.clone();
         for (p, a) in h.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }
         // Attach the program so the hook body can call sibling functions.
-        let prev = self.program;
-        self.program = Some(program as *const Program);
+        let prev = self.program.take();
+        self.program = Some(std::sync::Arc::new(program.clone()));
         let r = self.finish_block(&h.body, &mut local);
         self.program = prev;
         r
@@ -286,4 +309,69 @@ fn assign_path(env: &mut Env, target: &Expr, value: Value) -> Result<(), Diagnos
             "bind target must be an identifier or record.field",
         )),
     }
+}
+
+/// Resolve `part` + `signature` plus a facet and/or a colour|sound reading.
+///
+/// Shared words for Poet and every Qualia app, not a town or game dialect.
+/// A part is its own continuant. Water conditions are not `liquid_water`.
+/// Flora, fauna, and funga are not sugar, water, or oil records. Colour and
+/// sound are two readings of one EMF spectrum axis. They do not write spatial
+/// coordinates or bake a frame.
+fn attach_part_signature(
+    rec: &mut std::collections::BTreeMap<String, Value>,
+    span: crate::span::Span,
+) -> Result<(), Diagnostic> {
+    use crate::physics::PartContinuant;
+
+    let part = match rec.get("part") {
+        Some(Value::String(s)) => s.clone(),
+        _ => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "part must name a continuant id",
+            ))
+        }
+    };
+    let signature = match rec.get("signature") {
+        Some(Value::String(s)) => s.clone(),
+        _ => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "signature must name a material signature on this physics stack",
+            ))
+        }
+    };
+    let facet = match rec.get("facet") {
+        Some(Value::String(s)) => Some(s.clone()),
+        Some(_) => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "facet must be mechanical, thermal, optical, acoustic, or chemical",
+            ))
+        }
+        None => None,
+    };
+    let reading = match rec.get("reading") {
+        Some(Value::String(s)) => Some(s.clone()),
+        Some(_) => {
+            return Err(Diagnostic::new(
+                DiagCode::E600,
+                span,
+                "reading must be colour or sound",
+            ))
+        }
+        None => None,
+    };
+    let bound = PartContinuant::bind_with(&part, &signature, facet.as_deref(), reading.as_deref())
+        .map_err(|e| Diagnostic::new(DiagCode::E600, span, e.message()))?;
+    if let Value::Record(extra) = bound.to_record() {
+        for (k, v) in extra {
+            rec.insert(k, v);
+        }
+    }
+    Ok(())
 }

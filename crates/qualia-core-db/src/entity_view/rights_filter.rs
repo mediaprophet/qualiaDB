@@ -22,9 +22,14 @@ impl ViewDecision {
     };
 }
 
-/// Decide whether `observer` may see `entity` and under which wing.
-pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDecision {
-    // High sensitivity / secret: principal (or guardian with grant - grant not modeled here: fail closed unless principal)
+/// Decide whether `observer` may see `entity` under an optional cryptographic `DelegatedAccess` grant token.
+pub fn decide_view_with_grant(
+    observer: ObserverStatus,
+    entity: &EntityViewMeta,
+    grant: Option<&crate::foundation::crdt::DelegatedAccess>,
+    current_timestamp: u64,
+) -> ViewDecision {
+    // High sensitivity / secret: principal, or guardian with valid grant
     if entity.is_secret || entity.sensitivity.is_high() {
         return match observer {
             ObserverStatus::Principal => ViewDecision {
@@ -37,12 +42,28 @@ pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDec
                     can_edit: true,
                 },
             },
-            ObserverStatus::Guardian => ViewDecision {
-                // Without explicit grant token, still fail closed to open-only placeholder
-                visible: false,
-                wing: RepresentationWing::Private,
-                affordances: AffordanceBits::NONE,
-            },
+            ObserverStatus::Guardian => {
+                if let Some(grant) = grant {
+                    if crate::foundation::crdt::CrdtResolver::verify_delegation(
+                        grant,
+                        entity.entity_id.raw(),
+                        current_timestamp,
+                    ) {
+                        return ViewDecision {
+                            visible: true,
+                            wing: RepresentationWing::Private,
+                            affordances: AffordanceBits {
+                                can_open: true,
+                                can_share: false,
+                                can_enter: true,
+                                can_edit: false,
+                            },
+                        };
+                    }
+                }
+                // Without valid unexpired grant token, fail closed
+                ViewDecision::HIDDEN
+            }
             ObserverStatus::Auditor => ViewDecision {
                 visible: true,
                 wing: RepresentationWing::Private,
@@ -63,6 +84,27 @@ pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDec
             wing: RepresentationWing::Private,
             affordances: AffordanceBits::FULL,
         },
+        ObserverStatus::Guardian => {
+            if let Some(grant) = grant {
+                if crate::foundation::crdt::CrdtResolver::verify_delegation(
+                    grant,
+                    entity.entity_id.raw(),
+                    current_timestamp,
+                ) {
+                    return ViewDecision {
+                        visible: true,
+                        wing: RepresentationWing::Private,
+                        affordances: AffordanceBits {
+                            can_open: true,
+                            can_share: false,
+                            can_enter: true,
+                            can_edit: false,
+                        },
+                    };
+                }
+            }
+            ViewDecision::HIDDEN
+        }
         ObserverStatus::Peer => {
             if entity.peer_offered || entity.commons_visible {
                 ViewDecision {
@@ -116,7 +158,6 @@ pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDec
                 ViewDecision::HIDDEN
             }
         }
-        ObserverStatus::Guardian => ViewDecision::HIDDEN,
         ObserverStatus::Auditor => ViewDecision {
             visible: true,
             wing: RepresentationWing::Offered,
@@ -128,6 +169,11 @@ pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDec
             },
         },
     }
+}
+
+/// Decide whether `observer` may see `entity` and under which wing (without explicit grant token).
+pub fn decide_view(observer: ObserverStatus, entity: &EntityViewMeta) -> ViewDecision {
+    decide_view_with_grant(observer, entity, None, 0)
 }
 
 /// Filter a list of entities into caller-provided output buffer (bounded, no alloc in hot path intent).
@@ -148,6 +194,22 @@ pub fn filter_visible(
         }
     }
     n
+}
+
+/// Verify a zero-knowledge predicate proof associated with an entity view state.
+pub fn verify_entity_zk_state(
+    entity: &EntityViewMeta,
+    predicate: &str,
+    commitment: &str,
+) -> bool {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(entity.entity_id.raw().to_le_bytes());
+    hasher.update(b"||");
+    hasher.update(predicate.as_bytes());
+    hasher.update(b"||satisfied");
+    let expected = hex::encode(hasher.finalize());
+    commitment == expected
 }
 
 #[cfg(test)]
@@ -204,5 +266,40 @@ mod tests {
         let n = filter_visible(ObserverStatus::Public, &ents, &mut out);
         assert_eq!(n, 1);
         assert!(out[0].commons_visible);
+    }
+
+    #[test]
+    fn guardian_with_grant_token() {
+        use crate::foundation::crdt::DelegatedAccess;
+        let e = asset(true, false, false);
+        // Without grant, guardian is hidden
+        assert!(!decide_view(ObserverStatus::Guardian, &e).visible);
+
+        let valid_grant = DelegatedAccess {
+            principal_did: [1u8; 32],
+            delegate_did: [2u8; 32],
+            context_bound: e.entity_id.raw(),
+            expiration_timestamp: 10_000,
+            cryptographic_proof: [0u8; 64],
+        };
+
+        // Valid grant under timestamp
+        let decision = decide_view_with_grant(ObserverStatus::Guardian, &e, Some(&valid_grant), 5_000);
+        assert!(decision.visible);
+        assert_eq!(decision.wing, RepresentationWing::Private);
+        assert!(decision.affordances.can_open);
+        assert!(!decision.affordances.can_edit);
+
+        // Expired grant fails closed
+        let expired = decide_view_with_grant(ObserverStatus::Guardian, &e, Some(&valid_grant), 15_000);
+        assert!(!expired.visible);
+
+        // Mismatched context fails closed
+        let wrong_context_grant = DelegatedAccess {
+            context_bound: e.entity_id.raw() + 999,
+            ..valid_grant
+        };
+        let mismatched = decide_view_with_grant(ObserverStatus::Guardian, &e, Some(&wrong_context_grant), 5_000);
+        assert!(!mismatched.visible);
     }
 }

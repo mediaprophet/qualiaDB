@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `SiteSpecificityTheoryQapp` component.
 pub fn SiteSpecificityTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

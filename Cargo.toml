@@ -2,6 +2,7 @@
 members = [
     "crates/qualia-inference-kernel",
     "crates/qualia-core-db",
+    "crates/vibescript-abi",
     "crates/vibe",
     "crates/qualia-cli",
     "crates/qualia-solid-bridge",
@@ -11,7 +12,6 @@ members = [
     "crates/webizen-render",
     "crates/webizen-studio",
     "crates/webizen-runtime",
-    "crates/webizen-desktop",
     "crates/webizen-web",
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
@@ -21,14 +21,138 @@ members = [
     "crates/qualia-q-forge",
     "crates/qualia-vision",
     "crates/qualia-audio",
-    "crates/poet-cli",
     "crates/work-graph",
     "crates/vibe-lsp",
     "crates/vibe-wasm",
-    "crates/poet",
     "crates/qualia-peer",
+    "crates/qualia-app-contract",
+    "crates/qualia-anatomy-pack",
+    "crates/qualia-sim",
+    "crates/qualia-geospatial",
+    "crates/qualia-mcp",
+    "crates/qualia-seal-10d",
 ]
 resolver = "2"
+exclude = ["crates/qualia-etalon-sensing-bridge", "applications/sensing-inspect", "tools/accelerator-harness"]
+
+[workspace.dependencies]
+etalon-diagnostics = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+zeroize = "1.9.1"
+# Internal workspace crates
+qualia-inference-kernel = { path = "crates/qualia-inference-kernel" }
+qualia-core-db = { path = "crates/qualia-core-db", default-features = false }
+qualia-app-contract = { path = "crates/qualia-app-contract" }
+vibescript-abi = { path = "crates/vibescript-abi" }
+vibe = { path = "crates/vibe" }
+qualia-cli = { path = "crates/qualia-cli" }
+qualia-solid-bridge = { path = "crates/qualia-solid-bridge" }
+qualia-client-core = { path = "crates/qualia-client-core" }
+qualia-extensions = { path = "crates/qualia-extensions" }
+webizen-component-harvester = { path = "crates/webizen-component-harvester" }
+webizen-render = { path = "crates/webizen-render" }
+webizen-studio = { path = "crates/webizen-studio" }
+webizen-runtime = { path = "crates/webizen-runtime" }
+qualia-wasm = { path = "crates/webizen-web" }
+qualia-mobile-harness = { path = "crates/qualia-mobile-harness" }
+wellfare-core = { path = "crates/wellfare-core" }
+qualia-cooperative-core = { path = "crates/qualia-cooperative-core" }
+qualia-semantic-library = { path = "crates/qualia-semantic-library" }
+webizen-lite-wasm = { path = "crates/webizen-lite-wasm" }
+qualia-q-forge = { path = "crates/qualia-q-forge" }
+qualia-vision = { path = "crates/qualia-vision" }
+qualia-audio = { path = "crates/qualia-audio" }
+work-graph = { path = "crates/work-graph" }
+vibe-lsp = { path = "crates/vibe-lsp" }
+vibe-wasm = { path = "crates/vibe-wasm" }
+qualia-peer = { path = "crates/qualia-peer" }
+qualia-sim = { path = "crates/qualia-sim" }
+qualia-geospatial = { path = "crates/qualia-geospatial" }
+qualia-mcp = { path = "crates/qualia-mcp" }
+
+# External crates harmonised across the workspace
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+atoi = "3.1.1"
+base64 = { version = "0.23.1", default-features = false }
+bip39 = "2.2.2"
+blake3 = { version = "1.8.3", default-features = false }
+bytemuck = "1.25.2"
+byteorder = "1.5.0"
+chrono = { version = "0.4.45", default-features = false }
+ciborium = "0.2.2"
+clap = "4.6.7"
+console_error_panic_hook = "0.1.7"
+core_affinity = "0.8"
+cpal = "0.15"
+criterion = "0.8.2"
+crossbeam-channel = "0.5.17"
+csv = "1.4.0"
+dhat = "0.3.3"
+aether = { version = "=0.8.0-alpha.3", git = "https://github.com/mediaprophet/Aether.git", rev = "d5ccce3bb9d6cab2aa5d7ef185d57ad786737c27" }
+ed25519-dalek = { version = "3.0", default-features = false }
+fast_qr = "0.13.1"
+futures-util = "0.3.34"
+getrandom = "0.4.3"
+hex = "0.4.3"
+hmac = { version = "0.13", default-features = false }
+image = { version = "0.25.10", default-features = false }
+js-sys = "0.3.106"
+log = "0.4.34"
+lz4_flex = "0.13.1"
+minicbor = "2.3.1"
+naga = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", features = [
+    "wgsl-in",
+    "spv-out",
+    "msl-out",
+    "hlsl-out"
+] }
+oxiri = "0.2"
+ort = { version = "=2.0.0-rc.15", features = ["download-binaries"] }
+pdf-extract = "0.12.1"
+pollster = "1.0.1"
+rand = "0.10.3"
+raw-window-handle = "0.6.2"
+regex = "1.13.1"
+reqwest = { version = "0.13.5", default-features = false }
+rio_api = "0.8"
+rio_turtle = "0.8"
+rio_xml = "0.8"
+rtrb = "0.3.4"
+scraper = "0.27.0"
+serde = "1.0.229"
+serde_json = "1.0.154"
+serde_yaml = "0.9"
+serde-wasm-bindgen = "0.6.5"
+sha1 = "0.11.0"
+sha2 = { version = "0.11.1", default-features = false }
+sha3 = "0.12"
+sysinfo = "0.39.6"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+tokio = "1.54.1"
+urlencoding = "2.1.3"
+uuid = "1.28.0"
+warp = "0.4.3"
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "0.4.79"
+web-sys = "0.3.106"
+etalon = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
+etalon-agent = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-wgsl-forge = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
+etalon-nquin = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-tensor = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-render = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
+etalon-sim = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
+etalon-signal = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
+etalon-wasm = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-model = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-resources = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-inference-kernel = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-inference = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-inference-contract = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-model-io = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-inference-lab = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f" }
+etalon-vibe = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "057545fc14bc1202a167b9a76a8f82e246c1738f", default-features = false }
 
 # Profile for WASM web builds (qualia-mobile-harness).
 # wasm-opt on Windows crashes with STATUS_STACK_BUFFER_OVERRUN when the AST is
@@ -42,7 +166,7 @@ lto = true
 codegen-units = 1
 strip = "symbols"
 
-# Dioxus CLI (`dx build --web --release`) uses this named profile for webizen-studio.
+# Aether CLI (`dx build --web --release`) uses this named profile for webizen-studio.
 # Fat LTO / embed-bitcode on wasm32 fails at rust-lld with:
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
 # Keep LTO off here. Do not reuse [profile.wasm-release] (LTO=true for mobile-harness).
@@ -53,8 +177,11 @@ codegen-units = 16
 opt-level = "s"
 incremental = false
 
-[profile.release.package.poet]
-opt-level = "s"
+# Limit debuginfo to line-tables (1) for test profile. On Windows x86_64, linking
+# webizen-desktop with debug=2 exceeds the 2GB PE limit (producing a 2.33GB binary
+# that the OS loader rejects with error 193 'not a valid Win32 application').
+[profile.test]
+debug = 1
 
 # Vendored imap-proto 0.10.2 with the trailing-semicolon-in-macro future-incompat lint fixed
 # (upstream imap 2.4.1 pins imap-proto ^0.10.0; the fix hasn't been published to crates.io for
@@ -62,3 +189,6 @@ opt-level = "s"
 # we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
 [patch.crates-io]
 imap-proto = { path = "vendor/imap-proto" }
+
+[patch."https://github.com/mediaprophet/vibe-script.git"]
+vibescript-abi = { path = "crates/vibescript-abi" }

@@ -15,6 +15,7 @@ pub struct GraphStore {
 }
 
 impl GraphStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(GRAPH_QUINS_FILE);
         if let Some(parent) = path.parent() {
@@ -27,10 +28,12 @@ impl GraphStore {
         Ok(Self { path, quin_count })
     }
 
+    /// Count.
     pub fn count(&self) -> usize {
         self.quin_count
     }
 
+    /// Appends quins.
     pub fn append_quins(&mut self, quins: &[NQuin]) -> std::io::Result<()> {
         if quins.is_empty() {
             return Ok(());
@@ -45,6 +48,7 @@ impl GraphStore {
         Ok(())
     }
 
+    /// Lists recent entries.
     pub fn list_recent(&self, limit: usize) -> std::io::Result<Vec<NQuin>> {
         let mut file = fs::File::open(&self.path)?;
         let len = file.metadata()?.len();

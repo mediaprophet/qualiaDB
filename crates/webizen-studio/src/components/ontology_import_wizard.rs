@@ -1,6 +1,6 @@
 //! Ontology import + domain-matched layout presets for the studio canvas.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::canvas_model::{PanePlacement, PresentationMode};
@@ -115,6 +115,7 @@ fn pane(id: &str, x: u16, y: u16, w: u16, h: u16) -> PanePlacement {
     }
 }
 
+/// Built-in layout suggestions.
 pub fn builtin_layout_suggestions(catalog: &[CatalogOntology]) -> Vec<OntologyLayoutSuggestion> {
     let specs = vec![
         (
@@ -270,6 +271,7 @@ async fn enqueue_ontology_import(ontology_id: &str, bundled: bool) -> Result<Str
 }
 
 #[component]
+/// Aether `OntologyImportWizard` component.
 pub fn OntologyImportWizard(on_apply: EventHandler<OntologyLayoutSuggestion>) -> Element {
     let mut catalog = use_signal(Vec::<CatalogOntology>::new);
     let import_status = use_signal(|| String::new());

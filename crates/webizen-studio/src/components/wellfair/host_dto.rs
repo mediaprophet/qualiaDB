@@ -182,6 +182,7 @@ pub struct ReceiptDto {
     pub checkpoint_hash: Option<String>,
 }
 
+/// Fixture snapshot — dev/test host state (self-marks in `owner_label`).
 pub fn fixture_snapshot() -> WellfairHostSnapshot {
     WellfairHostSnapshot {
         vault: VaultLifecycle::Locked,

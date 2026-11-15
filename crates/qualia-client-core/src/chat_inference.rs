@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use qualia_core_db::{
+    inference::conditioning::{select_prioritized_parts, RequestPart},
     llm_agent::{
         AgentError, AgentIntent, AgentOutput, AgentRuntime, LocalLlmAgent, WebizenVerdict,
     },
@@ -22,6 +23,11 @@ use crate::context_binding::{self, InferenceContextPacket};
 use crate::ontology_router::OntologyRoutingDecision;
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
+
+/// Default output budget fed to the semantic-profile compiler when a profile
+/// does not declare its own `budget.output_tokens`. The profile's declared
+/// budget always wins; this only bounds the unconfigured case.
+const CHAT_CONDITIONING_OUTPUT_TOKENS: u32 = 1024;
 
 static INFERENCE_CANCEL: AtomicBool = AtomicBool::new(false);
 
@@ -64,6 +70,10 @@ pub struct ChatInferenceResult {
     pub wal_suspended: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suspended_agreement_id: Option<u64>,
+    /// Prompt Precision receipt: which profile/plan drove this turn and how
+    /// the prepared request was lowered for the route that served it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditioning: Option<crate::conditioning::PreparedRouteReceipt>,
 }
 
 impl Default for ChatInferenceResult {
@@ -88,18 +98,22 @@ impl Default for ChatInferenceResult {
             axiom_bounds_label: None,
             wal_suspended: false,
             suspended_agreement_id: None,
+            conditioning: None,
         }
     }
 }
 
+/// Requests inference cancellation.
 pub fn request_cancel_inference() {
     INFERENCE_CANCEL.store(true, Ordering::SeqCst);
 }
 
+/// Clears the cancellation flag.
 pub fn clear_cancel_inference() {
     INFERENCE_CANCEL.store(false, Ordering::SeqCst);
 }
 
+/// `true` when inference-cancelled.
 pub fn is_inference_cancelled() -> bool {
     INFERENCE_CANCEL.load(Ordering::SeqCst)
 }
@@ -117,6 +131,7 @@ pub struct ChatInferenceOptions {
     pub allowed_ontology_ids: Vec<String>,
 }
 
+/// Runs chat inference with options.
 pub fn run_chat_inference_with_options(
     session_id: &str,
     prompt: &str,
@@ -210,6 +225,7 @@ pub fn run_chat_inference_for_agent(
     )
 }
 
+/// Runs full chat inference.
 pub fn run_chat_inference_full(
     session_id: &str,
     prompt: &str,
@@ -312,6 +328,27 @@ pub fn run_chat_inference_full(
     };
 
     let graph_mutation = options.graph_mutation || env.graph_mutation;
+
+    // Prompt Precision: the persisted active profile is compiled once per turn
+    // into the shared prepared semantic request; each route below lowers the
+    // same plan (Ollama `system` role, native/orchestrated envelope prepend).
+    // A declared profile that fails to compile fails closed — enforced
+    // requirements are never silently dropped.
+    let prepared = match crate::conditioning::prepare_active_semantic_request(
+        Path::new(&storage),
+        prompt,
+        &profile.public_did,
+        &packet.graph_context_json,
+        CHAT_CONDITIONING_OUTPUT_TOKENS,
+    ) {
+        Ok(p) => p,
+        Err(error) => {
+            return empty(&format!(
+                "Conditioning profile rejected this request: {error}"
+            ))
+        }
+    };
+
     // Precision contracts are cold-path model configuration. They apply only
     // to the direct native chat decode path, where both input and output caps
     // can be enforced. Graph-mutation turns use the orchestrator-owned decode
@@ -344,11 +381,19 @@ pub fn run_chat_inference_full(
             &packet,
             &retrieval,
             &ib_settings,
+            prepared.as_ref(),
             on_token,
             started,
             Path::new(&storage),
             empty,
         );
+    }
+
+    // The compiled envelope is prepended after contract lowering so the model
+    // precision byte cap cannot truncate declared enforced requirements; the
+    // envelope itself is already bounded by the profile's own max_bytes.
+    if let Some(request) = &prepared {
+        packet.augmented_prompt = format!("{}\n\n{}", request.text, packet.augmented_prompt);
     }
 
     let active = match crate::api::load_active_model_record_from_disk() {
@@ -416,6 +461,11 @@ pub fn run_chat_inference_full(
         return empty("Generation cancelled");
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Err(reason) = crate::inference_policy::bind_turn(session_id, &agent) {
+        return empty(&format!("Inference authority unavailable: {reason}"));
+    }
+
     if graph_mutation {
         return run_orchestrated_inference(
             session_id,
@@ -424,6 +474,7 @@ pub fn run_chat_inference_full(
             &packet,
             &retrieval,
             intent,
+            prepared.as_ref(),
             started,
             Path::new(&storage),
             empty,
@@ -437,33 +488,45 @@ pub fn run_chat_inference_full(
         _ => {}
     }
 
+    // The active precision contract's output cap wins when present; otherwise
+    // the semantic profile's own output budget is enforced on native decode.
+    let decode_output_budget = active_precision
+        .as_ref()
+        .map(|precision| precision.output_budget_tokens)
+        .or_else(|| prepared.as_ref().map(|request| request.token_budget));
+
     let t0 = std::time::Instant::now();
     let output = if let Some(cb) = on_token {
-        let (text, mut prov, tokens, semantic_quin) =
-            if let Some(precision) = active_precision.as_ref() {
-                let control = qualia_core_db::llm_agent::DecodeControl::default();
-                control.set_token_budget(precision.output_budget_tokens);
-                agent.infer_local_model_controlled(
-                    &packet.augmented_prompt,
-                    &packet.graph_context_json,
-                    control,
-                    Some(move |delta: String| {
-                        if !is_inference_cancelled() {
-                            cb(delta);
-                        }
-                    }),
-                )
-            } else {
-                agent.infer_local_model_streaming(
-                    &packet.augmented_prompt,
-                    &packet.graph_context_json,
-                    Some(move |delta: String| {
-                        if !is_inference_cancelled() {
-                            cb(delta);
-                        }
-                    }),
-                )
-            };
+        let (text, mut prov, tokens, semantic_quin) = if let Some(budget) = decode_output_budget {
+            let control = qualia_core_db::llm_agent::DecodeControl::default();
+            control.set_token_budget(budget);
+            if let Some(thinking) = active_precision
+                .as_ref()
+                .and_then(|p| p.thinking_budget_tokens)
+            {
+                control.set_thinking_token_budget(thinking);
+            }
+            agent.infer_local_model_controlled(
+                &packet.augmented_prompt,
+                &packet.graph_context_json,
+                control,
+                Some(move |delta: String| {
+                    if !is_inference_cancelled() {
+                        cb(delta);
+                    }
+                }),
+            )
+        } else {
+            agent.infer_local_model_streaming(
+                &packet.augmented_prompt,
+                &packet.graph_context_json,
+                Some(move |delta: String| {
+                    if !is_inference_cancelled() {
+                        cb(delta);
+                    }
+                }),
+            )
+        };
         prov.extend(retrieval.provenance_hashes.iter().copied());
         prov.sort_unstable();
         prov.dedup();
@@ -476,9 +539,15 @@ pub fn run_chat_inference_full(
             peak_memory_bytes: 0,
         }
     } else {
-        match if let Some(precision) = active_precision.as_ref() {
+        match if let Some(budget) = decode_output_budget {
             let control = qualia_core_db::llm_agent::DecodeControl::default();
-            control.set_token_budget(precision.output_budget_tokens);
+            control.set_token_budget(budget);
+            if let Some(thinking) = active_precision
+                .as_ref()
+                .and_then(|p| p.thinking_budget_tokens)
+            {
+                control.set_thinking_token_budget(thinking);
+            }
             let (text, provenance_quins, tokens_generated, semantic_quin) = agent
                 .infer_local_model_controlled(
                     &packet.augmented_prompt,
@@ -535,9 +604,13 @@ pub fn run_chat_inference_full(
             .memory_used_bytes
             .load(std::sync::atomic::Ordering::Relaxed),
     );
-    finalize_success_result(
+    let mut result = finalize_success_result(
         output, &retrieval, started, &agent_cfg, false, 0, false, None,
-    )
+    );
+    result.conditioning = prepared
+        .as_ref()
+        .map(|request| request.receipt("native", "envelope", false, None));
+    result
 }
 
 /// Chat turn via optional Ollama HTTP harness.
@@ -551,6 +624,7 @@ fn run_ollama_chat_turn(
     packet: &InferenceContextPacket,
     retrieval: &RetrievalBundle,
     settings: &crate::inference_backend::InferenceBackendSettings,
+    prepared: Option<&crate::conditioning::PreparedSemanticRequest>,
     on_token: Option<Arc<dyn Fn(String) + Send + Sync>>,
     started: std::time::Instant,
     storage: &Path,
@@ -561,10 +635,25 @@ fn run_ollama_chat_turn(
     }
 
     let harness = crate::ollama_harness::OllamaHarness::from_settings(settings);
-    let system = "You are a Webizen/Qualia assistant. Ground answers in the provided graph context when present. Prefer precise, citation-aware replies. Do not invent legal or medical facts.";
+    const BASE_SYSTEM: &str = "You are a Webizen/Qualia assistant. Ground answers in the provided graph context when present. Prefer precise, citation-aware replies. Do not invent legal or medical facts.";
+    // Ollama natively supports a system role: the prepared semantic request
+    // travels there unflattened, and the profile's output budget is carried
+    // as `num_predict`.
+    let system_owned;
+    let system = match prepared {
+        Some(request) => {
+            system_owned = format!("{BASE_SYSTEM}\n\n{}", request.text);
+            system_owned.as_str()
+        }
+        None => BASE_SYSTEM,
+    };
     let user = packet.augmented_prompt.as_str();
 
-    let generation = match harness.generate(system, user) {
+    let generation = match harness.generate_with_options(
+        system,
+        user,
+        prepared.map(|request| request.token_budget),
+    ) {
         Ok(g) => g,
         Err(e) => {
             return empty(&format!(
@@ -613,6 +702,7 @@ fn run_ollama_chat_turn(
         finalize_success_result(output, retrieval, started, agent_cfg, false, 0, false, None);
     result.model_id = Some(generation.model);
     result.agent_backend = Some("ollama".into());
+    result.conditioning = prepared.map(|request| request.receipt("ollama", "system", false, None));
     result
 }
 
@@ -623,6 +713,7 @@ fn run_orchestrated_inference(
     packet: &InferenceContextPacket,
     retrieval: &RetrievalBundle,
     intent: AgentIntent,
+    prepared: Option<&crate::conditioning::PreparedSemanticRequest>,
     started: std::time::Instant,
     storage: &Path,
     empty: impl Fn(&str) -> ChatInferenceResult,
@@ -684,7 +775,7 @@ fn run_orchestrated_inference(
                     .memory_used_bytes
                     .load(std::sync::atomic::Ordering::Relaxed),
             );
-            finalize_success_result(
+            let mut result = finalize_success_result(
                 output,
                 retrieval,
                 started,
@@ -693,7 +784,19 @@ fn run_orchestrated_inference(
                 sieve_tokens.min(255) as u8,
                 wal_suspended,
                 suspended_agreement_id,
-            )
+            );
+            result.conditioning = prepared.map(|request| {
+                request.receipt(
+                    "orchestrated",
+                    "envelope",
+                    false,
+                    Some(
+                        "orchestrated decode carries the prepared request as a prompt envelope; the output token budget is advisory until DecodeControl is wired through the orchestrator"
+                            .to_string(),
+                    ),
+                )
+            });
+            result
         }
         OrchestrationResult::Blocked { reason, .. } => empty(reason),
         OrchestrationResult::Failed(ref msg) if msg.contains("SieveMisaligned") => {
@@ -775,6 +878,7 @@ fn finalize_success_result(
         axiom_bounds_label: None,
         wal_suspended,
         suspended_agreement_id,
+        conditioning: None,
     }
 }
 
@@ -803,6 +907,7 @@ fn cancelled_result(
         axiom_bounds_label: None,
         wal_suspended: false,
         suspended_agreement_id: None,
+        conditioning: None,
     }
 }
 
@@ -903,6 +1008,7 @@ fn blocked_result(
         axiom_bounds_label: None,
         wal_suspended: false,
         suspended_agreement_id: None,
+        conditioning: None,
     }
 }
 
@@ -936,6 +1042,7 @@ fn empty_result(
         },
         wal_suspended: false,
         suspended_agreement_id: None,
+        conditioning: None,
     }
 }
 
@@ -1080,32 +1187,58 @@ fn build_augmented_packet(
     packet.graph_context_json =
         serde_json::to_string(&enriched_context).unwrap_or(packet.graph_context_json);
 
-    if thread_block.is_empty() {
-        packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
-            env.capability_briefing,
-            semantic_block,
-            routing.routing_brief,
-            cooperative_block,
-            files_block,
-            retrieval.context_block,
-            inforg_block,
-            user_prompt
-        );
+    // Typed conditioning admission (Prompt Precision chat-graph stages): the
+    // grounded chat-graph thread is a `RequestPart::chat_graph` admitted ahead
+    // of evidence and ungrounded linear history, so a tight context window
+    // prunes the flat fallback blocks before the DAG thread. Blocks are
+    // reassembled in document order after selection — selection decides
+    // admission, not layout.
+    let user_tail = if thread_block.is_empty() {
+        format!("\n\n---\nUser: {user_prompt}\n---")
     } else {
-        packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
-            env.capability_briefing,
-            semantic_block,
-            routing.routing_brief,
-            cooperative_block,
-            thread_block,
-            files_block,
-            retrieval.context_block,
-            inforg_block,
-            user_prompt
-        );
+        format!("\n\n---\nUser (replying to graph fragment): {user_prompt}\n---")
+    };
+    // Byte approximation of the active context window (~4 bytes per token);
+    // 0 = unknown window → unbounded (pre-conditioning behaviour).
+    let byte_cap = if env.context_window == 0 {
+        usize::MAX
+    } else {
+        (env.context_window as usize).saturating_mul(4)
+    };
+
+    let blocks = [
+        RequestPart::required_instruction(&env.capability_briefing),
+        RequestPart::evidence("agent-profile", &semantic_block, None),
+        RequestPart::evidence("ontology-routing", &routing.routing_brief, None),
+        RequestPart::history(&cooperative_block),
+        RequestPart::chat_graph(&thread_block, reply_to_fragment_id),
+        RequestPart::evidence("chat-files", &files_block, None),
+        RequestPart::evidence("graph-retrieval", &retrieval.context_block, None),
+        RequestPart::history(&inforg_block),
+    ];
+    let mut parts = [RequestPart::required_instruction(""); 9];
+    parts[..8].copy_from_slice(&blocks);
+    parts[8] = RequestPart::user_prompt(&user_tail);
+
+    let mut selected = [RequestPart::required_instruction(""); 9];
+    let selected_count =
+        select_prioritized_parts(&parts, byte_cap, &mut selected).map_err(|e| {
+            format!("conditioning could not retain mandatory chat request parts: {e:?}")
+        })?;
+    let admitted = &selected[..selected_count];
+
+    let mut augmented = String::new();
+    for part in &blocks {
+        if part.content.is_empty() || !admitted.contains(part) {
+            continue;
+        }
+        if !augmented.is_empty() {
+            augmented.push_str("\n\n");
+        }
+        augmented.push_str(part.content);
     }
+    augmented.push_str(&user_tail);
+    packet.augmented_prompt = augmented;
 
     Ok(packet)
 }
@@ -1154,10 +1287,12 @@ pub fn stream_event_token(delta: &str) -> String {
     serde_json::json!({"event":"token","data":delta}).to_string()
 }
 
+/// Done stream event.
 pub fn stream_event_done(result: &ChatInferenceResult) -> String {
     serde_json::json!({"event":"done","data":result}).to_string()
 }
 
+/// Error stream event.
 pub fn stream_event_error(msg: &str) -> String {
     serde_json::json!({"event":"error","data":msg}).to_string()
 }

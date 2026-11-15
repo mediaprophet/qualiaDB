@@ -7,7 +7,6 @@ pub mod companion_pairing;
 pub mod companion_sync;
 pub mod conditions;
 pub mod credentials;
-pub mod finance;
 pub mod guardianship;
 pub mod life_records;
 pub mod live_share;
@@ -17,10 +16,8 @@ pub mod models;
 pub mod n3_rules;
 pub mod parser;
 pub mod personal_records;
-pub mod projects;
 pub mod qualia_bindings;
 pub mod rdf;
-pub mod record;
 pub mod shapes;
 pub mod sleep_analytics;
 pub mod store;
@@ -28,6 +25,9 @@ pub mod store;
 pub mod wasm;
 pub mod webizen;
 pub mod welfare_support;
+
+/// Single source of truth for record envelopes, double-entry finance, and cooperative projects.
+pub use qualia_cooperative_core::{finance, projects, record};
 
 /// Re-export the T71 bridge types so consumers can use them without
 /// qualifying through `record::`.

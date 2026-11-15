@@ -24,6 +24,7 @@ pub enum VerifyLevel {
 }
 
 impl VerifyLevel {
+    /// Parses a verify level name; error on unknown.
     pub fn parse(raw: &str) -> Result<Self, String> {
         match raw.trim().to_ascii_lowercase().as_str() {
             "structure" => Ok(Self::Structure),
@@ -70,11 +71,13 @@ enum FileRole {
 }
 
 impl Q42VerifyReceipt {
+    /// Verifies the volume at `path` at `level`.
     pub fn from_path(path: &Path, level: VerifyLevel) -> io::Result<Self> {
         let volume = Q42Volume::open(path)?;
         Ok(Self::from_volume(path, &volume, level))
     }
 
+    /// Builds the receipt for an already-open `volume`.
     pub fn from_volume(path: &Path, volume: &Q42Volume, level: VerifyLevel) -> Self {
         let role = if volume.volume_manifest().ok().flatten().is_some() {
             FileRole::VolumeRoot
@@ -310,6 +313,7 @@ impl Q42VerifyReceipt {
         }
     }
 
+    /// Human-readable verification report.
     pub fn to_text(&self) -> String {
         let mut out = format!(
             "Q42 verify  {}  level={:?}  overall={:?}\n",
@@ -362,6 +366,7 @@ pub struct Q42VerifySetReport {
 }
 
 impl Q42VerifySetReport {
+    /// Human-readable multi-volume report.
     pub fn to_text(&self) -> String {
         let mut out = format!(
             "Q42 verify-set  {}  members={}  overall={:?}\n",

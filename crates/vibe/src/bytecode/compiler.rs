@@ -76,11 +76,14 @@ struct Compiler {
     loops: Vec<LoopCtx>,
     /// Map from function name → index in `chunk.functions`.
     func_indices: HashMap<String, u16>,
+    /// User-defined enum declarations (for variant construction/matching).
+    enums: HashMap<String, EnumDecl>,
     /// Base offset for the current function's locals.
-    /// Top-level preamble uses 0; each function resets to 0.
+    /// Top-level preamble uses 0; each function uses 1.
     local_base: u16,
     /// Next local slot for the current frame.
     next_local: u16,
+    aliases: HashMap<String, String>,
 }
 
 impl Compiler {
@@ -90,8 +93,10 @@ impl Compiler {
             scopes: vec![HashMap::new()],
             loops: Vec::new(),
             func_indices: HashMap::new(),
+            enums: HashMap::new(),
             local_base: 0,
             next_local: 0,
+            aliases: HashMap::new(),
         }
     }
 
@@ -169,12 +174,6 @@ impl Compiler {
         self.check_code_size()
     }
 
-    #[allow(dead_code)]
-    fn emit_f64(&mut self, v: f64) -> Result<(), CompileError> {
-        self.chunk.emit_f64(v);
-        self.check_code_size()
-    }
-
     /// Reserve a u16 operand placeholder, returning the offset for later patching.
     fn emit_placeholder(&mut self) -> Result<usize, CompileError> {
         let off = self.chunk.code.len();
@@ -201,6 +200,9 @@ impl Compiler {
         match &e.kind {
             ExprKind::Literal(lit) => self.compile_literal(lit),
             ExprKind::Ident(name) => {
+                if name == "None" {
+                    return self.emit_op(Op::PushNull);
+                }
                 if let Some(slot) = self.lookup(name) {
                     self.emit_op(Op::LoadVar)?;
                     self.emit_u16(slot)?;
@@ -234,10 +236,36 @@ impl Compiler {
                 self.emit_u16(idx)
             }
             ExprKind::Binary { op, left, right } => self.compile_binary(op, left, right),
+            ExprKind::IfElse {
+                cond,
+                then_value,
+                else_value,
+            } => {
+                // cond; JumpIfFalse else; then; Jump end; else: else_value; end:
+                // Each path pushes exactly one value, so stack depth at the
+                // merge point is identical on both paths.
+                self.compile_expr(cond)?;
+                self.emit_op(Op::JumpIfFalse)?;
+                let else_jump = self.emit_placeholder()?;
+                self.compile_expr(then_value)?;
+                self.emit_op(Op::Jump)?;
+                let end_jump = self.emit_placeholder()?;
+                let else_start = self.chunk.current_offset();
+                self.patch(else_jump, else_start);
+                self.compile_expr(else_value)?;
+                let end = self.chunk.current_offset();
+                self.patch(end_jump, end);
+                Ok(())
+            }
             ExprKind::Unary { op, expr } => self.compile_unary(op, expr),
             ExprKind::Await(inner) => {
-                // Await in 0.1 bytecode: evaluate the inner expression.
-                // True async scheduling is handled by the host.
+                // Literal await is identity. Dynamic tasks need the admitted AST
+                // Engine context that this VM profile does not carry.
+                if !matches!(&inner.kind, ExprKind::Literal(_)) {
+                    return Err(CompileError::Unsupported(
+                        "dynamic await requires the admitted AST task runtime",
+                    ));
+                }
                 self.compile_expr(inner)
             }
             ExprKind::Member { recv, name } => {
@@ -253,18 +281,19 @@ impl Compiler {
                 self.emit_op(Op::GetIndex)
             }
             ExprKind::Try(inner) => {
-                // Try: compile inner, then TryUnwrap with a catch that pushes an error.
                 self.compile_expr(inner)?;
-                // For 0.1, Try just passes through — the VM's error handling
-                // catches diagnostics. We emit TryUnwrap with a no-op catch.
                 self.emit_op(Op::TryUnwrap)?;
                 let catch_off = self.emit_placeholder()?;
-                // Patch catch to point to the instruction after.
+                // Patch catch to the instruction immediately after TryUnwrap so
+                // Op::TryUnwrap propagates `Err(...)` as E600, matching AST `eval_expr`.
                 let after = self.chunk.current_offset();
                 self.patch(catch_off, after);
                 Ok(())
             }
             ExprKind::List(elements) => {
+                if elements.len() > u16::MAX as usize {
+                    return Err(CompileError::CodeTooLarge);
+                }
                 for el in elements {
                     self.compile_expr(el)?;
                 }
@@ -272,6 +301,9 @@ impl Compiler {
                 self.emit_u16(elements.len() as u16)
             }
             ExprKind::Record(fields) => {
+                if fields.len() > u16::MAX as usize {
+                    return Err(CompileError::CodeTooLarge);
+                }
                 for na in fields {
                     let key_idx = self.add_string(&na.name)?;
                     self.emit_op(Op::PushString)?;
@@ -427,68 +459,161 @@ impl Compiler {
     }
 
     fn compile_call(&mut self, callee: &Expr, args: &[Arg]) -> Result<(), CompileError> {
-        // Determine if this is a user function call or a host call.
+        if super::task_admission::scoped_callee(callee, &self.aliases) {
+            return Err(CompileError::Unsupported(
+                "scoped task operation requires the admitted AST task runtime",
+            ));
+        }
+        // Determine if this is a builtin constructor, enum variant, user function, or host call.
         let callee_name = callee.ident_name();
 
-        // Compile arguments onto the stack first.
-        let arg_count = args.len();
-        if arg_count > 255 {
+        let mut pos_args = Vec::new();
+        let mut named_args = Vec::new();
+        for arg in args {
+            match arg {
+                Arg::Pos(e) => pos_args.push(e),
+                Arg::Named(na) => named_args.push(na),
+            }
+        }
+        if pos_args.len() > u8::MAX as usize || named_args.len() > u8::MAX as usize {
             return Err(CompileError::Unsupported("more than 255 call arguments"));
+        }
+
+        // Builtin Result / Option constructors matching AST `eval/call.rs`.
+        if let Some(name @ ("Ok" | "Err" | "Some")) = callee_name {
+            if !named_args.is_empty() {
+                return Err(CompileError::Unsupported(
+                    "named arguments to builtin constructor",
+                ));
+            }
+            if let Some(first) = pos_args.first() {
+                self.compile_expr(first)?;
+            } else {
+                self.emit_op(Op::PushNull)?;
+            }
+            return match name {
+                "Ok" => self.emit_op(Op::MakeOk),
+                "Err" => self.emit_op(Op::MakeErr),
+                _ => Ok(()),
+            };
+        }
+
+        // Enum variant construction (`EnumName.Variant(args)`).
+        if let ExprKind::Member { recv, name: variant_name } = &callee.kind {
+            if let ExprKind::Ident(enum_name) = &recv.kind {
+                if let Some(enum_decl) = self.enums.get(enum_name).cloned() {
+                    if enum_decl.variants.iter().any(|v| v.name == *variant_name) {
+                        if !named_args.is_empty() {
+                            return Err(CompileError::Unsupported(
+                                "named arguments to enum variant constructor",
+                            ));
+                        }
+                        let enum_idx = self.add_string(enum_name)?;
+                        let var_idx = self.add_string(variant_name)?;
+                        for e in &pos_args {
+                            self.compile_expr(e)?;
+                        }
+                        self.emit_op(Op::MakeVariant)?;
+                        self.emit_u16(enum_idx)?;
+                        self.emit_u16(var_idx)?;
+                        return self.emit_u8(pos_args.len() as u8);
+                    }
+                }
+            }
         }
 
         // Check if it's a user-defined function.
         if let Some(name) = callee_name {
             if let Some(&fn_idx) = self.func_indices.get(name) {
-                for arg in args {
-                    self.compile_arg(arg)?;
+                if !named_args.is_empty() {
+                    return Err(CompileError::Unsupported(
+                        "named arguments to user function in bytecode",
+                    ));
+                }
+                for e in &pos_args {
+                    self.compile_expr(e)?;
                 }
                 self.emit_op(Op::CallUser)?;
                 self.emit_u16(fn_idx)?;
-                self.emit_u8(arg_count as u8)?;
+                self.emit_u8(pos_args.len() as u8)?;
                 return Ok(());
             }
         }
 
-        // Otherwise, treat as a host call. The callee path is a string constant.
-        // For member expressions like `math.sqrt`, the path is the full dotted name.
-        let path = callee_name.unwrap_or_else(|| {
-            // For non-ident callees (e.g. member expressions), we'd need to
-            // compile the receiver. For 0.1, we handle the common case.
-            ""
-        });
-        if path.is_empty() {
-            // Complex callee — compile it and use a generic host call.
-            // This handles `obj.method(args)` patterns.
-            self.compile_expr(callee)?;
-            for arg in args {
-                self.compile_arg(arg)?;
+        // Otherwise, treat as a host/extension call. The callee path is a string constant.
+        // Supports both 2-level (`math.sqrt`, `mech.verlet_step`) and 3-level (`mech.kinematics.verlet_step`) paths.
+        let static_member_path;
+        let path = if let Some(name) = callee_name {
+            name
+        } else if let ExprKind::Member { recv, name } = &callee.kind {
+            match &recv.kind {
+                ExprKind::Ident(namespace) => {
+                    if self.lookup(namespace).is_some() {
+                        return Err(CompileError::Unsupported(
+                            "dynamic member callee; use the AST evaluator",
+                        ));
+                    }
+                    let namespace = self
+                        .aliases
+                        .get(namespace)
+                        .map(String::as_str)
+                        .unwrap_or(namespace);
+                    static_member_path = format!("{namespace}.{name}");
+                    &static_member_path
+                }
+                ExprKind::Member {
+                    recv: inner_recv,
+                    name: sub_name,
+                } => {
+                    let ExprKind::Ident(namespace) = &inner_recv.kind else {
+                        return Err(CompileError::Unsupported(
+                            "dynamic host callee; use the AST evaluator",
+                        ));
+                    };
+                    if self.lookup(namespace).is_some() {
+                        return Err(CompileError::Unsupported(
+                            "dynamic member callee; use the AST evaluator",
+                        ));
+                    }
+                    let namespace = self
+                        .aliases
+                        .get(namespace)
+                        .map(String::as_str)
+                        .unwrap_or(namespace);
+                    static_member_path = format!("{namespace}.{sub_name}.{name}");
+                    &static_member_path
+                }
+                _ => {
+                    return Err(CompileError::Unsupported(
+                        "dynamic host callee; use the AST evaluator",
+                    ))
+                }
             }
-            // Use CallHost with a special path index 0xFFFF meaning "callee on stack".
-            self.emit_op(Op::CallHost)?;
-            self.emit_u16(0xFFFF)?;
-            self.emit_u8(arg_count as u8)?;
-            return Ok(());
-        }
+        } else {
+            return Err(CompileError::Unsupported(
+                "dynamic host callee; use the AST evaluator",
+            ));
+        };
 
         let path_idx = self.add_string(path)?;
-        for arg in args {
-            self.compile_arg(arg)?;
+        for e in &pos_args {
+            self.compile_expr(e)?;
         }
-        self.emit_op(Op::CallHost)?;
-        self.emit_u16(path_idx)?;
-        self.emit_u8(arg_count as u8)
-    }
-
-    fn compile_arg(&mut self, arg: &Arg) -> Result<(), CompileError> {
-        match arg {
-            Arg::Pos(e) => self.compile_expr(e),
-            Arg::Named(na) => {
-                // Named arg: push key string then value.
+        if named_args.is_empty() {
+            self.emit_op(Op::CallHost)?;
+            self.emit_u16(path_idx)?;
+            self.emit_u8(pos_args.len() as u8)
+        } else {
+            for na in &named_args {
                 let key_idx = self.add_string(&na.name)?;
                 self.emit_op(Op::PushString)?;
                 self.emit_u16(key_idx)?;
-                self.compile_expr(&na.value)
+                self.compile_expr(&na.value)?;
             }
+            self.emit_op(Op::CallHostNamed)?;
+            self.emit_u16(path_idx)?;
+            self.emit_u8(pos_args.len() as u8)?;
+            self.emit_u8(named_args.len() as u8)
         }
     }
 
@@ -514,7 +639,21 @@ impl Compiler {
                     self.emit_u16(slot)
                 } else {
                     self.compile_expr(value)?;
-                    self.emit_op(Op::Pop)
+                    self.emit_op(Op::Dup)?;
+                    self.compile_pattern_check(pattern)?;
+                    self.emit_op(Op::JumpIfFalse)?;
+                    let fail_jump = self.emit_placeholder()?;
+                    self.compile_pattern_bind(pattern)?;
+                    self.emit_op(Op::Pop)?;
+                    self.emit_op(Op::Jump)?;
+                    let done_jump = self.emit_placeholder()?;
+                    let fail_off = self.chunk.current_offset();
+                    self.patch(fail_jump, fail_off);
+                    self.emit_op(Op::Pop)?;
+                    self.emit_op(Op::TrapMatch)?;
+                    let done_off = self.chunk.current_offset();
+                    self.patch(done_jump, done_off);
+                    Ok(())
                 }
             }
             Stmt::Assign { target, value, .. } => {
@@ -684,15 +823,16 @@ impl Compiler {
                     self.emit_op(Op::JumpIfFalse)?;
                     let next_jump = self.emit_placeholder()?;
 
-                    // Pattern matched — pop the duplicated scrutinee.
-                    self.emit_op(Op::Pop)?;
-                    // Bind pattern variables.
+                    // Pattern matched — bind pattern variables from scrutinee before popping it.
+                    self.push_scope();
                     self.compile_pattern_bind(&arm.pattern)?;
+                    self.emit_op(Op::Pop)?;
                     // Compile arm body.
                     match &arm.body {
                         ArmBody::Block(b) => self.compile_block(b)?,
                         ArmBody::Expr(e) => self.compile_expr(e)?,
                     }
+                    self.pop_scope();
                     // Jump to end.
                     self.emit_op(Op::Jump)?;
                     let end_jump = self.emit_placeholder()?;
@@ -745,18 +885,10 @@ impl Compiler {
     }
 
     /// Compile a pattern check — pushes a boolean indicating whether the
-    /// stack-top value matches the pattern. Consumes the duplicated value
-    /// on success check (via EQ), leaves the original on the stack.
+    /// stack-top value matches the pattern, consuming the tested value.
     fn compile_pattern_check(&mut self, pat: &Pattern) -> Result<(), CompileError> {
         match pat {
-            Pattern::Wildcard => {
-                // Always matches. Pop the duplicate, push true.
-                self.emit_op(Op::Pop)?;
-                self.emit_op(Op::PushBool)?;
-                self.emit_u8(1)
-            }
-            Pattern::Ident(_) => {
-                // Always matches (binding). Pop duplicate, push true.
+            Pattern::Wildcard | Pattern::Ident(_) => {
                 self.emit_op(Op::Pop)?;
                 self.emit_op(Op::PushBool)?;
                 self.emit_u8(1)
@@ -770,27 +902,192 @@ impl Compiler {
                 self.emit_op(Op::Eq)
             }
             Pattern::Some(inner) => {
-                // For 0.1, treat Some(x) as "not null and matches inner".
-                // This is a simplification.
-                self.compile_pattern_check(inner)
-            }
-            Pattern::Ok(inner) => self.compile_pattern_check(inner),
-            Pattern::Err(inner) => self.compile_pattern_check(inner),
-            Pattern::Variant { .. }
-            | Pattern::Record(_)
-            | Pattern::List(_)
-            | Pattern::Constructor { .. } => {
-                // Variant/destructuring pattern matching requires runtime type info.
-                // For 0.1, we do a simplified check: always match.
+                self.emit_op(Op::Dup)?;
+                self.emit_op(Op::PushNull)?;
+                self.emit_op(Op::Ne)?;
+                self.emit_op(Op::JumpIfFalse)?;
+                let fail_jump = self.emit_placeholder()?;
+                self.compile_pattern_check(inner)?;
+                self.emit_op(Op::Jump)?;
+                let done_jump = self.emit_placeholder()?;
+                let fail_off = self.chunk.current_offset();
+                self.patch(fail_jump, fail_off);
                 self.emit_op(Op::Pop)?;
                 self.emit_op(Op::PushBool)?;
-                self.emit_u8(1)
+                self.emit_u8(0)?;
+                let done_off = self.chunk.current_offset();
+                self.patch(done_jump, done_off);
+                Ok(())
             }
+            Pattern::Ok(inner) => self.compile_wrapped_pattern_check(Op::IsOk, Op::UnwrapOk, inner),
+            Pattern::Err(inner) => {
+                self.compile_wrapped_pattern_check(Op::IsErr, Op::UnwrapErr, inner)
+            }
+            Pattern::Record(fields) => self.compile_record_pattern_check(fields),
+            Pattern::List(elements) => self.compile_list_pattern_check(elements),
+            Pattern::Constructor { name, args } => {
+                if matches!(name.as_str(), "vec2" | "vec3" | "vec4" | "mat3" | "mat4") {
+                    self.compile_list_pattern_check(args)
+                } else {
+                    self.emit_op(Op::Pop)?;
+                    self.emit_op(Op::PushBool)?;
+                    self.emit_u8(0)
+                }
+            }
+            Pattern::Variant {
+                enum_name,
+                variant_name,
+                args,
+            } => self.compile_variant_pattern_check(enum_name, variant_name, args),
         }
     }
 
-    /// Bind pattern variables to the value on the stack.
-    /// The value remains on the stack (consumed by the arm body or popped).
+    fn compile_wrapped_pattern_check(
+        &mut self,
+        tag_op: Op,
+        unwrap_op: Op,
+        inner: &Pattern,
+    ) -> Result<(), CompileError> {
+        self.emit_op(Op::Dup)?;
+        self.emit_op(tag_op)?;
+        self.emit_op(Op::JumpIfFalse)?;
+        let fail_jump = self.emit_placeholder()?;
+        self.emit_op(unwrap_op)?;
+        self.compile_pattern_check(inner)?;
+        self.emit_op(Op::Jump)?;
+        let done_jump = self.emit_placeholder()?;
+        let fail_off = self.chunk.current_offset();
+        self.patch(fail_jump, fail_off);
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(0)?;
+        let done_off = self.chunk.current_offset();
+        self.patch(done_jump, done_off);
+        Ok(())
+    }
+
+    fn compile_list_pattern_check(&mut self, elements: &[Pattern]) -> Result<(), CompileError> {
+        if elements.len() > u16::MAX as usize {
+            return Err(CompileError::CodeTooLarge);
+        }
+        let mut fail_jumps = Vec::with_capacity(elements.len() + 1);
+        self.emit_op(Op::Dup)?;
+        self.emit_op(Op::IsListLen)?;
+        self.emit_u16(elements.len() as u16)?;
+        self.emit_op(Op::JumpIfFalse)?;
+        fail_jumps.push(self.emit_placeholder()?);
+        for (i, pat) in elements.iter().enumerate() {
+            self.emit_op(Op::Dup)?;
+            self.emit_op(Op::PushInt)?;
+            self.emit_i64(i as i64)?;
+            self.emit_op(Op::GetIndex)?;
+            self.compile_pattern_check(pat)?;
+            self.emit_op(Op::JumpIfFalse)?;
+            fail_jumps.push(self.emit_placeholder()?);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(1)?;
+        self.emit_op(Op::Jump)?;
+        let done_jump = self.emit_placeholder()?;
+        let fail_off = self.chunk.current_offset();
+        for fj in fail_jumps {
+            self.patch(fj, fail_off);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(0)?;
+        let done_off = self.chunk.current_offset();
+        self.patch(done_jump, done_off);
+        Ok(())
+    }
+
+    fn compile_record_pattern_check(
+        &mut self,
+        fields: &[(String, Pattern)],
+    ) -> Result<(), CompileError> {
+        let mut fail_jumps = Vec::with_capacity(fields.len() * 2 + 1);
+        self.emit_op(Op::Dup)?;
+        self.emit_op(Op::IsRecord)?;
+        self.emit_op(Op::JumpIfFalse)?;
+        fail_jumps.push(self.emit_placeholder()?);
+        for (key, pat) in fields {
+            let key_idx = self.add_string(key)?;
+            self.emit_op(Op::Dup)?;
+            self.emit_op(Op::HasMember)?;
+            self.emit_u16(key_idx)?;
+            self.emit_op(Op::JumpIfFalse)?;
+            fail_jumps.push(self.emit_placeholder()?);
+            self.emit_op(Op::Dup)?;
+            self.emit_op(Op::GetMember)?;
+            self.emit_u16(key_idx)?;
+            self.compile_pattern_check(pat)?;
+            self.emit_op(Op::JumpIfFalse)?;
+            fail_jumps.push(self.emit_placeholder()?);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(1)?;
+        self.emit_op(Op::Jump)?;
+        let done_jump = self.emit_placeholder()?;
+        let fail_off = self.chunk.current_offset();
+        for fj in fail_jumps {
+            self.patch(fj, fail_off);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(0)?;
+        let done_off = self.chunk.current_offset();
+        self.patch(done_jump, done_off);
+        Ok(())
+    }
+
+    fn compile_variant_pattern_check(
+        &mut self,
+        enum_name: &str,
+        variant_name: &str,
+        args: &[Pattern],
+    ) -> Result<(), CompileError> {
+        if args.len() > u8::MAX as usize {
+            return Err(CompileError::CodeTooLarge);
+        }
+        let enum_idx = self.add_string(enum_name)?;
+        let var_idx = self.add_string(variant_name)?;
+        let mut fail_jumps = Vec::with_capacity(args.len() + 1);
+        self.emit_op(Op::Dup)?;
+        self.emit_op(Op::IsVariant)?;
+        self.emit_u16(enum_idx)?;
+        self.emit_u16(var_idx)?;
+        self.emit_u8(args.len() as u8)?;
+        self.emit_op(Op::JumpIfFalse)?;
+        fail_jumps.push(self.emit_placeholder()?);
+        for (i, pat) in args.iter().enumerate() {
+            self.emit_op(Op::Dup)?;
+            self.emit_op(Op::GetVariantField)?;
+            self.emit_u8(i as u8)?;
+            self.compile_pattern_check(pat)?;
+            self.emit_op(Op::JumpIfFalse)?;
+            fail_jumps.push(self.emit_placeholder()?);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(1)?;
+        self.emit_op(Op::Jump)?;
+        let done_jump = self.emit_placeholder()?;
+        let fail_off = self.chunk.current_offset();
+        for fj in fail_jumps {
+            self.patch(fj, fail_off);
+        }
+        self.emit_op(Op::Pop)?;
+        self.emit_op(Op::PushBool)?;
+        self.emit_u8(0)?;
+        let done_off = self.chunk.current_offset();
+        self.patch(done_jump, done_off);
+        Ok(())
+    }
+
+    /// Bind pattern variables to the value on top of the stack.
+    /// Preserves the matched value on top of the stack for caller cleanup.
     fn compile_pattern_bind(&mut self, pat: &Pattern) -> Result<(), CompileError> {
         match pat {
             Pattern::Ident(name) => {
@@ -800,22 +1097,48 @@ impl Compiler {
                 self.emit_u16(slot)
             }
             Pattern::Wildcard | Pattern::Literal(_) | Pattern::None => Ok(()),
-            Pattern::Some(_) | Pattern::Ok(_) | Pattern::Err(_) | Pattern::Variant { .. } => Ok(()),
+            Pattern::Some(inner) => self.compile_pattern_bind(inner),
+            Pattern::Ok(inner) => {
+                self.emit_op(Op::Dup)?;
+                self.emit_op(Op::UnwrapOk)?;
+                self.compile_pattern_bind(inner)?;
+                self.emit_op(Op::Pop)
+            }
+            Pattern::Err(inner) => {
+                self.emit_op(Op::Dup)?;
+                self.emit_op(Op::UnwrapErr)?;
+                self.compile_pattern_bind(inner)?;
+                self.emit_op(Op::Pop)
+            }
             Pattern::Record(fields) => {
-                for (_, p) in fields {
+                for (key, p) in fields {
+                    let key_idx = self.add_string(key)?;
+                    self.emit_op(Op::Dup)?;
+                    self.emit_op(Op::GetMember)?;
+                    self.emit_u16(key_idx)?;
                     self.compile_pattern_bind(p)?;
+                    self.emit_op(Op::Pop)?;
                 }
                 Ok(())
             }
-            Pattern::List(elements) => {
-                for p in elements {
+            Pattern::List(elements) | Pattern::Constructor { args: elements, .. } => {
+                for (i, p) in elements.iter().enumerate() {
+                    self.emit_op(Op::Dup)?;
+                    self.emit_op(Op::PushInt)?;
+                    self.emit_i64(i as i64)?;
+                    self.emit_op(Op::GetIndex)?;
                     self.compile_pattern_bind(p)?;
+                    self.emit_op(Op::Pop)?;
                 }
                 Ok(())
             }
-            Pattern::Constructor { args, .. } => {
-                for p in args {
+            Pattern::Variant { args, .. } => {
+                for (i, p) in args.iter().enumerate() {
+                    self.emit_op(Op::Dup)?;
+                    self.emit_op(Op::GetVariantField)?;
+                    self.emit_u8(i as u8)?;
                     self.compile_pattern_bind(p)?;
+                    self.emit_op(Op::Pop)?;
                 }
                 Ok(())
             }
@@ -840,29 +1163,33 @@ impl Compiler {
     ) -> Result<(), CompileError> {
         let code_offset = self.chunk.current_offset();
 
-        // Reset local counter for this function.
+        // Reset local counter and scope frame for this function.
         // Each function has its own local slot space starting at 0.
         let saved_next_local = self.next_local;
+        let saved_local_base = self.local_base;
+        let saved_scopes = std::mem::replace(&mut self.scopes, vec![HashMap::new()]);
         self.next_local = 0;
+        self.local_base = 1;
 
-        // Set up function scope with parameters.
-        self.push_scope();
         for p in &fd.params {
-            let _ = self.declare_var(&p.name)?;
+            self.declare_var(&p.name)?;
         }
+
+        // Compile body first so every local declared inside the function
+        // (including loop/match temporaries) is included in `local_count`.
+        let compile_res = self.compile_block(&fd.body);
         let local_count = self.next_local;
 
-        // Compile body.
-        self.compile_block(&fd.body)?;
-
-        // If the function doesn't end with an explicit return, emit ReturnNull.
-        let last_byte = *self.chunk.code.last().unwrap_or(&0);
-        if last_byte != Op::Return as u8 && last_byte != Op::ReturnNull as u8 {
-            self.emit_op(Op::ReturnNull)?;
-        }
-
-        self.pop_scope();
+        self.scopes = saved_scopes;
+        self.local_base = saved_local_base;
         self.next_local = saved_next_local;
+        compile_res?;
+
+        // Every forward edge patched to the function's current end needs a real
+        // landing instruction, even when a branch ends in Return. A raw last byte
+        // may also be an operand rather than an opcode. Explicit returns bypass
+        // this harmless fallback; fallthrough cannot enter the next function.
+        self.emit_op(Op::ReturnNull)?;
 
         // Parse budget steps if present.
         let budget_steps = fd
@@ -887,20 +1214,51 @@ impl Compiler {
     // ── Program compilation ──────────────────────────────────────
 
     fn compile_program(&mut self, program: &Program) -> Result<&Chunk, CompileError> {
-        // First pass: register all function names so calls can resolve
+        for req in &program.requires {
+            if req.id.trim().is_empty() {
+                return Err(CompileError::Unsupported(
+                    "empty capability requirement in bytecode program",
+                ));
+            }
+        }
+        for import in &program.imports {
+            let namespace = import
+                .path
+                .strip_prefix("vibe:0.1/")
+                .unwrap_or(&import.path);
+            self.aliases.insert(
+                import.alias.as_deref().unwrap_or(namespace).to_string(),
+                namespace.to_string(),
+            );
+        }
+        // First pass: register enums and all function names so calls can resolve
         // even if a function is called before its definition.
         for item in &program.items {
-            if let Item::Function(fd) = item {
-                let idx = self.chunk.functions.len() as u16;
-                self.func_indices.insert(fd.name.clone(), idx);
-                // Reserve a FuncMeta slot — we'll fill it in the second pass.
-                self.chunk.functions.push(FuncMeta {
-                    name: fd.name.clone(),
-                    param_count: fd.params.len() as u8,
-                    local_count: 0,
-                    code_offset: 0, // placeholder
-                    budget_steps: 0,
-                });
+            match item {
+                Item::Enum(ed) => {
+                    self.enums.insert(ed.name.clone(), ed.clone());
+                }
+                Item::Function(fd) => {
+                    if fd.params.len() > u8::MAX as usize {
+                        return Err(CompileError::Unsupported(
+                            "more than 255 function parameters",
+                        ));
+                    }
+                    if self.chunk.functions.len() >= crate::bytecode::op::MAX_FUNCTIONS {
+                        return Err(CompileError::TooManyFunctions);
+                    }
+                    let idx = self.chunk.functions.len() as u16;
+                    self.func_indices.insert(fd.name.clone(), idx);
+                    // Reserve a FuncMeta slot — we'll fill it in the third pass.
+                    self.chunk.functions.push(FuncMeta {
+                        name: fd.name.clone(),
+                        param_count: fd.params.len() as u8,
+                        local_count: 0,
+                        code_offset: 0, // placeholder
+                        budget_steps: 0,
+                    });
+                }
+                _ => {}
             }
         }
 
@@ -926,7 +1284,17 @@ impl Compiler {
                 Item::Statement(stmt) => {
                     self.compile_stmt(stmt)?;
                 }
-                _ => {}
+                Item::Function(_) | Item::Enum(_) => {}
+                Item::Hook(_)
+                | Item::Field(_)
+                | Item::Material(_)
+                | Item::Law(_)
+                | Item::Present(_)
+                | Item::Bind(_) => {
+                    return Err(CompileError::Unsupported(
+                        "hooks/fields/materials/laws/present/bind require the AST evaluator",
+                    ));
+                }
             }
         }
 
@@ -950,6 +1318,9 @@ impl Compiler {
 pub fn compile(program: &Program) -> Result<Chunk, CompileError> {
     let mut compiler = Compiler::new();
     let chunk = compiler.compile_program(program)?;
+    super::task_admission::validate(chunk).map_err(|_| {
+        CompileError::Unsupported("bytecode runtime admission failed; use the AST evaluator")
+    })?;
     Ok(chunk.clone())
 }
 
@@ -959,6 +1330,9 @@ pub fn compile_expr(expr: &Expr) -> Result<Chunk, CompileError> {
     let mut compiler = Compiler::new();
     compiler.compile_expr(expr)?;
     compiler.emit_op(Op::Return)?;
+    super::task_admission::validate(&compiler.chunk).map_err(|_| {
+        CompileError::Unsupported("bytecode runtime admission failed; use the AST evaluator")
+    })?;
     Ok(compiler.chunk)
 }
 

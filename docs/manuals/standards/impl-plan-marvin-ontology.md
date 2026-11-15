@@ -1,7 +1,7 @@
 # Impl plan — Marvin / ontology (shapes · vocab · joins)
 
 **Owner:** Marvin · **Seam commits:** Neo · **Language triage:** Vibe · **Chrome pair:** davinci/monet
-**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Plans tip:** `7318a049`+ · **Branch:** `0.0.36-dev`
+**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Plans tip:** `7318a049`+ · **Branch:** `0.0.40-dev`
 **North star:** Shared vocabularies and class/property/relation models so QualiaDB, Poet, and vibe script read the same world — human chrome machine-readable underneath.
 **Rules:** shapes join only live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` IRIs · gaps → @Vibe → `vibescript-sprint-deltas.md` · script hot-edit must never force host rebuild
 

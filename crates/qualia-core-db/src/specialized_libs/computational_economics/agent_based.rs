@@ -45,6 +45,7 @@ pub struct OrderBook {
 }
 
 impl OrderBook {
+    /// Clears all state.
     pub fn clear(&mut self) {
         self.n_bids = 0;
         self.n_asks = 0;

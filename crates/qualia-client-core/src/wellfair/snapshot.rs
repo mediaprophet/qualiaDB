@@ -1,4 +1,4 @@
-//! Derive `WellfairHostSnapshot` from live host services (not Dioxus signals).
+//! Derive `WellfairHostSnapshot` from live host services (not Aether signals).
 
 use super::accessibility_prefs;
 use super::host_state::{NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot};
@@ -15,6 +15,7 @@ pub fn build_host_snapshot(
     build_host_snapshot_with_storage(key_vault, host_api_ready, owner_label, demo_mode, None)
 }
 
+/// Builds host-snapshot-with-storage.
 pub fn build_host_snapshot_with_storage(
     key_vault: &KeyVault,
     host_api_ready: bool,

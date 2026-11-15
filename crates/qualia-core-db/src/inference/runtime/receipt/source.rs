@@ -14,6 +14,7 @@ pub struct SourceProvenance {
     pub executable_sha256: String,
 }
 
+/// Captures source provenance.
 pub fn capture_source_provenance() -> SourceProvenance {
     let executable_sha256 = std::env::current_exe()
         .ok()

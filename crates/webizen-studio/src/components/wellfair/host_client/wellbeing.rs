@@ -56,6 +56,7 @@ pub struct AssessmentResultDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches assessment-instruments.
 pub async fn fetch_assessment_instruments() -> Result<Vec<AssessmentInstrumentDto>, String> {
     let js = tauri_invoke(
         "wellfair_list_assessment_instruments",
@@ -70,11 +71,13 @@ pub async fn fetch_assessment_instruments() -> Result<Vec<AssessmentInstrumentDt
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches assessment-instruments.
 pub async fn fetch_assessment_instruments() -> Result<Vec<AssessmentInstrumentDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Records assessment.
 pub async fn record_assessment(
     instrument_id: &str,
     responses_csv: &str,
@@ -102,6 +105,7 @@ pub async fn record_assessment(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Records assessment.
 pub async fn record_assessment(
     _instrument_id: &str,
     _responses_csv: &str,
@@ -110,6 +114,7 @@ pub async fn record_assessment(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches assessments.
 pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
     let js = tauri_invoke("wellfair_list_assessments", wasm_bindgen::JsValue::NULL)
         .await
@@ -121,6 +126,7 @@ pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches assessments.
 pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
     Ok(vec![])
 }

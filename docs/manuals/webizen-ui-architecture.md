@@ -11,7 +11,7 @@
 webizen-desktop (Tauri 2)
   shell, tray, browser chrome, 300+ commands
         │
-webizen-studio (Dioxus)
+webizen-studio (Aether)
   Talk, Library, 10D browser, QApps, panes
         │
 qualia-client-core → qualia-core-db + specialized_libs
@@ -23,7 +23,7 @@ qualia-client-core → qualia-core-db + specialized_libs
 - No second GPU adapter for chrome.
 - Ollama is optional Settings harness — not the Qualia engine.
 - Audio product cut is planned separately (algorithms catalogue); UI waves first.
-- Product shell stays Tauri 2 + Dioxus + engine wgpu.
+- Product shell stays Tauri 2 + Aether + engine wgpu.
 
 ## Inference honesty
 

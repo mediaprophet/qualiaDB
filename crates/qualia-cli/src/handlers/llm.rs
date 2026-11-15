@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use crate::cli::LlmAction;
 use crate::llm_lifecycle;
 use crate::llm_testing;
+use crate::qwen_testing;
 
+/// Handles the subcommand action.
 pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>> {
     let vault = |opt: &Option<PathBuf>| {
         opt.clone()
@@ -24,10 +26,14 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         }
         LlmAction::Eval {
             prompt,
+            authority,
             orchestrated,
             stream,
             lora,
         } => {
+            let _authority = authority.as_ref()
+                .map(|path| super::inference_policy::prepare_eval(path))
+                .transpose()?;
             if let Some(l) = lora {
                 println!("Multiplexing LoRA adapter from {:?}", l);
             }
@@ -40,13 +46,13 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             vault_path,
             models,
             quantization,
-            verbose,
+            details,
         } => {
             llm_testing::run_test_models(
                 vault_path.clone(),
                 models.clone(),
                 quantization.clone(),
-                *verbose,
+                *details,
             )?;
         }
         LlmAction::Validate { vault_path, strict } => {
@@ -55,9 +61,9 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         LlmAction::ComprehensiveTest {
             vault_path,
             model,
-            verbose,
+            details,
         } => {
-            llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *verbose)?;
+            llm_testing::run_comprehensive_llm_test(vault_path.clone(), model.clone(), *details)?;
         }
         LlmAction::Benchmark {
             vault_path,
@@ -86,6 +92,142 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             layout,
         } => {
             llm_testing::run_convert_gguf_to_p64(input, out, *page_log2, layout)?;
+        }
+        LlmAction::PrepareQwen4Exp {
+            input,
+            out,
+            ple_out,
+        } => {
+            llm_testing::run_prepare_qwen4exp_native(input, out, ple_out)?;
+        }
+        LlmAction::VerifyQwen4Exp { package } => {
+            llm_testing::run_verify_qwen4exp_native(package)?;
+        }
+        LlmAction::ProbeQwen4ExpPle { package } => {
+            llm_testing::run_probe_qwen4exp_ple(package)?;
+        }
+        LlmAction::GatherQwen4ExpPle { package, token_ids } => {
+            llm_testing::run_gather_qwen4exp_ple(package, token_ids)?;
+        }
+        LlmAction::ProbeQwen4ExpPleBlock { package, token_id } => {
+            llm_testing::run_probe_qwen4exp_ple_block(package, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpHyper {
+            package,
+            layer,
+            ffn,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_hyper(package, *layer, *ffn, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpGdn {
+            package,
+            layer,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_gdn(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpQsa {
+            package,
+            layer,
+            token_id,
+        } => {
+            qwen_testing::run_probe_qwen4exp_qsa(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpLayer {
+            package,
+            layer,
+            token_id,
+        } => {
+            qwen_testing::run_probe_qwen4exp_gdn_moe_layer(package, *layer, *token_id)?;
+        }
+        LlmAction::ProbeQwen4ExpTrunk { package, token_id } => {
+            llm_testing::run_probe_qwen4exp_trunk(package, *token_id)?;
+        }
+        LlmAction::ActivateQwen4Exp { package } => {
+            llm_testing::run_activate_qwen4exp_native(package)?;
+        }
+        LlmAction::ProbeQwen4ExpMoe {
+            package,
+            layer,
+            token_id,
+            tile,
+        } => {
+            llm_testing::run_probe_qwen4exp_moe(package, *layer, *token_id, tile.as_deref())?;
+        }
+        LlmAction::PromoteQwen4ExpExpert {
+            package,
+            layer,
+            expert,
+            cache_dir,
+            max_cache_gib,
+        } => {
+            llm_testing::run_promote_qwen4exp_expert(
+                package,
+                *layer,
+                *expert,
+                cache_dir,
+                *max_cache_gib,
+            )?;
+        }
+        LlmAction::ProbeQwen4ExpExpertTile {
+            package,
+            tile,
+            token_id,
+        } => {
+            llm_testing::run_probe_qwen4exp_expert_tile(package, tile, *token_id)?;
+        }
+        LlmAction::DecodeQwen4Exp {
+            package,
+            authority,
+            developer,
+            prompt,
+            token_ids,
+            chat,
+            max_tokens,
+            context,
+            trunk_mmap,
+        } => {
+            if authority.is_some() && *developer {
+                return Err("decode-qwen4exp accepts either --authority or --developer, never both".into());
+            }
+            if let Some(authority) = authority {
+                super::inference_policy::run_qwen_governed(authority, package,
+                    prompt.as_deref(), token_ids, *max_tokens, *context, *chat, *trunk_mmap)?;
+            } else if *developer {
+                qwen_testing::run_decode_qwen4exp(
+                    package,
+                    prompt.as_deref(),
+                    token_ids,
+                    *max_tokens,
+                    *context,
+                    *chat,
+                    *trunk_mmap,
+                )?;
+            } else {
+                return Err("decode-qwen4exp requires --authority or explicit --developer".into());
+            }
+        }
+        LlmAction::ProbeQwen4ExpTrace {
+            package,
+            prompt,
+            token_ids,
+            chat,
+            context,
+            topk,
+            rank_tokens,
+            dump,
+        } => {
+            qwen_testing::run_probe_qwen4exp_trace(
+                package,
+                prompt.as_deref(),
+                token_ids,
+                *chat,
+                *context,
+                *topk,
+                rank_tokens,
+                dump.as_deref(),
+            )?;
         }
         LlmAction::Optimize {
             input,

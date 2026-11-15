@@ -51,6 +51,14 @@ pub struct FraminghamResult {
     pub log_score: f64,
 }
 
+/// Framingham 10-year cardiovascular risk (Anderson 1991 / Wilson 1998,
+/// ATP III sex-specific log-linear model).
+///
+/// Returns the estimated absolute risk in `[0, 1]` plus a `Low`
+/// (&lt;10%), `Moderate` (≤20%), or `High` (&gt;20%) category. Inputs
+/// must be physiologically plausible (positive cholesterol/SBP values)
+/// — the caller is responsible for range validation; no clamping is
+/// applied beyond the final `[0, 1]` bound.
 pub fn framingham_10yr_risk(input: &FraminghamInput) -> FraminghamResult {
     // Wilson 1998 coefficients (Table 2).
     let (b_age, b_tc, b_hdl, b_sbp_unt, b_sbp_trt, b_smoke, b_diab, baseline_surv, mean_sum) =
@@ -134,6 +142,12 @@ pub struct Cha2ds2VascResult {
     pub anticoagulation_recommended: bool,
 }
 
+/// CHA₂DS₂-VASc stroke-risk score for non-valvular atrial fibrillation
+/// (Lip 2010 / ESC 2020).
+///
+/// Sums the weighted factors (0–9), maps the score to a cohort-derived
+/// annual stroke-risk percentage, and flags whether anticoagulation is
+/// recommended per ESC 2020 thresholds (men ≥2, women ≥3).
 pub fn cha2ds2_vasc_score(input: &Cha2ds2VascInput) -> Cha2ds2VascResult {
     let score = input.congestive_heart_failure as u8
         + input.hypertension as u8
@@ -198,6 +212,14 @@ pub struct Score2Result {
     pub category: RiskCategory,
 }
 
+/// SCORE2 10-year cardiovascular risk (ESC CVD Risk Collaboration /
+/// SCORE2 Working Group 2021).
+///
+/// Computes the sex-specific baseline risk from centred age, SBP,
+/// non-HDL cholesterol, and smoking, then applies the regional
+/// calibration multiplier (`Low` 0.71 → `VeryHigh` 2.27). Returns risk
+/// as a percentage in `[0, 100]` with a `Low`/`Moderate`/`High`/
+/// `VeryHigh` category banded at 5/10/20%.
 pub fn score2_risk(input: &Score2Input) -> Score2Result {
     let non_hdl = input.total_cholesterol_mmol - input.hdl_cholesterol_mmol;
     let age_c = (input.age as f64 - 60.0) / 5.0;
@@ -559,6 +581,15 @@ pub struct FhirValidationResult {
     pub interpretation_code: &'static str,
 }
 
+/// Classify a FHIR Observation value against built-in LOINC reference
+/// ranges, falling back to the caller-provided `reference_low`/`high`
+/// (with half-range critical margins) when the code is unlisted.
+///
+/// Returns `ObservationStatus::{Normal, Low, High, CriticalLow,
+/// CriticalHigh, Unknown}` plus the HL7 interpretation code
+/// (`N`/`L`/`H`/`LL`/`HH`/`U`). `is_valid` is false only when neither a
+/// known range nor caller references exist — the observation is then
+/// `Unknown` rather than guessed.
 pub fn validate_fhir_observation(obs: &FhirObservation) -> FhirValidationResult {
     // (loinc_code, low, high, critical_low, critical_high)
     const RANGES: &[(&str, f64, f64, f64, f64)] = &[

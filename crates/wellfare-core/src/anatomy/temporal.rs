@@ -43,6 +43,7 @@ impl Kinetics {
         half_life_minutes: 0,
     };
 
+    /// Creates a new instance.
     pub fn new(onset_minutes: u32, half_life_minutes: u32) -> Self {
         Self {
             onset_minutes,
@@ -102,6 +103,7 @@ pub struct FactorEvent {
 }
 
 impl FactorEvent {
+    /// Creates a new instance.
     pub fn new(factor: Factor, at_minute: i64) -> Self {
         Self {
             factor,
@@ -194,15 +196,18 @@ pub struct TrajectoryPoint {
 }
 
 impl Timeline {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Builder — sets the event.
     pub fn with_event(mut self, e: FactorEvent) -> Self {
         self.events.push(e);
         self
     }
 
+    /// Builder — sets the environment.
     pub fn with_environment(mut self, m: EnvironmentModulator) -> Self {
         self.environment.push(m);
         self

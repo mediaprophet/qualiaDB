@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -237,6 +237,7 @@ fn initial_claims() -> Vec<EClaim> {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
+/// Aether `Nexus` component.
 pub fn Nexus() -> Element {
     // Signals
     let mut lens = use_signal(|| Lens::Causal);

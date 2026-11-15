@@ -8,6 +8,7 @@ use crate::domains::biological::bioinformatics::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: bio sequence align.
 pub fn align(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (q, t) = pair_seq(args_v, span)?;
     let r = align_nucleotide(q.as_bytes(), t.as_bytes());
@@ -43,6 +44,7 @@ fn alignment_value(result: crate::domains::biological::bioinformatics::Alignment
     ])
 }
 
+/// VibeScript seam: bioinformatics compute.
 pub fn bio_compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let operation = args::rec_str(args_v, "operation")
         .ok_or_else(|| args::bad(span, "Bioinformatics.compute needs operation"))?;

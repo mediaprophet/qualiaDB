@@ -22,6 +22,7 @@ pub enum ModelTask {
 }
 
 impl ModelTask {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             ModelTask::Always => "Whenever installed",
@@ -32,6 +33,7 @@ impl ModelTask {
         }
     }
 
+    /// Constructs from str-lossy.
     pub fn from_str_lossy(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
             "chat" => ModelTask::Chat,
@@ -42,6 +44,7 @@ impl ModelTask {
         }
     }
 
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             ModelTask::Always => "always",
@@ -119,10 +122,12 @@ pub struct ResolvedModelPreference {
     pub task: String,
 }
 
+/// Preferences path.
 pub fn preferences_path(storage_root: &Path) -> PathBuf {
     storage_root.join("Meta").join(PREFS_FILE)
 }
 
+/// Loads preferences.
 pub fn load_preferences(storage_root: &Path) -> ModelPreferences {
     let path = preferences_path(storage_root);
     let Ok(text) = std::fs::read_to_string(&path) else {
@@ -131,6 +136,7 @@ pub fn load_preferences(storage_root: &Path) -> ModelPreferences {
     serde_json::from_str(&text).unwrap_or_default()
 }
 
+/// Saves preferences.
 pub fn save_preferences(storage_root: &Path, prefs: &ModelPreferences) -> Result<(), String> {
     let path = preferences_path(storage_root);
     if let Some(parent) = path.parent() {
@@ -140,6 +146,7 @@ pub fn save_preferences(storage_root: &Path, prefs: &ModelPreferences) -> Result
     std::fs::write(path, json).map_err(|e| e.to_string())
 }
 
+/// Lists installed model IDs.
 pub fn list_installed_model_ids(storage_root: &Path) -> Vec<String> {
     let models = models_dir(storage_root);
     let Ok(entries) = std::fs::read_dir(&models) else {
@@ -266,6 +273,7 @@ fn condition_passes(
     Some(reason)
 }
 
+/// Resolves a preference.
 pub fn resolve_preference(
     storage_root: &Path,
     catalog: &ResourceCatalog,
@@ -297,6 +305,7 @@ pub fn resolve_preference(
     None
 }
 
+/// Applies preference.
 pub fn apply_preference(
     storage_root: &Path,
     catalog: &ResourceCatalog,
@@ -309,6 +318,7 @@ pub fn apply_preference(
         .map_err(|e| e.to_string())
 }
 
+/// `default-preferences-from` catalog.
 pub fn default_preferences_from_catalog(catalog: &ResourceCatalog) -> ModelPreferences {
     let mut llms: Vec<_> = catalog.llms.iter().collect();
     llms.sort_by_key(|m| m.ram_estimate_mb.or(m.size_mb).unwrap_or(u32::MAX));
@@ -355,6 +365,7 @@ pub fn default_preferences_from_catalog(catalog: &ResourceCatalog) -> ModelPrefe
     }
 }
 
+/// Ensures preferences.
 pub fn ensure_preferences(storage_root: &Path, catalog: &ResourceCatalog) -> ModelPreferences {
     let mut prefs = load_preferences(storage_root);
     if prefs.entries.is_empty() && !catalog.llms.is_empty() {

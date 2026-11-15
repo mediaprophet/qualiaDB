@@ -22,10 +22,12 @@ DAEMON_URL = os.environ.get("QUALIA_DAEMON_URL", "http://127.0.0.1:4242")
 
 
 def _utc_now() -> str:
+    """Internal helper."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _host_class() -> str:
+    """Internal helper."""
     machine = platform.machine().lower()
     system = platform.system().lower()
     if machine in ("arm64", "aarch64"):
@@ -46,6 +48,7 @@ def _host_class() -> str:
 
 
 def _total_ram_gb() -> Optional[float]:
+    """Internal helper."""
     try:
         import psutil
         return round(psutil.virtual_memory().total / (1024 ** 3), 1)
@@ -64,6 +67,7 @@ def _total_ram_gb() -> Optional[float]:
 
 
 def collect_device_manifest() -> dict[str, Any]:
+    """Collects device manifest."""
     cores = os.cpu_count()
     return {
         "host_class": _host_class(),
@@ -92,6 +96,7 @@ def collect_ci_environment() -> Optional[dict[str, Any]]:
 
 
 def _harness_runner_label() -> str:
+    """Internal helper."""
     if os.environ.get("GITHUB_ACTIONS"):
         return "github-actions-comparative-harness"
     return "python-comparative-harness"
@@ -116,6 +121,7 @@ def collect_harness_environment(
     runner: Optional[str] = None,
     measurement_path: str = "harness_isolated_subprocess",
 ) -> dict[str, Any]:
+    """Collects harness environment."""
     env: dict[str, Any] = {
         "runner": runner or _harness_runner_label(),
         "engine_version": read_workspace_engine_version(),
@@ -139,6 +145,7 @@ def collect_harness_environment(
 
 
 def fetch_daemon_health(base_url: str = DAEMON_URL, timeout: float = 1.0) -> Optional[dict[str, Any]]:
+    """Fetches daemon health."""
     try:
         req = urllib.request.Request(f"{base_url.rstrip('/')}/health", method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -148,6 +155,7 @@ def fetch_daemon_health(base_url: str = DAEMON_URL, timeout: float = 1.0) -> Opt
 
 
 def fetch_daemon_execution_environment(base_url: str = DAEMON_URL) -> Optional[dict[str, Any]]:
+    """Fetches daemon execution environment."""
     health = fetch_daemon_health(base_url)
     if not health:
         return None

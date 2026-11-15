@@ -16,14 +16,14 @@ if (!(Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 }
 
-# 2. Build Dioxus WASM with the android_pwa_edge feature
+# 2. Build Aether WASM with the android_pwa_edge feature
 Set-Location $HarnessDir
-# We use cargo to build since Dioxus CLI can be complex with features, 
+# We use cargo to build since Aether CLI can be complex with features, 
 # but assuming dx CLI is installed:
 Write-Host "Running dx build..."
 # For simplicity in this script, we'll write the manifest generation directly
 # Usually dx build handles HTML wrapping.
-# NOTE: User should have Dioxus CLI installed. 
+# NOTE: User should have Aether CLI installed. 
 # dx build --release --features "android_pwa_edge"
 
 # 3. Generate PWA manifest.json

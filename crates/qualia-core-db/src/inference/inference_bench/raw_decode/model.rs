@@ -1,11 +1,12 @@
-use std::sync::Arc;
+#![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
+
 
 use crate::gguf_bridge::QTensorEngine;
 use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
 
 pub(super) struct RawModel {
     pub engine: QTensorEngine,
-    pub mmap: Arc<memmap2::Mmap>,
+    pub mmap: crate::gguf_bridge::ModelByteHandle,
     pub tokenizer: GgufTokenizer,
     pub index: GgufTensorIndex,
     pub emb: Vec<f32>,
@@ -14,6 +15,7 @@ pub(super) struct RawModel {
 }
 
 impl RawModel {
+    /// Loads a raw model from `model_path`.
     pub fn load(model_path: &str) -> Result<Self, String> {
         let mut engine = QTensorEngine::new();
         // The checked activation path parses the format and eagerly uploads resident layer
@@ -22,11 +24,27 @@ impl RawModel {
         engine.load_model_checked(model_path)?;
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let is_p64 = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
-        let (tokenizer, index) = if is_p64 {
+        let (tokenizer, index) = if let Some(ref pkg) = engine.ftw_package {
+            let path_obj = std::path::Path::new(model_path);
+            let dir = if path_obj.is_dir() {
+                path_obj
+            } else {
+                path_obj.parent().unwrap_or(path_obj)
+            };
+            let tok_path = dir.join("tokenizer.json");
+            let tok = if tok_path.is_file() {
+                std::fs::read_to_string(&tok_path)
+                    .ok()
+                    .and_then(|s| GgufTokenizer::from_hf_json(&s))
+                    .unwrap_or_default()
+            } else {
+                GgufTokenizer::default()
+            };
+            (tok, pkg.tensor_index.clone())
+        } else if is_p64 {
             let p64 = crate::p64_weight::P64TensorIndex::from_p64(&mmap)
                 .map_err(|e| format!("P64 index: {e}"))?;
             let tokenizer =
@@ -54,6 +72,7 @@ impl RawModel {
         })
     }
 
+    /// Tokenizes and prepares the prompt state.
     pub fn prepare_prompt(
         &mut self,
         prompt_tokens: &[u32],
@@ -118,6 +137,7 @@ impl RawModel {
         ))
     }
 
+    /// Loads the embedding row for `token_id`.
     pub fn load_embedding(&mut self, token_id: u32) -> Result<(), String> {
         let emb_dim = self.index.emb_dim();
         let written = self.index.dequantize_token_embedding_into(

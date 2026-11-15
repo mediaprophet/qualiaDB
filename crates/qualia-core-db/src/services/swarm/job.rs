@@ -57,6 +57,7 @@ pub enum JobInput {
 }
 
 impl JobInput {
+    /// The kind tag.
     pub fn kind(&self) -> JobKind {
         match self {
             JobInput::DenseLinearProduct { .. } => JobKind::DenseLinearProduct,
@@ -95,6 +96,7 @@ pub enum JobResult {
 }
 
 impl JobResult {
+    /// The kind tag.
     pub fn kind(&self) -> JobKind {
         match self {
             JobResult::DenseLinearProduct { .. } => JobKind::DenseLinearProduct,
@@ -113,11 +115,13 @@ pub struct JobSpec {
 }
 
 impl JobSpec {
+    /// Creates a default `JobSpec`.
     pub fn new(mode: JobMode, input: JobInput) -> Self {
         let id = content_id(&input);
         Self { id, mode, input }
     }
 
+    /// The kind tag.
     pub fn kind(&self) -> JobKind {
         self.input.kind()
     }

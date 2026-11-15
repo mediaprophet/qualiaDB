@@ -8,6 +8,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Tauri `invoke` FFI seam.
 pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     match id {
         "Cosmic.geodetic_to_ecef" => geodetic_to_ecef(args, span),
@@ -27,10 +28,12 @@ pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// Bad-catalog entry.
 pub(super) fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {
     Diagnostic::new(DiagCode::E100, span, msg)
 }
 
+/// f64 record field.
 pub(super) fn rec_f64(args: &Value, key: &str) -> Option<f64> {
     match args {
         Value::Record(map) => match map.get(key) {
@@ -50,6 +53,7 @@ pub(super) fn utf8_fold(s: &str) -> String {
     s.trim().to_lowercase()
 }
 
+/// String record field.
 pub(super) fn rec_str<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
     match args {
         Value::Record(map) => match map.get(key) {
@@ -60,6 +64,7 @@ pub(super) fn rec_str<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
     }
 }
 
+/// Record constructor.
 pub(super) fn record(pairs: &[(&str, Value)]) -> Value {
     let mut map = BTreeMap::new();
     for (k, v) in pairs {

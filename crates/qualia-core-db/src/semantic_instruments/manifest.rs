@@ -41,6 +41,7 @@ pub struct InstrumentManifest {
 }
 
 impl InstrumentManifest {
+    /// `InstrumentManifest::validate`.
     pub fn validate(&self) -> Result<(), InstrumentError> {
         let required = [
             ("format_version", self.format_version.as_str()),
@@ -49,7 +50,10 @@ impl InstrumentManifest {
             ("version", self.version.as_str()),
             ("name", self.name.as_str()),
             ("purpose", self.purpose.as_str()),
-            ("prohibited_interpretation", self.prohibited_interpretation.as_str()),
+            (
+                "prohibited_interpretation",
+                self.prohibited_interpretation.as_str(),
+            ),
             ("domain", self.domain.as_str()),
             ("ontology_reference", self.ontology_reference.as_str()),
             ("entry_point", self.entry_point.as_str()),

@@ -43,6 +43,7 @@ pub struct ExactLine2 {
 }
 
 impl ExactLine2 {
+    /// Creates a default `ExactLine2`.
     pub fn new(slope: f64, intercept: f64) -> Self {
         Self {
             slope,
@@ -52,6 +53,7 @@ impl ExactLine2 {
         }
     }
 
+    /// `true` when the segment is vertical.
     pub fn vertical(x: f64) -> Self {
         Self {
             slope: 0.0,

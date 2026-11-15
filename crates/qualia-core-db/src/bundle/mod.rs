@@ -24,15 +24,60 @@
 //!
 //! See [`format`] for the on-disk layout.
 
-mod format;
+pub mod cbor_ld_manifest;
+pub mod entity_compiler;
+pub mod entity_verifier;
+pub mod field_range_planner;
+pub(crate) mod format;
 mod reader;
+pub use entity_compiler as twin_compiler;
+pub use entity_verifier as twin_verifier;
+pub mod species_meta;
+pub mod stream;
+pub mod streaming_hydration;
+pub mod streaming_loader;
+pub mod variant_matrix;
 mod writer;
 
-pub use format::{
-    BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION,
-    SHA256_LEN,
+pub use streaming_hydration::{
+    DEFAULT_HYDRATION_QUEUE_CAPACITY, EcopunkPackStreamer, HmcPackStreamer, LocalHostQ42Ext,
 };
-pub use reader::BundleReader;
+
+pub use entity_compiler::{
+    compile_digital_twin, compile_entity, EntityCompileInput, EntityCompileOutput,
+    TwinCompileInput, TwinCompileOutput,
+};
+
+pub use entity_verifier::{
+    verify_digital_twin_10d, verify_digital_twin_bundle, verify_entity_10d, verify_entity_bundle,
+    AffordanceVerificationSummary, CommonsObligationSummary, DigitalTwin10dVerification,
+    DigitalTwinBundleVerification, Entity10dVerification, EntityBundleVerification,
+    ImpostorVerificationSummary, SurfelVerificationSummary,
+};
+
+pub use cbor_ld_manifest::{
+    AcousticAnchors, CborLdManifest, CommonsObligation, CredentialProof, CredentialSubject,
+    GeometryLayout, SectionLayoutEntry, SubjectAffordances, CBOR_LD_CONTEXT_CREDENTIALS_V1,
+    CBOR_LD_CONTEXT_WEBCIVICS_V1, CBOR_LD_MANIFEST_ENTRY_KEY, CBOR_LD_MANIFEST_KIND,
+};
+pub use field_range_planner::*;
+pub use format::{
+    BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_FLAG_PAGE_ALIGN_4096, BUNDLE_HEADER_SIZE,
+    BUNDLE_MAGIC, BUNDLE_PAGE_ALIGN_4096, BUNDLE_VERSION, SHA256_LEN,
+};
+pub use reader::{BundleReadLimits, BundleReader};
+pub use species_meta::{
+    FaunaSpeciesMeta, FloraSpeciesMeta, HolisticSpeciesMeta, MechanicalAssemblyMeta,
+    SPECIES_META_ENTRY_KEY, SPECIES_META_KIND,
+};
+pub use streaming_loader::{
+    classify_10d_section_tier, classify_entry_tier, verify_arrived_range, HmcHeaderProbe,
+    HmcProgressiveRangePlanner, HmcRangeRequest, StreamPriorityTier,
+};
+pub use variant_matrix::{
+    BiologicalPhenotype, EntityFamilyManifest, LodTier, ModelVariantDescriptor, StructuralState,
+    TwinFamilyManifest, FAMILY_MANIFEST_ENTRY_KEY, FAMILY_MANIFEST_KIND,
+};
 pub use writer::BundleWriter;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -41,6 +86,7 @@ pub use reader::BundleMmap;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity_view::entity_ontologies::LifecycleStage;
 
     #[test]
     fn heterogeneous_pack_of_three_kinds_roundtrips() {
@@ -74,5 +120,81 @@ mod tests {
         let bytes = BundleWriter::new().build().unwrap();
         let r = BundleReader::parse(&bytes).unwrap();
         assert!(r.entries().is_empty());
+    }
+
+    #[test]
+    fn tampered_bundle_fails_verification() {
+        let mut w = BundleWriter::new();
+        w.add_file("asset.10d", "10d", b"valid asset bytes".to_vec(), None)
+            .unwrap();
+        let mut bytes = w.build().unwrap();
+
+        // Tamper with one byte in the payload
+        let r = BundleReader::parse(&bytes).unwrap();
+        let offset = r.entry("asset.10d").unwrap().offset as usize;
+        bytes[offset] ^= 0xFF;
+
+        // Bundle parse must reject with CRC mismatch
+        let res = BundleReader::parse(&bytes);
+        assert!(matches!(res, Err(BundleError::CrcMismatch { .. })));
+    }
+
+    #[test]
+    fn family_manifest_bundle_roundtrip() {
+        let mut manifest = TwinFamilyManifest::new(
+            "urn:taxon:water_pump_v3",
+            "Water Pump V3",
+            "machinery",
+            "operational_lod0",
+        );
+        manifest.add_variant(ModelVariantDescriptor {
+            variant_id: "operational_lod0".to_string(),
+            phenotype: BiologicalPhenotype::Unspecified,
+            stage: LifecycleStage::Operational,
+            lod: LodTier::Lod0,
+            state: StructuralState::Pristine,
+            asset_key: "pump_hero.10d".to_string(),
+            entity_ontology_key: Some("pump_ontology.q42".to_string()),
+            procedural_seed: Some(101),
+        });
+
+        let mut w = BundleWriter::new();
+        w.add_family_manifest(&manifest).unwrap();
+        w.add_file("pump_hero.10d", "10d", vec![0x10; 64], None)
+            .unwrap();
+        w.add_file("pump_ontology.q42", "q42", vec![0x42; 64], None)
+            .unwrap();
+        let bytes = w.build().unwrap();
+
+        let r = BundleReader::parse(&bytes).unwrap();
+        let decoded_manifest = r.get_family_manifest().unwrap().expect("manifest exists");
+        assert_eq!(decoded_manifest.family_id, "urn:taxon:water_pump_v3");
+        let resolved = decoded_manifest
+            .resolve_variant(
+                BiologicalPhenotype::Unspecified,
+                LifecycleStage::Operational,
+                LodTier::Lod0,
+                StructuralState::Pristine,
+            )
+            .unwrap();
+        assert_eq!(resolved.variant_id, "operational_lod0");
+        assert_eq!(resolved.asset_key, "pump_hero.10d");
+    }
+
+    #[test]
+    fn species_meta_and_4096_alignment_roundtrip() {
+        let flora = HolisticSpeciesMeta::Flora(FloraSpeciesMeta::new("urn:taxon:eucalyptus_regnans"));
+        let mut w = BundleWriter::new().with_page_align_4096(true);
+        w.add_species_meta(&flora).unwrap();
+        w.add_file("tree.10d", "10d", vec![0x10; 128], None).unwrap();
+        let bytes = w.build().unwrap();
+
+        let r = BundleReader::parse(&bytes).unwrap();
+        assert!(r.is_page_aligned_4096());
+        for e in r.entries() {
+            assert_eq!(e.offset % BUNDLE_PAGE_ALIGN_4096 as u64, 0);
+        }
+        let decoded = r.get_species_meta().unwrap().expect("species meta exists");
+        assert_eq!(decoded, flora);
     }
 }

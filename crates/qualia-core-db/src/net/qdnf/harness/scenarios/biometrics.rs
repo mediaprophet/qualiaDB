@@ -14,6 +14,7 @@ fn capture() -> Result<RawCapture, QdnfError> {
     RawCapture::acquire(Modality::Fingerprint, digest(1), digest(2), 80, 0)
 }
 
+/// Scenario S18: a biometric match alone is not authority.
 pub fn s18_match_not_authority() -> Result<(), QdnfError> {
     let probe = capture()?;
     let reference = derive_template(&probe, digest(3), digest(4), digest(5), Generation(1))?;
@@ -25,6 +26,7 @@ pub fn s18_match_not_authority() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S19: biometric auth must not cross domains.
 pub fn s19_cross_domain() -> Result<(), QdnfError> {
     let probe = capture()?;
     let template = derive_template(&probe, digest(3), digest(4), digest(5), Generation(1))?;
@@ -38,6 +40,7 @@ pub fn s19_cross_domain() -> Result<(), QdnfError> {
     )
 }
 
+/// Scenario S20: non-biometric recovery path.
 pub fn s20_non_biometric_recovery() -> Result<(), QdnfError> {
     if !recovery_without_biometric() {
         return Err(QdnfError::Denied);
@@ -45,6 +48,7 @@ pub fn s20_non_biometric_recovery() -> Result<(), QdnfError> {
     recover_with_pin(digest(7), digest(7))
 }
 
+/// Scenario S34: worker crash mid-operation.
 pub fn s34_worker_crash() -> Result<(), QdnfError> {
     let charge = PassCharge {
         arena: 1024,
@@ -62,6 +66,7 @@ pub fn s34_worker_crash() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario S40: missing threshold config fails closed.
 pub fn s40_threshold_missing() -> Result<(), QdnfError> {
     if remote_matching_selectable() {
         return Err(QdnfError::Downgrade);

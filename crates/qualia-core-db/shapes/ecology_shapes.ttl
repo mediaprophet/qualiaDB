@@ -1,0 +1,129 @@
+@prefix q42: <https://webizen.org/q42#> .
+@prefix eco: <https://webizen.org/eco#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── QualiaDB Ecological & Ethological SHACL Shapes (WP-2.4) ───────────────────────
+# Validates organism ontogeny, ethogram behaviors, developmental keyframes,
+# ecosystem health metrics, and biocultural provenance labels.
+
+# ── Organism Species & Taxon Shape ───────────────────────────────────────────
+
+eco:SpeciesDefinitionShape a sh:NodeShape ;
+    rdfs:label "Species Definition Shape" ;
+    rdfs:comment "Validates ecological taxon classification and biological parameters" ;
+    sh:targetClass eco:Species ;
+    sh:property [
+        sh:path eco:scientificName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Species must have exactly one scientific binomial name" ;
+    ] ;
+    sh:property [
+        sh:path eco:taxonHash ;
+        sh:datatype xsd:unsignedLong ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Species must define a 64-bit q_hash taxon identifier" ;
+    ] ;
+    sh:property [
+        sh:path eco:conservationStatus ;
+        sh:in ( "LC" "NT" "VU" "EN" "CR" "EW" "EX" ) ;
+        sh:maxCount 1 ;
+        sh:message "Conservation status must match IUCN Red List categories" ;
+    ] .
+
+# ── Ethogram Behavioral Affordance Shape ─────────────────────────────────────
+
+eco:EthogramBehaviorShape a sh:NodeShape ;
+    rdfs:label "Ethogram Behavior Shape" ;
+    rdfs:comment "Validates an ethogram state entry binding environmental stimulus to SKL1 motor clip" ;
+    sh:targetClass eco:EthogramBehavior ;
+    sh:property [
+        sh:path eco:stimulusTopicHash ;
+        sh:datatype xsd:unsignedLong ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Ethogram behavior must declare a 64-bit environmental stimulus topic hash" ;
+    ] ;
+    sh:property [
+        sh:path eco:preconditionMask ;
+        sh:datatype xsd:unsignedInt ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Ethogram behavior must declare a 32-bit precondition bitmask" ;
+    ] ;
+    sh:property [
+        sh:path eco:animationClipId ;
+        sh:datatype xsd:unsignedInt ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Ethogram behavior must link to a valid SKL1 skeletal motor clip ID" ;
+    ] ;
+    sh:property [
+        sh:path eco:energyDeltaPermill ;
+        sh:datatype xsd:short ;
+        sh:minInclusive -1000 ;
+        sh:maxInclusive 1000 ;
+        sh:message "Energy permill delta must be bounded between -1000 and +1000" ;
+    ] .
+
+# ── Developmental Milestone & Allometry Shape ────────────────────────────────
+
+eco:DevelopmentalKeyframeShape a sh:NodeShape ;
+    rdfs:label "Developmental Keyframe Shape" ;
+    rdfs:comment "Validates longitudinal ontogenetic keyframes for 4D organism growth" ;
+    sh:targetClass eco:DevelopmentalKeyframe ;
+    sh:property [
+        sh:path eco:ageDays ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Organism age in days must be non-negative" ;
+    ] ;
+    sh:property [
+        sh:path eco:lifecycleStage ;
+        sh:datatype xsd:unsignedByte ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 4 ;
+        sh:message "Lifecycle stage must be between 0 (Seed/Spore) and 4 (Deceased/Detritus)" ;
+    ] ;
+    sh:property [
+        sh:path eco:allometricCrownScale ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.01 ;
+        sh:maxInclusive 50.0 ;
+        sh:message "Crown radius allometric scale must be positive" ;
+    ] ;
+    sh:property [
+        sh:path eco:allometricTrunkScale ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.01 ;
+        sh:maxInclusive 50.0 ;
+        sh:message "Trunk diameter allometric scale must be positive" ;
+    ] .
+
+# ── Biocultural & Traditional Knowledge Governance Shape ──────────────────────
+
+eco:BioculturalGovernanceShape a sh:NodeShape ;
+    rdfs:label "Biocultural Governance Shape" ;
+    rdfs:comment "Enforces TK and BC label assertions on ecological and genetic data" ;
+    sh:targetClass eco:BioculturalEntity ;
+    sh:property [
+        sh:path eco:tkLabel ;
+        sh:in ( "TK_A" "TK_C" "TK_CR" "TK_CV" "TK_MC" "TK_MF" "TK_NC" "TK_O" "TK_P" "TK_S" "TK_V" ) ;
+        sh:message "TK Label must conform to Local Contexts Traditional Knowledge standards" ;
+    ] ;
+    sh:property [
+        sh:path eco:bcLabel ;
+        sh:in ( "BC_CO" "BC_CS" "BC_DO" "BC_MC" "BC_NC" "BC_O" "BC_P" "BC_R" "BC_V" ) ;
+        sh:message "BC Label must conform to Local Contexts Biocultural standards" ;
+    ] ;
+    sh:property [
+        sh:path eco:stewardCommunityDid ;
+        sh:datatype xsd:string ;
+        sh:pattern "^did:q42:[a-zA-Z0-9_-]+" ;
+        sh:message "Steward community must be identified by a valid did:q42 URI" ;
+    ] .

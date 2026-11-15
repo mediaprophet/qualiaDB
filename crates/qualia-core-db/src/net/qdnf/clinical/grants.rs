@@ -39,6 +39,7 @@ pub struct GrantTable {
 }
 
 impl GrantTable {
+    /// Creates a default `GrantTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
@@ -59,6 +60,7 @@ impl GrantTable {
         None
     }
 
+    /// Adds an entry.
     pub fn add(&mut self, grant: CareGrant) -> Result<usize, QdnfError> {
         if grant.recipient == StrongDigest::ZERO {
             return Err(QdnfError::Malformed);
@@ -74,6 +76,7 @@ impl GrantTable {
         Ok(i)
     }
 
+    /// Revokes the grant.
     pub fn revoke(
         &mut self,
         kind: CareGrantKind,
@@ -113,6 +116,7 @@ impl Default for GrantTable {
     }
 }
 
+/// `true` when visible from.
 pub(super) fn visible_from(grants: &GrantTable) -> [StrongDigest; MAX_VISIBLE] {
     let mut out = [StrongDigest::ZERO; MAX_VISIBLE];
     let mut n = 0usize;

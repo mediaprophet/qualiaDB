@@ -7,7 +7,7 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReceiverState {
     Running { bind: String },
-    Held,
+    Planned,
 }
 
 /// A purpose (or relationship) mailbox shown in the inbox sidebar.
@@ -37,19 +37,20 @@ pub struct ReplyDraft {
 }
 
 impl ReceiverState {
+    /// `true` when running.
     pub fn is_running(&self) -> bool {
         matches!(self, Self::Running { .. })
     }
 }
 
-/// Map `mail_receiver_status` JSON onto a held / running state.
+/// Map `mail_receiver_status` JSON onto a Planned / running state.
 pub fn receiver_from_status(value: &serde_json::Value) -> ReceiverState {
     let running = value
         .get("running")
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
     if !running {
-        return ReceiverState::Held;
+        return ReceiverState::Planned;
     }
     let bind = value
         .get("bind")
@@ -67,6 +68,7 @@ pub fn receiver_from_status(value: &serde_json::Value) -> ReceiverState {
     ReceiverState::Running { bind }
 }
 
+/// Text.
 pub fn text(value: &serde_json::Value, key: &str) -> String {
     value
         .get(key)
@@ -75,6 +77,7 @@ pub fn text(value: &serde_json::Value, key: &str) -> String {
         .to_string()
 }
 
+/// Mailbox kind.
 pub fn mailbox_kind(value: &serde_json::Value) -> MailboxKind {
     match value.get("kind").and_then(serde_json::Value::as_str) {
         Some("Purpose") => MailboxKind::Purpose,
@@ -83,6 +86,7 @@ pub fn mailbox_kind(value: &serde_json::Value) -> MailboxKind {
     }
 }
 
+/// `mailbox` label.
 pub fn mailbox_label(local: &str) -> String {
     match local.trim().to_ascii_lowercase().as_str() {
         "frontdoor" => "Front door".into(),
@@ -142,6 +146,7 @@ fn kind_rank(kind: MailboxKind) -> u8 {
     }
 }
 
+/// Mailbox for a message.
 pub fn message_mailbox(message: &serde_json::Value) -> String {
     let mailbox = text(message, "mailbox");
     if mailbox.is_empty() {
@@ -179,6 +184,7 @@ pub fn filter_messages<'a>(
         .collect()
 }
 
+/// Unread count in a mailbox.
 pub fn unread_in_mailbox(messages: &[serde_json::Value], mailbox: Option<&str>) -> usize {
     filter_messages(messages, mailbox, true)
         .into_iter()
@@ -191,6 +197,7 @@ pub fn unread_in_mailbox(messages: &[serde_json::Value], mailbox: Option<&str>) 
         .count()
 }
 
+/// Reply draft.
 pub fn reply_draft(message: &serde_json::Value) -> ReplyDraft {
     let from = {
         let mailbox = message_mailbox(message);
@@ -223,6 +230,7 @@ pub fn reply_draft(message: &serde_json::Value) -> ReplyDraft {
     }
 }
 
+/// Reply subject.
 pub fn reply_subject(subject: &str) -> String {
     let trimmed = subject.trim();
     if trimmed.is_empty() {
@@ -234,7 +242,7 @@ pub fn reply_subject(subject: &str) -> String {
     }
 }
 
-/// Outbound SMTP is optional. Empty/missing host → held, not a fake send.
+/// Outbound SMTP is optional. Empty/missing host → Planned, not a fake send.
 pub fn smtp_ready(transport: &serde_json::Value) -> bool {
     transport
         .get("smtp")
@@ -244,6 +252,7 @@ pub fn smtp_ready(transport: &serde_json::Value) -> bool {
         .unwrap_or(false)
 }
 
+/// Extracts messages.
 pub fn extract_messages(list: &serde_json::Value) -> Vec<serde_json::Value> {
     list.get("messages")
         .and_then(serde_json::Value::as_array)
@@ -252,6 +261,7 @@ pub fn extract_messages(list: &serde_json::Value) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
+/// Extracts addresses.
 pub fn extract_addresses(list: &serde_json::Value) -> Vec<serde_json::Value> {
     list.as_array()
         .cloned()
@@ -263,6 +273,7 @@ pub fn extract_addresses(list: &serde_json::Value) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
+/// Inbox counts line.
 pub fn inbox_counts_line(list: &serde_json::Value) -> String {
     if let Some(counts) = list.get("counts") {
         let total = counts.get("total").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -311,12 +322,12 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn receiver_held_when_not_running() {
+    fn receiver_planned_when_not_running() {
         assert_eq!(
             receiver_from_status(&json!({ "running": false })),
-            ReceiverState::Held
+            ReceiverState::Planned
         );
-        assert_eq!(receiver_from_status(&json!({})), ReceiverState::Held);
+        assert_eq!(receiver_from_status(&json!({})), ReceiverState::Planned);
     }
 
     #[test]
@@ -422,5 +433,31 @@ mod tests {
     fn unix_epoch_formats_utc() {
         assert_eq!(format_received_at(0), "");
         assert_eq!(format_received_at(1_704_067_200), "2024-01-01 00:00");
+    }
+
+    #[test]
+    fn mail_receiver_off_is_planned_not_held_theatre() {
+        assert_eq!(
+            receiver_from_status(&json!({ "running": false })),
+            ReceiverState::Planned
+        );
+        let name = format!("{:?}", ReceiverState::Planned);
+        assert_eq!(name, "Planned");
+        assert!(!name.to_ascii_lowercase().contains("held"));
+    }
+
+    #[test]
+    fn mail_rs_paint_has_no_held_theatre() {
+        let src = include_str!("mail.rs");
+        let folded = src.to_ascii_lowercase();
+        assert!(
+            !folded.contains("held / not yet"),
+            "MailInboxPane must not paint held / not yet (Capt orbit UAT)"
+        );
+        assert!(src.contains("Planned"), "Mail surface uses Planned honesty");
+        assert!(
+            src.contains("Live"),
+            "Mail surface uses Live honesty for reading"
+        );
     }
 }

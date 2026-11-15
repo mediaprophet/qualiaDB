@@ -3,9 +3,17 @@
 
 use crate::container_10d::crc32c::crc32c_update;
 
+#[path = "reader_limits.rs"]
+mod limits;
+pub use limits::BundleReadLimits;
+#[cfg(test)]
+#[path = "reader_limits_tests.rs"]
+mod limits_tests;
+
 use super::format::{
-    BundleEntry, BundleError, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION, OFF_CRC32C,
-    OFF_FLAGS, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH, OFF_VERSION,
+    BUNDLE_FLAG_PAGE_ALIGN_4096, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_PAGE_ALIGN_4096,
+    BUNDLE_VERSION, BundleEntry, BundleError, OFF_CRC32C, OFF_FLAGS, OFF_INDEX_LENGTH,
+    OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH, OFF_VERSION,
 };
 
 #[inline]
@@ -40,6 +48,78 @@ pub struct BundleReader<'a> {
 }
 
 impl<'a> BundleReader<'a> {
+    /// Bounded cold admission for the current definite-length index encoding.
+    /// Shared preflight borrows CBOR fields before cold materialization can
+    /// allocate. Unknown fields, indefinite encodings and trailing index data
+    /// require an explicit compatibility profile instead of implicit skipping.
+    /// This verifies bytes and structure, not source rights or asset acceptance.
+    pub fn parse_with_limits(
+        bytes: &'a [u8],
+        limits: BundleReadLimits,
+    ) -> Result<Self, BundleError> {
+        use super::stream::index::{ExtentLimit, IndexError, admit_header, decode_owned_index};
+        if bytes.len() < BUNDLE_HEADER_SIZE {
+            return Err(BundleError::TooShort);
+        }
+        if bytes.len() > limits.file_bytes {
+            return Err(IndexError::ResidentLimit.into_bundle_error());
+        }
+        let extent =
+            u64::try_from(bytes.len()).map_err(|_| IndexError::Overflow.into_bundle_error())?;
+        let max_logical_bytes = u64::try_from(limits.file_bytes)
+            .map_err(|_| IndexError::Overflow.into_bundle_error())?;
+        let header = admit_header(
+            &bytes[..BUNDLE_HEADER_SIZE],
+            extent,
+            ExtentLimit { max_logical_bytes },
+            limits.into(),
+        )
+        .map_err(IndexError::into_bundle_error)?;
+        let start = usize::try_from(header.index_offset())
+            .map_err(|_| IndexError::Overflow.into_bundle_error())?;
+        let len = usize::try_from(header.index_length())
+            .map_err(|_| IndexError::Overflow.into_bundle_error())?;
+        let end = start
+            .checked_add(len)
+            .ok_or_else(|| IndexError::Overflow.into_bundle_error())?;
+        let index = bytes
+            .get(start..end)
+            .ok_or_else(|| IndexError::Footer.into_bundle_error())?;
+        let got = whole_file_crc(bytes);
+        if got != header.crc32c() {
+            return Err(BundleError::CrcMismatch {
+                expected: header.crc32c(),
+                got,
+            });
+        }
+        let entries = decode_owned_index(&header, index, limits.into())
+            .map_err(IndexError::into_bundle_error)?;
+        // Shared admission proves disjointness before any payload hashing.
+        use sha2::{Digest, Sha256};
+        for entry in &entries {
+            let start = usize::try_from(entry.offset)
+                .map_err(|_| IndexError::Overflow.into_bundle_error())?;
+            let end = entry
+                .offset
+                .checked_add(entry.length)
+                .ok_or_else(|| IndexError::Overflow.into_bundle_error())?;
+            let end = usize::try_from(end).map_err(|_| IndexError::Overflow.into_bundle_error())?;
+            let payload = bytes
+                .get(start..end)
+                .ok_or_else(|| IndexError::EntryBounds.into_bundle_error())?;
+            if Sha256::digest(payload).as_slice() != entry.sha256.as_slice() {
+                return Err(BundleError::Cbor(
+                    "Bundle entry payload hash differs".into(),
+                ));
+            }
+        }
+        Ok(Self {
+            bytes,
+            entries,
+            flags: header.probe().flags,
+        })
+    }
+
     /// Parse and fully validate a bundle: magic, version, declared length,
     /// whole-file CRC, and every entry's bounds. On success the payloads are
     /// known-good and in-bounds, so `get`/`segment` are total on valid keys.
@@ -96,6 +176,7 @@ impl<'a> BundleReader<'a> {
             ciborium::from_reader(index_slice).map_err(|e| BundleError::Cbor(e.to_string()))?;
 
         // Every entry must lie within the payload region (before the index).
+        let check_4096 = (flags & BUNDLE_FLAG_PAGE_ALIGN_4096) != 0;
         for e in &entries {
             let e_end =
                 e.offset
@@ -110,6 +191,13 @@ impl<'a> BundleReader<'a> {
                     key: e.key.clone(),
                     offset: e.offset,
                     length: e.length,
+                });
+            }
+            if check_4096 && (e.offset % BUNDLE_PAGE_ALIGN_4096 as u64 != 0) {
+                return Err(BundleError::UnpageAligned {
+                    key: e.key.clone(),
+                    offset: e.offset,
+                    alignment: BUNDLE_PAGE_ALIGN_4096,
                 });
             }
         }
@@ -130,6 +218,11 @@ impl<'a> BundleReader<'a> {
     /// such as a signed/compressed-entry variant).
     pub fn flags(&self) -> u16 {
         self.flags
+    }
+
+    /// True when the bundle header declares 4096-byte OS page alignment.
+    pub fn is_page_aligned_4096(&self) -> bool {
+        (self.flags & BUNDLE_FLAG_PAGE_ALIGN_4096) != 0
     }
 
     /// The index record for `key`, if present.
@@ -171,6 +264,32 @@ impl<'a> BundleReader<'a> {
         let mut hasher = Sha256::new();
         hasher.update(payload);
         hasher.finalize().as_slice() == e.sha256.as_slice()
+    }
+
+    /// Retrieve and decode the embedded digital twin family manifest, if present.
+    pub fn get_family_manifest(
+        &self,
+    ) -> Result<Option<super::variant_matrix::TwinFamilyManifest>, BundleError> {
+        match self.get(super::variant_matrix::FAMILY_MANIFEST_ENTRY_KEY) {
+            Some(bytes) => {
+                let manifest = super::variant_matrix::TwinFamilyManifest::decode_from_cbor(bytes)?;
+                Ok(Some(manifest))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Retrieve and decode the embedded holistic species metadata, if present.
+    pub fn get_species_meta(
+        &self,
+    ) -> Result<Option<super::species_meta::HolisticSpeciesMeta>, BundleError> {
+        match self.get(super::species_meta::SPECIES_META_ENTRY_KEY) {
+            Some(bytes) => {
+                let meta = super::species_meta::HolisticSpeciesMeta::decode_from_cbor(bytes)?;
+                Ok(Some(meta))
+            }
+            None => Ok(None),
+        }
     }
 }
 

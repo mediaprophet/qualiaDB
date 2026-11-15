@@ -4,7 +4,6 @@
 //! `.q42` path). No in-binary WordNet. Missing/unknown → diagnose **held /
 //! not yet** (never "broken"). No Host widen.
 
-#[cfg(not(target_arch = "wasm32"))]
 use super::super::args;
 use crate::poet_host::PoetSnapshot;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -36,6 +35,82 @@ fn wasm_denied(span: Span) -> Diagnostic {
 ///
 /// Returns record: pack_id, packSemVer, framing, upliftFrom?, conceptIds[],
 /// volume_path?, volume_ok.
+fn parse_manifest_json_str(
+    raw: &str,
+    manifest_display: &str,
+    volume_display: &str,
+    volume_ok: bool,
+    span: Span,
+) -> Result<Value, Diagnostic> {
+    let v: serde_json::Value = serde_json::from_str(raw).map_err(|e| {
+        held(
+            span,
+            format!("lexicon pack manifest JSON invalid: {e}"),
+            "held / not yet — fix lexicon pack manifest JSON",
+        )
+    })?;
+    let pack_semver = v
+        .get("packSemVer")
+        .or_else(|| v.get("pack_semver"))
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| {
+            held(
+                span,
+                "lexicon pack manifest missing packSemVer",
+                "held / not yet — add packSemVer to lexicon pack",
+            )
+        })?;
+    let framing = v.get("framing").and_then(|x| x.as_str()).ok_or_else(|| {
+        held(
+            span,
+            "lexicon pack manifest missing framing",
+            "held / not yet — set framing to living-SHACL | artifact-OWL | mixed",
+        )
+    })?;
+    match framing {
+        "living-SHACL" | "artifact-OWL" | "mixed" => {}
+        other => {
+            return Err(held(
+                span,
+                format!("lexicon pack framing unknown: {other}"),
+                "held / not yet — use living-SHACL | artifact-OWL | mixed",
+            ));
+        }
+    }
+    let pack_id = v
+        .get("packId")
+        .or_else(|| v.get("pack_id"))
+        .or_else(|| v.get("id"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    let uplift = v
+        .get("upliftFrom")
+        .or_else(|| v.get("uplift_from"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    let concept_ids: Vec<Value> = v
+        .get("conceptIds")
+        .or_else(|| v.get("concept_ids"))
+        .and_then(|x| x.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|c| c.as_str().map(|s| Value::String(s.into())))
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(args::record([
+        ("pack_id", Value::String(pack_id.into())),
+        ("packSemVer", Value::String(pack_semver.into())),
+        ("framing", Value::String(framing.into())),
+        ("upliftFrom", Value::String(uplift.into())),
+        ("conceptIds", Value::List(concept_ids)),
+        ("manifest_path", Value::String(manifest_display.into())),
+        ("volume_path", Value::String(volume_display.into())),
+        ("volume_ok", Value::Bool(volume_ok)),
+        ("gate", Value::String("open".into())),
+    ]))
+}
+
 pub fn lexicon_manifest(
     _snap: &mut PoetSnapshot,
     args_v: &Value,
@@ -43,13 +118,128 @@ pub fn lexicon_manifest(
 ) -> Result<Value, Diagnostic> {
     #[cfg(target_arch = "wasm32")]
     {
-        let _ = (_snap, args_v);
+    if let Some(hash) = args::rec_u64(args_v, "hash") {
+        let term = _snap.resolve_admitted_lexicon_term(hash).unwrap_or("");
+        return Ok(args::record([
+            ("hash", Value::U64(hash)),
+            ("term", Value::String(term.into())),
+            ("resolved", Value::Bool(!term.is_empty())),
+            ("gate", Value::String("open".into())),
+        ]));
+    }
+    if let Some(inline_json) = args::rec_str(args_v, "manifest_json") {
+        return parse_manifest_json_str(
+            inline_json,
+            "inline.lexicon.json",
+            "",
+            !_snap.admitted_views.is_empty(),
+            span,
+        );
+    }
+    let _ = (_snap, args_v);
         return Err(wasm_denied(span));
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
+        if let Some(hash) = args::rec_u64(args_v, "hash") {
+            let term = _snap.resolve_admitted_lexicon_term(hash).unwrap_or("");
+            return Ok(args::record([
+                ("hash", Value::U64(hash)),
+                ("term", Value::String(term.into())),
+                ("resolved", Value::Bool(!term.is_empty())),
+                ("gate", Value::String("open".into())),
+            ]));
+        }
+        if let Some(inline_json) = args::rec_str(args_v, "manifest_json") {
+            return parse_manifest_json_str(
+                inline_json,
+                "inline.lexicon.json",
+                "",
+                !_snap.admitted_views.is_empty(),
+                span,
+            );
+        }
         lexicon_manifest_native(args_v, span)
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)]
+#[allow(dead_code)]
+fn _unused_native_parse_manifest_json_str(
+    raw: &str,
+    manifest_display: &str,
+    volume_display: &str,
+    volume_ok: bool,
+    span: Span,
+) -> Result<Value, Diagnostic> {
+    let v: serde_json::Value = serde_json::from_str(raw).map_err(|e| {
+        held(
+            span,
+            format!("lexicon pack manifest JSON invalid: {e}"),
+            "held / not yet — fix lexicon pack manifest JSON",
+        )
+    })?;
+    let pack_semver = v
+        .get("packSemVer")
+        .or_else(|| v.get("pack_semver"))
+        .and_then(|x| x.as_str())
+        .ok_or_else(|| {
+            held(
+                span,
+                "lexicon pack manifest missing packSemVer",
+                "held / not yet — add packSemVer to lexicon pack",
+            )
+        })?;
+    let framing = v.get("framing").and_then(|x| x.as_str()).ok_or_else(|| {
+        held(
+            span,
+            "lexicon pack manifest missing framing",
+            "held / not yet — set framing to living-SHACL | artifact-OWL | mixed",
+        )
+    })?;
+    match framing {
+        "living-SHACL" | "artifact-OWL" | "mixed" => {}
+        other => {
+            return Err(held(
+                span,
+                format!("lexicon pack framing unknown: {other}"),
+                "held / not yet — use living-SHACL | artifact-OWL | mixed",
+            ));
+        }
+    }
+    let pack_id = v
+        .get("packId")
+        .or_else(|| v.get("pack_id"))
+        .or_else(|| v.get("id"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    let uplift = v
+        .get("upliftFrom")
+        .or_else(|| v.get("uplift_from"))
+        .and_then(|x| x.as_str())
+        .unwrap_or("");
+    let concept_ids: Vec<Value> = v
+        .get("conceptIds")
+        .or_else(|| v.get("concept_ids"))
+        .and_then(|x| x.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|c| c.as_str().map(|s| Value::String(s.into())))
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(args::record([
+        ("pack_id", Value::String(pack_id.into())),
+        ("packSemVer", Value::String(pack_semver.into())),
+        ("framing", Value::String(framing.into())),
+        ("upliftFrom", Value::String(uplift.into())),
+        ("conceptIds", Value::List(concept_ids)),
+        ("manifest_path", Value::String(manifest_display.into())),
+        ("volume_path", Value::String(volume_display.into())),
+        ("volume_ok", Value::Bool(volume_ok)),
+        ("gate", Value::String("open".into())),
+    ]))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

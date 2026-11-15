@@ -3,6 +3,7 @@
 use super::ALL_INVOKE_IDS;
 use crate::animation::presets::list_all_presets;
 
+/// Did-you-mean suggestion.
 pub fn did_you_mean(path: &str) -> Option<String> {
     let mut best: Option<(&str, usize)> = None;
     for id in ALL_INVOKE_IDS.iter().copied() {

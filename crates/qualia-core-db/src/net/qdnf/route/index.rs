@@ -33,6 +33,7 @@ pub struct AdjacencyIndex {
 }
 
 impl AdjacencyIndex {
+    /// Creates a default `AdjacencyIndex`.
     pub const fn new(scope: u64) -> Self {
         Self {
             scope,
@@ -48,30 +49,36 @@ impl AdjacencyIndex {
     }
 
     #[inline]
+    /// Index scope.
     pub const fn scope(&self) -> u64 {
         self.scope
     }
 
     #[inline]
+    /// `true` when the index is dirty.
     pub const fn is_dirty(&self) -> bool {
         self.dirty
     }
 
     #[inline]
+    /// Topology generation.
     pub const fn topology_generation(&self) -> Generation {
         self.topology_gen
     }
 
     #[inline]
+    /// Published forwarding generation.
     pub const fn published(&self) -> &ForwardingGeneration {
         &self.live
     }
 
     #[inline]
+    /// Draft forwarding generation.
     pub const fn draft(&self) -> &ForwardingGeneration {
         &self.draft
     }
 
+    /// Last sequence for `origin`.
     pub fn last_sequence(&self, origin: u8) -> Option<u32> {
         if self.seq_present[origin as usize] {
             Some(self.last_seq[origin as usize])
@@ -80,6 +87,7 @@ impl AdjacencyIndex {
         }
     }
 
+    /// `live` count.
     pub fn live_count(&self, now_unix: u64) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -94,6 +102,7 @@ impl AdjacencyIndex {
         n
     }
 
+    /// `true` when `withdrawn`.
     pub fn is_withdrawn(&self, from: u8, to: u8) -> bool {
         let mut i = 0usize;
         while i < MAX_ADMITTED_EDGES {
@@ -123,6 +132,7 @@ impl AdjacencyIndex {
         n
     }
 
+    /// Edge at `idx`.
     pub fn edge_at(&self, slot: usize) -> Option<ValidatedEdge> {
         if slot >= MAX_ADMITTED_EDGES {
             return None;

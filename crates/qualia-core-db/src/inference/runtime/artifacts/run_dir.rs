@@ -40,6 +40,7 @@ pub struct RunArtifactDir {
 }
 
 impl RunArtifactDir {
+    /// Creates a run artifact dir under the given parent with a byte budget.
     pub fn new_in(
         scratch_parent: &Path,
         label: &str,
@@ -63,6 +64,7 @@ impl RunArtifactDir {
         })
     }
 
+    /// Filesystem path of the run dir.
     pub fn path(&self) -> &Path {
         self.dir
             .as_ref()
@@ -70,14 +72,17 @@ impl RunArtifactDir {
             .path()
     }
 
+    /// Byte budget remaining.
     pub fn remaining_bytes(&self) -> u64 {
         self.byte_budget.saturating_sub(self.stats.created_bytes)
     }
 
+    /// Current artifact stats.
     pub fn stats(&self) -> ArtifactStats {
         self.stats
     }
 
+    /// Writes an artifact file, failing closed when the budget would be exceeded.
     pub fn write_bounded(
         &mut self,
         relative_path: impl AsRef<Path>,
@@ -101,6 +106,7 @@ impl RunArtifactDir {
         Ok(output)
     }
 
+    /// Finalizes the run dir, producing an `ArtifactFinish` summary.
     pub fn finish(mut self) -> Result<ArtifactFinish, ArtifactError> {
         let dir = self
             .dir

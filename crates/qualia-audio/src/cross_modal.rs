@@ -75,6 +75,7 @@ pub fn frames_to_media_ms(frame: u64, sample_rate: u32, origin_ms: u64) -> u64 {
     origin_ms + (frame * 1000) / sample_rate as u64
 }
 
+/// Correlation predicate.
 pub fn correlation_predicate() -> u64 {
     q_hash("https://ns.webizen.org/q42/proposesAvCooccurrence")
 }
@@ -90,6 +91,7 @@ pub struct SharedMediaClock {
 }
 
 impl SharedMediaClock {
+    /// Creates a new instance.
     pub fn new(media_hash: u64, audio_sample_rate: u32, video_fps: f32) -> Self {
         let fps = if video_fps > 0.0 { video_fps } else { 30.0 };
         Self {
@@ -101,6 +103,7 @@ impl SharedMediaClock {
         }
     }
 
+    /// Video frame to ms.
     pub fn video_frame_to_ms(&self, frame_index: u64) -> u64 {
         if self.video_fps_num == 0 {
             return self.origin_ms;
@@ -109,6 +112,7 @@ impl SharedMediaClock {
             + (frame_index * 1000 * self.video_fps_den as u64) / self.video_fps_num as u64
     }
 
+    /// Audio frame to ms.
     pub fn audio_frame_to_ms(&self, sample_frame: u64) -> u64 {
         frames_to_media_ms(sample_frame, self.audio_sample_rate, self.origin_ms)
     }

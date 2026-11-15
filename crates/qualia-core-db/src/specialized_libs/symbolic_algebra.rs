@@ -36,46 +36,68 @@ pub enum Expr {
     Tan(Box<Expr>),
 }
 
+/// Predicate tag string for an exact 64-bit signed integer CAS leaf (`Q42-08`).
+pub const CAS_INT_CONST_TAG: &str = "cas:int_const";
+
 // ── ergonomic constructors ──────────────────────────────────────────────────────
+/// Constant leaf `Expr::Const(v)`.
 pub fn c(v: f64) -> Expr {
     Expr::Const(v)
 }
+/// Exact integer constant leaf constructor (`Q42-08`).
+pub fn int_c(v: i64) -> Expr {
+    Expr::Const(v as f64)
+}
+/// Variable leaf `Expr::Var(name)` (names > 8 bytes are truncated at
+/// Quin encode time).
 pub fn var(name: &str) -> Expr {
     Expr::Var(name.to_string())
 }
+/// `a + b` node.
 pub fn add(a: Expr, b: Expr) -> Expr {
     Expr::Add(Box::new(a), Box::new(b))
 }
+/// `a − b` node.
 pub fn sub(a: Expr, b: Expr) -> Expr {
     Expr::Sub(Box::new(a), Box::new(b))
 }
+/// `a · b` node.
 pub fn mul(a: Expr, b: Expr) -> Expr {
     Expr::Mul(Box::new(a), Box::new(b))
 }
+/// `a / b` node.
 pub fn div(a: Expr, b: Expr) -> Expr {
     Expr::Div(Box::new(a), Box::new(b))
 }
+/// `a^e` node with integer exponent.
 pub fn pow(a: Expr, e: i32) -> Expr {
     Expr::Pow(Box::new(a), e)
 }
+/// Unary `−a` node.
 pub fn neg(a: Expr) -> Expr {
     Expr::Neg(Box::new(a))
 }
+/// `√a` node.
 pub fn sqrt(a: Expr) -> Expr {
     Expr::Sqrt(Box::new(a))
 }
+/// `e^a` node.
 pub fn exp(a: Expr) -> Expr {
     Expr::Exp(Box::new(a))
 }
+/// `ln a` node.
 pub fn ln(a: Expr) -> Expr {
     Expr::Ln(Box::new(a))
 }
+/// `sin a` node.
 pub fn sin(a: Expr) -> Expr {
     Expr::Sin(Box::new(a))
 }
+/// `cos a` node.
 pub fn cos(a: Expr) -> Expr {
     Expr::Cos(Box::new(a))
 }
+/// `tan a` node.
 pub fn tan(a: Expr) -> Expr {
     Expr::Tan(Box::new(a))
 }
@@ -189,6 +211,9 @@ pub fn simplify(expr: &Expr) -> Expr {
     cur
 }
 
+/// One bottom-up simplification pass: constant folding, identity
+/// elimination (x+0, x·1, x−x), and self-cases (x+x→2x, x/x→1).
+/// `simplify` iterates to fixpoint.
 fn simplify_once(expr: &Expr) -> Expr {
     match expr {
         Expr::Const(_) | Expr::Var(_) => expr.clone(),
@@ -340,6 +365,7 @@ pub fn expand(expr: &Expr) -> Expr {
     }
 }
 
+/// Distribute `a · b` over `Add`/`Sub` children (one level).
 fn expand_mul(a: &Expr, b: &Expr) -> Expr {
     match (a, b) {
         (Expr::Add(a1, a2), _) => add(expand_mul(a1, b), expand_mul(a2, b)),
@@ -352,6 +378,8 @@ fn expand_mul(a: &Expr, b: &Expr) -> Expr {
     }
 }
 
+/// Expand `base^e` into repeated `expand_mul` for small non-negative
+/// `e`; leaves `Pow` intact otherwise.
 fn expand_pow(base: &Expr, e: i32) -> Expr {
     if e <= 1 || e > 8 {
         return pow(base.clone(), e);
@@ -413,10 +441,13 @@ pub fn expr_citation_hash(expr: &Expr) -> u64 {
 //   pow     object = base child index, metadata = exponent (i32 as u64)
 //   neg/sqrt object = child index
 
+/// `q_hash` predicate tag for a CAS node kind (`"cas:add"`, …).
 fn name_tag(kind: &str) -> u64 {
     crate::q_hash(kind)
 }
 
+/// Pack a variable name into (LE-packed-u64, byte-len), truncating to
+/// 8 bytes — the Quin object/metadata encoding for `cas:var`.
 fn pack_name(name: &str) -> (u64, u64) {
     let bytes = name.as_bytes();
     let len = bytes.len().min(8);
@@ -427,6 +458,7 @@ fn pack_name(name: &str) -> (u64, u64) {
     (v, len as u64)
 }
 
+/// Inverse of `pack_name` — extract up to 8 name bytes.
 fn unpack_name(v: u64, len: u64) -> String {
     let len = (len as usize).min(8);
     let mut s = String::with_capacity(len);
@@ -436,6 +468,8 @@ fn unpack_name(v: u64, len: u64) -> String {
     s
 }
 
+/// Append a CAS node Quin (subject = its index in `out`, parity
+/// computed) and return that index for child references.
 fn push_node(
     out: &mut Vec<NQuin>,
     predicate: u64,
@@ -454,6 +488,22 @@ fn push_node(
         parity: NQuin::calculate_parity(subject, predicate, object, context, metadata),
     });
     idx
+}
+
+/// Encode `e` post-order into `out` (children before parents,
+/// index-linked); returns the root node index.
+/// Append an exact 64-bit signed integer constant leaf Quin (`cas:int_const`) with 5-field parity.
+pub fn push_int_const_node(out: &mut Vec<NQuin>, value: i64) -> usize {
+    push_node(out, name_tag(CAS_INT_CONST_TAG), value as u64, 0, 0)
+}
+
+/// Extract the exact 64-bit signed integer from a `cas:int_const` Quin leaf.
+pub fn decode_int_const_quin(quin: &NQuin) -> Option<i64> {
+    if quin.verify_ecc_parity() && quin.predicate == name_tag(CAS_INT_CONST_TAG) {
+        Some(quin.object as i64)
+    } else {
+        None
+    }
 }
 
 fn encode(e: &Expr, out: &mut Vec<NQuin>) -> usize {
@@ -521,14 +571,30 @@ pub fn to_quins(expr: &Expr) -> Vec<NQuin> {
     out
 }
 
+/// Decode node `idx` (and its index-linked children) back into an
+/// `Expr`; errors on unknown predicates, parity failure, or non-postorder/cyclic child references.
 fn decode(quins: &[NQuin], idx: usize) -> Result<Expr, String> {
     let node = quins
         .get(idx)
         .ok_or_else(|| format!("child index {idx} out of range"))?;
+    if !node.verify_ecc_parity() {
+        return Err(format!("CAS quin {idx} failed 5-field ECC parity check"));
+    }
     let p = node.predicate;
-    let child = |i: u64| decode(quins, i as usize);
+    let child = |i: u64| -> Result<Expr, String> {
+        let child_idx = usize::try_from(i)
+            .map_err(|_| format!("child index {i} overflows usize at quin {idx}"))?;
+        if child_idx >= idx {
+            return Err(format!(
+                "non-postorder or cyclic child reference: child_idx {child_idx} >= current_idx {idx}"
+            ));
+        }
+        decode(quins, child_idx)
+    };
     if p == name_tag("cas:const") {
         Ok(c(f64::from_bits(node.object)))
+    } else if p == name_tag("cas:int_const") {
+        Ok(int_c(node.object as i64))
     } else if p == name_tag("cas:var") {
         Ok(var(&unpack_name(node.object, node.metadata)))
     } else if p == name_tag("cas:add") {
@@ -600,6 +666,7 @@ enum Tok {
     RParen,
 }
 
+/// Lex `s` into tokens (numbers, names, operators, parens).
 fn tokenize(s: &str) -> Result<Vec<Tok>, String> {
     let mut out = Vec::new();
     let chars: Vec<char> = s.chars().collect();
@@ -665,9 +732,11 @@ struct Parser {
 }
 
 impl Parser {
+    /// Current token without consuming it.
     fn peek(&self) -> Option<&Tok> {
         self.tokens.get(self.pos)
     }
+    /// Consume and return the current token.
     fn next(&mut self) -> Option<Tok> {
         let t = self.tokens.get(self.pos).cloned();
         if t.is_some() {
@@ -676,6 +745,7 @@ impl Parser {
         t
     }
 
+    /// expr := term (('+'|'-') term)* — lowest precedence level.
     fn parse_expr(&mut self) -> Result<Expr, String> {
         let mut left = self.parse_term()?;
         while let Some(op) = self.peek() {
@@ -694,6 +764,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// term := factor (('*'|'/') factor)*.
     fn parse_term(&mut self) -> Result<Expr, String> {
         let mut left = self.parse_factor()?;
         while let Some(op) = self.peek() {
@@ -712,6 +783,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// factor := unary ('^' unary)* — right-binding power level.
     fn parse_factor(&mut self) -> Result<Expr, String> {
         let base = self.parse_unary()?;
         if let Some(Tok::Caret) = self.peek() {
@@ -733,6 +805,7 @@ impl Parser {
         }
     }
 
+    /// unary := '-' unary | base — prefix negation.
     fn parse_unary(&mut self) -> Result<Expr, String> {
         if let Some(Tok::Minus) = self.peek() {
             self.next();
@@ -741,6 +814,8 @@ impl Parser {
         self.parse_base()
     }
 
+    /// base := number | name | name '(' args ')' | '(' expr ')' —
+    /// function calls map to `exp`/`ln`/`sin`/`cos`/`tan`/`sqrt`.
     fn parse_base(&mut self) -> Result<Expr, String> {
         match self.next() {
             Some(Tok::Num(n)) => Ok(c(n)),
@@ -773,6 +848,7 @@ impl Parser {
         }
     }
 
+    /// Consume the next token, erroring unless it equals `t`.
     fn expect(&mut self, t: Tok) -> Result<(), String> {
         if self.next().as_ref() == Some(&t) {
             Ok(())
@@ -783,6 +859,7 @@ impl Parser {
 }
 
 impl std::fmt::Display for Expr {
+    /// Infix pretty-print with parenthesized children.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Const(k) => write!(f, "{k}"),
@@ -801,6 +878,200 @@ impl std::fmt::Display for Expr {
             Expr::Tan(a) => write!(f, "tan({a})"),
         }
     }
+}
+
+// ── Sum of Three Cubes (x^3 + y^3 + z^3 = k), Divisor Cascade, & 4-Prime RNS CRT (Q42-08) ──
+
+/// Canonical symbolic expression for `x^3 + y^3 + z^3 - k` using exact `Expr::IntConst(k)`.
+pub fn sum_of_three_cubes_expr(k: i64) -> Expr {
+    sub(
+        add(add(pow(var("x"), 3), pow(var("y"), 3)), pow(var("z"), 3)),
+        int_c(k),
+    )
+}
+
+/// Encode `x^3 + y^3 + z^3 - k` into a post-order `Vec<NQuin>` with canonical 5-field XOR parity
+/// and an exact `cas:int_const` leaf for `k`.
+pub fn sum_of_three_cubes_quins(k: i64) -> Vec<NQuin> {
+    let mut out = Vec::new();
+    let sum_cubes = add(add(pow(var("x"), 3), pow(var("y"), 3)), pow(var("z"), 3));
+    let l = encode(&sum_cubes, &mut out);
+    let r = push_int_const_node(&mut out, k);
+    push_node(&mut out, name_tag("cas:sub"), l as u64, r as u64, 0);
+    out
+}
+
+#[inline]
+const fn u256_add_limbs(a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
+    let mut out = [0u64; 4];
+    let mut carry = 0u128;
+    let mut i = 0;
+    while i < 4 {
+        let sum = (a[i] as u128) + (b[i] as u128) + carry;
+        out[i] = sum as u64;
+        carry = sum >> 64;
+        i += 1;
+    }
+    out
+}
+
+#[inline]
+const fn i256_cube_from_i64(v: i64) -> [u64; 4] {
+    let neg = v < 0;
+    let mag = v.unsigned_abs();
+    let sq = (mag as u128) * (mag as u128);
+    let sq_lo = sq as u64;
+    let sq_hi = (sq >> 64) as u64;
+    let p0 = (sq_lo as u128) * (mag as u128);
+    let p1 = (sq_hi as u128) * (mag as u128) + (p0 >> 64);
+    let cube = [p0 as u64, p1 as u64, (p1 >> 64) as u64, 0u64];
+    if neg {
+        u256_add_limbs([!cube[0], !cube[1], !cube[2], !cube[3]], [1, 0, 0, 0])
+    } else {
+        cube
+    }
+}
+
+/// Returns `true` iff `k ≡ 4 or 5 (mod 9)` (`k ≡ ±4 (mod 9)`), proving global algebraic
+/// impossibility of `x^3 + y^3 + z^3 = k` over `ℤ^3` (`Q42-08` / §6.2.3).
+#[inline]
+pub const fn has_sum_of_three_cubes_mod9_obstruction(k: i64) -> bool {
+    matches!(k.rem_euclid(9), 4 | 5)
+}
+
+/// Zero-heap exact signed 256-bit verification of `x^3 + y^3 + z^3 == k` over `[u64; 4]` stack limbs.
+#[inline]
+pub fn verify_sum_of_three_cubes_exact(
+    x: i64,
+    y: i64,
+    z: i64,
+    k: i64,
+) -> Result<bool, &'static str> {
+    if has_sum_of_three_cubes_mod9_obstruction(k) {
+        return Ok(false);
+    }
+    let sum = u256_add_limbs(
+        u256_add_limbs(i256_cube_from_i64(x), i256_cube_from_i64(y)),
+        i256_cube_from_i64(z),
+    );
+    let ext = if k < 0 { u64::MAX } else { 0u64 };
+    Ok(sum == [k as u64, ext, ext, ext])
+}
+
+/// Zero-heap `i128` Divisor / Discriminant reduction cascade for `x^3 + y^3 + z^3 = k`:
+/// Given `(k, z)` and divisor `s = x + y` of `r = k - z^3 = s(x^2 - xy + y^2)`:
+/// 1. `q = r / s` (`r % s == 0`)
+/// 2. `p = (s^2 - q) / 3` (`(s^2 - q) % 3 == 0`)
+/// 3. `D = s^2 - 4p = (x - y)^2 = u^2 >= 0`
+/// Returns recovered `(x, y)` with `x >= y` when all cascade conditions hold.
+pub fn reduce_sum_of_three_cubes_divisor_discriminant(
+    k: i128,
+    z: i128,
+    s: i128,
+) -> Option<(i128, i128)> {
+    if s == 0 {
+        return None;
+    }
+    let z3 = z.checked_mul(z)?.checked_mul(z)?;
+    let r = k.checked_sub(z3)?;
+    if r % s != 0 {
+        return None;
+    }
+    let q = r / s;
+    let s2 = s.checked_mul(s)?;
+    let s2_minus_q = s2.checked_sub(q)?;
+    if s2_minus_q % 3 != 0 {
+        return None;
+    }
+    let p = s2_minus_q / 3;
+    let d = s2.checked_sub(p.checked_mul(4)?)?;
+    if d < 0 {
+        return None;
+    }
+    let u = (d as u128).isqrt() as i128;
+    if u * u != d || (s + u) % 2 != 0 {
+        return None;
+    }
+    Some(((s + u) / 2, (s - u) / 2))
+}
+
+/// Arbitrary-precision Divisor / Discriminant cascade verifier over `BigInt` (`Q42-08` / §6.2.3),
+/// capable of verifying 170-bit witnesses such as Booker & Sutherland's `k = 42` solution:
+/// `r = k - z^3`, `s = x + y`, `q = r / s`, `p = (s^2 - q) / 3`, `D = s^2 - 4p = (x - y)^2 = u^2`.
+pub fn verify_divisor_discriminant_cascade_bigint(
+    x: i64,
+    y: i64,
+    z: i64,
+    k: i64,
+) -> Result<bool, String> {
+    use crate::solvers::exact::BigInt;
+    let bx = BigInt::from_i64(x);
+    let by = BigInt::from_i64(y);
+    let bz = BigInt::from_i64(z);
+    let bk = BigInt::from_i64(k);
+
+    let s = bx.add(&by);
+    if s.is_zero() {
+        return Ok(false);
+    }
+    let r = bk.sub(&bz.pow(3));
+    let (q, rem_r) = r.divmod(&s).ok_or_else(|| "division by zero".to_string())?;
+    if !rem_r.is_zero() {
+        return Ok(false);
+    }
+    let s2 = s.mul(&s);
+    let (p, rem_3) = s2
+        .sub(&q)
+        .divmod(&BigInt::from_i64(3))
+        .ok_or_else(|| "division by 3".to_string())?;
+    if !rem_3.is_zero() {
+        return Ok(false);
+    }
+    let disc = s2.sub(&p.mul(&BigInt::from_i64(4)));
+    let u = bx.sub(&by);
+    let u2 = u.mul(&u);
+    Ok(disc == u2 && bx.pow(3).add(&by.pow(3)) == r)
+}
+
+/// Four pairwise-coprime 31-bit primes for zero-heap RNS / CRT verification (`∏ m_i ≈ 2^124 > 2B`).
+pub const RNS_CRT_PRIMES_4: [u64; 4] = [
+    2_147_483_647, // 2^31 - 1
+    2_147_483_629,
+    2_147_483_587,
+    2_147_483_579,
+];
+
+#[inline]
+const fn mod_cube_i64(v: i64, m: u64) -> u64 {
+    let r = v.rem_euclid(m as i64) as u64;
+    let r2 = ((r as u128 * r as u128) % m as u128) as u64;
+    ((r2 as u128 * r as u128) % m as u128) as u64
+}
+
+/// Zero-heap 4-prime RNS residual `(x^3 + y^3 + z^3 - k) mod m_i` across [`RNS_CRT_PRIMES_4`].
+/// By CRT, all 4 lanes are `0` iff `∏ m_i` divides `x^3 + y^3 + z^3 - k` (exact for `|residual| < ∏ m_i / 2`).
+#[inline]
+pub const fn rns_4prime_cubic_residuals(x: i64, y: i64, z: i64, k: i64) -> [u64; 4] {
+    let mut out = [0u64; 4];
+    let mut i = 0;
+    while i < 4 {
+        let m = RNS_CRT_PRIMES_4[i];
+        let cx = mod_cube_i64(x, m);
+        let cy = mod_cube_i64(y, m);
+        let cz = mod_cube_i64(z, m);
+        let ck = k.rem_euclid(m as i64) as u64;
+        let sum = (cx + cy + cz) % m;
+        out[i] = (sum + m - ck) % m;
+        i += 1;
+    }
+    out
+}
+
+/// Returns `true` iff `(x, y, z, k)` vanishes in all 4 RNS prime lanes (`RNS_CRT_PRIMES_4`).
+#[inline]
+pub const fn verify_sum_of_three_cubes_rns_4prime(x: i64, y: i64, z: i64, k: i64) -> bool {
+    let r = rns_4prime_cubic_residuals(x, y, z, k);
+    r[0] == 0 && r[1] == 0 && r[2] == 0 && r[3] == 0
 }
 
 #[cfg(test)]
@@ -962,5 +1233,79 @@ mod tests {
         let b = add(var("x"), c(1.0));
         assert_eq!(expr_citation_hash(&a), expr_citation_hash(&b));
         assert_ne!(expr_citation_hash(&a), expr_citation_hash(&var("x")));
+    }
+
+    #[test]
+    fn sum_of_three_cubes_k42_exact_256bit_vs_f64_catastrophic_cancellation_and_mod9_obstruction() {
+        // Booker & Sutherland (2019) witness for x^3 + y^3 + z^3 = 42:
+        let x: i64 = -80_538_738_812_075_974;
+        let y: i64 = 80_435_758_145_817_515;
+        let z: i64 = 12_602_123_297_335_631;
+
+        // 1. Naive IEEE-754 f64 evaluation loses ~117 bits of precision on ~170-bit cubes:
+        let f64_sum = (x as f64).powi(3) + (y as f64).powi(3) + (z as f64).powi(3);
+        assert_ne!(
+            f64_sum, 42.0,
+            "IEEE-754 f64 must fail to resolve 42 at 10^51 scale (got {f64_sum})"
+        );
+
+        // 2. Exact zero-heap 256-bit stack-limb verifier proves x^3 + y^3 + z^3 == 42:
+        assert_eq!(verify_sum_of_three_cubes_exact(x, y, z, 42), Ok(true));
+        assert_eq!(verify_sum_of_three_cubes_exact(x, y, z + 1, 42), Ok(false));
+
+        // 3. Mod-9 algebraic obstruction (k ≡ ±4 mod 9 => rem_euclid(9) in {4, 5}):
+        for obstructed_k in [4, 5, 13, 14, -4, -5, -13, -14] {
+            assert!(
+                has_sum_of_three_cubes_mod9_obstruction(obstructed_k),
+                "k={obstructed_k} must trigger mod 9 obstruction"
+            );
+            assert_eq!(
+                verify_sum_of_three_cubes_exact(x, y, z, obstructed_k),
+                Ok(false)
+            );
+        }
+        assert!(!has_sum_of_three_cubes_mod9_obstruction(42));
+        assert!(!has_sum_of_three_cubes_mod9_obstruction(3));
+        assert!(!has_sum_of_three_cubes_mod9_obstruction(-42));
+    }
+
+    #[test]
+    fn sum_of_three_cubes_quins_postorder_and_divisor_discriminant_and_rns_4prime() {
+        // Encode x^3 + y^3 + z^3 - 42 as post-order Vec<NQuin> with 5-field parity:
+        let expr_42 = sum_of_three_cubes_expr(42);
+        let quins = sum_of_three_cubes_quins(42);
+        assert!(quins.iter().all(|q| q.verify_ecc_parity()));
+        let decoded = from_quins(&quins).expect("decode post-order CAS quins");
+        assert_eq!(decoded, expr_42);
+
+        // Enforce child_idx < current_idx in from_quins (reject self-loop / forward reference):
+        let mut cyclic = quins.clone();
+        let last_idx = cyclic.len() - 1;
+        cyclic[last_idx].object = last_idx as u64;
+        cyclic[last_idx].recalculate_parity();
+        assert!(
+            from_quins(&cyclic).is_err(),
+            "from_quins must reject cyclic/non-postorder child_idx >= current_idx"
+        );
+
+        // Divisor / discriminant reduction cascade on k = 3: (-5)^3 + 4^3 + 4^3 = -125 + 64 + 64 = 3
+        // With z = 4: r = 3 - 64 = -61, s = x + y = -1 => q = 61, p = (1 - 61)/3 = -20, D = 1 - 4(-20) = 81 = 9^2
+        let recovered = reduce_sum_of_three_cubes_divisor_discriminant(3, 4, -1)
+            .expect("divisor/discriminant reduction for k=3, z=4, s=-1");
+        assert_eq!(recovered, (4, -5));
+
+        // Arbitrary-precision Divisor / Discriminant cascade on Booker & Sutherland's k = 42 witness:
+        let x: i64 = -80_538_738_812_075_974;
+        let y: i64 = 80_435_758_145_817_515;
+        let z: i64 = 12_602_123_297_335_631;
+        assert!(
+            verify_divisor_discriminant_cascade_bigint(x, y, z, 42).unwrap(),
+            "k=42 witness must satisfy r = k - z^3 = s*q, 3p = s^2 - q, D = s^2 - 4p = (x - y)^2"
+        );
+        assert!(!verify_divisor_discriminant_cascade_bigint(x, y, z + 1, 42).unwrap());
+
+        // 4-prime RNS CRT batch verification on k = 42 witness and perturbed non-witness:
+        assert!(verify_sum_of_three_cubes_rns_4prime(x, y, z, 42));
+        assert!(!verify_sum_of_three_cubes_rns_4prime(x, y, z + 1, 42));
     }
 }

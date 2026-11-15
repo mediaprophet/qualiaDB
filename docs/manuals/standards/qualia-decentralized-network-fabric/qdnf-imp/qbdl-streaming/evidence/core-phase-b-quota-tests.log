@@ -1,0 +1,11 @@
+
+running 6 tests
+test sensing::local_custody::quota::tests::actual_u64_byte_and_entry_overflow_leave_totals_and_slots_unchanged ... ok
+test sensing::local_custody::quota::tests::admission_rejects_capacity_duplicate_and_scope_without_mutation ... ok
+test sensing::local_custody::quota::tests::callback_unwind_retains_exact_charge_and_blocks_retry ... ok
+test sensing::local_custody::quota::tests::exhausted_entries_and_untrusted_snapshot_are_rejected ... ok
+test sensing::local_custody::quota::tests::late_denial_retains_charge_before_any_storage_creation ... ok
+test sensing::local_custody::quota::tests::unavailable_chain_head_retains_charge_before_producer_io ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 10281 filtered out; finished in 0.69s
+

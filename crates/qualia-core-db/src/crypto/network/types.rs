@@ -30,6 +30,8 @@ pub enum KeyPurpose {
     RouteUpdate = 6,
     RecordSign = 7,
     DiscoveryHmac = 8,
+    ObjectContent = 9,
+    ObjectRecipient = 10,
 }
 
 /// Typed algorithm/length pair. Reject unknown combinations.
@@ -54,6 +56,7 @@ impl AlgorithmSpec {
         length: ML_KEM_768_PK_LEN as u16,
     };
 
+    /// Asserts `actual_len` equals the declared length; `Range` error otherwise.
     pub fn check(self, actual_len: usize) -> Result<(), QdnfError> {
         if actual_len != self.length as usize {
             return Err(QdnfError::Range);

@@ -469,6 +469,7 @@ pub enum ExportFormat {
 // Supporting implementations
 
 impl StructuralAnalyzer {
+    /// Creates a `StructuralAnalyzer` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             finite_element_solver: FiniteElementSolver::new(),
@@ -485,16 +486,19 @@ impl StructuralAnalyzer {
         self.linear_algebra = lib;
     }
 
+    /// Stores the model in the in-memory registry keyed by `model_id`.
     pub fn store_model(&mut self, model: EngineeringModel) {
         self.model_store.insert(model.model_id.clone(), model);
     }
 
+    /// Readies `StructuralAnalyzer`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.finite_element_solver.initialize()?;
         self.structural_dynamics.initialize()?;
         Ok(())
     }
 
+    /// Checks the model has at least geometry dimensions; `ValidationError` otherwise.
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -504,6 +508,11 @@ impl StructuralAnalyzer {
         Ok(())
     }
 
+    /// First-principles axial strength-of-materials analysis: `σ = F/A`,
+    /// `ε = σ/E`, `δ = F·L/(A·E)`, factor of safety `σ_yield/|σ|`. Dispatches
+    /// `Thermal` to `ThermalAnalyzer` and `Vibration` to a single-element
+    /// `solve_modal_eigen`. Missing materials/geometry/loads return
+    /// `InsufficientData` — never a fabricated constant.
     pub fn analyze(
         &mut self,
         model: &EngineeringModel,
@@ -738,19 +747,33 @@ impl StructuralAnalyzer {
                     heat_flux_field: Vec::new(),
                 })
             }
-            // Modal/thermal results cannot be represented in the scalar-field
-            // `AnalysisResults` shape — they are eigenmodes / temperature fields, not a
-            // structural stress/displacement response. They are genuinely computed, but
-            // through the dedicated methods that return the right result types:
-            //   Vibration → VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal
-            //   Thermal   → ThermalAnalyzer::analyze
-            AnalysisType::Vibration | AnalysisType::Thermal => {
-                Err(EngineeringError::NotImplemented(format!(
-                    "structural {:?} is not available through the AnalysisResults facade; \
-                     use VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal for \
-                     modal & free-vibration results and ThermalAnalyzer for thermal response",
-                    analysis_type
-                )))
+            AnalysisType::Thermal => {
+                let mut thermal = ThermalAnalyzer::new();
+                thermal.analyze(model, analysis_type)
+            }
+            AnalysisType::Vibration => {
+                if !(density > 0.0) {
+                    return Err(EngineeringError::InsufficientData(
+                        "vibration analysis needs a positive material density".to_string(),
+                    ));
+                }
+                let k = e * area / length;
+                let m = (density * area * length / 2.0).max(1e-12);
+                let modes = solve_modal_eigen(&[k], &[m], 1)?;
+                let omega = modes.first().map(|(w, _)| *w).unwrap_or(0.0);
+                let freq_hz = omega / (2.0 * std::f64::consts::PI);
+                let mode_vector = modes.into_iter().next().map(|(_, phi)| phi).unwrap_or_default();
+                Ok(AnalysisResults {
+                    results_id: "structural_vibration_modal".to_string(),
+                    analysis_type,
+                    displacement_field: vec![freq_hz], // fundamental natural frequency (Hz)
+                    stress_field: vec![omega],         // angular frequency (rad/s)
+                    strain_field: Vec::new(),
+                    reaction_forces: mode_vector,
+                    safety_factor: 1.0,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
             }
         }
     }
@@ -766,6 +789,7 @@ impl StructuralAnalyzer {
         fem::solve_static(model)
     }
 
+    /// Lists the supported analysis types (LinearStatic…Buckling).
     pub fn list_analysis_types(&self) -> Vec<String> {
         vec![
             "LinearStatic".to_string(),
@@ -776,10 +800,12 @@ impl StructuralAnalyzer {
         ]
     }
 
+    /// Returns a clone of the stored model, or `None` if absent.
     pub fn get_model(&self, model_id: &str) -> Option<EngineeringModel> {
         self.model_store.get(model_id).cloned()
     }
 
+    /// Returns a snapshot of the analyzer's performance metrics.
     pub fn get_performance_metrics(&self) -> EngineeringPerformanceMetrics {
         EngineeringPerformanceMetrics::new()
     }
@@ -806,6 +832,7 @@ impl StructuralAnalyzer {
 }
 
 impl FiniteElementSolver {
+    /// Creates a `FiniteElementSolver` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             mesh_generator: MeshGenerator::new(),
@@ -821,6 +848,7 @@ impl FiniteElementSolver {
         self.zns_manager = manager;
     }
 
+    /// Readies `FiniteElementSolver`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.mesh_generator.initialize()?;
         self.element_library.initialize()?;
@@ -831,6 +859,7 @@ impl FiniteElementSolver {
 }
 
 impl MeshGenerator {
+    /// Creates a `MeshGenerator` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             mesh_types: HashMap::new(),
@@ -953,6 +982,7 @@ impl MeshGenerator {
 }
 
 impl MeshQuality {
+    /// Creates a `MeshQuality` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             quality_metrics: HashMap::new(),
@@ -985,6 +1015,7 @@ impl MeshQuality {
 }
 
 impl QualityAssessment {
+    /// Creates a `QualityAssessment` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             overall_quality: 0.95,
@@ -995,6 +1026,7 @@ impl QualityAssessment {
 }
 
 impl ElementLibrary {
+    /// Creates a `ElementLibrary` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             elements: HashMap::new(),
@@ -1142,6 +1174,7 @@ impl ElementLibrary {
 }
 
 impl SolverEngine {
+    /// Creates a `SolverEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             solvers: HashMap::new(),
@@ -1150,6 +1183,7 @@ impl SolverEngine {
         }
     }
 
+    /// Readies `SolverEngine`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -1193,6 +1227,7 @@ impl SolverEngine {
 }
 
 impl SolverParameters {
+    /// Creates a `SolverParameters` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,
@@ -1203,6 +1238,7 @@ impl SolverParameters {
 }
 
 impl ConvergenceCriteria {
+    /// Creates a `ConvergenceCriteria` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             criteria_type: ConvergenceType::Residual,
@@ -1213,6 +1249,7 @@ impl ConvergenceCriteria {
 }
 
 impl PostProcessor {
+    /// Creates a `PostProcessor` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             result_extractors: HashMap::new(),
@@ -1221,6 +1258,7 @@ impl PostProcessor {
         }
     }
 
+    /// Readies `PostProcessor`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.visualization_engine.initialize()?;
         self.report_generator.initialize()?;
@@ -1247,6 +1285,7 @@ impl PostProcessor {
 }
 
 impl VisualizationEngine {
+    /// Creates a `VisualizationEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             visualization_types: HashMap::new(),
@@ -1254,6 +1293,7 @@ impl VisualizationEngine {
         }
     }
 
+    /// Readies `VisualizationEngine`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -1287,6 +1327,7 @@ impl VisualizationEngine {
 }
 
 impl RenderingEngine {
+    /// Creates a `RenderingEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             engine_type: RenderingEngineType::OpenGL,
@@ -1296,6 +1337,7 @@ impl RenderingEngine {
 }
 
 impl RenderingOptions {
+    /// Creates a `RenderingOptions` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             color_map: "jet".to_string(),
@@ -1307,6 +1349,7 @@ impl RenderingOptions {
 }
 
 impl ReportGenerator {
+    /// Creates a `ReportGenerator` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             report_templates: HashMap::new(),
@@ -1314,6 +1357,7 @@ impl ReportGenerator {
         }
     }
 
+    /// Readies `ReportGenerator`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }

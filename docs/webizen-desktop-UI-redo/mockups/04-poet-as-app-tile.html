@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>04 — Poet as app tile</title>
+<style>
+  :root { --desk:#1b3a4b; --desk2:#0d2130; --panel:rgba(12,18,24,.8); --text:#f2f6fa; --muted:#b7c4d0; --dock:rgba(8,12,18,.78); --accent:#7ec8ff; --line:#334155; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font:14px/1.4 system-ui,sans-serif; color:var(--text);
+    background: linear-gradient(160deg, var(--desk), var(--desk2)); }
+  .banner { padding:.45rem .75rem; background:#111827ee; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
+  .banner strong { color:var(--accent); }
+  .stage { position:relative; height:calc(100vh - 5rem); }
+  .window { position:absolute; top:18%; left:50%; transform:translateX(-50%); width:min(420px,92vw);
+    background:var(--panel); border:1px solid rgba(255,255,255,.12); border-radius:12px; overflow:hidden; }
+  .titlebar { padding:.5rem .75rem; border-bottom:1px solid rgba(255,255,255,.08); display:flex; gap:.5rem; align-items:center; }
+  .titlebar .dot { width:10px; height:10px; border-radius:50%; background:#64748b; }
+  .body { padding:1.25rem; }
+  .body h1 { margin:0 0 .5rem; font-size:1.1rem; }
+  .body p { margin:0; color:var(--muted); }
+  .dock { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:10px; padding:10px 14px;
+    background:var(--dock); border:1px solid rgba(255,255,255,.1); border-radius:18px; }
+  .dock .app { width:48px; height:48px; border-radius:12px; background:#1e2a38; display:grid; place-items:center; font-size:18px; opacity:.55; }
+  .dock .app.poet { opacity:1; outline:2px solid var(--accent); }
+</style>
+</head>
+<body>
+  <div class="banner"><strong>Gate 0 mock-up</strong> — leave Poet. Shell first. Poet is one future app on the dock (WASM host form), not a rival half-done product.</div>
+  <div class="stage">
+    <div class="window">
+      <div class="titlebar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>Poet</span></div>
+      <div class="body">
+        <h1>Migrates in after the shell</h1>
+        <p>Desktop launches Poet. One product. Fold/retire the duplicate path when inventory marks the canonical host.</p>
+      </div>
+    </div>
+  </div>
+  <nav class="dock" aria-label="Dock">
+    <div class="app poet" title="Poet">🪶</div>
+    <div class="app" title="Browser">🌐</div>
+    <div class="app" title="Talk">💬</div>
+    <div class="app" title="Settings">⚙️</div>
+  </nav>
+</body>
+</html>

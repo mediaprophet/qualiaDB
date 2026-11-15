@@ -26,7 +26,7 @@ enum EntryParseStage<'a> {
     Fail(nom::Err<&'a [u8]>),
 }
 
-fn check_private_shared(i: &[u8]) -> EntryParseStage<'_> {
+fn check_private_shared<'a>(i: &'a [u8]) -> EntryParseStage<'a> {
     if i.starts_with(b"/private") {
         EntryParseStage::VendorComment(8)
     } else if i.starts_with(b"/shared") {
@@ -38,7 +38,7 @@ fn check_private_shared(i: &[u8]) -> EntryParseStage<'_> {
     }
 }
 
-fn check_admin(i: &[u8], l: usize) -> EntryParseStage<'_> {
+fn check_admin<'a>(i: &'a [u8], l: usize) -> EntryParseStage<'a> {
     if i[l..].starts_with(b"/admin") {
         EntryParseStage::Path(l + 6)
     } else {
@@ -46,7 +46,7 @@ fn check_admin(i: &[u8], l: usize) -> EntryParseStage<'_> {
     }
 }
 
-fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage<'_> {
+fn check_vendor_comment<'a>(i: &'a [u8], l: usize) -> EntryParseStage<'a> {
     if i[l..].starts_with(b"/comment") {
         EntryParseStage::Path(l + 8)
     } else if i[l..].starts_with(b"/vendor") {
@@ -63,7 +63,7 @@ fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage<'_> {
     }
 }
 
-fn check_path(i: &[u8], l: usize) -> EntryParseStage<'_> {
+fn check_path<'a>(i: &'a [u8], l: usize) -> EntryParseStage<'a> {
     if i.len() == l || i[l] == b' ' || i[l] == b'\r' {
         return EntryParseStage::Done(l);
     } else if i[l] != b'/' {
@@ -140,12 +140,12 @@ named!(keyval_list<Vec<Metadata>>, do_parse!(
         (list)
 ));
 
-named!(entry_list<Vec<&str>>, do_parse!(
+named_a!(entry_list<'a, Vec<&'a str>>, do_parse!(
     list: separated_list!(tag!(" "), map!(entry_name, slice_to_str)) >>
         (list)
 ));
 
-named!(metadata_common<&[u8]>, do_parse!(
+named_a!(metadata_common<'a, &'a [u8]>, do_parse!(
     tag_no_case!("METADATA ") >>
         mbox: quoted >>
         tag!(" ") >>
@@ -153,7 +153,7 @@ named!(metadata_common<&[u8]>, do_parse!(
 ));
 
 // [RFC5464 - 4.4.1 METADATA Response with values]
-named!(metadata_solicited<Response>, do_parse!(
+named_a!(metadata_solicited<'a, Response<'a>>, do_parse!(
     mbox: metadata_common >>
     tail: keyval_list >>
         (Response::MailboxData(MailboxDatum::MetadataSolicited {
@@ -162,7 +162,7 @@ named!(metadata_solicited<Response>, do_parse!(
 ));
 
 // [RFC5464 - 4.4.2 Unsolicited METADATA Response without values]
-named!(metadata_unsolicited<Response>, do_parse!(
+named_a!(metadata_unsolicited<'a, Response<'a>>, do_parse!(
     mbox: metadata_common >>
         tail: entry_list >>
         (Response::MailboxData(MailboxDatum::MetadataUnsolicited {
@@ -171,7 +171,7 @@ named!(metadata_unsolicited<Response>, do_parse!(
 ));
 
 // Parse solicited or unsolicited METADATA response.
-named!(pub resp_metadata<Response>, do_parse!(
+named_a!(pub resp_metadata<'a, Response<'a>>, do_parse!(
     r: alt!(metadata_solicited |
             metadata_unsolicited) >>
         (r)

@@ -28,6 +28,7 @@ NON_GENERATED = {"duty-to-suppress-forced-labour", "iccpr-non-derogable-overlay"
 
 
 def schema_version() -> str:
+    """Schema version."""
     return (ROOT / "SCHEMA_VERSION").read_text(encoding="utf-8").strip()
 
 
@@ -64,6 +65,7 @@ def check() -> int:
 
 
 def run(label: str, *args: str) -> None:
+    """Runs."""
     print(f"\n=== {label} ===")
     p = subprocess.run([sys.executable, *args], cwd=REPO)
     if p.returncode != 0:
@@ -71,6 +73,7 @@ def run(label: str, *args: str) -> None:
 
 
 def reprocess() -> None:
+    """Reprocesses the library."""
     cur = schema_version()
     print(f"Reprocessing the CML library at SCHEMA_VERSION = {cur}")
     print("(machine-PROPOSED layer only; overlays/** + KEEP + attestations untouched)")
@@ -86,6 +89,7 @@ def reprocess() -> None:
 
 
 def main() -> None:
+    """CLI entry point."""
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:

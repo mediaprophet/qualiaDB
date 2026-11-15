@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `HermeneuticsQapp` component.
 pub fn HermeneuticsQapp() -> Element {
     rsx! {
         QAppEngine {

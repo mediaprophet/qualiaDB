@@ -9,6 +9,7 @@ pub struct SemanticTokenMetadata {
     pub decimals: u8,
 }
 
+/// Generates an SLP OP_RETURN.
 pub fn generate_slp_op_return(metadata: &SemanticTokenMetadata) -> Vec<u8> {
     let mut payload = Vec::new();
 
@@ -38,6 +39,7 @@ pub fn generate_slp_op_return(metadata: &SemanticTokenMetadata) -> Vec<u8> {
     payload
 }
 
+/// Generates an SLP send OP_RETURN.
 pub fn generate_slp_send_op_return(token_id: &str, amounts: &[u64]) -> Vec<u8> {
     let mut payload = Vec::new();
     payload.push(0x6a); // OP_RETURN
@@ -57,6 +59,7 @@ pub fn generate_slp_send_op_return(token_id: &str, amounts: &[u64]) -> Vec<u8> {
     payload
 }
 
+/// Generates an ALP send OP_RETURN.
 pub fn generate_alp_send_op_return(token_id: &str, amounts: &[u64]) -> Vec<u8> {
     let mut payload = Vec::new();
     payload.push(0x6a); // OP_RETURN
@@ -76,6 +79,7 @@ pub fn generate_alp_send_op_return(token_id: &str, amounts: &[u64]) -> Vec<u8> {
     payload
 }
 
+/// Generates semantic-metadata CBOR.
 pub fn generate_semantic_metadata_cbor(
     subject_did: &str,
     properties: serde_json::Value,

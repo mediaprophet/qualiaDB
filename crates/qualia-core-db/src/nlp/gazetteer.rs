@@ -32,6 +32,7 @@ impl Default for Gazetteer {
 }
 
 impl Gazetteer {
+    /// Builds `Gazetteer` from `lexicon`.
     pub fn from_lexicon(lex: &'static [Lexeme]) -> Self {
         let mut nodes = vec![Node {
             next: HashMap::new(),
@@ -68,6 +69,7 @@ impl Gazetteer {
         self.patterns.len()
     }
 
+    /// `Gazetteer::find`.
     pub fn find(&self, source: &str) -> Vec<Hit> {
         let folded = ascii_fold(source);
         let bytes = folded.as_bytes();

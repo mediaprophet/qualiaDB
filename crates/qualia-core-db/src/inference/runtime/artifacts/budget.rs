@@ -78,6 +78,7 @@ impl From<std::io::Error> for ArtifactError {
     }
 }
 
+/// Validates `relative-artifact-path`.
 pub fn validate_relative_artifact_path(path: &Path) -> Result<(), ArtifactError> {
     if path.as_os_str().is_empty() || path.is_absolute() {
         return Err(ArtifactError::InvalidRelativePath);
@@ -91,6 +92,7 @@ pub fn validate_relative_artifact_path(path: &Path) -> Result<(), ArtifactError>
     Ok(())
 }
 
+/// Validates the label.
 pub(super) fn validate_label(label: &str) -> Result<(), ArtifactError> {
     if label.is_empty()
         || !label

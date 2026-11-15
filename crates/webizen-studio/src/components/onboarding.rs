@@ -8,7 +8,7 @@
 
 use crate::components::experience_mode::ExperienceModeSwitch;
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// First-run spine (matches `REQUIRED_SETUP_STEPS` in `qualia_client_core::setup`).
@@ -442,6 +442,7 @@ fn comma_values(value: &str) -> Vec<String> {
 }
 
 #[component]
+/// Aether `OnboardingGate` component.
 pub fn OnboardingGate() -> Element {
     let mut loading = use_signal(|| true);
     let mut complete = use_signal(|| false);

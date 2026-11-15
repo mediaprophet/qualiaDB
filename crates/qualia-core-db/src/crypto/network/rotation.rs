@@ -38,6 +38,7 @@ impl RotationState {
         })
     }
 
+    /// Revokes the previous-generation key material.
     pub fn revoke_old(&mut self) {
         self.revoked_old = true;
     }
@@ -101,6 +102,7 @@ pub struct RecoveredPossession {
 }
 
 impl RecoveredPossession {
+    /// Rebuilds a recovered possession for `controller` from `secret`.
     pub fn from_bytes(controller: u64, secret: &[u8]) -> Result<Self, CryptoError> {
         Ok(Self {
             controller,
@@ -108,6 +110,7 @@ impl RecoveredPossession {
         })
     }
 
+    /// `Ok` when `controller` matches; error on mismatch.
     pub fn confirms_controller(&self, controller: u64) -> Result<(), CryptoError> {
         let _ = self.material.purpose()?;
         if self.controller != controller {
@@ -127,6 +130,7 @@ impl RecoveredPossession {
         Err(CryptoError::Unauthorized)
     }
 
+    /// Zeroizes the recovered secret.
     pub fn destroy(&mut self) {
         self.material.destroy();
     }

@@ -1,4 +1,6 @@
+mod app;
 mod evaluate;
+mod inference_policy;
 mod llm;
 mod misc;
 mod qpu;
@@ -7,7 +9,9 @@ mod solid;
 mod solve;
 mod webizen;
 
+pub use app::AppAction;
 pub use evaluate::EvaluateModality;
+pub use inference_policy::InferencePolicyAction;
 pub use llm::LlmAction;
 pub use misc::*;
 pub use qpu::QpuAction;
@@ -54,6 +58,18 @@ pub enum ImportProgressFormat {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Explicit native Sentinel policy and actor setup for an operator-selected profile.
+    InferencePolicy {
+        #[arg(long)]
+        profile: PathBuf,
+        #[command(subcommand)]
+        action: InferencePolicyAction,
+    },
+    /// Manage, install, inspect, and uninstall QApp application packages (.qpkg)
+    App {
+        #[command(subcommand)]
+        action: AppAction,
+    },
     Extension {
         #[command(subcommand)]
         action: ExtensionAction,
@@ -70,6 +86,14 @@ pub enum Commands {
         #[command(subcommand)]
         action: CompileAction,
     },
+    /// Compile and seal an ontological entity bundle (.hmc) in Reverse-LOD order with CBOR-LD manifest
+    EntityCompile(EntityCompileArgs),
+    /// Legacy alias for EntityCompile
+    TwinCompile(TwinCompileArgs),
+    /// Verify and validate an ontological entity (.10d or .hmc bundle)
+    EntityVerify(EntityVerifyArgs),
+    /// Legacy alias for EntityVerify
+    TwinVerify(TwinVerifyArgs),
     Llm {
         #[command(subcommand)]
         action: LlmAction,
@@ -108,6 +132,11 @@ pub enum Commands {
     Q42 {
         #[command(subcommand)]
         action: Q42Action,
+    },
+    /// Transparent hyper-media container (`.hmc` / QBDL) inspect and verify.
+    Hmc {
+        #[command(subcommand)]
+        action: HmcAction,
     },
     Dump {
         out_path: PathBuf,
@@ -156,7 +185,7 @@ pub enum Commands {
         #[arg(long)]
         dataset: PathBuf,
     },
-    /// Prove exact encoded N-Triples/Q42 set equivalence using bounded external sorting.
+    /// Prove exact encoded RDF/Q42 set equivalence using bounded external sorting.
     VerifyGraph {
         #[arg(long)]
         input: PathBuf,
@@ -168,10 +197,26 @@ pub enum Commands {
         /// Maximum live temporary-run space. The check fails closed at this limit.
         #[arg(long, default_value_t = 24)]
         temp_gib: u64,
+        /// `import` (default) = Rio + q_hash matching `qualia-cli import`.
+        /// `legacy-semantic` = whitespace/`hash_token` path (old ingest semantic).
+        #[arg(long, default_value = "import")]
+        encoder: String,
+        /// Comma-separated predicate IRIs to omit (identical filter for twin ingest).
+        #[arg(long)]
+        omit_predicates: Option<String>,
+        /// Preset omit list: `comment-gloss`.
+        #[arg(long)]
+        omit_preset: Option<String>,
+        /// Fail if blank nodes are present (require GroundGraphProven / future RDFC).
+        /// Default: encoded-set match is enough for exit 0; blanks emit a warning.
+        #[arg(long, alias = "strict-rdfc")]
+        require_isomorphism: bool,
     },
     Import {
+        /// RDF source path (omit with `--url` + `--job-dir`).
         input: Option<PathBuf>,
-        output: PathBuf,
+        /// Destination `.q42` path.
+        output: Option<PathBuf>,
         #[arg(long)]
         strip_literals: bool,
         /// Publish an embedded-manifest root plus child Q42 segments capped at this size.
@@ -189,6 +234,12 @@ pub enum Commands {
         /// Resume `--job-dir` instead of starting over.
         #[arg(long)]
         resume: bool,
+        /// Comma-separated predicate IRIs to drop before hashing.
+        #[arg(long)]
+        omit_predicates: Option<String>,
+        /// Preset omit list: `comment-gloss`.
+        #[arg(long)]
+        omit_preset: Option<String>,
     },
     /// Review, compare, continue, or append ingest jobs (including incomplete ones).
     IngestJob {

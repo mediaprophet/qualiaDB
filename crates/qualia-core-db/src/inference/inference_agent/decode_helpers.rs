@@ -6,6 +6,7 @@
 // across the new submodule boundary while keeping them crate-internal — the
 // external public API is unchanged.
 
+#![allow(dead_code)]
 use crate::NQuin;
 
 use super::config::{TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};
@@ -107,7 +108,7 @@ pub(super) fn embedding_fallback_logits(
     emb_buf: &mut [f32],
     wt: &crate::gguf_bridge::QTensor,
 ) -> Vec<f32> {
-    if let (Some(idx), Some(mmap)) = (tensor_idx, engine.gguf_mmap.as_deref()) {
+    if let (Some(idx), Some(mmap)) = (tensor_idx, engine.model_bytes()) {
         if let Some(adapter) = lora_adapter {
             lora_embedding_forward(engine, idx, mmap, token_id, emb_dim, emb_buf, wt, adapter)
         } else {
@@ -188,16 +189,16 @@ pub(super) enum TopologyDraftStep {
     },
 }
 
+/// Drains the tensor-context injection.
 pub(super) fn drain_tensor_context_inject() {
     while let Some(inject) = crate::compute_universe::pop_tensor_context() {
-        if let Some(tensor) = crate::tensor::resident_substrate::global_resident_substrate()
-            .tensor_at(inject.tensor_index)
-        {
+        if let Some(tensor) = crate::compute_universe::context_tensor_at(inject.tensor_index) {
             crate::compute_universe::publish_query_tensor(tensor, inject.subject_hash);
         }
     }
 }
 
+/// Tries to accept a topology draft.
 pub(super) fn try_accept_topology_draft(
     engine: &mut crate::gguf_bridge::QTensorEngine,
     tensor_idx: Option<&crate::gguf_sharder::GgufTensorIndex>,
@@ -214,7 +215,9 @@ pub(super) fn try_accept_topology_draft(
     tok: &crate::gguf_sharder::GgufTokenizer,
     streamed_len: &mut usize,
     stream_tx: Option<&std::sync::mpsc::SyncSender<String>>,
+    output_cap: usize,
     mut on_token: Option<&mut dyn FnMut(String)>,
+    mut accept_token: Option<&mut dyn FnMut(Option<(u32, u64)>) -> Option<u32>>,
 ) -> TopologyDraftStep {
     let idx = match tensor_idx {
         Some(i) => i,
@@ -234,17 +237,32 @@ pub(super) fn try_accept_topology_draft(
         return TopologyDraftStep::Denied;
     }
 
-    let accepted = engine.verify_topology_draft_batch(
-        idx,
-        ctx,
-        &mapped,
-        emb_dim,
-        &mut emb_buf[..emb_dim],
-        scratch_a,
-        scratch_b,
-        TEST_TRANSFORMER_LAYER_CAP,
-        TEST_VOCAB_CHUNK_CAP,
-    );
+    let first_position = ctx.len().saturating_sub(1) as u64;
+    if accept_token
+        .as_mut()
+        .is_some_and(|accept| accept(None).is_none())
+    {
+        return TopologyDraftStep::Stop {
+            sieve_failed: false,
+            semantic_quin: None,
+        };
+    }
+    let accepted = engine
+        .verify_topology_draft_batch(
+            idx,
+            ctx,
+            &mapped,
+            emb_dim,
+            &mut emb_buf[..emb_dim],
+            scratch_a,
+            scratch_b,
+            TEST_TRANSFORMER_LAYER_CAP,
+            TEST_VOCAB_CHUNK_CAP,
+        )
+        // Speculative acceptance is a multi-token operation. Never let it bypass
+        // the caller's generation budget, which otherwise makes benchmark rows
+        // incomparable with scalar decode.
+        .min(output_cap.saturating_sub(out_ids.len()) as u32);
     crate::gpu_context::record_draft_acceptance(accepted, mapped.draft_len as u32);
 
     if accepted == 0 {
@@ -254,7 +272,23 @@ pub(super) fn try_accept_topology_draft(
     let mut sieve_failed = false;
     let mut semantic_quin = None;
     for i in 0..accepted as usize {
-        let id = mapped.draft_ids[i];
+        let proposed = mapped.draft_ids[i];
+        // Verification may have advanced ctx for the whole batch. Publication
+        // positions derive from its original prefix, not the speculative tail.
+        let position = first_position + i as u64;
+        let id = if let Some(accept) = accept_token.as_mut() {
+            match accept(Some((proposed, position))) {
+                Some(accepted) => accepted,
+                None => {
+                    return TopologyDraftStep::Stop {
+                        sieve_failed: false,
+                        semantic_quin: None,
+                    }
+                }
+            }
+        } else {
+            proposed
+        };
         out_ids.push(id);
         if let Some(ref mut s) = sieve {
             if s.apply_token(id).is_err() {
@@ -293,6 +327,7 @@ pub(super) fn try_accept_topology_draft(
     }
 }
 
+/// Builds the sieve.
 pub(super) fn build_sieve(
     tok: &crate::gguf_sharder::GgufTokenizer,
     spec: Option<&crate::neuro_symbolic_sieve::SieveLexSpec>,
@@ -344,12 +379,14 @@ pub(super) fn build_sieve(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-static PREFIX_CACHE: std::sync::OnceLock<
-    std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>,
+#[allow(dead_code)]
+pub(super) static PREFIX_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<super::prefix_cache::BoundedInferenceCache>,
 > = std::sync::OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Prefix cache.
 pub(super) fn get_prefix_cache(
-) -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
-    PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+) -> &'static std::sync::Mutex<super::prefix_cache::BoundedInferenceCache> {
+    super::prefix_cache::get_prefix_cache()
 }

@@ -116,19 +116,22 @@ pub struct EnergyPoint {
 // Supporting structs
 
 impl Molecule {
+    /// Creates an empty molecule with zero-initialized, unmeasured properties.
+    /// The legacy local record key is preserved; it does not imply any structure.
     pub fn new() -> Self {
         Self {
             molecule_id: "mol_1".to_string(),
-            formula: "CH4".to_string(),
-            atoms: vec![Atom::new()],
+            formula: String::new(),
+            atoms: Vec::new(),
             bonds: Vec::new(),
-            coordinates: vec![vec![0.0, 0.0, 0.0]; 5],
+            coordinates: Vec::new(),
             properties: MolecularProperties::new(),
         }
     }
 }
 
 impl Atom {
+    /// Creates a default atom.
     pub fn new() -> Self {
         Self {
             atom_id: "atom_1".to_string(),
@@ -142,6 +145,7 @@ impl Atom {
 }
 
 impl Bond {
+    /// Creates a default bond.
     pub fn new() -> Self {
         Self {
             bond_id: "bond_1".to_string(),
@@ -154,17 +158,20 @@ impl Bond {
 }
 
 impl MolecularProperties {
+    /// Creates zero-initialized, unmeasured properties.
+    /// These values are placeholders, not measured or predicted chemical results.
     pub fn new() -> Self {
         Self {
-            molecular_weight: 16.04,
+            molecular_weight: 0.0,
             dipole_moment: 0.0,
             polarizability: 0.0,
-            energy: -74.8,
+            energy: 0.0,
         }
     }
 }
 
 impl SimulationTrajectory {
+    /// Creates an empty trajectory.
     pub fn new() -> Self {
         Self {
             trajectory_id: "traj_1".to_string(),
@@ -176,6 +183,7 @@ impl SimulationTrajectory {
 }
 
 impl TrajectoryProperties {
+    /// Creates default trajectory properties.
     pub fn new() -> Self {
         Self {
             total_frames: 0,
@@ -187,6 +195,7 @@ impl TrajectoryProperties {
 }
 
 impl ReactionConditions {
+    /// Creates default reaction conditions.
     pub fn new() -> Self {
         Self {
             temperature: 298.15,
@@ -197,6 +206,7 @@ impl ReactionConditions {
 }
 
 impl KineticsResults {
+    /// Creates empty kinetics results.
     pub fn new() -> Self {
         Self {
             rate_constant: 1.0,
@@ -208,6 +218,7 @@ impl KineticsResults {
 }
 
 impl QuantumProperties {
+    /// Creates default quantum properties.
     pub fn new() -> Self {
         Self {
             total_energy: -74.8,
@@ -222,6 +233,7 @@ impl QuantumProperties {
 }
 
 impl PredictedProperties {
+    /// Creates empty predicted properties.
     pub fn new() -> Self {
         Self {
             properties: HashMap::new(),
@@ -279,4 +291,32 @@ pub struct ChemistryPerformanceMetrics {
     pub average_computation_time: f64,
     pub average_accuracy: f64,
     pub convergence_rate: f64,
+}
+
+#[cfg(test)]
+mod constructor_tests {
+    use super::*;
+
+    #[test]
+    fn new_molecule_is_empty_and_has_no_measured_properties() {
+        let molecule = Molecule::new();
+        assert_eq!(molecule.molecule_id, "mol_1"); // legacy local record key
+        assert!(molecule.formula.is_empty());
+        assert!(molecule.atoms.is_empty());
+        assert!(molecule.bonds.is_empty());
+        assert!(molecule.coordinates.is_empty());
+        assert_eq!(molecule.properties.molecular_weight, 0.0);
+        assert_eq!(molecule.properties.dipole_moment, 0.0);
+        assert_eq!(molecule.properties.polarizability, 0.0);
+        assert_eq!(molecule.properties.energy, 0.0);
+    }
+
+    #[test]
+    fn new_molecular_properties_are_zero_initialized_not_chemical_results() {
+        let properties = MolecularProperties::new();
+        assert_eq!(properties.molecular_weight, 0.0);
+        assert_eq!(properties.dipole_moment, 0.0);
+        assert_eq!(properties.polarizability, 0.0);
+        assert_eq!(properties.energy, 0.0);
+    }
 }

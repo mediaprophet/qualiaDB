@@ -1,0 +1,44 @@
+@prefix si: <https://ns.webizen.org/semantic-instrument/> .
+@prefix cml: <https://ns.webcivics.net/cml/> .
+@prefix clinical: <https://ns.webizen.org/clinical-nutrition/> .
+
+# Demonstrator template for a clinician or pharmacist reviewing the same food evidence
+# through a more technical mechanism, exposure and interaction lens.
+
+clinical:mechanism-review a si:SemanticInstrument ;
+    si:instrumentId "https://ns.webizen.org/demo/clinical-mechanism-review" ;
+    si:name "Clinical nutrition mechanism review template (demo)" ;
+    si:requiresQualifiedAuthor "clinician-pharmacist-dietitian-or-organic-chemistry-subject-matter-expert" .
+
+clinical:mechanism-review-1-0-0 a si:InstrumentRelease ;
+    si:instrument clinical:mechanism-review ;
+    si:releaseId "https://ns.webizen.org/demo/clinical-mechanism-review/releases/1.0.0" ;
+    si:contentCategory si:Demo ;
+    si:entryPoint clinical:assess-mechanism ;
+    si:prohibitedInterpretation "autonomous-diagnosis-prescription-dose-selection-or-replacement-of-clinical-judgement" ;
+    si:requiresInput "food-or-compound,chemical-identity,preparation-or-exposure,dose-context,mechanism-source,clinical-evidence,interaction-and-safety-context" ;
+    si:holdsWhenMissing "chemical-identity,source,exposure-context,interaction-check-or-qualified-review" ;
+    si:resultKind "clinician-review-dossier" ;
+    si:authorshipState "template-awaiting-qualified-author" ;
+    si:reviewState "awaiting-independent-clinical-review" ;
+    si:hasRecipientView clinical:person-view ;
+    si:hasRecipientView clinical:professional-view .
+
+clinical:assess-mechanism a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:operationKind "trace-classify-and-prepare-for-review" ;
+    si:sideEffects "none" ;
+    si:logicApplication clinical:mechanism-logic .
+
+clinical:mechanism-logic a cml:LogicApplication ;
+    cml:modality cml:N3Logic ;
+    cml:logicSummary "Separates compound identity, preparation, plausible mechanism, human outcome evidence, contraindications and interaction signals; preserves links to the person-readable evidence record." ;
+    cml:curationStatus cml:Proposed .
+
+clinical:person-view a si:RecipientView ;
+    si:audience "person-or-supporter" ;
+    si:contains "plain-language-consideration,evidence-limit,caution,next-question-for-care-team" .
+
+clinical:professional-view a si:RecipientView ;
+    si:audience "qualified-clinician-or-pharmacist" ;
+    si:contains "compound-identity,mechanism-of-action,exposure-and-preparation,study-design,interaction-and-contraindication,uncertainty-and-source-links" .

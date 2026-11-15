@@ -16,6 +16,7 @@ pub struct BipolarFramework {
 }
 
 impl BipolarFramework {
+    /// Creates `BipolarFramework` with the given state.
     pub fn new(af: ArgumentationFramework) -> Self {
         Self {
             af,

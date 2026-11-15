@@ -215,19 +215,23 @@ pub fn gpu_compile_shader(args: &Value, span: Span) -> Result<Value, Diagnostic>
 mod tests {
     use super::*;
 
+    #[allow(dead_code)]
     fn snap() -> crate::poet_host::PoetSnapshot {
         crate::poet_host::PoetSnapshot::default()
     }
 
+    #[allow(dead_code)]
     fn eval(src: &str) -> Value {
         let mut snap = snap();
         snap.eval_fn(src, "go", vec![]).expect("script should eval")
     }
 
+    #[allow(dead_code)]
     fn dummy_span() -> Span {
         Span::new(0, 0)
     }
 
+    #[allow(dead_code)]
     const VALID_VERTEX_WGSL: &str = r#"
 @vertex
 fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
@@ -235,6 +239,7 @@ fn vs_main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
 }
 "#;
 
+    #[allow(dead_code)]
     const INVALID_WGSL: &str = "fn broken(";
 
     #[test]

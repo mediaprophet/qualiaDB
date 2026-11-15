@@ -42,7 +42,11 @@ fn credential_from(attestation: &InstrumentAttestation) -> Credential {
             q_hash(attestation.kind.as_iri()),
             q_hash(&attestation.content_digest),
         ),
-        claim_quin(issuer, q_hash("si:releaseId"), q_hash(&attestation.release_id)),
+        claim_quin(
+            issuer,
+            q_hash("si:releaseId"),
+            q_hash(&attestation.release_id),
+        ),
         claim_quin(issuer, q_hash("si:signatureIsNotTruth"), q_hash("true")),
     ];
     if attestation.kind == AttestationKind::CapabilityAward {
@@ -136,10 +140,7 @@ mod tests {
     fn issue_and_verify_roundtrip() {
         let sk = key();
         let issued = issue_native(&sk, sample()).expect("issue");
-        assert_eq!(
-            verify_native(&sk.verifying_key(), &issued, 1_500),
-            Ok(())
-        );
+        assert_eq!(verify_native(&sk.verifying_key(), &issued, 1_500), Ok(()));
         assert!(issued.attestation.origin_is_not_truth);
         assert_eq!(issued.attestation.kind, AttestationKind::Authorship);
     }

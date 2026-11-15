@@ -1,14 +1,6 @@
 //! Feedback Delay Network reverb — 4 lines, 4×4 Hadamard feedback matrix.
 //!
-//! Four delay lines of mutually-detuned lengths are cross-coupled by a normalized
-//! Hadamard matrix `0.5·H₄` (orthogonal → lossless mixing). A global `decay`
-//! (< 1) sets the tail length; a per-line one-pole `damping` darkens it.
-//!
-//! Because `0.5·H₄` is orthonormal, the loop gain is exactly `decay`, so the
-//! network is unconditionally stable for `decay < 1`.
-//!
-//! All four delay buffers are allocated **once** in [`FdnReverb::new`]. The
-//! `process_sample` / `process` paths never allocate, lock, or touch the FS.
+//! Hadamard mixing delegated to [`etalon_signal::reverb::fdn4_hadamard_mix`].
 
 use crate::types::AudioError;
 
@@ -105,35 +97,26 @@ impl FdnReverb {
     /// Process one sample. **Zero-alloc, no locks.**
     #[inline]
     pub fn process_sample(&mut self, input: f32) -> f32 {
-        // Read the delayed output of each line (oldest sample at idx).
         let d0 = self.lines[0][self.idx[0]];
         let d1 = self.lines[1][self.idx[1]];
         let d2 = self.lines[2][self.idx[2]];
         let d3 = self.lines[3][self.idx[3]];
 
-        // Per-line damping (one-pole lowpass in the feedback path).
         let damp = self.damping;
         let one = 1.0 - damp;
         self.lp[0] = d0 * one + self.lp[0] * damp;
         self.lp[1] = d1 * one + self.lp[1] * damp;
         self.lp[2] = d2 * one + self.lp[2] * damp;
         self.lp[3] = d3 * one + self.lp[3] * damp;
-        let (s0, s1, s2, s3) = (self.lp[0], self.lp[1], self.lp[2], self.lp[3]);
 
-        // Normalized Hadamard mix (0.5·H₄, orthonormal → lossless).
-        let m0 = 0.5 * (s0 + s1 + s2 + s3);
-        let m1 = 0.5 * (s0 - s1 + s2 - s3);
-        let m2 = 0.5 * (s0 + s1 - s2 - s3);
-        let m3 = 0.5 * (s0 - s1 - s2 + s3);
+        let [m0, m1, m2, m3] = etalon_signal::reverb::fdn4_hadamard_mix(self.lp);
 
-        // Inject input into every line, add scaled feedback, and write back.
         let g = self.decay;
         self.lines[0][self.idx[0]] = input + g * m0;
         self.lines[1][self.idx[1]] = input + g * m1;
         self.lines[2][self.idx[2]] = input + g * m2;
         self.lines[3][self.idx[3]] = input + g * m3;
 
-        // Advance each ring index.
         for i in 0..4 {
             self.idx[i] += 1;
             if self.idx[i] >= self.lines[i].len() {
@@ -141,7 +124,6 @@ impl FdnReverb {
             }
         }
 
-        // Wet output = mean of the raw delayed taps.
         let wet_sig = 0.25 * (d0 + d1 + d2 + d3);
         wet_sig * self.wet + input * self.dry
     }
@@ -174,8 +156,6 @@ mod tests {
         assert!(out.iter().all(|x| x.is_finite()), "FDN produced NaN/Inf");
         assert!(out.iter().all(|x| x.abs() < 4.0), "FDN tail not bounded");
 
-        // First echoes only appear after the shortest delay — early window is
-        // measured after that so it contains real tail energy.
         let win = 4_410;
         let early: f32 = out[win..2 * win].iter().map(|x| x * x).sum();
         let late: f32 = out[9 * win..10 * win].iter().map(|x| x * x).sum();
@@ -199,7 +179,6 @@ mod tests {
         let mut ol = vec![0.0f32; n];
         short.process(&input, &mut os).unwrap();
         long.process(&input, &mut ol).unwrap();
-        // Late-window energy is greater for the longer decay.
         let es: f32 = os[30_000..].iter().map(|x| x * x).sum();
         let el: f32 = ol[30_000..].iter().map(|x| x * x).sum();
         assert!(

@@ -10,6 +10,12 @@ pub const PROJECTOR_GROUP1_BINDINGS: &[u32] = &[0];
 /// Rust ambient layout — binding 4 is reserved for `ObserverStandpoint` (not yet in WGSL).
 pub const AMBIENT_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4];
 pub const BLOOM_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4];
+/// Mesh frame group: camera/observer plus shadow, AO and atmosphere bindings.
+pub const MESH_GROUP0_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+pub const MESH_GROUP1_BINDINGS: &[u32] = &[0];
+/// Dynamic material factors, six textures, six samplers, and the environment probe contract.
+pub const MESH_GROUP2_BINDINGS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+pub const MESH_GROUP3_BINDINGS: &[u32] = &[0];
 
 /// Parse `@group(G) @binding(B)` declarations from WGSL source lines.
 pub fn parse_wgsl_bindings(source: &str) -> Vec<(u32, u32)> {
@@ -63,12 +69,18 @@ pub fn assert_wgsl_bindings_covered(
 fn validate_wgsl_smoke(label: &str, source: &str) {
     use naga::front::wgsl::Frontend;
 
-    // Parse-only smoke: catches syntax regressions on native CI. Full layout validation
-    // is enforced by `CameraUniform`/`ObserverStandpoint` size tests below and by
-    // `cargo check --target wasm32-unknown-unknown --features portal` (wgpu pipeline create).
-    Frontend::new()
+    // Validate the complete module on native CI, including WGSL semantics, resource
+    // declarations and entry-point interfaces. This is stronger than syntax parsing
+    // and catches instance-record ABI drift before an adapter-backed pipeline test.
+    let module = Frontend::new()
         .parse(source)
         .unwrap_or_else(|e| panic!("{label}: WGSL parse failed: {e:?}"));
+    naga::valid::Validator::new(
+        naga::valid::ValidationFlags::all(),
+        naga::valid::Capabilities::all(),
+    )
+    .validate(&module)
+    .unwrap_or_else(|e| panic!("{label}: WGSL validation failed: {e:?}"));
 }
 
 #[cfg(test)]
@@ -91,7 +103,10 @@ mod tests {
         CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry, STANDPOINT_DID,
         STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };
-    use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
+    use crate::shaders::viewport::{
+        AMBIENT_WGSL, AO_GENERATE_WGSL, AO_PREPASS_WGSL, BLOOM_WGSL, HOLOGRAPHIC_WGSL, MESH_WGSL,
+        OUTPUT_WGSL, PROJECTOR_WGSL, SUN_SHADOW_WGSL,
+    };
     use crate::sonic_token::SonicToken;
     use crate::tensor::buffer_export::tensor_node_count;
     use crate::tensor::buffer_export::{TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE};
@@ -103,7 +118,23 @@ mod tests {
     fn phenomenal_shader_modules_parse() {
         validate_wgsl_smoke("ambient", AMBIENT_WGSL);
         validate_wgsl_smoke("projector", PROJECTOR_WGSL);
+        validate_wgsl_smoke("mesh", MESH_WGSL);
+        validate_wgsl_smoke("holographic", HOLOGRAPHIC_WGSL);
+        validate_wgsl_smoke("sun shadow", SUN_SHADOW_WGSL);
+        validate_wgsl_smoke("AO prepass", AO_PREPASS_WGSL);
+        validate_wgsl_smoke("AO generate", AO_GENERATE_WGSL);
+        validate_wgsl_smoke("SDR output", OUTPUT_WGSL);
         validate_wgsl_smoke("bloom", BLOOM_WGSL);
+        assert!(
+            BLOOM_WGSL.contains("let combined = hdr + bloom * uniforms.composite.bloom_strength;")
+        );
+        assert_eq!(
+            BLOOM_WGSL
+                .matches("scene_linear * exposure * white_balance_gains")
+                .count(),
+            1,
+            "exposure and white balance belong to one shared output transform"
+        );
     }
 
     #[test]
@@ -115,6 +146,33 @@ mod tests {
         assert_wgsl_bindings_covered(PROJECTOR_WGSL, 1, PROJECTOR_GROUP1_BINDINGS)
             .expect("projector group1");
         assert_wgsl_bindings_covered(BLOOM_WGSL, 0, BLOOM_GROUP0_BINDINGS).expect("bloom");
+        assert_wgsl_bindings_covered(OUTPUT_WGSL, 0, &[0, 1, 2]).expect("SDR output");
+        assert_wgsl_bindings_covered(MESH_WGSL, 0, MESH_GROUP0_BINDINGS)
+            .expect("mesh frame, shadow, AO and atmosphere");
+        assert_wgsl_bindings_covered(MESH_WGSL, 1, MESH_GROUP1_BINDINGS).expect("mesh model");
+        assert_wgsl_bindings_covered(MESH_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("combined material factors and textures");
+        assert_wgsl_bindings_covered(MESH_WGSL, 3, MESH_GROUP3_BINDINGS)
+            .expect("instanced mesh storage");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 0, &[0]).expect("shadow matrix");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 1, &[0]).expect("shadow model");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("shadow material and alpha-mask texture");
+        assert_wgsl_bindings_covered(SUN_SHADOW_WGSL, 3, &[0]).expect("shadow instances");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 0, &[0, 1, 2])
+            .expect("AO camera and uniform");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 1, &[0]).expect("AO model");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 2, MESH_GROUP2_BINDINGS)
+            .expect("AO material and alpha-mask texture");
+        assert_wgsl_bindings_covered(AO_PREPASS_WGSL, 3, &[0]).expect("AO instances");
+        for shader in [MESH_WGSL, SUN_SHADOW_WGSL, AO_PREPASS_WGSL] {
+            assert!(
+                parse_wgsl_bindings(shader)
+                    .iter()
+                    .all(|(group, _)| *group <= 3),
+                "mesh-related shaders must fit the four-group WebGPU baseline"
+            );
+        }
     }
 
     #[test]

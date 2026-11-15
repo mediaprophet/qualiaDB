@@ -1,5 +1,6 @@
 //! Canvas2D fallback painters — the non-WebGPU 2.5D field (background, ambient, tensor, HUD).
 use super::*;
+/// `paint_background`.
 pub(super) fn paint_background(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -16,6 +17,7 @@ pub(super) fn paint_background(
     ctx.fill_rect(0.0, 0.0, w, h);
 }
 
+/// `paint_ambient_field`.
 pub(super) fn paint_ambient_field(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -55,6 +57,7 @@ pub(super) fn paint_ambient_field(
     }
 }
 
+/// `paint_tensor_projection`.
 pub(super) fn paint_tensor_projection(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -148,6 +151,7 @@ pub(super) fn paint_tensor_projection(
     }
 }
 
+/// `stroke_segment`.
 pub(super) fn stroke_segment(
     ctx: &CanvasRenderingContext2d,
     a: ProjectedNode,
@@ -161,6 +165,7 @@ pub(super) fn stroke_segment(
     ctx.stroke();
 }
 
+/// `project_xyz`.
 pub(super) fn project_xyz(x: f32, y: f32, z: f32, w: f64, h: f64, yaw: f64) -> (f64, f64, f32) {
     let cx = yaw.cos() as f32;
     let sx = yaw.sin() as f32;
@@ -173,6 +178,7 @@ pub(super) fn project_xyz(x: f32, y: f32, z: f32, w: f64, h: f64, yaw: f64) -> (
     (px, py, depth)
 }
 
+/// `paint_hud`.
 pub(super) fn paint_hud(
     ctx: &CanvasRenderingContext2d,
     portal: &QualiaPortal,
@@ -209,6 +215,7 @@ pub(super) fn paint_hud(
     }
 }
 
+/// `append_parsed_dom`.
 pub(super) fn append_parsed_dom(
     document: &Document,
     panel: &Element,
@@ -224,6 +231,7 @@ pub(super) fn append_parsed_dom(
     append_triple_dom(document, panel, parsed)
 }
 
+/// `append_triple_dom`.
 pub(super) fn append_triple_dom(
     document: &Document,
     panel: &Element,
@@ -249,6 +257,7 @@ pub(super) fn append_triple_dom(
     Ok(())
 }
 
+/// `field_as_string`.
 pub(super) fn field_as_string(value: &JsValue, key: &str) -> Option<String> {
     Reflect::get(value, &JsValue::from_str(key))
         .ok()
@@ -256,6 +265,7 @@ pub(super) fn field_as_string(value: &JsValue, key: &str) -> Option<String> {
         .and_then(|v| v.as_string())
 }
 
+/// `ontology_tag`.
 pub(super) fn ontology_tag(predicate: &str) -> &'static str {
     let p = predicate.to_ascii_lowercase();
     if p.contains("title") || p.contains("label") || p.contains("name") {
@@ -273,6 +283,7 @@ pub(super) fn ontology_tag(predicate: &str) -> &'static str {
     }
 }
 
+/// `html_escape`.
 pub(super) fn html_escape(raw: &str) -> String {
     raw.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -281,6 +292,7 @@ pub(super) fn html_escape(raw: &str) -> String {
 }
 
 #[inline]
+/// `acoustic_uniform_to_floats`.
 pub(super) fn acoustic_uniform_to_floats(
     u: &AcousticUniform,
 ) -> [f32; ACOUSTIC_UNIFORM_FLOAT_COUNT] {
@@ -305,4 +317,96 @@ pub(super) fn acoustic_uniform_to_floats(
     floats[17] = u.stft_frame;
     floats[18..].copy_from_slice(&u.preview_bins);
     floats
+}
+
+/// Project the loaded mesh with the same orbit camera the GPU path uses.
+///
+/// Proof tick only. Triangles are filled solid, back to front by mean clip-w.
+/// That painter order is not a depth buffer and not occlusion. The lit look
+/// (shade + depth) is the WebGPU path, and only when it actually presents.
+pub(super) fn paint_cpu_body(
+    ctx: &CanvasRenderingContext2d,
+    w: f64,
+    h: f64,
+    mesh: &CpuBodyMesh,
+    camera: &CameraState,
+    aspect: f32,
+) {
+    use crate::render::camera::painter_order_far_to_near;
+    if mesh.indices.len() < 3 || mesh.positions.is_empty() || w < 2.0 || h < 2.0 {
+        return;
+    }
+    let vp = camera.view_projection(aspect);
+    let project = |p: [f32; 3]| -> Option<(f64, f64, f32)> {
+        let x = vp[0][0] * p[0] + vp[1][0] * p[1] + vp[2][0] * p[2] + vp[3][0];
+        let y = vp[0][1] * p[0] + vp[1][1] * p[1] + vp[2][1] * p[2] + vp[3][1];
+        let clip_w = vp[0][3] * p[0] + vp[1][3] * p[1] + vp[2][3] * p[2] + vp[3][3];
+        if clip_w <= 0.05 {
+            return None;
+        }
+        let ndc_x = (x / clip_w) as f64;
+        let ndc_y = (y / clip_w) as f64;
+        if !ndc_x.is_finite() || !ndc_y.is_finite() {
+            return None;
+        }
+        Some((
+            (ndc_x * 0.5 + 0.5) * w,
+            (1.0 - (ndc_y * 0.5 + 0.5)) * h,
+            clip_w,
+        ))
+    };
+    struct ProofTri {
+        depth: f32,
+        p0: (f64, f64),
+        p1: (f64, f64),
+        p2: (f64, f64),
+        rgb: [u8; 3],
+    }
+    let tris = mesh.indices.len() / 3;
+    let max_proof_tris = 1536usize;
+    let step = (tris / max_proof_tris).max(1);
+    let mut batch = Vec::with_capacity(tris.min(max_proof_tris));
+    for t in (0..tris).step_by(step) {
+        let i0 = mesh.indices[t * 3] as usize;
+        let i1 = mesh.indices[t * 3 + 1] as usize;
+        let i2 = mesh.indices[t * 3 + 2] as usize;
+        let (Some(a), Some(b), Some(c)) = (
+            mesh.positions.get(i0).copied().and_then(&project),
+            mesh.positions.get(i1).copied().and_then(&project),
+            mesh.positions.get(i2).copied().and_then(&project),
+        ) else {
+            continue;
+        };
+        let col = mesh
+            .colors
+            .get(i0)
+            .copied()
+            .unwrap_or([0.7, 0.7, 0.65, 1.0]);
+        batch.push(ProofTri {
+            depth: (a.2 + b.2 + c.2) / 3.0,
+            p0: (a.0, a.1),
+            p1: (b.0, b.1),
+            p2: (c.0, c.1),
+            rgb: [
+                (col[0].clamp(0.0, 1.0) * 255.0) as u8,
+                (col[1].clamp(0.0, 1.0) * 255.0) as u8,
+                (col[2].clamp(0.0, 1.0) * 255.0) as u8,
+            ],
+        });
+        if batch.len() >= max_proof_tris {
+            break;
+        }
+    }
+    let depths: Vec<f32> = batch.iter().map(|t| t.depth).collect();
+    for idx in painter_order_far_to_near(&depths) {
+        let tri = &batch[idx];
+        let [r, g, b] = tri.rgb;
+        ctx.set_fill_style_str(&format!("rgb({r},{g},{b})"));
+        ctx.begin_path();
+        ctx.move_to(tri.p0.0, tri.p0.1);
+        ctx.line_to(tri.p1.0, tri.p1.1);
+        ctx.line_to(tri.p2.0, tri.p2.1);
+        ctx.close_path();
+        ctx.fill();
+    }
 }

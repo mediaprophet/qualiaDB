@@ -59,16 +59,19 @@ impl EphemeralKeyLease {
         })
     }
 
+    /// The key purpose this lease was issued for.
     pub fn purpose(&self) -> Result<KeyPurpose, CryptoError> {
         self.require_live()?;
         Ok(self.purpose)
     }
 
+    /// The lease's X25519 public key.
     pub fn x25519_public(&self) -> Result<[u8; X25519_LEN], CryptoError> {
         self.require_live()?;
         Ok(X25519Secret::from_bytes(self.x25519).public())
     }
 
+    /// The lease's Ed25519 public key.
     pub fn ed25519_public(&self) -> Result<[u8; 32], CryptoError> {
         self.require_live()?;
         Ok(ed25519::public_from_seed(&self.ed25519))
@@ -112,6 +115,7 @@ impl EphemeralKeyLease {
         Ok(())
     }
 
+    /// Cancels the lease without destroying key material bookkeeping.
     pub fn cancel(&mut self) {
         if matches!(self.state, LeaseState::Live) {
             self.state = LeaseState::Cancelled;
@@ -119,6 +123,7 @@ impl EphemeralKeyLease {
         }
     }
 
+    /// Destroys the lease, zeroing key material and releasing the slot.
     pub fn destroy(&mut self) {
         self.state = LeaseState::Destroyed;
         self.zeroize_material();

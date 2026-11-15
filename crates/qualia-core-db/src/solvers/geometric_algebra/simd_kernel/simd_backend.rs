@@ -18,6 +18,7 @@ pub struct GaKernel {
 }
 
 impl GaKernel {
+    /// Initializes internal state.
     pub fn init() -> Self {
         Self {
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -334,6 +335,7 @@ pub unsafe fn geometric_product_avx2(a: __m256, b: __m256) -> __m256 {
     result
 }
 
+/// Geometric product.
 pub fn multivector_geometric_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
@@ -368,6 +370,7 @@ pub fn multivector_geometric_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     out
 }
 
+/// Outer product.
 pub fn multivector_outer_product(a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
     // For now, outer product is only scalar.
     let mut out = [0.0; 8];

@@ -39,6 +39,7 @@ pub enum ComputeLane {
 }
 
 impl ComputeLane {
+    /// Static string.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PortableResident => "portable-resident",
@@ -57,6 +58,7 @@ pub enum QuantProfile {
 }
 
 impl QuantProfile {
+    /// Static string.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Int4SoaInt8Kv => "int4-soa+int8-kv",

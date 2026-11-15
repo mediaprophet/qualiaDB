@@ -45,13 +45,19 @@ pub enum RepresentationWing {
 #[serde(rename_all = "snake_case")]
 #[repr(u8)]
 pub enum SensitivityClass {
+    /// Openly shareable.
     #[default]
     Public = 0,
+    /// Limited audience — rights-filtered.
     Restricted = 1,
+    /// Highest confidentiality (sanctuary-grade).
     Classified = 2,
 }
 
 impl SensitivityClass {
+    /// Parse a class label; `"restricted"` → Restricted,
+    /// `"classified"`/`"sanctuary"`/`"secret"` → Classified, anything else
+    /// → Public.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
             "restricted" => Self::Restricted,
@@ -60,6 +66,8 @@ impl SensitivityClass {
         }
     }
 
+    /// True for `Restricted` or `Classified` — content that requires
+    /// rights-filtered presentation.
     pub fn is_high(self) -> bool {
         matches!(self, Self::Restricted | Self::Classified)
     }
@@ -68,9 +76,13 @@ impl SensitivityClass {
 /// Fixed affordance bits for path open/share/enter/edit (presentation + deontic).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct AffordanceBits {
+    /// Observer may open/read the entity.
     pub can_open: bool,
+    /// Observer may share/forward it.
     pub can_share: bool,
+    /// Observer may enter its spatial/scene context.
     pub can_enter: bool,
+    /// Observer may modify it.
     pub can_edit: bool,
 }
 
@@ -89,6 +101,8 @@ impl AffordanceBits {
         can_edit: true,
     };
 
+    /// Pack the four flags into a nibble (bit0=open, 1=share, 2=enter,
+    /// 3=edit) for wire/storage.
     pub fn pack(self) -> u8 {
         let mut b = 0u8;
         if self.can_open {
@@ -106,6 +120,7 @@ impl AffordanceBits {
         b
     }
 
+    /// Inverse of [`Self::pack`]; bits above bit3 are ignored.
     pub fn unpack(b: u8) -> Self {
         Self {
             can_open: b & 1 != 0,
@@ -119,8 +134,11 @@ impl AffordanceBits {
 /// Minimal entity descriptor for pure rights filtering (no heap bodies).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EntityViewMeta {
+    /// Stable entity identifier being viewed.
     pub entity_id: super::entity_id::EntityId,
+    /// Coarse projection kind.
     pub kind: super::entity_id::EntityKind,
+    /// Sensitivity of the underlying content.
     pub sensitivity: SensitivityClass,
     /// Entity lives in secret / sanctuary lane.
     pub is_secret: bool,

@@ -118,6 +118,7 @@ fn splitmix64(state: &mut u64) -> u64 {
 }
 
 impl SamplerState {
+    /// Creates a default `SamplerState`.
     pub fn new(cfg: SamplerConfig) -> Self {
         // Avoid the all-zero SplitMix64 fixed point; mix the seed once.
         let mut rng = cfg.seed ^ 0x2545_F491_4F6C_DD1D;

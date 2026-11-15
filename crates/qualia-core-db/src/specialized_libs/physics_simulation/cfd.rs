@@ -164,6 +164,7 @@ impl PhysicsSimulationLibrary {
             },
         })
     }
+    /// Initializes the CFD field arrays.
     pub fn initialize_cfd_fields(
         &self,
         simulation: &Simulation,
@@ -220,6 +221,7 @@ impl PhysicsSimulationLibrary {
 
         Ok(fields)
     }
+    /// `true` when the CFD fields converged.
     pub fn check_convergence(&self, solver_result: &SolverResult) -> bool {
         // Simple convergence check
         solver_result.residual_norm < 1e-6

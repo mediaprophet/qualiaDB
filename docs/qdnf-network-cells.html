@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QPR Network Cells</title>
+  <title>QDNF Protocol Cells &amp; Wire Framing — QualiaDB 0.0.41</title>
+  <meta name="description" content="Complete architectural guide to QDNF protocol cells, QFrame wire framing, QLink adjacency, DNI locators, 384-bit radix-16 QSR routing, 40-scenario QPolicy egress, and QSession/QSync.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
 </head>
 <body class="min-h-screen">
@@ -26,20 +27,200 @@
       </div>
     </div>
   </nav>
-  <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
-    <p class="q-chip mb-6">Proposed profile · not a process sandbox yet</p>
-    <h1 class="q-hero-title font-display mb-5">Network cells</h1>
-    <p class="q-lede mb-6">Networking runs in one or more Network Cells — supervised loops, admission ledger, memory pool. Ordinary cell ceiling is 512 MiB. The 42 MiB Sentinel pass stays a separate Webizen contract.</p>
-    <div class="q-card p-8 mb-12">
-      <p class="q-kicker mb-3">Honesty</p>
-      <p style="color:var(--q-muted);max-width:40rem">Current code does not yet establish one arena per cell or enforce every declared limit. A cell is an ownership boundary, not automatic filesystem or payment authority. Handle revoke must not wipe a volume.</p>
-    </div>
-    <p class="flex flex-wrap gap-3">
-      <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
-      <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
-      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <!-- LAYER 1: PLAIN-LANGUAGE OVERVIEW -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-cubes"></i> QDNF Protocol Cells · Wire Framing &amp; Cell Supervision · 0.0.41</div>
+    <h1 class="q-hero-title font-display mb-5">
+      Deterministic protocol cells from <code class="q-mono">QFrame</code> wire bytes to <code class="q-mono">QSync</code> replication.
+    </h1>
+    <p class="q-lede mb-6">
+      In the <strong>Qualia Decentralized Network Fabric (QDNF)</strong>, networking is decomposed into composable protocol cells executed inside supervised runtime containers (<strong>Network Cells</strong>). Every packet parser, routing lookup, policy gate, and session key derivation runs in caller-supplied stack or arena buffers with zero heap allocation in hot loops.
     </p>
+    <p class="q-note mb-6">
+      <strong>Cell Supervision &amp; Memory Boundaries:</strong> An ordinary Network Cell operates under a bounded <code class="q-mono">512 MiB</code> ceiling (<code class="q-mono">MAX_ORDINARY_CELL</code>), while core Webizen logic passes remain governed by the separate <code class="q-mono">42 MiB</code> Prolog Sentinel contract (<code class="q-mono">SENTINEL_PASS_TOTAL</code>). A Network Cell is a memory and scheduling ownership boundary — never automatic filesystem or payment authority, and revoking a network handle never wipes a local <code class="q-mono">.q42</code> volume.
+    </p>
+    <p class="q-continuity-strip mb-12" role="note">
+      <strong>Handle ≠ human.</strong>
+      Every <code class="q-mono">QFrame</code> header, <code class="q-mono">DNI</code> locator, and <code class="q-mono">QRoute</code> forwarding entry operates exclusively on the <strong>Handle</strong> and <strong>Instrument</strong> planes — never exposing the human (<code class="q-mono">NaturalAgent</code>) on the <strong>Entity</strong> plane.
+    </p>
+
+    <!-- LAYER 2: QFRAME, QLINK, AND DNI -->
+    <section class="q-card p-8 mb-12" id="qframe-qlink-dni">
+      <p class="q-kicker mb-2">Layer 2 · Link &amp; Locator Cells</p>
+      <h2 class="text-2xl font-semibold mb-4"><code class="q-mono">QFrame</code> Wire Framing, <code class="q-mono">QLink</code> Adjacency &amp; <code class="q-mono">DNI</code> Locators</h2>
+      <div class="grid md:grid-cols-3 gap-5 text-sm">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">Wire Framing</span>
+            <span class="q-mono text-xs text-white/60">qdnf::frame</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">QFrame</code> Bounded Envelopes</h3>
+          <p style="color:var(--q-muted)">
+            Encapsulates control and data payloads in fixed-cap, fail-closed binary frames with explicit protocol version, cell type tag, monotonic <code class="q-mono">Generation</code> counter, payload length verification, and <code class="q-mono">StrongDigest</code> (<code class="q-mono">SHA-384</code>) integrity checks. Truncated or oversized frames are rejected before parser dispatch.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">Neighbor Discovery</span>
+            <span class="q-mono text-xs text-white/60">qdnf::link</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">QLink</code> Cryptographic Adjacency</h3>
+          <p style="color:var(--q-muted)">
+            Replaces unauthenticated broadcast ARP and IPv6 Neighbour Discovery with signed challenge-response adjacency proofs bound to a <code class="q-mono">LinkId</code>. Supports native <code class="q-mono">local-ipc-v1</code> links and explicitly labelled transition bearers (<code class="q-mono">WireGuard</code>, TLS <code class="q-mono">WebSocket</code>, <code class="q-mono">HTTP/2</code> capsules, <code class="q-mono">Nym</code> mixnet framing).
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-violet-300">Handle Plane</span>
+            <span class="q-mono text-xs text-white/60">DNI Locators</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">DNI</code> Expiring Topological Handles</h3>
+          <p style="color:var(--q-muted)">
+            <strong>Decentralized Network Identifiers (<code class="q-mono">DNI</code>)</strong> are self-certifying, time-bounded topological locators. Because a <code class="q-mono">DNI</code> carries an explicit expiry epoch and sits on the Handle plane, peers rotate locators freely to prevent traffic correlation without disturbing higher-level agreements.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- LAYER 3: QROUTE, QSR (NET-19), AND QRESOLVE -->
+    <section class="q-card p-8 mb-12" id="qroute-qresolve">
+      <p class="q-kicker mb-2">Layer 3 · Routing &amp; Resolution Mechanics (<code class="q-mono">NET-19</code>)</p>
+      <h2 class="text-2xl font-semibold mb-3">384-Bit Radix-16 <code class="q-mono">QSR</code>, Bellman–Ford Dual Witness &amp; <code class="q-mono">QResolve</code></h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        QDNF replaces global BGP prefix hijacking and ICANN DNS root dependencies with constraint-first intra-realm routing (<code class="q-mono">QRoute</code>), 384-bit Qualia Semantic Routing (<code class="q-mono">QSR</code>), and capability-gated resolution (<code class="q-mono">QResolve</code>).
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">NET-19 · QSR Exact Match</span>
+            <span class="q-mono text-xs text-white/60">qsr/exact.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">384-Bit (<code class="q-mono">48</code>-Byte / <code class="q-mono">96</code>-Nibble) Radix-16 Lookup</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Routes semantic coordinates using a full 384-bit (<code class="q-mono">48</code>-byte / <code class="q-mono">96</code>-nibble) radix-16 trie in <code class="q-mono">qsr/exact.rs</code>. Unlike truncated hash tables that suffer collision ambiguity, the 96-nibble walk resolves exact <code class="q-mono">StrongDigest</code> coordinates in deterministic bounded steps.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Every forwarding entry is bound to a cryptographic <code class="q-mono">RarPermit</code> (Resource Authorization Permit), ensuring unauthorized callers cannot probe or traverse restricted semantic routes.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">NET-19 · Primal-Dual SPF</span>
+            <span class="q-mono text-xs text-white/60">qdnf::route::{validate,index,plan,spf}</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">Bellman–Ford Dual Shortest-Path Witness</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Production route admission runs a strict constraint-first pipeline: <code class="q-mono">validate_record</code> → <code class="q-mono">AdjacencyIndex</code> (<code class="q-mono">MAX_ADMITTED_EDGES</code>) → <code class="q-mono">plan_routes</code> → <code class="q-mono">pareto_select</code>, followed by <code class="q-mono">HopHoldDown</code> hysteresis to suppress flapping hops.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            <code class="q-mono">verify_spf_dual_optimality</code> certifies shortest-path trees by verifying the Bellman–Ford primal-dual optimality condition (<code class="q-mono">d[v] &lt;= d[u] + w(u,v)</code> for every admitted directed edge <code class="q-mono">(u,v)</code>) alongside an explicit predecessor tree witness.
+          </p>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <span class="q-kicker text-violet-300">QResolve · Identifier &amp; Content Resolution</span>
+          <span class="q-mono text-xs text-white/60">qdnf::resolve</span>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Zero-DNS-Root Resolution with <code class="q-mono">RarPermit</code> Binding</h3>
+        <p class="text-sm" style="color:var(--q-muted)">
+          <code class="q-mono">QResolve</code> maps <code class="q-mono">did:qi</code> instrument DIDs, <code class="q-mono">did:webizen</code> agreements, and <code class="q-mono">did:q42</code> resource coordinates to verified <code class="q-mono">DNI</code> locators or content manifests using signed resolution records and <code class="q-mono">RarPermit</code> checks. Legacy DNS domain names remain optional attach-later handles on the Handle plane — never the root of authority.
+        </p>
+      </article>
+    </section>
+
+    <!-- LAYER 4: QPOLICY (NET-21) AND QSESSION / QSYNC (NET-18 & NET-20) -->
+    <section class="q-card p-8 mb-12" id="qpolicy-qsession">
+      <p class="q-kicker mb-2">Layer 4 · Egress Governance &amp; Cryptographic Sessions (<code class="q-mono">NET-18</code>, <code class="q-mono">NET-20</code>, <code class="q-mono">NET-21</code>)</p>
+      <h2 class="text-2xl font-semibold mb-4"><code class="q-mono">QPolicy</code> 40-Scenario Lattice &amp; <code class="q-mono">QSession</code> / <code class="q-mono">QSync</code></h2>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-amber-300">NET-21 · QPolicy Egress Matrix</span>
+            <span class="q-mono text-xs text-white/60">qdnf::policy_labels</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">40-Scenario <code class="q-mono">policy_labels</code> Egress Admission</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Every outbound cell is checked against <code class="q-mono">VerifiedLabel</code> join rules across four confidentiality levels (<code class="q-mono">C0Public</code>, <code class="q-mono">C1Private</code>, <code class="q-mono">C2Sensitive</code>, <code class="q-mono">C3Restricted</code>; <code class="q-mono">Unknown</code> fails closed with <code class="q-mono">QdnfError::Conflict</code>) and restriction flags (<code class="q-mono">NO_TRAINING</code>, <code class="q-mono">NO_EXTERNAL_AI</code>, <code class="q-mono">NO_PUBLIC_INDEX</code>, <code class="q-mono">NO_REDISTRIBUTE</code>, <code class="q-mono">NO_BIOMETRIC_REUSE</code>).
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            <code class="q-mono">EgressAuditReceipt</code> and <code class="q-mono">enumerate_egress_audit_quin</code> evaluate all 40 canonical egress scenarios across the four <code class="q-mono">EgressCaller</code> classes (<code class="q-mono">Vibe</code>, <code class="q-mono">Poet</code>, <code class="q-mono">BackgroundWorker</code>, <code class="q-mono">DelegatedTool</code>), emitting 5-field XOR-parity-verified <code class="q-mono">NQuin</code> audit records.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">NET-18 &amp; NET-20 · QSession / QSync</span>
+            <span class="q-mono text-xs text-white/60">qdnf::session · peer::replication</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">Transcript-Bound Sessions &amp; SuperBlock Sync</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            <code class="q-mono">QSession</code> binds <code class="q-mono">ClientHello || ServerHello || NegotiatedParams</code> into a <code class="q-mono">SHA-384</code> <code class="q-mono">HandshakeTranscriptDigest</code>, derives directional keys via <code class="q-mono">HKDF-SHA384</code>, enforces <code class="q-mono">LocatorBinding</code> (<code class="q-mono">no_proxy_launder</code>), and rotates keys via monotonic <code class="q-mono">rekey_session</code> transitions.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Over established sessions, <code class="q-mono">QSync</code> transfers <code class="q-mono">SHA-384</code> chunks and commits them into <code class="q-mono">SHA-256</code> <code class="q-mono">.q42</code> v4 SuperBlocks via <code class="q-mono">ChunkToSuperBlockManifest</code> after verifying 5-field <code class="q-mono">NQuin</code> XOR parity.
+          </p>
+        </article>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[48rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10">
+            <tr>
+              <th class="pb-3 pr-4">Cell / Module</th>
+              <th class="pb-3 pr-4">Budget / Constant</th>
+              <th class="pb-3 pr-4">In-Tree Verification</th>
+              <th class="pb-3">Qualification Boundary</th>
+            </tr>
+          </thead>
+          <tbody class="text-white/65">
+            <tr class="border-b border-white/5">
+              <td class="py-3.5 pr-4 font-medium text-white">Ordinary Network Cell (<code class="q-mono">admit.rs</code>)</td>
+              <td class="py-3.5 pr-4 font-mono text-cyan-300">MAX_ORDINARY_CELL = 512 MiB</td>
+              <td class="py-3.5 pr-4">1..=16 cells (<code class="q-mono">MAX_CELLS = 16</code>) admitted with equal-share fairness and LLM starvation protection.</td>
+              <td class="py-3.5">In-process accounting ledger; not an OS kernel process sandbox.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-3.5 pr-4 font-medium text-white">Sentinel Pass Accounting (<code class="q-mono">pass_budget.rs</code>)</td>
+              <td class="py-3.5 pr-4 font-mono text-emerald-300">SENTINEL_PASS_TOTAL = 42 MiB</td>
+              <td class="py-3.5 pr-4"><code class="q-mono">charge_pass</code> and RAII <code class="q-mono">PassGuard</code> enforce the 42 MiB per-pass Webizen contract.</td>
+              <td class="py-3.5"><code class="q-mono">pass_maps_process_rss() == false</code> (logical pass budget, distinct from total process RSS).</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 pr-4 font-medium text-white">AF_XDP Zero-Copy NIC (<code class="q-mono">cells/af_xdp.rs</code>)</td>
+              <td class="py-3.5 pr-4 font-mono text-amber-300">PlatformUnsupported</td>
+              <td class="py-3.5 pr-4"><code class="q-mono">open_af_xdp()</code> fails closed without silent fallback (<code class="q-mono">silent_zero_copy_fallback() == false</code>).</td>
+              <td class="py-3.5"><code class="q-mono">umem_registered() == false</code> until privileged NIC hardware qualification.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="q-card p-8">
+      <h2 class="text-2xl font-semibold mb-3">Related QDNF Architecture &amp; Runtime Guides</h2>
+      <p class="text-sm mb-5" style="color:var(--q-muted);max-width:46rem">
+        Explore the Qualia Peer Runtime (`QPR`) execution kernel, the side-by-side DID reference, or the full release <code class="q-mono">0.0.41</code> implementation status matrix.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
+        <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+        <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>
+        <a class="q-pill" href="qdnf-did-qi.html">did:qi &amp; side-by-side DIDs</a>
+      </div>
+    </section>
   </main>
-  <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
+
+  <footer class="q-site-footer">
+    QDNF Protocol &amp; Network Cells · Release 0.0.41 · Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
+  </footer>
 </body>
 </html>

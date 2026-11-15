@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `MycologyQapp` component.
 pub fn MycologyQapp() -> Element {
     rsx! {
         QAppEngine {

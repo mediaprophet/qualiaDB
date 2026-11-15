@@ -26,16 +26,19 @@ pub struct WgEngine {
 }
 
 impl WgEngine {
+    /// Creates a default `WgEngine`.
     pub fn new(mine: &WgKeypair, peer: PublicKey, index: u32) -> Result<Self, String> {
         Ok(Self {
             tunn: new_tunnel(mine, peer, index)?,
         })
     }
 
+    /// `true` when `session` present.
     pub fn has_session(&self) -> bool {
         self.tunn.time_since_last_handshake().is_some()
     }
 
+    /// `WgEngine::encapsulate`.
     pub fn encapsulate(&mut self, inner: &[u8], out: &mut [u8]) -> Result<EngineOut, EngineError> {
         match self.tunn.encapsulate(inner, out) {
             TunnResult::WriteToNetwork(p) => Ok(EngineOut::Network { len: p.len() }),
@@ -47,6 +50,7 @@ impl WgEngine {
         }
     }
 
+    /// Decapsulates a WireGuard packet.
     pub fn decapsulate(&mut self, pkt: &[u8], out: &mut [u8]) -> Result<EngineOut, EngineError> {
         match self.tunn.decapsulate(None, pkt, out) {
             TunnResult::WriteToNetwork(p) => Ok(EngineOut::Network { len: p.len() }),

@@ -1,5 +1,7 @@
 //! Share-exchange: initiator ML-KEM public + X25519, responder ciphertext + X25519.
 
+pub(crate) mod leased;
+
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::kem::{encapsulate, MlKem768Secret};
 use crate::crypto::network::malformed::{reject_all_zero_dh, reject_malformed_kem_ct};
@@ -57,6 +59,7 @@ fn reject_complete_failures(
     Ok(())
 }
 
+/// Initiator sends its handshake share.
 pub fn initiator_share(
     x25519_secret: &[u8; 32],
     ml_kem_pk: &[u8; ML_KEM_768_PK_LEN],
@@ -70,6 +73,7 @@ pub fn initiator_share(
     })
 }
 
+/// Responder consumes the initiator share, producing its reply.
 pub fn responder_complete(
     initiator: &InitiatorShare,
     x25519_secret: &[u8; 32],
@@ -89,6 +93,7 @@ pub fn responder_complete(
     Ok((share, kem_ss, x_ss))
 }
 
+/// Initiator consumes the reply, completing the handshake.
 pub fn initiator_complete(
     ml_kem_sk: &MlKem768Secret,
     x25519_secret: &[u8; 32],

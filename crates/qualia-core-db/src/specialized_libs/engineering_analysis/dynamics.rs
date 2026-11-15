@@ -137,6 +137,7 @@ pub struct ResonanceDetection {
     pub quality_factors: Vec<f64>,
 }
 impl StructuralDynamics {
+    /// Creates dynamics state with default modal/transient/harmonic subsystems.
     pub fn new() -> Self {
         Self {
             modal_analysis: ModalAnalysis::new(),
@@ -145,6 +146,7 @@ impl StructuralDynamics {
         }
     }
 
+    /// Initializes subsystems; `EngineeringError` propagates.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -261,6 +263,7 @@ impl StructuralDynamics {
 }
 
 impl ModalAnalysis {
+    /// Creates modal-analysis state with default eigenvalue solver and parameters.
     pub fn new() -> Self {
         Self {
             eigenvalue_solver: EigenvalueSolver::new(),
@@ -331,6 +334,7 @@ impl ModalAnalysis {
 }
 
 impl EigenvalueSolver {
+    /// Creates a default `EigenvalueSolver` descriptor.
     pub fn new() -> Self {
         Self {
             solver_type: EigenvalueSolverType::Lanczos,
@@ -341,6 +345,7 @@ impl EigenvalueSolver {
 }
 
 impl ModalParameters {
+    /// Creates default `ModalParameters`.
     pub fn new() -> Self {
         Self {
             mass_normalization: true,
@@ -351,6 +356,7 @@ impl ModalParameters {
 }
 
 impl TransientAnalysis {
+    /// Creates transient-analysis state with default time integration and loading history.
     pub fn new() -> Self {
         Self {
             time_integration: TimeIntegration::new(),
@@ -391,6 +397,7 @@ impl TransientAnalysis {
 }
 
 impl TimeIntegration {
+    /// Creates a default `TimeIntegration` scheme descriptor.
     pub fn new() -> Self {
         Self {
             integration_method: IntegrationMethod::Newmark,
@@ -401,6 +408,7 @@ impl TimeIntegration {
 }
 
 impl LoadingHistory {
+    /// Creates an empty `LoadingHistory`.
     pub fn new() -> Self {
         Self {
             time_points: Vec::new(),
@@ -411,6 +419,7 @@ impl LoadingHistory {
 }
 
 impl ResponseCalculation {
+    /// Creates a default `ResponseCalculation` descriptor.
     pub fn new() -> Self {
         Self {
             response_types: vec![ResponseType::Displacement, ResponseType::Stress],
@@ -420,6 +429,7 @@ impl ResponseCalculation {
 }
 
 impl HarmonicAnalysis {
+    /// Creates harmonic-analysis state with default frequency response and resonance detection.
     pub fn new() -> Self {
         Self {
             frequency_response: FrequencyResponse::new(),
@@ -449,6 +459,7 @@ impl HarmonicAnalysis {
 }
 
 impl FrequencyResponse {
+    /// Creates a default `FrequencyResponse` descriptor.
     pub fn new() -> Self {
         Self {
             frequencies: Vec::new(),
@@ -459,6 +470,7 @@ impl FrequencyResponse {
 }
 
 impl ResonanceDetection {
+    /// Creates a default `ResonanceDetection` descriptor.
     pub fn new() -> Self {
         Self {
             resonance_frequencies: Vec::new(),

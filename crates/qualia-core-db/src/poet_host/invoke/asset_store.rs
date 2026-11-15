@@ -54,6 +54,7 @@ pub struct PersistedAsset {
 }
 
 impl PersistedAsset {
+    /// Creates a default `PersistedAsset`.
     pub fn new(asset_id: &str, kind_iri: &str, owner_did: Option<&str>) -> Self {
         Self {
             asset_id: asset_id.to_string(),
@@ -66,16 +67,19 @@ impl PersistedAsset {
         }
     }
 
+    /// Adds `temporal`.
     pub fn add_temporal(&mut self, aspect: TemporalAspect) {
         self.temporal_aspects.push(aspect);
     }
 
+    /// Adds `topic`.
     pub fn add_topic(&mut self, topic: &str) {
         if !self.topics.iter().any(|t| t == topic) {
             self.topics.push(topic.to_string());
         }
     }
 
+    /// Sets `spatial`.
     pub fn set_spatial(&mut self, anchor: SpatialAnchor) {
         self.spatial_anchor = Some(anchor);
     }

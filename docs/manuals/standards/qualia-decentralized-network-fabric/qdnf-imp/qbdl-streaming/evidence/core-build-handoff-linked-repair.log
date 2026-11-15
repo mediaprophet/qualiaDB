@@ -1,0 +1,285 @@
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\etalon_model_io-37xcfedklx7jv\s-ho3bt8d7x5-0eumv0x-working`
+
+warning: `etalon-model-io` (lib) generated 1 warning
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 1 warning (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+warning: unused import: `PendingMessage`
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:9:40
+  |
+9 | pub(crate) use send::{MessageSequence, PendingMessage};
+  |                                        ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary parentheses around function argument
+   --> crates\qualia-core-db\src\bundle\stream\proof\path_tests.rs:148:24
+    |
+148 |         sibling_ranges((1u64 << 33), 0, &mut ranges),
+    |                        ^          ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+148 -         sibling_ranges((1u64 << 33), 0, &mut ranges),
+148 +         sibling_ranges(1u64 << 33, 0, &mut ranges),
+    |
+
+warning: unused import: `WorkspacePageAttempt`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:44
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                                            ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `WorkClass`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:12:58
+   |
+12 |     ReservationLedger, ResourceBudget, ResourceGovernor, WorkClass,
+   |                                                          ^^^^^^^^^
+
+warning: unused imports: `RetainedRuntime` and `RuntimeCloseError`
+ --> crates\qualia-core-db\src\bundle\stream\runtime\mod.rs:7:24
+  |
+7 | pub(crate) use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
+  |                        ^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `runtime::*`
+ --> crates\qualia-core-db\src\bundle\stream\storage\native\tests.rs:4:62
+  |
+4 |     policy::adopt_local_whole_source, proof::Representation, runtime::*, storage::*,
+  |                                                              ^^^^^^^^^^
+
+warning: unused import: `ids::Mapping`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:18:16
+   |
+18 | pub(crate) use ids::Mapping;
+   |                ^^^^^^^^^^^^
+
+warning: unused import: `metadata::PrivateReferences`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:19:16
+   |
+19 | pub(crate) use metadata::PrivateReferences;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Artifact`, `ProtectedCandidate`, and `PublisherError`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:21:5
+   |
+21 |     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
+   |     ^^^^^^^^                 ^^^^^^^^^^^^^^^^^^                      ^^^^^^^^^^^^^^
+
+warning: unused import: `derive_segment`
+  --> crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^
+
+warning: unused import: `open::UnwrappedMetadata`
+ --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\mod.rs:9:16
+  |
+9 | pub(crate) use open::UnwrappedMetadata;
+  |                ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\inference_bench\prepared_domino.rs:51:14
+   |
+51 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+51 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+51 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\compute_universe_epoch.rs:36:10
+   |
+36 |         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+36 -         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+36 +         .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\qwen\retained.rs:74:37
+   |
+74 |         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+   |                                     ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+74 -         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+74 +         let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\sensing\local_custody\quota\recovery.rs:10:10
+   |
+10 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+10 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+10 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\net\peer\runtime\incarnation.rs:24:10
+   |
+24 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+24 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+24 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner\counted.rs:33:14
+   |
+33 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+33 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+33 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\tests\process_crash.rs:47:17
+   |
+47 |             let mut op = ticket(rt, payload.len(), 1);
+   |                 ----^^
+   |                 |
+   |                 help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\recovery.rs:77:29
+   |
+77 |                         let mut material = UnacceptedMaterial { proof, payload };
+   |                             ----^^^^^^^^
+   |                             |
+   |                             help: remove this `mut`
+
+warning: fields `ar` and `or` are never read
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\endpoint_fixtures.rs:95:9
+   |
+92 | pub(super) struct Pair<'a> {
+   |                   ---- fields in this struct
+...
+95 |     pub ar: &'a EndpointAuthority<'a>,
+   |         ^^
+96 |     pub oi: &'a Mutex<AuthorityOwner>,
+97 |     pub or: &'a Mutex<AuthorityOwner>,
+   |         ^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: multiple methods are never used
+   --> crates\qualia-core-db\src\bundle\stream\runtime\state\access.rs:69:19
+    |
+ 17 | impl<'b, 'p> RuntimeAccess<'b, 'p> {
+    | ---------------------------------- methods in this implementation
+...
+ 69 |     pub(crate) fn cancel_epoch(&self, ticket: &TransferTicket) -> Result<CancelEpoch, E> {
+    |                   ^^^^^^^^^^^^
+...
+ 75 |     pub(crate) fn expire(&mut self, now: u64) -> Result<usize, E> {
+    |                   ^^^^^^
+...
+ 86 |     pub(crate) fn live_transfers(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^
+...
+ 89 |     pub(crate) fn pending_schedule_records(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 92 |     pub(crate) fn charged_window_bytes(&self) -> u64 {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+...
+116 |     pub(crate) fn storage_stage<'s>(
+    |                   ^^^^^^^^^^^^^
+...
+129 |     pub(crate) fn release_recovery_source<'root>(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `state` is never read
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\close.rs:8:9
+  |
+6 | pub(crate) struct RuntimeCloseError<'parent, 'host> {
+  |                   ----------------- field in this struct
+7 |     pub error: E,
+8 |     pub state: RetainedRuntime<'parent, 'host>,
+  |         ^^^^^
+
+warning: methods `live_transfers` and `pending_schedule_records` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\scope.rs:61:19
+   |
+60 | impl RetainedRuntime<'_, '_> {
+   | ---------------------------- methods in this implementation
+61 |     pub(crate) fn live_transfers(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^
+...
+64 |     pub(crate) fn pending_schedule_records(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `directory_offset` is never used
+   --> crates\qualia-core-db\src\bundle\stream\formats\m64_tests.rs:144:4
+    |
+144 | fn directory_offset(with_metric: bool) -> usize {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: field `context` is never read
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:36:16
+   |
+34 | pub(crate) struct ProtectedCandidate {
+   |                   ------------------ field in this struct
+35 |     pub(super) descriptor: StrongDigest,
+36 |     pub(super) context: StrongDigest,
+   |                ^^^^^^^
+
+warning: method `context_id` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:42:19
+   |
+38 | impl ProtectedCandidate {
+   | ----------------------- method in this implementation
+...
+42 |     pub(crate) fn context_id(&self) -> StrongDigest {
+   |                   ^^^^^^^^^^
+
+warning: field `wraps` is never read
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:42:5
+   |
+33 | pub struct ManagedObjectPublication<'a> {
+   |            ------------------------ field in this struct
+...
+42 |     wraps: u8,
+   |     ^^^^^
+
+warning: method `wrap_for` is never used
+   --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:255:19
+    |
+ 88 | impl<'a> ManagedObjectPublication<'a> {
+    | ------------------------------------- method in this implementation
+...
+255 |     pub(crate) fn wrap_for(
+    |                   ^^^^^^^^
+
+warning: `qualia-core-db` (lib test) generated 28 warnings (run `cargo fix --lib -p qualia-core-db --tests` to apply 19 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 46s
+  Executable unittests src\lib.rs (target\debug\deps\qualia_core_db-c4560c081fa48873.exe)

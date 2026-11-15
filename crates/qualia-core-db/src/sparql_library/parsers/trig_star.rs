@@ -329,6 +329,7 @@ pub fn parse_trig_star_into<R: std::io::Read, S: crate::sparql_library::quin_sin
     Ok(count)
 }
 
+/// Parses `trig-star-stream`.
 pub fn parse_trig_star_stream<R: std::io::Read>(
     reader: R,
     context_hash: u64,

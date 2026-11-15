@@ -13,6 +13,7 @@ pub struct SharedFrameBuffer {
 }
 
 impl SharedFrameBuffer {
+    /// Creates a new instance.
     pub fn new(byte_len: usize) -> Self {
         Self {
             slots: Arc::new([
@@ -23,16 +24,19 @@ impl SharedFrameBuffer {
         }
     }
 
+    /// `byte` length.
     pub fn byte_len(&self) -> usize {
         self.byte_len
     }
 
+    /// Builder — sets slot.
     pub fn with_slot<R>(&self, slot: u8, reader: impl FnOnce(&[u8]) -> R) -> Option<R> {
         let slot = self.slots.get(slot as usize)?;
         let guard = slot.lock().ok()?;
         Some(reader(&guard))
     }
 
+    /// Overwrites a slot.
     pub(crate) fn overwrite_slot(&self, slot: usize, writer: impl FnOnce(&mut [u8])) -> Option<()> {
         let slot = self.slots.get(slot)?;
         let mut guard = slot.lock().ok()?;
@@ -43,6 +47,7 @@ impl SharedFrameBuffer {
 
 pub type StateHash = [u8; 32];
 
+/// Computes state-hash.
 pub(crate) fn compute_state_hash(bytes: &[u8]) -> StateHash {
     let mut hasher = Sha256::new();
     hasher.update(bytes);

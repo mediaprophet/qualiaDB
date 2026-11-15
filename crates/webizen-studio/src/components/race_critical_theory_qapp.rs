@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `RaceCriticalTheoryQapp` component.
 pub fn RaceCriticalTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

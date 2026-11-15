@@ -1,8 +1,7 @@
 theme: jekyll-theme-slate
 title: Webizen / QualiaDB
-description: Local-first life-domain habitat on the QualiaDB 0.0.39 line — Qualia graph, Webizen habitat, Poet / VibeScript. Workspace crate stamps are 0.0.39.
-url: "https://webizen.au"
-baseurl: ""
+description: Local-first life-domain habitat on the QualiaDB 0.0.40 line — Qualia graph, Webizen habitat, Poet / VibeScript. Workspace crate stamps are 0.0.40.
+baseurl: "/qualiaDB"
 
 defaults:
   - scope:
@@ -13,7 +12,6 @@ defaults:
 
 # Pass binary dataset and WASM artefacts through unchanged.
 include:
-  - CNAME
   - _headers
   - _redirects
   - menu.json
@@ -43,7 +41,7 @@ include:
   - "resources/*.json"
   - "tests/**/*.js"
 
-# Exclude obsolete WordNet sidecars (unified v3 .q42 embeds lex + bidx + LZ4 SuperBlocks).
+# Exclude obsolete WordNet sidecars (unified v4 .q42 embeds lex + bidx + LZ4 SuperBlocks).
 exclude:
   - "playground/wordnet.c.q42"
   - "playground/wordnet.q42.lex"

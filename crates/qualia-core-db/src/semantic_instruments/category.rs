@@ -15,6 +15,7 @@ pub enum ContentCategory {
 }
 
 impl ContentCategory {
+    /// `ContentCategory::as_iri`.
     pub const fn as_iri(self) -> &'static str {
         match self {
             Self::Demo => "si:Demo",
@@ -23,6 +24,7 @@ impl ContentCategory {
         }
     }
 
+    /// Parses input; error on malformed data.
     pub fn parse(raw: &str) -> Result<Self, InstrumentError> {
         match raw.trim() {
             "si:Demo" | "demo" | "Demo" => Ok(Self::Demo),
@@ -32,6 +34,7 @@ impl ContentCategory {
         }
     }
 
+    /// `ContentCategory::requires_seed_label`.
     pub const fn requires_seed_label(self) -> bool {
         matches!(self, Self::Demo | Self::Reference)
     }

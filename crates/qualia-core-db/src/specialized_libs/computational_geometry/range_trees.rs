@@ -115,10 +115,12 @@ impl IntervalTree {
         }
     }
 
+    /// Intervals stored.
     pub fn len(&self) -> usize {
         self.count
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }
@@ -298,10 +300,12 @@ impl RangeTree1D {
         end - start
     }
 
+    /// Points stored.
     pub fn len(&self) -> usize {
         self.keys.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.keys.is_empty()
     }
@@ -371,6 +375,7 @@ impl RangeTree2D {
         }
     }
 
+    /// Points stored.
     pub fn len(&self) -> usize {
         self.count
     }
@@ -562,6 +567,7 @@ impl PrioritySearchTree {
         }
     }
 
+    /// Points stored.
     pub fn len(&self) -> usize {
         self.count
     }

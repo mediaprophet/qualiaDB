@@ -5,6 +5,7 @@ use crate::net::sonic_token::{SonicEventType, SonicToken};
 use crate::q_hash;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: peer hash.
 pub fn peer_hash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "did"))
@@ -12,6 +13,7 @@ pub fn peer_hash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::U64(q_hash(s)))
 }
 
+/// VibeScript seam: sonic pack.
 pub fn sonic_pack(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let note = args::rec_u64(args_v, "note").unwrap_or(60) as u8;
     let vel = args::rec_u64(args_v, "velocity").unwrap_or(80) as u8;

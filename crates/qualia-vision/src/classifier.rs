@@ -100,6 +100,7 @@ pub struct LinearProbeVision<M: VisualModel> {
 }
 
 impl<M: VisualModel> LinearProbeVision<M> {
+    /// Creates a new instance.
     pub fn new(base: M, head: LinearHead, min_score: f32) -> Self {
         let model_hash = q_hash("qualia-vision-linear-probe-v1");
         Self {
@@ -110,6 +111,7 @@ impl<M: VisualModel> LinearProbeVision<M> {
         }
     }
 
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.model_hash
     }

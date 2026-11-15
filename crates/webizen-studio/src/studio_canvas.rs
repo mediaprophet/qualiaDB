@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use qualia_core_db::NQuin;
 
@@ -18,11 +18,11 @@ use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
-use webizen_studio::tauri_ffi::listen as tauri_listen;
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{EventSource, MessageEvent};
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
 
 #[cfg(target_arch = "wasm32")]
 #[derive(Deserialize)]
@@ -432,6 +432,7 @@ fn default_presentation_mode(app_id: Option<&str>) -> PresentationMode {
 // ─────────────────────────────────────────────────────────────
 
 #[component]
+/// Aether `DynamicPage` component.
 pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) -> Element {
     let mock_quin = use_signal(|| NQuin {
         subject: 0,
@@ -1464,7 +1465,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         onkeydown: {
                                             let mut generate_nonce = generate_nonce.clone();
                                             move |e: Event<KeyboardData>| {
-                                                if e.key() == Key::Enter {
+                                                if e.key().to_string() == "Enter" {
                                                     generate_nonce.set(generate_nonce() + 1);
                                                 }
                                             }
@@ -1926,7 +1927,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         div {
                                             span { style: "color: var(--qualia-text-muted, #888);", "UI Mode: " }
                                             span {
-                                                if pane.ui_mode == Some(UiMode::IFrameSandbox) { "IFrame Sandbox" } else { "Native Dioxus" }
+                                                if pane.ui_mode == Some(UiMode::IFrameSandbox) { "IFrame Sandbox" } else { "Native Aether" }
                                             }
                                         }
                                     }

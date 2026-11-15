@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;
@@ -9,6 +9,7 @@ struct QuantumDftProps {
 }
 
 #[component]
+/// Aether `QuantumDft` component.
 pub fn QuantumDft() -> Element {
     let mut geometry =
         use_signal(|| "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000".to_string());

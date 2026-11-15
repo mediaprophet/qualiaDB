@@ -18,6 +18,7 @@ pub enum SourceKind {
 }
 
 impl SourceKind {
+    /// MIME type.
     pub fn mime(self) -> &'static str {
         match self {
             SourceKind::Pdf => "application/pdf",
@@ -74,6 +75,7 @@ pub fn detect_kind(path: &Path, bytes: &[u8]) -> SourceKind {
     }
 }
 
+/// Acquires.
 pub fn acquire(path: &Path) -> std::io::Result<Acquired> {
     let bytes = std::fs::read(path)?;
     let kind = detect_kind(path, &bytes);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.39';
+const releaseVersion = '0.0.41';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 27, 'expected all 27 workspace crates');
+assert.equal(workspaceMembers.length, 31, 'expected all 31 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {
@@ -33,8 +33,6 @@ for (const name of workspacePackageNames) {
 }
 
 const versionedJson = [
-  'crates/webizen-desktop/tauri.conf.json',
-  'crates/webizen-desktop/static/portal/menu.json',
   'docs/data/knowledge-universe-manifest.json',
   'docs/menu.json',
   'docs/pkg/qualia/package.json',
@@ -53,7 +51,6 @@ const liveReleaseSurfaces = [
   '.github/workflows/release-desktop.yml',
   '.github/workflows/release-p64-models.yml',
   '.github/workflows/release-wasm.yml',
-  'crates/webizen-desktop/static/portal/js/qualia-wasm-runtime.js',
   'docs/api-explorer/index.html',
   'docs/api.html',
   'docs/benchmark.html',
@@ -62,7 +59,7 @@ const liveReleaseSurfaces = [
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
-  'docs/progress-0.0.39.html',
+  'docs/progress-0.0.41.html',
   'docs/qdnf.html',
   'docs/qdnf-status.html',
   'docs/release-matrix.html',
@@ -89,7 +86,7 @@ assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${r
 
 const releaseMatrix = read('docs/release-matrix.html');
 assert.match(releaseMatrix, /Qualia · Webizen · Poet/);
-assert.match(releaseMatrix, /What 0\.0\.39 is for/);
+assert.match(releaseMatrix, /What 0\.0\.(40|41) is for/);
 assert.match(releaseMatrix, /vibe-wasm/);
 assert.match(releaseMatrix, /Published from GitHub Actions/);
 assert.match(releaseMatrix, /release-cli\.yml/);
@@ -104,6 +101,10 @@ assert.doesNotMatch(read('docs/index.html'), /Linux release matrix that is actua
 assert.doesNotMatch(read('docs/index.html'), /15 \/ 15 green on Linux/);
 
 const pagesMenu = JSON.parse(read('docs/menu.json'));
+assert.ok(
+  pagesMenu.navigation.some((entry) => entry.href === 'progress-0.0.41.html'),
+  'Pages navigation must expose the 0.0.41 Release Prep guide',
+);
 assert.ok(
   pagesMenu.navigation.some((entry) => entry.href === 'semantic-instruments.html'),
   'Pages navigation must expose the Semantic Instruments guide',

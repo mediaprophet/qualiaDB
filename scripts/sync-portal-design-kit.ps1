@@ -1,10 +1,15 @@
 # Copy Design Studio + Qualia Portal WASM kit into :8080 static portal (webizen-desktop).
 param(
     [string]$DocsRoot = "$PSScriptRoot\..\docs",
-    [string]$PortalRoot = "$PSScriptRoot\..\crates\webizen-desktop\static\portal"
+    [string]$PortalRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $PortalRoot) {
+    Write-Host "PortalRoot not specified; skip syncing portal design kit"
+    exit 0
+}
 
 function Copy-Tree($src, $dst) {
     if (-not (Test-Path $src)) {

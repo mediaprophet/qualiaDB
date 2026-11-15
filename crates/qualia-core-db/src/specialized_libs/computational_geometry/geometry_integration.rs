@@ -109,6 +109,7 @@ pub enum IntegrationError {
     InvalidDescriptor,
 }
 
+/// Validates an operation descriptor against the integration schema.
 pub fn validate_operation_descriptor(
     op: GeometryOperationDescriptor,
 ) -> Result<(), IntegrationError> {
@@ -118,6 +119,7 @@ pub fn validate_operation_descriptor(
     Ok(())
 }
 
+/// Validates a geometry conformance record; `IntegrationError` on violation.
 pub fn validate_conformance(record: GeometryConformanceRecord) -> Result<(), IntegrationError> {
     if record.scalar_hash != record.wasm_hash {
         return Err(IntegrationError::HashMismatch {
@@ -132,6 +134,7 @@ pub fn validate_conformance(record: GeometryConformanceRecord) -> Result<(), Int
     Ok(())
 }
 
+/// Returns the schema descriptor for the geometry integration section.
 pub fn schema_descriptor(
     kind: GeometrySchemaKind,
     version: u16,
@@ -157,6 +160,7 @@ pub fn schema_descriptor(
     })
 }
 
+/// Builds the section header for geometry integration data.
 pub fn build_section_header(
     schema: GeometrySchemaKind,
     version: u16,
@@ -172,6 +176,7 @@ pub fn build_section_header(
     })
 }
 
+/// Encodes a section header into bytes.
 pub fn encode_section_header(
     header: GeometrySectionHeader,
     out: &mut [u8],
@@ -188,6 +193,7 @@ pub fn encode_section_header(
     Ok(18)
 }
 
+/// Plans bounded stream chunks for a geometry payload.
 pub fn plan_stream_chunks(
     op_id: u32,
     total_items: usize,
@@ -214,6 +220,7 @@ pub fn plan_stream_chunks(
     Ok(count)
 }
 
+/// Cancels all chunks from `first_cancelled`; returns the count cancelled.
 pub fn cancel_stream_at(chunks: &mut [GeometryStreamChunk], first_cancelled: usize) -> usize {
     let mut n = 0usize;
     for (i, chunk) in chunks.iter_mut().enumerate() {
@@ -225,6 +232,7 @@ pub fn cancel_stream_at(chunks: &mut [GeometryStreamChunk], first_cancelled: usi
     n
 }
 
+/// Returns the renderer descriptor for this integration.
 pub fn renderer_descriptor(
     schema: GeometrySchemaKind,
     source_identity_hash: u64,
@@ -244,6 +252,7 @@ pub fn renderer_descriptor(
     })
 }
 
+/// Validates the full conformance record matrix.
 pub fn validate_conformance_matrix(
     rows: &[GeometryConformanceMatrixRow],
 ) -> Result<(), IntegrationError> {
@@ -259,6 +268,7 @@ pub fn validate_conformance_matrix(
     Ok(())
 }
 
+/// Summarizes closeout records into `(passed, failed, skipped, total)`.
 pub fn closeout_summary(records: &[GeometryCloseoutRecord]) -> (usize, usize, usize, usize) {
     let mut implemented = 0;
     let mut verified = 0;

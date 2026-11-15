@@ -1,0 +1,243 @@
+{
+  "observed_at": "2026-11-12T10:09:09.037Z",
+  "scope": "Post-run filesystem snapshot of phase-A direct-source harness imports; not a release attestation or build-time snapshot. Other custody/host modules tested separately.",
+  "test_log": "phase-a-conformance.log",
+  "files": [
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/cbor.rs",
+      "sha256": "4539a729a071ed440e7e4c1cdcf885a734d5d610888ef118b51fc830ace09757"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/digest.rs",
+      "sha256": "68814735ad373cfb76280cafed33f4c630dfa223300a8dc4096f2eb49d957021"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/inventory.rs",
+      "sha256": "5067c154a6eb72eca3b5c68de2abf526bdcf303281e1d3b19b9b0178e4ddffa5"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/mod.rs",
+      "sha256": "41459de155cd821c6e2d1338d879e48ee1c321ffa14ed17631c94f6eb196a03b"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/pages.rs",
+      "sha256": "85695aed15c4581a87e63b69c4284449c21255c253662def81e2b96f9c1fed38"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/refs.rs",
+      "sha256": "2769340f477b5c816e057cd91f231b8192dc213069095cd5f905826c10b86658"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/roots.rs",
+      "sha256": "3e6fb44c4e415191a7525be6bd156a3b91a37cb11e850c0dc1b3eb0f31681b8f"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/tests.rs",
+      "sha256": "0457e91a4e5bb8b8501aa415a061722d00beea56e693e22be8b4a5a9eaada5ee"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/descriptor/types.rs",
+      "sha256": "c355513a9e73040d8f66f253fba263741979da3961afa7de1d41e909a7a4bcea"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/admit.rs",
+      "sha256": "1a3ee48ed1923c3ba054e4c597ca4ca64fe55458cc3ece00b67c62916d11b499"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/cbor.rs",
+      "sha256": "035618783465e5b2064a1ac9907d412550ab7b7684ad7026af220eddd5168ed8"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/error.rs",
+      "sha256": "8665f872b4f00454f07fdb4becddfc2d4bfeab07a6d3f354fc24e710ff19d703"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/header.rs",
+      "sha256": "cf02c1eba136d674d94a0e7964ee9929d558726cbf9e135888122b8ee7a88214"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/limits.rs",
+      "sha256": "95cfa30ff3744889f8e9af23957545e4194e313d37cee4976ffd683b989396cb"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/mod.rs",
+      "sha256": "2a09533bc70e4b631ba9808a9392dca06181ee038dee00f00c09fd77baf6c3f1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/owned.rs",
+      "sha256": "545aabe71445a0e90b909c9cf781bae5ff77d86690abf4d73737cdc6f886d1f7"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/probe.rs",
+      "sha256": "19c8aecc2a04323cd76ba88abde1beed18f66e1d24ca5195934efb93b176e59e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/index/tests.rs",
+      "sha256": "3c28c3e812a8cb3f4d1559cd5f56ed9a6553be1d709b4bad1246d560ad3fbfc6"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/builder.rs",
+      "sha256": "a7708029cc03d765ee15f10f3a30e71e262cdf2102e25e02413aef30486afdb1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/codec.rs",
+      "sha256": "65ef17e02f895009da2e1f7bd8cceee45337aa3d5fc43512b66a73ee47b19bf9"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/hash.rs",
+      "sha256": "43b7b0415fea89a03224b1e34059237eb32d9c5f197ec1cfe401a88ae9514705"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/mod.rs",
+      "sha256": "1d855fa63675402565a3deed91169400fdcefe7d3d0a041f3301f3f65231eeca"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/types.rs",
+      "sha256": "3e2f6a7c17b8168b490ff61533e3ab51cc734c77a19c689952b05d893285c86e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/proof/verify.rs",
+      "sha256": "6dc8fa883096ccd3b9dae150010df01ecbd1d92dc11afe9bfcaa43daf8970b91"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/dispatch.rs",
+      "sha256": "f2d394aabb3e7c2e00ff6cda87eedd32389ebf540fd858a403204fa508327c11"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/mod.rs",
+      "sha256": "b83fa45c574a56f1c4a7662ffbaa46855c43673ff8edd35097b7effe8ef743d8"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/owner.rs",
+      "sha256": "00702b116921f70d10e4ed124653bd1dfc4596d0a4c865cc8a268ea5622d020c"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/plan.rs",
+      "sha256": "b714c87c353de6781639230dc82befe65d4b2509996c58deda87fdc7f3fc1a3e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/storage_stage.rs",
+      "sha256": "f410fee34503ce3217fa86a4297f36d1a83b8afecc9218dcacb52e671c0c1215"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/tests.rs",
+      "sha256": "c328b7ceeac36f3eec82889fed9ed7d22af51ccae07b2d1d54ff54e05cb44266"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/tests/capacity.rs",
+      "sha256": "be0b81df1bd9621ed10b1dc8ffc9d98da78c42741e2d30d112ad98d8638ba9c3"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/tests/lifecycle.rs",
+      "sha256": "a5cf171da0efa0ed3d7131cb34a9317ca4770b077d84aad3cbdb527dafbbd2e4"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/tests/storage_stage.rs",
+      "sha256": "7cd44bb8a0f60e44c983665133e38383cf19084a93e18a6b451b382dfd3c711e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/transfer.rs",
+      "sha256": "06a7fb25f1a37eeacba8289ffa4d8c2d1ef1068b097b1cdda68ea9d3f6b09d43"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/runtime/types.rs",
+      "sha256": "8a784a15d0a50076d44dd1746ec063c14a8f26e8d882e2d120e3b6954b698ad7"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/bitmap.rs",
+      "sha256": "ab3174456fe004f3996911a4d641ed7b99c441b3209ab1576bc23ce72b95854e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/checkpoint.rs",
+      "sha256": "2f503592515ed8b15df813f36776bb0933c3843ecd801333c565a0dcf5bab21e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/error.rs",
+      "sha256": "6a8de37ab8972f6b31fa18c606be5a29850c0ff63951bc62f8269741b864b730"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/identity.rs",
+      "sha256": "1fad01328c399bfc101abdb027d1cdfac34e1d3ff9a419cb5c9eb4287258804a"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/leaf.rs",
+      "sha256": "c27386ce8ded7787ba9e250a251c71ce8cc4f8ca1fb0c74f2faf16d52c6d1079"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/mod.rs",
+      "sha256": "4ecb88680e65dfd61bb12fa3216f5055a831bf4ff222232bfe18dd109222c265"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/tests.rs",
+      "sha256": "9112c838fea59dc2616c7eaf04ceaf81f92e2d3b09dbc76a24e6f49472bddd61"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/tests/checkpoint.rs",
+      "sha256": "a0442234df2ee5fd9d8722056c7c7b88729ee93c1641758e315e7d5b97d90c93"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/tests/identity.rs",
+      "sha256": "5329f979b5446ee86230576150db8ac9d419b7d3dc38e3cf24133528b175bf2e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/tests/leaf_bitmap.rs",
+      "sha256": "f1fb7332a86fab98cd336ba2cee16be8e8e7b38ac644e8424e5c25524279ac65"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/wire.rs",
+      "sha256": "25b534ef5c73b2d11b8632f3bad00bd6e75785d07e167fc6758fa81d64b8f82d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/semantic_instruments/resolve/bounded_closure/mod.rs",
+      "sha256": "2cf1db1795a1dc5e45a16ee587c9f82c025b5b6b368bb04a9dabee0c2c7cdaef"
+    },
+    {
+      "path": "crates/qualia-core-db/src/semantic_instruments/resolve/bounded_closure/tests.rs",
+      "sha256": "b8abde65c888b6f65afd29cd31ddf22f1ba985c2bc318dc1c296ecd913cc808d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/semantic_instruments/resolve/bounded_closure/types.rs",
+      "sha256": "a9282e77e58b2eff4edbe2a9b766c796e982a1572537f5c09ffaf2b50273c295"
+    },
+    {
+      "path": "crates/qualia-core-db/src/semantic_instruments/resolve/bounded_closure/walk.rs",
+      "sha256": "1b314f18d36fae11ba3bd6ea5153e8c0b051d2010c12db8315c213cb4d0f90f9"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/allocation.rs",
+      "sha256": "a75c66abfa57ebfdba61f42096638b7f49d429aa791a6f28f2e39d8906d35f9f"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/cose_codec/mod.rs",
+      "sha256": "7473edbfc2f9fa9a21900980499441baf2079686968e219c56c56ab57cd084a2"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/cose_fixtures.rs",
+      "sha256": "ef38a3aed380570dfb2a6c918c8795ec27271786c151f9fd94ab60b1a96650b7"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/descriptor_fixtures.rs",
+      "sha256": "6661f874da1f2626f79eca4ec54cd16cf9e788383dfa1c2d356619f9007a6495"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/index_fixtures.rs",
+      "sha256": "91efa37f8affeffd33af10715b895f779f68c2b5104f3fa39c0f2500fd175c2a"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/lib.rs",
+      "sha256": "d81ef2e1ed7ca7ab384fc814d90cb180135cd2c21cbf7ae6e773938029399517"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/proof_tests.rs",
+      "sha256": "d8f190c93d271743c80fbc0585beb633f6fe397459e8fc955bed695c38d0fdb4"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/runtime_allocations.rs",
+      "sha256": "4b7be41361b22878a9d02ff4f488976e1ac10351152e9dbce767f78adf69427f"
+    },
+    {
+      "path": "tools/qbdl-stream-conformance/src/semantic_instruments/mod.rs",
+      "sha256": "8e5bb4dc1e9c1e0b44402af86a9538d37ac10ed7aacd89edcbdcc3f78b1038c5"
+    }
+  ]
+}

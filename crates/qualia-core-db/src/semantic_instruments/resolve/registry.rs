@@ -26,6 +26,7 @@ pub struct LocalRegistry {
 }
 
 impl LocalRegistry {
+    /// Creates a default `LocalRegistry`.
     pub fn new() -> Self {
         Self {
             by_id: BTreeMap::new(),
@@ -53,6 +54,7 @@ impl LocalRegistry {
         Ok(())
     }
 
+    /// Looks up an entry; `None` when absent.
     pub fn lookup(&self, release_id: &str) -> Option<&InstalledRelease> {
         self.by_id.get(release_id)
     }

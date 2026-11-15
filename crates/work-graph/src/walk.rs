@@ -10,6 +10,7 @@ use crate::IndexError;
 /// Skip cite-scrape on huge generated HTML (byte budget, fail closed for that page).
 pub const MAX_DOC_SCRAPE_BYTES: usize = 4 * 1024 * 1024;
 
+/// Lists project-files.
 pub fn list_project_files(root: &Path) -> Result<Vec<FileNode>, IndexError> {
     let paths = git::ls_files(root)?;
     Ok(paths
@@ -21,6 +22,7 @@ pub fn list_project_files(root: &Path) -> Result<Vec<FileNode>, IndexError> {
         .collect())
 }
 
+/// Lists crates.
 pub fn list_crates(root: &Path, files: &[FileNode]) -> Result<Vec<CrateNode>, IndexError> {
     let mut crates = Vec::new();
     for file in files {
@@ -42,6 +44,7 @@ pub fn list_crates(root: &Path, files: &[FileNode]) -> Result<Vec<CrateNode>, In
     Ok(crates)
 }
 
+/// `true` when doc-page.
 pub fn is_doc_page(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
     if !(lower.ends_with(".md") || lower.ends_with(".html") || lower.ends_with(".htm")) {
@@ -54,6 +57,7 @@ pub fn is_doc_page(path: &str) -> bool {
         || lower.starts_with("crates/work-graph/")
 }
 
+/// `true` when crate-manifest.
 pub fn is_crate_manifest(path: &str) -> bool {
     if !path.ends_with("Cargo.toml") {
         return false;
@@ -62,6 +66,7 @@ pub fn is_crate_manifest(path: &str) -> bool {
     !path.starts_with("vendor/")
 }
 
+/// Language for a path.
 pub fn lang_for(path: &str) -> &'static str {
     let lower = path.to_ascii_lowercase();
     let ext = lower.rsplit('.').next().unwrap_or("");

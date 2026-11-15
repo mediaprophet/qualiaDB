@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Live, data-backed implementations for the Benchmark Hub's interactive tabs.
  *
  * Graph Operations:
@@ -874,6 +874,12 @@ const GRAPH_DATASETS = {
         storageFormat: 'nt',
         fallbackStorageFormats: ['q42'],
         label: 'Schema.org 30.0 current HTTPS',
+    },
+    'wordnet-31': {
+        manifestId: 'wordnet-31',
+        storageFormat: 'q42',
+        fallbackStorageFormats: ['nt'],
+        label: 'Princeton WordNet 3.1',
     },
     'wikidata-sample': {
         unavailable: 'Wikidata sample is not shipped in this repo yet, so this selector is disabled instead of pretending to run it.',

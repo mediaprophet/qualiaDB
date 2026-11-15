@@ -17,6 +17,7 @@ pub struct DecodedClaim {
 }
 
 impl DecodedClaim {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             asserted_principal: StrongDigest::ZERO,

@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `MaterialistAestheticsQapp` component.
 pub fn MaterialistAestheticsQapp() -> Element {
     rsx! {
         QAppEngine {

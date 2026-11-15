@@ -1,7 +1,8 @@
 use super::super::host_dto::ProvenanceHop;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `ProvenanceTrail` component.
 pub fn ProvenanceTrail(hops: Vec<ProvenanceHop>) -> Element {
     if hops.is_empty() {
         return rsx! {

@@ -28,7 +28,9 @@ pub fn board_project(args_v: &Value, span: Span) -> Result<Value, vibe::Diagnost
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qualia_cooperative_core::work_item::{WorkItemPriority, WorkItemStatus, WorkItemType};
+    use qualia_cooperative_core::work_item::{
+        TaskConstraint, WorkItemPriority, WorkItemStatus, WorkItemType,
+    };
     use std::collections::BTreeMap;
 
     fn rec(pairs: &[(&str, Value)]) -> Value {
@@ -48,7 +50,13 @@ mod tests {
             title: "Ship board".into(),
             description: String::new(),
             priority: WorkItemPriority::Normal,
+            parent_id: None,
+            wbs: String::new(),
+            outline_level: 0,
             estimate_minutes: None,
+            three_point_estimate: None,
+            constraint: TaskConstraint::Asap,
+            constraint_date_unix: None,
             assignee_did: None,
             created_at_unix: 10,
         };

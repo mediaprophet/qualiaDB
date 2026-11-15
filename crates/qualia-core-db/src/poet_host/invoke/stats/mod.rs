@@ -4,6 +4,8 @@
 //! in the `Statistics.*` namespace.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod cohort_estimation;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod correlation;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod correlation_more;
@@ -56,9 +58,13 @@ pub use manifold::{
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use more::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[allow(unused_imports)]
+pub use cohort_estimation::{estimate_cohort, stats_estimate_cohort};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use regression::linear_regression;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::arithmetic_mean`.
 pub fn arithmetic_mean(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -67,11 +73,13 @@ pub fn arithmetic_mean(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::pearson_r`.
 pub fn pearson_r(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     arithmetic_mean(args, span)
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::linear_regression`.
 pub fn linear_regression(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -202,5 +210,7 @@ stats_stub!(
     neg_entropy_grad,
     kl_bregman_form,
     bregman_pythagorean_test,
-    probability_hash
+    probability_hash,
+    estimate_cohort,
+    stats_estimate_cohort
 );

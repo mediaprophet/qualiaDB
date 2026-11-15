@@ -98,6 +98,7 @@ pub enum RecommendationSeverity {
 }
 
 impl KeyGenerator {
+    /// Creates a generator with default entropy sources and algorithm registry.
     pub fn new() -> Self {
         Self {
             generation_algorithms: HashMap::new(),
@@ -111,6 +112,7 @@ impl KeyGenerator {
         }
     }
 
+    /// Populates the generation-algorithm registry; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         for alg in [
             KeyAlgorithm::MLDSA,
@@ -122,6 +124,7 @@ impl KeyGenerator {
             KeyAlgorithm::EdDSA,
             KeyAlgorithm::AES,
             KeyAlgorithm::ChaCha20,
+            KeyAlgorithm::X25519,
         ] {
             self.generation_algorithms
                 .insert(alg.clone(), GenerationAlgorithm::new(alg));
@@ -148,10 +151,9 @@ impl KeyGenerator {
     }
 
     /// Generate random key data of the requested size using the selected
-    /// entropy source. For `HardwareRNG`, `OSRandom`, and `Quantum` (used as a
-    /// placeholder since a real quantum RNG is not available) the bytes are
-    /// filled with `rand::random()`. The generated material is also folded into
-    /// the quality metrics as a simple entropy estimate.
+    /// entropy source. For `OSRandom` the bytes are drawn from the OS CSPRNG (`rand::random()`).
+    /// For `HardwareRNG` and `Quantum`, the generator fails closed honestly when physical
+    /// hardware entropy devices are unattached, preventing security illusions.
     pub fn generate_key_data(&mut self, key_size: usize) -> Result<Vec<u8>, CryptographicError> {
         let source = self
             .selected_entropy_source
@@ -167,16 +169,26 @@ impl KeyGenerator {
 
         let mut data = vec![0u8; key_size];
         match source {
-            EntropySource::HardwareRNG | EntropySource::OSRandom | EntropySource::Quantum => {
-                // rand::random() draws from the OS CSPRNG; for HardwareRNG and
-                // Quantum this is a placeholder until dedicated hardware is wired.
+            EntropySource::OSRandom => {
                 for byte in data.iter_mut() {
                     *byte = rand::random();
                 }
             }
+            EntropySource::HardwareRNG => {
+                return Err(CryptographicError::SecurityError(
+                    "Hardware RNG source unavailable: dedicated hardware TRNG driver not attached"
+                        .to_string(),
+                ));
+            }
+            EntropySource::Quantum => {
+                return Err(CryptographicError::SecurityError(
+                    "Quantum RNG source unavailable: physical quantum entropy source unattached"
+                        .to_string(),
+                ));
+            }
             _ => {
                 return Err(CryptographicError::SecurityError(format!(
-                    "entropy source {:?} not yet supported for raw key generation",
+                    "entropy source {:?} not supported for raw key generation",
                     source
                 )));
             }
@@ -188,6 +200,7 @@ impl KeyGenerator {
         Ok(data)
     }
 
+    /// Generates a `Key` under `algorithm` at `security_level`; `UnsupportedAlgorithm` when unregistered.
     pub fn generate_key(
         &mut self,
         key_id: String,
@@ -229,6 +242,7 @@ impl KeyGenerator {
         })
     }
 
+    /// Derives the public key from `private_key`.
     pub fn derive_public_key(
         &mut self,
         private_key: &Key,
@@ -298,7 +312,7 @@ impl KeyGenerator {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{pkcs8::EncodePrivateKey, rand_core::OsRng, RsaPrivateKey};
+                    use rsa::{RsaPrivateKey, pkcs8::EncodePrivateKey, rand_core::OsRng};
                     let mut rng = OsRng;
                     let priv_key = RsaPrivateKey::new(&mut rng, 2048)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
@@ -335,6 +349,7 @@ impl KeyGenerator {
             KeyAlgorithm::AES | KeyAlgorithm::ChaCha20 | KeyAlgorithm::EdDSA => {
                 Ok(rand::random::<[u8; 32]>().to_vec())
             }
+            KeyAlgorithm::X25519 => x25519::generate(),
             other => Err(CryptographicError::UnsupportedAlgorithm(format!(
                 "{other:?} key generation not implemented"
             ))),
@@ -401,8 +416,8 @@ impl KeyGenerator {
                 #[cfg(feature = "interop-crypto")]
                 {
                     use rsa::{
-                        pkcs8::{DecodePrivateKey, EncodePublicKey},
                         RsaPrivateKey, RsaPublicKey,
+                        pkcs8::{DecodePrivateKey, EncodePublicKey},
                     };
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
@@ -451,6 +466,7 @@ impl KeyGenerator {
                 let signing_key = SigningKey::from_bytes(&seed);
                 Ok(signing_key.verifying_key().to_bytes().to_vec())
             }
+            KeyAlgorithm::X25519 => x25519::public(&private_key.key_data),
             other => Err(CryptographicError::UnsupportedAlgorithm(format!(
                 "{other:?} public key derivation not supported"
             ))),
@@ -459,6 +475,7 @@ impl KeyGenerator {
 }
 
 impl GenerationAlgorithm {
+    /// Creates a generation-algorithm descriptor for `algorithm`.
     pub fn new(algorithm: KeyAlgorithm) -> Self {
         Self {
             algorithm_id: format!("gen_{}", format!("{:?}", algorithm).to_lowercase()),
@@ -475,6 +492,7 @@ impl GenerationAlgorithm {
 }
 
 impl KeyQualityMetrics {
+    /// Creates zeroed key-quality metrics.
     pub fn new() -> Self {
         Self {
             entropy_score: 0.0,
@@ -489,6 +507,7 @@ impl KeyQualityMetrics {
 }
 
 impl SecurityAssessment {
+    /// Creates a default security assessment.
     pub fn new() -> Self {
         Self {
             vulnerability_score: 0.0,
@@ -497,3 +516,5 @@ impl SecurityAssessment {
         }
     }
 }
+
+mod x25519;

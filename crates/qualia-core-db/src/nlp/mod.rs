@@ -45,6 +45,7 @@ pub struct DocumentAnalysis {
     pub plans: Vec<AnnotationPlan>,
 }
 
+/// Analyzes a document into annotations.
 pub fn analyze_document(source: &str) -> DocumentAnalysis {
     contracts::analyze_document(source)
 }

@@ -5,6 +5,14 @@ use serde_json::{json, Value};
 const NOT_ADVICE: &str =
     "This number is not a diagnosis, treatment recommendation, or clinical advice.";
 
+/// Dispatch a clinical-risk calculation by name (`"framingham"`,
+/// `"chas2"`/`"cha2ds2"`/`"cha2ds2_vasc"`, `"score2"`).
+///
+/// `params` must supply every field the calculator requires — missing
+/// values fail closed with a descriptive error rather than being
+/// defaulted, since a guessed patient value is worse than no answer.
+/// Successful results merge the computed output with provenance
+/// metadata (`algorithm`, `version`, and the not-a-diagnosis notice).
 pub fn evaluate(calculator: &str, params: &Value) -> Result<Value, String> {
     match calculator {
         "framingham" => framingham(params),

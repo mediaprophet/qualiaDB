@@ -14,11 +14,14 @@ use std::path::Path;
 
 use serde::Serialize;
 
+#[cfg(not(target_arch = "wasm32"))]
 use super::super::{
     Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, QUIN_SIZE, SUPERBLOCK_HEADER,
     SUPERBLOCK_SIZE,
 };
-use crate::{NQuin, PermissiveRoutingLane, QUINS_PER_BLOCK};
+use crate::{NQuin, PermissiveRoutingLane};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::QUINS_PER_BLOCK;
 
 /// What the caller asserts about a file. Never overrides Quin-level rights.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -28,6 +31,109 @@ pub enum PublicationIntent {
     /// Human principal marks a catalog/ontology artefact. Still denied if any
     /// Quin is restricted, classified, medical, legal, fiduciary, or bilateral.
     CommonsCatalog,
+}
+
+/// Mandatory ingest access / publication policy (QW-10).
+///
+/// Never inferred: writers must receive an explicit choice. Only
+/// [`IngestAccessPolicy::PublicRedistributable`] may set `FLAG_PERMISSIVE_COMMONS`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum IngestAccessPolicy {
+    /// Local / Sanctuary; no public magnet, web-seed, or cache.
+    Restricted,
+    /// Shared inside a project; still not public redistribution.
+    ProjectInternal,
+    /// May be shown publicly but licence / redistribution still under review.
+    PublicNotForRedistribution,
+    /// Explicit reviewed decision: Permissive Commons transport allowed.
+    PublicRedistributable,
+}
+
+impl IngestAccessPolicy {
+    /// Parse a policy name (`restricted` | `project-internal` |
+    /// `public-not-for-redistribution` | `public-redistributable`,
+    /// plus review/licence-review aliases).
+    pub fn parse(raw: &str) -> Result<Self, String> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "restricted" => Ok(Self::Restricted),
+            "project-internal" | "project_internal" | "internal" => Ok(Self::ProjectInternal),
+            "public-not-for-redistribution"
+            | "public_not_for_redistribution"
+            | "licence-review"
+            | "license-review"
+            | "review-required" => Ok(Self::PublicNotForRedistribution),
+            "public-redistributable" | "public_redistributable" | "permissive-commons" => {
+                Ok(Self::PublicRedistributable)
+            }
+            other => Err(format!(
+                "unknown access policy '{other}'; expected restricted | project-internal | public-not-for-redistribution | public-redistributable"
+            )),
+        }
+    }
+
+    /// Canonical lowercase policy token (as accepted by `parse`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Restricted => "restricted",
+            Self::ProjectInternal => "project-internal",
+            Self::PublicNotForRedistribution => "public-not-for-redistribution",
+            Self::PublicRedistributable => "public-redistributable",
+        }
+    }
+
+    /// Only an explicit redistributable decision may mint the Commons header flag.
+    pub fn may_declare_permissive_commons(self) -> bool {
+        matches!(self, Self::PublicRedistributable)
+    }
+}
+
+/// Integrity-bound companion written beside a newly ingested `.q42` (QW-10).
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct IngestProvenanceRecord {
+    pub access_policy: String,
+    pub source_sha256: String,
+    pub mapping_version: String,
+    pub context_digest: String,
+    pub compiler_build_digest: String,
+    pub engine_version: String,
+}
+
+impl IngestProvenanceRecord {
+    /// New record; `engine_version` is stamped from
+    /// `CARGO_PKG_VERSION` automatically.
+    pub fn new(
+        policy: IngestAccessPolicy,
+        source_sha256: impl Into<String>,
+        mapping_version: impl Into<String>,
+        context_digest: impl Into<String>,
+        compiler_build_digest: impl Into<String>,
+    ) -> Self {
+        Self {
+            access_policy: policy.as_str().to_string(),
+            source_sha256: source_sha256.into(),
+            mapping_version: mapping_version.into(),
+            context_digest: context_digest.into(),
+            compiler_build_digest: compiler_build_digest.into(),
+            engine_version: env!("CARGO_PKG_VERSION").to_string(),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    /// Write `<q42>.provenance.json` beside the volume; returns the
+    /// written path.
+    pub fn write_beside_volume(&self, q42_path: &Path) -> io::Result<std::path::PathBuf> {
+        let path = provenance_path_for(q42_path);
+        let json = serde_json::to_vec_pretty(self).map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, format!("provenance json: {e}"))
+        })?;
+        std::fs::write(&path, json)?;
+        Ok(path)
+    }
+}
+
+/// `<q42_path>.provenance.json` — the sidecar provenance location.
+pub fn provenance_path_for(q42_path: &Path) -> std::path::PathBuf {
+    std::path::PathBuf::from(format!("{}.provenance.json", q42_path.display()))
 }
 
 /// How this volume may move, if at all.
@@ -84,6 +190,7 @@ pub struct Q42PublicationVerdict {
 }
 
 impl Q42PublicationClass {
+    /// Lowercase class token (`permissive-commons`, `sanctuary`, …).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PermissiveCommons => "permissive-commons",
@@ -96,6 +203,8 @@ impl Q42PublicationClass {
 }
 
 impl Q42Transport {
+    /// Human-readable transport description (Commons magnet /
+    /// SocialWebNet bilateral / local sanctuary).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::WebTorrentCommons => {
@@ -111,7 +220,48 @@ impl Q42Transport {
     }
 }
 
-/// True when this Quin is Selfhood, bilateral, or a protected ODRL tier.
+const MASK_60: u64 = 0x0FFF_FFFF_FFFF_FFFF;
+
+const fn token60(iri: &str) -> u64 {
+    crate::q_hash(iri) & MASK_60
+}
+
+const NATURAL_AGENT_SANCTUARY_TOKENS: &[u64] = &[
+    crate::q_hash("https://qualia.world/ontology/idf#NaturalAgent"),
+    token60("https://qualia.world/ontology/idf#NaturalAgent"),
+    crate::q_hash("q42:NaturalAgent"),
+    token60("q42:NaturalAgent"),
+    crate::q_hash("idf:NaturalAgent"),
+    token60("idf:NaturalAgent"),
+    crate::q_hash("https://qualia.world/ontology/idf#hasGuardian"),
+    token60("https://qualia.world/ontology/idf#hasGuardian"),
+    crate::q_hash("q42:hasGuardian"),
+    token60("q42:hasGuardian"),
+    crate::q_hash("https://qualia.world/ontology/clinical#hasDiagnosis"),
+    token60("https://qualia.world/ontology/clinical#hasDiagnosis"),
+    crate::q_hash("https://qualia.world/ontology/clinical#ClinicalClaim"),
+    token60("https://qualia.world/ontology/clinical#ClinicalClaim"),
+    crate::q_hash("https://qualia.world/ontology/sanctuary#PersonalClaim"),
+    token60("https://qualia.world/ontology/sanctuary#PersonalClaim"),
+    crate::q_hash("https://qualia.world/ontology/sanctuary#GuardianshipClaim"),
+    token60("https://qualia.world/ontology/sanctuary#GuardianshipClaim"),
+];
+
+#[inline]
+fn has_natural_agent_sanctuary_token(quin: &NQuin) -> bool {
+    let mut i = 0;
+    while i < NATURAL_AGENT_SANCTUARY_TOKENS.len() {
+        let tok = NATURAL_AGENT_SANCTUARY_TOKENS[i];
+        if quin.subject == tok || quin.predicate == tok || quin.object == tok {
+            return true;
+        }
+        i += 1;
+    }
+    false
+}
+
+/// True when this Quin is Selfhood, bilateral, a protected ODRL tier, or a `NaturalAgent`
+/// personal/clinical/guardianship claim.
 pub fn quin_requires_sanctuary(quin: &NQuin) -> bool {
     match quin.get_sensitivity_byte() {
         NQuin::SENSITIVITY_RESTRICTED | NQuin::SENSITIVITY_CLASSIFIED => return true,
@@ -123,9 +273,15 @@ pub fn quin_requires_sanctuary(quin: &NQuin) -> bool {
         | NQuin::SENSITIVITY_TIER_FIDUCIARY => return true,
         _ => {}
     }
-    quin.identify_routing_lane() == PermissiveRoutingLane::EnforceBilateralMicroCommons
+    if quin.identify_routing_lane() == PermissiveRoutingLane::EnforceBilateralMicroCommons {
+        return true;
+    }
+    has_natural_agent_sanctuary_token(quin)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
+/// Open `path` and classify it for publication under `intent`.
 pub fn classify_q42_path(
     path: &Path,
     intent: PublicationIntent,
@@ -134,6 +290,10 @@ pub fn classify_q42_path(
     Ok(classify_q42_volume(&volume, intent))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+/// Full-volume publication verdict: scans every decoded Quin's
+/// sensitivity byte/tier and routing lane, then applies the
+/// fail-closed `decide` policy.
 pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42PublicationVerdict {
     let flags = volume.header().flags;
     let header_commons = flags & FLAG_PERMISSIVE_COMMONS != 0;
@@ -166,6 +326,7 @@ pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42
 }
 
 /// Volume-set: any child that cannot be public denies the whole public set.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn classify_q42_volume_set(
     root: &Path,
     intent: PublicationIntent,
@@ -189,21 +350,92 @@ pub fn classify_q42_volume_set(
     Ok(root_verdict)
 }
 
+/// `PermissionDenied` with the verdict's reason unless
+/// `may_emit_public_magnet` — the enforcement gate for public
+/// publication paths.
 pub fn deny_public_publication(verdict: &Q42PublicationVerdict) -> io::Result<()> {
-    if verdict.may_emit_public_magnet {
-        return Ok(());
+    if verdict.header_sanctuary_flag || !verdict.may_emit_public_magnet {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            verdict.reason.clone(),
+        ));
     }
-    Err(io::Error::new(
-        io::ErrorKind::PermissionDenied,
-        verdict.reason.clone(),
-    ))
+    Ok(())
 }
 
+/// Trait supporting flexible invocation of [`check_public_distribution_allowed`].
+pub trait CheckPublicDistribution {
+    fn check_public_distribution(self) -> io::Result<()>;
+}
+
+impl CheckPublicDistribution for &Q42PublicationVerdict {
+    fn check_public_distribution(self) -> io::Result<()> {
+        deny_public_publication(self)
+    }
+}
+
+impl CheckPublicDistribution for Q42PublicationVerdict {
+    fn check_public_distribution(self) -> io::Result<()> {
+        deny_public_publication(&self)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CheckPublicDistribution for &Q42Volume {
+    fn check_public_distribution(self) -> io::Result<()> {
+        let verdict = classify_q42_volume(self, PublicationIntent::Default);
+        deny_public_publication(&verdict)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CheckPublicDistribution for (&Q42Volume, PublicationIntent) {
+    fn check_public_distribution(self) -> io::Result<()> {
+        let verdict = classify_q42_volume(self.0, self.1);
+        deny_public_publication(&verdict)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CheckPublicDistribution for &Path {
+    fn check_public_distribution(self) -> io::Result<()> {
+        let verdict = classify_q42_path(self, PublicationIntent::Default)?;
+        deny_public_publication(&verdict)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CheckPublicDistribution for (&Path, PublicationIntent) {
+    fn check_public_distribution(self) -> io::Result<()> {
+        let verdict = classify_q42_path(self.0, self.1)?;
+        deny_public_publication(&verdict)
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CheckPublicDistribution for &std::path::PathBuf {
+    fn check_public_distribution(self) -> io::Result<()> {
+        check_public_distribution_allowed(self.as_path())
+    }
+}
+
+/// Hard publication gate (`Q42-00`): rejects any volume with `FLAG_SANCTUARY` (`0x0040`),
+/// `NaturalAgent` personal/clinical/guardianship claims, or non-Commons classification,
+/// even if `FLAG_PERMISSIVE_COMMONS` or `PublicationIntent::CommonsCatalog` was passed.
+pub fn check_public_distribution_allowed<T: CheckPublicDistribution>(target: T) -> io::Result<()> {
+    target.check_public_distribution()
+}
+
+/// Tally one Quin into `counts` — sensitivity byte, protected tiers,
+/// and routing lane.
+#[cfg(not(target_arch = "wasm32"))]
 fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
     counts.quins_scanned += 1;
+    let is_nat_sanctuary = has_natural_agent_sanctuary_token(quin);
     match quin.get_sensitivity_byte() {
         NQuin::SENSITIVITY_RESTRICTED => counts.restricted += 1,
         NQuin::SENSITIVITY_CLASSIFIED => counts.classified += 1,
+        _ if is_nat_sanctuary => counts.restricted += 1,
         _ => counts.public += 1,
     }
     match quin.get_sensitivity_tier() {
@@ -221,6 +453,9 @@ fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
     }
 }
 
+/// Total Quins that force Sanctuary handling (restricted +
+/// classified + protected tiers + bilateral lane).
+#[cfg(not(target_arch = "wasm32"))]
 fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
     counts.restricted
         + counts.classified
@@ -230,6 +465,13 @@ fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
         + counts.bilateral
 }
 
+/// The fail-closed policy core: sanctuary material + commons
+/// signals → `MixedFailClosed` (split the volume); sanctuary alone →
+/// `Sanctuary`; declared/intended commons → `CommonsGated` or
+/// `PermissiveCommons`; unmarked → `UnmarkedLocal` (stays local).
+/// Decode failures count as sanctuary bits — unverifiable data never
+/// goes public.
+#[cfg(not(target_arch = "wasm32"))]
 fn decide(
     header_commons: bool,
     header_sanctuary: bool,
@@ -317,7 +559,7 @@ fn decide(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::q42_volume::{write_unified_volume, StreamingQ42VolumeWriter};
@@ -339,14 +581,14 @@ mod tests {
         let mut q = public_quin(object);
         q.set_sensitivity_byte(NQuin::SENSITIVITY_CLASSIFIED);
         q.set_sensitivity_tier(NQuin::SENSITIVITY_TIER_MEDICAL);
-        q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        q.recalculate_parity();
         q
     }
 
     fn bilateral_quin(object: u64) -> NQuin {
         let mut q = public_quin(object);
         q.metadata |= 0b10u64 << 61;
-        q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        q.recalculate_parity();
         q
     }
 
@@ -429,5 +671,41 @@ mod tests {
         let verdict = classify_q42_path(file.path(), PublicationIntent::Default).unwrap();
         assert_eq!(verdict.class, Q42PublicationClass::MixedFailClosed);
         assert!(!verdict.may_emit_public_magnet);
+    }
+
+    #[test]
+    fn natural_agent_sanctuary_claim_sets_flag_sanctuary_and_rejects_public_distribution() {
+        let file = NamedTempFile::new().unwrap();
+        let mut writer = StreamingQ42VolumeWriter::new(&HashMap::new()).unwrap();
+        // Caller attempts to declare FLAG_PERMISSIVE_COMMONS on a volume carrying a NaturalAgent guardianship claim:
+        writer.declare_permissive_commons();
+        let mut claim = NQuin {
+            subject: crate::q_hash("urn:qualia:entity:natural-agent:alice"),
+            predicate: crate::q_hash("https://qualia.world/ontology/idf#hasGuardian"),
+            object: crate::q_hash("urn:qualia:entity:natural-agent:bob"),
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        claim.recalculate_parity();
+        assert!(quin_requires_sanctuary(&claim));
+        writer.push_block(0, &[claim]).unwrap();
+        writer.finish(file.path()).unwrap();
+
+        let volume = Q42Volume::open(file.path()).unwrap();
+        assert_ne!(
+            volume.header().flags & FLAG_SANCTUARY,
+            0,
+            "volume carrying NaturalAgent guardianship claim must set FLAG_SANCTUARY (0x0040)"
+        );
+        assert!(
+            check_public_distribution_allowed(&volume).is_err(),
+            "check_public_distribution_allowed must hard-reject FLAG_SANCTUARY volume even with FLAG_PERMISSIVE_COMMONS"
+        );
+        assert!(
+            check_public_distribution_allowed((file.path(), PublicationIntent::CommonsCatalog))
+                .is_err(),
+            "CommonsCatalog intent must not override FLAG_SANCTUARY"
+        );
     }
 }

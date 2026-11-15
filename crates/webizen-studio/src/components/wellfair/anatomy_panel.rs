@@ -10,7 +10,7 @@ use super::host_client::{
     fetch_anatomy_view, get_physiological_state, reset_physiological_state,
     set_physiological_state, AnatomyViewReportDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct AnatomyUi {
@@ -169,6 +169,7 @@ fn level_word(level: &str) -> &'static str {
 }
 
 #[component]
+/// Aether `WellfairAnatomyPanel` component.
 pub fn WellfairAnatomyPanel() -> Element {
     let mut ui = use_signal(|| AnatomyUi {
         lens: "person".to_string(),

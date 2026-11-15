@@ -4,20 +4,25 @@
 
 pub const MAX_DENSE_ELEMS: usize = 0;
 
+/// Returns 0 — no weight fingerprinting without CUDA (feature `cuda` off or wasm).
 pub fn weight_fingerprint(_raw: &[u8], _n_in: usize, _n_out: usize) -> u64 {
     0
 }
 
+/// No-op — no device weight cache exists without CUDA.
 pub fn cache_dense_weight(_key: u64, _n_in: usize, _n_out: usize, _data: Vec<f32>) {}
 
+/// Returns `false` — nothing is ever cached without CUDA.
 pub fn dense_weight_cached(_key: u64) -> bool {
     false
 }
 
+/// Returns 0 — no device weight preloading without CUDA.
 pub fn preload_q4k_soa_weights(_weights: &[(&[u8], usize, usize)]) -> usize {
     0
 }
 
+/// Returns `false` — CUDA GEMV unavailable; caller falls back to CPU.
 pub fn try_cuda_batch_gemv(
     _hidden: &[f32],
     _batch: usize,
@@ -29,6 +34,7 @@ pub fn try_cuda_batch_gemv(
     false
 }
 
+/// Returns `false` — no cached device weights exist without CUDA.
 pub fn try_cuda_batch_gemv_cached_only(
     _key: u64,
     _hidden: &[f32],
@@ -38,6 +44,7 @@ pub fn try_cuda_batch_gemv_cached_only(
     false
 }
 
+/// Returns `false` — CUDA GEMV unavailable; caller falls back to CPU.
 pub fn try_cuda_batch_gemv_cached(
     _key: u64,
     _hidden: &[f32],
@@ -50,12 +57,15 @@ pub fn try_cuda_batch_gemv_cached(
     false
 }
 
+/// Returns 0 — the weight cache is empty by definition without CUDA.
 pub fn weight_cache_len() -> usize {
     0
 }
 
+/// No-op — no cache to clear without CUDA.
 pub fn clear_weight_cache() {}
 
+/// Returns `false` — Q4K device GEMV unavailable without CUDA.
 pub fn try_q4k_soa_gemv(
     _n_in: usize,
     _n_out: usize,
@@ -66,6 +76,7 @@ pub fn try_q4k_soa_gemv(
     false
 }
 
+/// Returns `false` — fused QKV projection unavailable without CUDA.
 pub fn try_q4k_soa_qkv(
     _n_in: usize,
     _n_q: usize,
@@ -81,6 +92,7 @@ pub fn try_q4k_soa_qkv(
     false
 }
 
+/// Returns `false` — fused SwiGLU unavailable without CUDA.
 pub fn try_q4k_soa_fused_swiglu(
     _n_in: usize,
     _n_out: usize,
@@ -92,6 +104,7 @@ pub fn try_q4k_soa_fused_swiglu(
     false
 }
 
+/// Returns `false` — fused residual FFN block unavailable without CUDA.
 pub fn try_q4k_soa_ffn_block_residual(
     _n_embd: usize,
     _n_ffn: usize,
@@ -105,6 +118,7 @@ pub fn try_q4k_soa_ffn_block_residual(
     false
 }
 
+/// Returns `false` — fused FFN block unavailable without CUDA.
 pub fn try_q4k_soa_ffn_block(
     _n_embd: usize,
     _n_ffn: usize,
@@ -117,14 +131,17 @@ pub fn try_q4k_soa_ffn_block(
     false
 }
 
+/// Returns 0 — no Q4K weights are resident on-device without CUDA.
 pub fn q4k_device_weight_count() -> usize {
     0
 }
 
+/// Returns `false` — no CUDA context to warm.
 pub fn warm_cuda_context() -> bool {
     false
 }
 
+/// Returns `false` — no device KV cache can be allocated without CUDA.
 pub fn ensure_device_kv_cache(
     _max_context: u32,
     _n_layer: u32,
@@ -137,10 +154,12 @@ pub fn ensure_device_kv_cache(
     false
 }
 
+/// Returns `false` — device KV cache never exists without CUDA.
 pub fn device_kv_ready() -> bool {
     false
 }
 
+/// Returns `false` — device-side attention unavailable without CUDA.
 pub fn try_q4k_soa_attention_device(
     _n_embd: usize,
     _n_head: usize,
@@ -191,6 +210,7 @@ pub struct MegaPassLayerDims {
     pub down_out: usize,
 }
 
+/// Returns `None` — the fused mega-pass is unavailable without CUDA.
 pub fn try_cuda_mega_pass(
     _n_embd: usize,
     _n_head: usize,

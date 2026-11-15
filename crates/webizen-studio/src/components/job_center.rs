@@ -1,6 +1,6 @@
 //! Global background-work indicator and full job-centre page.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
@@ -156,6 +156,7 @@ fn use_job_snapshot() -> (Signal<JobQueueSnapshot>, Signal<String>) {
 }
 
 #[component]
+/// Aether `JobIndicator` component.
 pub fn JobIndicator() -> Element {
     let (snapshot, note) = use_job_snapshot();
     let mut expanded = use_signal(|| false);
@@ -272,6 +273,7 @@ fn JobCompactRow(
 }
 
 #[component]
+/// Aether `JobCenterPage` component.
 pub fn JobCenterPage() -> Element {
     let (snapshot, note) = use_job_snapshot();
     let current = snapshot();

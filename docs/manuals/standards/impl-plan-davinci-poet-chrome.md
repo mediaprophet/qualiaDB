@@ -1,7 +1,7 @@
 # Impl plan — davinci / Poet chrome (UX · toolchest · maps · 3D/temporal)
 
 **Owner:** davinci · **Visual pair:** monet · **Seam commits:** Neo · **Ontology:** Marvin · **Language triage:** Vibe
-**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.36-dev`
+**Frozen surface:** `vibe-host-0.1` @ `6dc2b8b8` · **Branch:** `0.0.40-dev`
 **North star:** Poet feels like a live studio over QualiaDB — human-first chrome (not a code UI), machine-readable underneath; Layout · Stage · Timeline **aspects** on every surface (not twins — twin infers identical; not planes).
 **Rules:** chrome binds only to frozen four-ops + live `ALL_BOUND` / `vibe:InvokeId` · no Host invent · no dotted `qualia.*` · unbound = visually gated (never stub-broken) · script hot-edit must never force host rebuild · gaps → @Vibe → `vibescript-sprint-deltas.md`
 

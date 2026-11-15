@@ -33,6 +33,7 @@ impl LeasedIpc {
         }
     }
 
+    /// Sends a leased IPC frame.
     pub fn send_leased(
         &mut self,
         leases: &mut LeaseTable,
@@ -49,6 +50,7 @@ impl LeasedIpc {
         finish_lease(leases, lease, sent)
     }
 
+    /// Receives a leased IPC frame.
     pub fn recv_leased(
         &mut self,
         leases: &mut LeaseTable,
@@ -64,6 +66,7 @@ impl LeasedIpc {
         finish_lease(leases, lease, recvd)
     }
 
+    /// Drains the channel then shuts down; `inner_shutdown` controls the inner transport.
     pub fn drain_and_shutdown(&mut self, inner_shutdown: bool) -> Result<(), QdnfError> {
         if self.lifecycle.phase() == BearerPhase::Ready {
             self.lifecycle.begin_drain()?;
@@ -76,11 +79,13 @@ impl LeasedIpc {
     }
 
     #[inline]
+    /// `LeasedIpc::lifecycle`.
     pub fn lifecycle(&self) -> &BearerLifecycle {
         &self.lifecycle
     }
 
     #[inline]
+    /// Locator.
     pub fn locator(&self) -> ObservedLocator {
         self.inner.locator()
     }

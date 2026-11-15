@@ -4,6 +4,87 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Prefer `high-performance` GPU adapters on desktop QualiaPortal (WebGPU then WebGL2, Intel iGPU as fallback) so hybrid laptops do not pin anatomy/studio to the integrated chip. `docs/js/webgpu-limits-shim.js` applies immediately; portal Rust matches on the next `wasm-pack`.
+
+- Pin the qualified Etalon resource, tensor and Forge lifecycle update: reject foreign device/queue use and stale device readback, retain cancellation cleanup, and add browser transport and actual Portal device-loss recovery qualification. Remaining MoE and inference expansion is deferred to a separate sprint.
+
+- Preserve configured generic MoE expert counts and top-k selection through native P64 metadata and Etalon dispatch. Validate recurrent-state budgets, clear recurrent history on sequence reset, prevent KV-only prefix reuse for hybrid models, and propagate recurrent-layer failures.
+- Apply explicit developer admission and lifecycle-generation checks to the legacy browser inference agent, including extension callbacks. Refuse missing engines and invalid vocabulary projections instead of panicking or treating buffer sizes and embedding coordinates as tokens. Browser execution receipts use schema v2, identify the active projection path, and report unmeasured GPU transfer totals as null.
+- Distinguish native epoch, context, token-checkpoint and token-acceptance refusals in diagnostics without exposing proposed token contents or changing Webizen decisions.
+- Native inference checks cancellation at token/artifact acceptance and finalization, discards terminal worker state, and stops on closed output channels. Accepted token IDs and artifact bytes transfer into caller-owned output before retained evidence completes; normal execution continues to require authenticated Webizen acceptance.
+- Browser CPU workers support explicit developer execution with native P64 models, lifecycle invalidation and both shared-memory and transferable transports. Shared-memory messages are copied into bounded ordinary buffers before decoding for Chromium compatibility.
+- Browser GPU projection waits for mapped readback after submission instead of treating WebGPU's absent native submission index as failure. The top-k shader uses an exactly representable f32 minimum.
+
+- Browser diagnostics distinguish direct page/worker adapter refusal from the Rust request, retain unsupported GPU results, and include bounded renderer and adapter evidence in exported reports.
+- Browser device diagnostics request WebGPU compatibility adapters and only the compute limits they need, supporting browsers that cannot provide a core adapter. Compact email drafts include the GPU rejection reason and API visibility.
+- Forge manifests no longer label absent, native-only or mismatched evidence as Naga validation; numerical certification rejects invalid tolerances and nonfinite values.
+- Made resident tensor loads and reads synchronize through safe shared state; malformed loads preserve the previous publication and poisoned state fails closed.
+- Isolated browser device diagnostics from the portal build, restored explicit unsupported diagnostics for excluded scientific functions, and made CPU harness selection exclude GPU tests exactly.
+
+### Added
+
+- `qualia-seal-10d` seals cardiac SKL1 (6-joint `beat` clip) plus optional OCC1 occupancy into sibling Matter-64 (`.m64`, LRM3 + 16³ HOLO bricks) and `Q42EMF64` (`.emf`, 8³ depolarization / dielectric cells). The `.10d` envelope gains VOX0, FEMC, MRP1, FIEL, and MID2 `FIELD_KIND_ELECTROMAGNETIC` on the σ axis using existing codecs. Reconstruct still does not write those containers.
+
+- Adopt Etalon's canonical inference, model, generic MoE, compute/render resources, Forge, diagnostics and optimization-lab libraries at immutable revision `6252bf58f3078bb26098dfe2e903fa1cf02bbeba`. P64 is the native model format, with GGUF import/compatibility adapters; Qwen-specific architecture handling remains distinct from generic MoE. QualiaDB retains authenticated Webizen policy and token/artifact acceptance, while explicit developer and lab modes can run independently.
+- Add an explicit Qwen35 CPU linear-layer lab adapter with retained verified model leases, checked memory budgets, caller-selected packing and normalization representation, and transactional Etalon execution. This layer API does not admit complete Qwen model execution.
+
+- Split the native tensor engine state into a focused owner and route model-byte access through an internal borrowed/retained interface. Preserve public mapping fields, ownership transfer and existing native/browser numerical paths while preparing for retained-model admission.
+
+- Added explicit V3 evidence-policy installation and retained token/artifact acceptance through the existing native authority gate. Preserve V2 signed policy records and require current association/policy checks before one-use acceptance; prepared model binding and real decoder cutover remain separate migration steps.
+
+- Moved MoE routing, NVFP4 arithmetic, causal convolution/GatedDeltaNet, and Qwen vector/Hyper-Connection primitives to Etalon-backed compatibility exports. Existing public imports, error types and numerical ordering remain available; complete Qwen/MoE model execution and Webizen acceptance integration remain separate migration steps.
+
+- Split the local inference decoder into focused native/browser, preparation, selection, publication and finalization modules, preserving existing behavior and public entrypoints. Real Webizen token-acceptance integration remains a separate required migration step.
+
+- Added signed inference-policy and authenticated multi-identifier association foundations. Subject identity, identifier evidence, controller and policy installation authority remain distinct; normal decoder and browser acceptance integration is still pending.
+- Added explicit local `inference-policy` commands for protected-vault setup, signed project configuration, identifier login checks and policy installation/revocation. These commands do not install default policy or create an identity during ordinary login.
+- Moved the GGUF-to-P64 canonical layout/writer and portable GGML codecs to Etalon-backed compatibility modules, retaining legacy format transforms, descriptor routing and public imports.
+
+- Added `generate_with_validation_via_etalon` to retain shader validation reports while preserving the existing shader-only compatibility API.
+- Added fresh Windows/Linux NPU discovery with independent runtime/workload/execution states, and an optional OpenVINO plugin harness that selects an actual runtime NPU, disables CPU fallback and checks output plus provider execution evidence. Missing hardware is recorded as unverified execution.
+- Made CUDA opt-in in the portable default profile, upgraded optional vision adapters to ORT rc.15 with a shared environment owner and caller-owned environment loaders, and corrected NPU routing and iGPU zero-copy claims.
+- Added a local Etalon/VibeScript integration harness covering checked scripts through the canonical Qualia host, graph transactions, real GPU readback against CPU references, resource initialization and request rejection. Integrated GPUs are supported; CPU-only coverage is explicit. See `docs/testing-etalon-vibe.md`.
+
+### Added (Whole-Biosphere & Poet Host Engine — 2026-10-29)
+
+- **Whole-Biosphere, Corpus Estimation, Living-Systems & Selective Streaming Engine (`PHASE-1`–`PHASE-5`)**:
+  - **Clean-Room Studio Domains & Fast-Build Capability Bitmasks (`P1-W1`, `P1-W2`)**: Decomposed `poet_host::invoke::studio_domains` into focused submodules (`receipt`, `office_domains`, `media_cad_domains`, `sim_lifecycle_domains`) under 300 lines each and added `const fn` capability bitmasks (`active_domain_mask()`, `active_specialized_lib_mask()`) + `minimal-fast-build` Cargo feature gate.
+  - **Source-Preserving Corpus Ingest & Zero-Heap Cohort Estimation (`P2-W1`–`P2-W4`, `C1–C5`, `Task G`)**: Deterministic `DOM-AX-7` subject hashing, `context[56..63]` sensitivity-tier packing, and `PRED_RAW_INVALID_LEXICAL` preservation in `csv_parser` / `json_parser`; Tier-1 zero-heap comparable-cohort estimation in `solvers::statistics::cohort_estimator` and Vibe `Statistics.estimate_cohort`; N3 `Strict`/`Defeasible`/`Defeater` and `AgreementDID` norm compilation in `modalities::n3_deontic_bridge`; and sensitivity/grant enforcement in `governance::cohort_access_gate`.
+  - **Biosphere Living-Systems & Space-Weather Heliophysical Engine (`P3-W3`, `P3-W4`, `BIO-FN/MC/EC`, `EAS-01..04`)**: Zero-heap fungal mycelial network transport (`domains::biosphere::funga_network`), microbial scale-band transforms & Monod biofilm kinetics (`microbial_colony`), trophic/mycorrhizal coupling (`ecological_coupling`), dynamic Shue/Burton/Chapman space-weather modeling (`poet_host::invoke::space_weather_bridge`), and strict vertical-datum (`Wgs84Ellipsoidal` vs `AhdOrthometric`) and temporal-basis validation in `qualia_geospatial::frame`.
+  - **Selective HMC Byte-Range Streamer, CPU/GPU Residency Governor & Typed Physical Cue Engine (`P5-W1`, `P5-W2`, `BS-30`, `BS-40`)**: Zero-heap HMC sub-range resolution and CRC-32C slice verification (`q42::selective_streamer`), LRU residency budget governance with pinned-slot protection (`render::gpu::residency_budget`), SI-typed EMF/acoustic/chemical cue receptor evaluation refusing uncalibrated bands (`modalities::typed_cue_profile`), and 64-byte `#[repr(C)]` WebGPU descriptor packing (`render::gpu::emf_cue_bridge`). See `docs/whole-biosphere-engine-reference.md`.
+
+### Added
+
+- **Geospatial OSM scene compilation**: Compile parsed OSM points, lines, simple areas, and multipart geometries into bounded local ENU meshes, retain source identity/version/tags alongside each mesh, drape emitted vertices against a caller-owned DEM sampler, and optionally clip point/line/area triangles to a rectangular local tile. Clipped edge heights are interpolated for continuous DEM draping. Area fills with interior rings are rejected until hole-preserving triangulation is selected.
+- **Scene Mesh Decoupling**: Separated generic 3D scene mesh rendering (`scene_mesh.rs`) from human anatomy fitting, ensuring clean architectural boundaries for game environments.
+
+### Fixed
+
+- **WebGPU WGSL Uniform Control Flow**: Restructured `mesh.wgsl`, `sun_shadow.wgsl`, and `ao_prepass.wgsl` shaders so derivative calls (`dpdx`, `dpdy`) and texture sampling strictly execute in uniform control flow prior to branching, eliminating WebGPU pipeline creation failures in modern browsers.
+
+### Changed
+
+- **Renamed `modalities::value_flow` → `modalities::socioeconomics`** (module file, `GovernanceLogic.compute` mode string, Poet workbench/JS registry IDs `value-flow*` → `socioeconomics*`, `q42:ValueFlowConfigurationShape` → `q42:SocioeconomicsConfigurationShape`). Disambiguates the internal commons-economics engine — agent-category-scaled royalties, human-rooted obligation discharge, capped ROI, E-ROI gating, usury ceiling — from the unrelated external ValueFlows project/ontology. No persisted wire-format fields change.
+
+## [0.0.40] — 2026-09-28
+
+### Added
+
+- **Semantic Instruments Integration**: Clinical mechanism, meal consideration, and nutrition evidence reviews with execution fixtures.
+- **Desktop Health Volume & OS Shell Workflows**: Health volume, saved items, i18n support, and polished volume experiences across mail, settings, keep, talk, and wellfair.
+- **Mail Services & Transport**: Account management, store, and transport integrations for `qualia-client-core`.
+- **Food Evidence Pipeline**: Added `food_sources_to_q42` ETL CLI binary tool.
+- **Inference Guard & WASM Governance**: Zero-heap inference guard modality and WebAssembly governance bridge in `qualia-core-db`.
+
+### Changed
+
+- Workspace release line bumped to `0.0.40` across all 27 crates, `Cargo.lock`, Tauri manifest, release workflows, and portal metadata.
+- Poet `CRATE_STAMP`, desktop vibe-host stamp, and Q42 app-registry default engine version updated to `0.0.40`.
+
 ## [0.0.39] — 2026-09-16
 
 ### Added
@@ -230,7 +311,7 @@ throughout, **2091 tests** by series end (authoritative build from `C:\Projects\
   content-addressed `JobSpec` (Personal/Collaborative/Paid), a `JobExecutor` trait + real local
   executor, **Freivalds' O(n²) probabilistic matrix-product verification** + embedding-artifact
   ranking reproduction, and a dispatch path where no `Rejected` verdict can reach a payment.
-- Settlement is an **escrow state machine over `value_flow`** (ROI-capped pricing via `commons_cost`;
+- Settlement is an **escrow state machine over `socioeconomics`** (ROI-capped pricing via `commons_cost`;
   `eroi_viable` = the solar-excess thermodynamic gate). On `Verified` it emits a
   `MicropaymentInstruction` for the existing `ilp_dispatcher` rail; on `Rejected`, a refund. **It
   never moves funds itself.**
@@ -303,7 +384,7 @@ All §1–§30 logic operators implemented as tested `modalities/*.rs` (only the
 - **Capacity/delegation/contract** (`capacity.rs`, `delegation.rs`, `contract.rs`): duress →
   voidable-at-election (confirmed by Timothy), guardianship, posthumous standing, delegation +
   revocation cascade, Offer→Assent→Binding.
-- **Economic/identity** (`value_flow.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
+- **Economic/identity** (`socioeconomics.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
   Commons capped-ROI threshold discharge, RPL capability gap, k-of-n resilient identity.
 - **Meta-deontic / governance** (`meta_deontic.rs`, `interaction_governance.rs`,
   `responsibility.rs`): provenance-anchored court-admissible WAL BreachRecords with ed25519
@@ -776,7 +857,7 @@ real implementations for previously-stubbed security and query primitives.
 ### Added — Native-First WASM-LLM Offloading
 
 - **`extension_bus::wasm_bus`**: Implemented `did:q42` WebSocket handshake and event routing for WASM targets (`qualia-core-db/src/extension_bus.rs`).
-- **Zero-Allocation Sync/Async Bridge**: Refactored `llm_agent.rs` WASM execution path to intercept inference requests and cleanly pipe synchronous LLM traits into the non-blocking Dioxus `on_token` event loop callback.
+- **Zero-Allocation Sync/Async Bridge**: Refactored `llm_agent.rs` WASM execution path to intercept inference requests and cleanly pipe synchronous LLM traits into the non-blocking Aether `on_token` event loop callback.
 - **WASM Extension Fallback**: The WASM inference pipeline now intelligently escalates to the Qualia Native Daemon (port 4242) if installed, or gracefully falls back to the in-browser WebGPU engine if not.
 
 ---

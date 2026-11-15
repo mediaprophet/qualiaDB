@@ -58,6 +58,7 @@ impl From<CscpError> for FabricError {
     }
 }
 
+/// Maps a `Disclosure` level to its wire byte.
 pub fn disclosure_byte(d: Disclosure) -> u8 {
     match d {
         Disclosure::DirectPermitted => 1,
@@ -67,6 +68,7 @@ pub fn disclosure_byte(d: Disclosure) -> u8 {
     }
 }
 
+/// Decodes a `Disclosure` from its wire byte; `CscpError` on an unknown value — fails closed.
 pub fn disclosure_from(b: u8) -> Result<Disclosure, CscpError> {
     match b {
         1 => Ok(Disclosure::DirectPermitted),
@@ -77,6 +79,7 @@ pub fn disclosure_from(b: u8) -> Result<Disclosure, CscpError> {
     }
 }
 
+/// Maps a `PathClass` to its wire byte.
 pub fn path_class_byte(c: PathClass) -> u8 {
     match c {
         PathClass::DirectV6 => 1,
@@ -87,6 +90,7 @@ pub fn path_class_byte(c: PathClass) -> u8 {
     }
 }
 
+/// Decodes a `PathClass` from its wire byte; fails closed on unknown.
 pub fn path_class_from(b: u8) -> Result<PathClass, CscpError> {
     match b {
         1 => Ok(PathClass::DirectV6),
@@ -98,6 +102,7 @@ pub fn path_class_from(b: u8) -> Result<PathClass, CscpError> {
     }
 }
 
+/// Maps a `LocatorKind` to its wire byte.
 pub fn locator_kind_byte(k: LocatorKind) -> u8 {
     match k {
         LocatorKind::Mailbox => 1,
@@ -106,6 +111,7 @@ pub fn locator_kind_byte(k: LocatorKind) -> u8 {
     }
 }
 
+/// Decodes a `LocatorKind` from its wire byte; fails closed on unknown.
 pub fn locator_kind_from(b: u8) -> Result<LocatorKind, CscpError> {
     match b {
         1 => Ok(LocatorKind::Mailbox),
@@ -115,6 +121,7 @@ pub fn locator_kind_from(b: u8) -> Result<LocatorKind, CscpError> {
     }
 }
 
+/// Writes the fixed CSCP message header (type byte + big-endian body length) into `out`.
 pub(crate) fn header(out: &mut [u8], msg: u8, body_len: u16) -> Result<usize, CscpError> {
     if out.len() < 10 {
         return Err(CscpError::Capacity);
@@ -128,6 +135,7 @@ pub(crate) fn header(out: &mut [u8], msg: u8, body_len: u16) -> Result<usize, Cs
     Ok(10)
 }
 
+/// Appends one tag/length/value triple into `out`; errors when the buffer is too small.
 pub(crate) fn write_tlv(out: &mut [u8], tag: u8, val: &[u8]) -> Result<usize, CscpError> {
     let n = 3 + val.len();
     if out.len() < n {
@@ -139,6 +147,7 @@ pub(crate) fn write_tlv(out: &mut [u8], tag: u8, val: &[u8]) -> Result<usize, Cs
     Ok(n)
 }
 
+/// Validates the header and returns the body slice; `Malformed`/`Unsupported` on wrong type or truncation.
 pub(crate) fn parse_header(bytes: &[u8], expect: u8) -> Result<&[u8], CscpError> {
     if bytes.len() < 10 {
         return Err(CscpError::Truncated);
@@ -159,6 +168,7 @@ pub(crate) fn parse_header(bytes: &[u8], expect: u8) -> Result<&[u8], CscpError>
     Ok(&bytes[10..10 + blen])
 }
 
+/// Iterates body TLVs, invoking `f(tag, val)` per entry; fails closed on truncated length fields.
 pub(crate) fn walk_tlvs(
     body: &[u8],
     known: fn(u8) -> bool,
@@ -195,6 +205,7 @@ pub(crate) fn walk_tlvs(
     Ok(())
 }
 
+/// As `walk_tlvs` plus a seen-tag bitmask for required-field validation.
 pub(crate) fn walk_tlvs_seen(
     body: &[u8],
     known: fn(u8) -> bool,
@@ -210,6 +221,7 @@ pub(crate) fn walk_tlvs_seen(
     Ok(seen_mask)
 }
 
+/// `Ok` when every tag in `tags` appears in the `seen` bitmask, else `Incomplete`.
 pub(crate) fn require_tags(seen: u16, tags: &[u8]) -> Result<(), CscpError> {
     for &t in tags {
         if t >= 16 || seen & (1u16 << t) == 0 {
@@ -219,6 +231,7 @@ pub(crate) fn require_tags(seen: u16, tags: &[u8]) -> Result<(), CscpError> {
     Ok(())
 }
 
+/// Writes header + body as a complete message; returns total length.
 pub(crate) fn finish(out: &mut [u8], msg: u8, body: &[u8]) -> Result<usize, CscpError> {
     if body.len() > MAX_BODY || 10 + body.len() > out.len() {
         return Err(CscpError::Capacity);
@@ -228,6 +241,7 @@ pub(crate) fn finish(out: &mut [u8], msg: u8, body: &[u8]) -> Result<usize, Cscp
     Ok(10 + body.len())
 }
 
+/// Decodes a big-endian u64; `Malformed` on short input.
 pub(crate) fn u64_be(v: &[u8]) -> Result<u64, CscpError> {
     if v.len() != 8 {
         return Err(CscpError::Malformed);
@@ -237,6 +251,7 @@ pub(crate) fn u64_be(v: &[u8]) -> Result<u64, CscpError> {
     Ok(u64::from_be_bytes(b))
 }
 
+/// Decodes a big-endian u32; `Malformed` on short input.
 pub(crate) fn u32_be(v: &[u8]) -> Result<u32, CscpError> {
     if v.len() != 4 {
         return Err(CscpError::Malformed);
@@ -246,6 +261,7 @@ pub(crate) fn u32_be(v: &[u8]) -> Result<u32, CscpError> {
     Ok(u32::from_be_bytes(b))
 }
 
+/// Decodes a big-endian u16; `Malformed` on short input.
 pub(crate) fn u16_be(v: &[u8]) -> Result<u16, CscpError> {
     if v.len() != 2 {
         return Err(CscpError::Malformed);

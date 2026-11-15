@@ -1,0 +1,44 @@
+
+running 39 tests
+test q42::m64_matter::brick3d::tests::test_brick3d_constants ... ok
+test q42::m64_matter::brick3d::tests::test_brick_voxel_morton_roundtrip ... ok
+test q42::m64_matter::brick3d::tests::test_hilbert3d_continuity ... ok
+test q42::m64_matter::brick3d::tests::test_hilbert3d_roundtrip_exhaustive ... ok
+test q42::m64_matter::brick3d::tests::test_hilbert3d_roundtrip_samples ... ok
+test q42::m64_matter::checked_reader::tests::admits_e64_magic_and_shell_mode_with_crc ... ok
+test q42::m64_matter::checked_reader::tests::admits_holo_without_per_record_crc ... ok
+test q42::m64_matter::checked_reader::tests::admits_lrm3_gap_when_flag_set_and_crc_valid ... ok
+test q42::m64_matter::checked_reader::tests::admits_point_without_per_record_crc ... ok
+test q42::m64_matter::checked_reader::tests::legacy_prefix_requires_opt_in_and_detects_tampering ... ok
+test q42::m64_matter::checked_reader::tests::rejects_lrm3_flag_when_block_missing ... ok
+test q42::m64_matter::checked_reader::tests::rejects_lrm3_gap_crc_mismatch ... ok
+test q42::m64_matter::checked_reader::tests::rejects_payload_overlapping_authenticated_lrm3_gap ... ok
+test q42::m64_matter::checked_reader::tests::rejects_shell_record_crc_mismatch ... ok
+test q42::m64_matter::checked_reader::tests::rejects_unknown_record_mode ... ok
+test q42::m64_matter::checked_reader::tests::shell_m64_and_e64_alias_writer_round_trip ... ok
+test q42::m64_matter::checked_reader::tests::strata_terrain_still_uses_record_crc ... ok
+test q42::m64_matter::holo_record::tests::test_m64_holo_record_size_and_alignment ... ok
+test q42::m64_matter::lrm3::tests::test_lrm3_coordinate_transformation ... ok
+test q42::m64_matter::lrm3::tests::test_lrm3_header_crc_roundtrip ... ok
+test q42::m64_matter::lrm3::tests::test_lrm3_header_size_and_alignment ... ok
+test q42::m64_matter::point_record::tests::test_m64_point_record_size_and_alignment ... ok
+test q42::m64_matter::point_record::tests::test_normal_packing ... ok
+test q42::m64_matter::shell_record::tests::test_m64_shell_record_size_crc ... ok
+test q42::m64_matter::tests::header_crc_admits_legacy_first_56_with_flags_zero ... ok
+test q42::m64_matter::tests::header_crc_admits_legacy_first_56_with_occupancy_flags ... ok
+test q42::m64_matter::tests::header_crc_covers_container_flags ... ok
+test q42::m64_matter::tests::test_banked_lut_size_and_paging_isolation ... ok
+test q42::m64_matter::tests::test_constituent_lut_entry_crc_validation ... ok
+test q42::m64_matter::tests::test_constituent_lut_entry_size_and_alignment ... ok
+test q42::m64_matter::tests::test_m64_chunk_directory_crc_roundtrip ... ok
+test q42::m64_matter::tests::test_m64_chunk_directory_entry_size_and_alignment ... ok
+test q42::m64_matter::tests::test_m64_header_accepts_e64_magic_alias ... ok
+test q42::m64_matter::tests::test_m64_header_crc_roundtrip ... ok
+test q42::m64_matter::tests::test_m64_header_size_and_alignment ... ok
+test q42::m64_matter::tests::test_m64_phase_juncture_crc_and_reinflation ... ok
+test q42::m64_matter::tests::test_m64_phase_juncture_size_and_alignment ... ok
+test q42::m64_matter::tests::test_m64_strata_record_crc_and_navigation ... ok
+test q42::m64_matter::tests::test_m64_strata_record_size_and_alignment ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 10448 filtered out; finished in 0.04s
+

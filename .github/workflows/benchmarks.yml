@@ -2,7 +2,7 @@ name: Comparative Benchmarks
 
 on:
   push:
-    branches: [ "main", "0.0.39" ]
+    branches: [ "main", "0.0.39", "0.0.40", "0.0.40.*", "0.0.41", "0.0.41.*" ]
   schedule:
     - cron: '0 3 * * 1'   # Weekly on Monday at 03:00 UTC
   workflow_dispatch:
@@ -48,12 +48,27 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends curl
 
+      - name: Record benchmark hardware availability
+        shell: bash
+        run: |
+          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/tmp/qualia-gpu-probe.txt 2>&1; then
+            echo "QUALIA_BENCH_GPU_STATUS=available" >> "$GITHUB_ENV"
+            echo "QUALIA_BENCH_GPU_DETAILS=$(tr '\n' ';' </tmp/qualia-gpu-probe.txt)" >> "$GITHUB_ENV"
+          else
+            echo "QUALIA_BENCH_GPU_STATUS=not_detected" >> "$GITHUB_ENV"
+            echo "QUALIA_BENCH_GPU_DETAILS=No NVIDIA compute device reported by nvidia-smi; this CPU-native suite does not use an accelerator" >> "$GITHUB_ENV"
+          fi
+
       - name: Install Python benchmark dependencies
         run: pip install --quiet -r benchmarks/requirements.txt
 
       # ── RAM ceiling gate (gate: must pass before any bench runs) ─────────────
       - name: RAM Footprint Validator (512 MB ceiling gate)
         run: cargo bench --package qualia-core-db --bench ram_usage
+
+      # ── Native Zero-Heap DNS & Network Benchmarks ───────────────────────────
+      - name: Native Zero-Heap DNS & Network Benchmarks
+        run: cargo bench --package qualia-core-db --bench network_benchmark -- --test
 
       # ── Oxigraph ─────────────────────────────────────────────────────────────
       - name: Run Oxigraph benchmark (10 k triples)
@@ -110,7 +125,7 @@ jobs:
 
       - name: Build Qualia WASM for comparative harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -134,7 +149,15 @@ jobs:
 
       - name: Run native Qualia bench suite (ingestion + latency)
         run: cargo run --release -p qualia-cli -- bench --suite full
-        # Output written to docs/llm_benchmark_results.json by the CLI
+        # Output written to docs/llm_benchmark_results.json by the CLI,
+        # including runner CPU/RAM and the GPU probe above. This suite is CPU-native.
+
+      - name: Run Qualia NT benchmark (10 k triples)
+        run: |
+          python benchmarks/harness.py \
+            --engine qualia_nt \
+            --n 10000 \
+            --output docs/comparative_benchmark_results.json
 
       - name: Start Qualia daemon (background)
         run: |
@@ -144,6 +167,7 @@ jobs:
             curl -sf http://127.0.0.1:4242/health && echo "Daemon ready." && break
             sleep 2
           done
+          curl -sf http://127.0.0.1:4242/health || { echo "Daemon failed to start on port 4242!"; exit 1; }
 
       - name: Ingest benchmark dataset into Qualia
         run: |
@@ -168,7 +192,7 @@ jobs:
         # Persist onto the branch that ran. Pages and the release line live on
         # 0.0.39; main still gets weekly/scheduled numbers. Do not push from
         # tags or arbitrary feature branches — that used to rebase them onto main.
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40' || startsWith(github.ref, 'refs/heads/0.0.40.') || github.ref == 'refs/heads/0.0.41' || startsWith(github.ref, 'refs/heads/0.0.41.')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -177,10 +201,22 @@ jobs:
             || git commit -m "chore: update benchmark results [skip ci]"
           # During rebase our just-generated results are the replayed ("theirs")
           # side; prefer them on any conflict so the latest numbers win.
-          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
-          git push origin "HEAD:${{ github.ref_name }}"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash -X theirs origin "$RESULT_BRANCH"
+            if git push origin "HEAD:$RESULT_BRANCH"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Benchmark result push failed after 3 attempts"
+              exit 1
+            fi
+            sleep "$((attempt * 5))"
+          done
+        env:
+          RESULT_BRANCH: ${{ github.ref_name }}
 
       - name: Upload comparative results artifact
+        if: ${{ !cancelled() && hashFiles('docs/comparative_benchmark_results.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results
@@ -188,6 +224,7 @@ jobs:
           retention-days: 30
 
       - name: Upload LLM benchmark results artifact
+        if: ${{ !cancelled() && hashFiles('docs/llm_benchmark_results.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: llm-benchmark-results
@@ -240,7 +277,7 @@ jobs:
 
       - name: Build Qualia WASM for Schema.org harness
         env:
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           rustup target add wasm32-unknown-unknown
           wasm-pack build crates/qualia-core-db \
@@ -271,17 +308,29 @@ jobs:
             --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
 
       - name: Commit Schema.org benchmark results
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/0.0.39' || github.ref == 'refs/heads/0.0.40' || startsWith(github.ref, 'refs/heads/0.0.40.') || github.ref == 'refs/heads/0.0.41' || startsWith(github.ref, 'refs/heads/0.0.41.')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/comparative_benchmark_results.schemaorg-30-current-https.json
           git diff --cached --quiet \
             || git commit -m "chore: update Schema.org comparative benchmark results [skip ci]"
-          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
-          git push origin "HEAD:${{ github.ref_name }}"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash -X theirs origin "$RESULT_BRANCH"
+            if git push origin "HEAD:$RESULT_BRANCH"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Schema.org result push failed after 3 attempts"
+              exit 1
+            fi
+            sleep "$((attempt * 5))"
+          done
+        env:
+          RESULT_BRANCH: ${{ github.ref_name }}
 
       - name: Upload Schema.org comparative results artifact
+        if: ${{ !cancelled() && hashFiles('docs/comparative_benchmark_results.schemaorg-30-current-https.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results-schemaorg

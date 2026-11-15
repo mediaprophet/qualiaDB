@@ -1,6 +1,7 @@
 use super::*;
 
 impl<'a> Parser<'a> {
+    /// Parses item.
     pub(crate) fn parse_item(&mut self) -> Result<Item, Diagnostic> {
         if self.kw("bind") {
             return Ok(Item::Bind(self.parse_bind_decl()?));
@@ -32,20 +33,26 @@ impl<'a> Parser<'a> {
         if self.kw("law") {
             return Ok(Item::Law(self.parse_law()?));
         }
+        if self.looks_like_geometry_or_topology() {
+            let decl = self.parse_geometry_or_topology_decl()?;
+            return Ok(Item::Statement(Stmt::Block(decl.lower_to_block())));
+        }
         Ok(Item::Statement(self.parse_stmt()?))
     }
 
+    ///  when input looks like a cell.
     pub(crate) fn looks_like_cell(&self) -> bool {
         if self.kw("cell") {
             return true;
         }
-        if self.kw("pure") || self.kw("hot") || self.kw("effect") {
+        if self.kw("pure") || self.kw("hot") || self.kw("cold") || self.kw("async") || self.kw("effect") {
             let rest = self.lex.source()[self.cur.span.end as usize..].trim_start();
             return rest.starts_with("cell");
         }
         false
     }
 
+    /// Parses cell-decl.
     pub(crate) fn parse_cell_decl(&mut self) -> Result<CellDecl, Diagnostic> {
         let start = self.cur.span.start;
         let effect = self.take_effect_class()?;
@@ -90,6 +97,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses bind-decl.
     pub(crate) fn parse_bind_decl(&mut self) -> Result<BindDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // bind
@@ -137,6 +145,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    ///  when input looks like a function.
     pub(crate) fn looks_like_function(&self) -> bool {
         if self.kw("fn") || self.kw("async") || self.kw("pure") || self.kw("hot") || self.kw("cold")
         {
@@ -145,6 +154,7 @@ impl<'a> Parser<'a> {
         self.kw("effect") && self.peek_fn_after_effect()
     }
 
+    /// Peeks  after an effect.
     pub(crate) fn peek_fn_after_effect(&self) -> bool {
         // `effect fn` vs `effect expr;` â€” we only have one token of lookahead.
         // Heuristic: next token after bump would be needed. Store nothing;
@@ -155,6 +165,7 @@ impl<'a> Parser<'a> {
         trimmed.starts_with("fn") || trimmed.starts_with("async")
     }
 
+    /// Parses function.
     pub(crate) fn parse_function(&mut self) -> Result<FunctionDecl, Diagnostic> {
         let start = self.cur.span.start;
         let effect = self.take_effect_class()?;
@@ -192,6 +203,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses hook.
     pub(crate) fn parse_hook(&mut self) -> Result<HookDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // on
@@ -221,6 +233,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses const.
     pub(crate) fn parse_const(&mut self) -> Result<ConstDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -360,8 +373,8 @@ impl<'a> Parser<'a> {
                     };
                 }
                 _ => {
-                    // Skip unknown property â€” consume one token value
-                    self.bump()?;
+                    // Consume the full unknown property value expression so parsing stays aligned.
+                    self.parse_expr()?;
                 }
             }
         }
@@ -381,6 +394,18 @@ impl<'a> Parser<'a> {
     /// material sucrose_cube: Material
     ///   yield: 50.0 <qudt:KiloPascal>
     ///   density: 1580.0;
+    /// ```
+    ///
+    /// Shared words for Poet and every Qualia app (not a town or game dialect):
+    /// **part**, **signature**, and either **facet** or **reading**.
+    /// `reading` is `colour` or `sound` — two readings of one EMF spectrum axis.
+    /// They are property names, not new reserved keywords.
+    ///
+    /// ```vibe
+    /// material shell: Material
+    ///   part: "did:q42:part:polymer-shell",
+    ///   signature: "hdpe_tank_shell",
+    ///   reading: "colour";
     /// ```
     pub(crate) fn parse_material(&mut self) -> Result<MaterialDecl, Diagnostic> {
         let start = self.cur.span.start;
@@ -440,6 +465,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses budget.
     pub(crate) fn parse_budget(&mut self) -> Result<Vec<NamedArg>, Diagnostic> {
         if !self.kw("budget") && !(self.cur.kind == TokenKind::Ident && self.text() == "budget") {
             return Ok(Vec::new());
@@ -461,6 +487,7 @@ impl<'a> Parser<'a> {
         Ok(args)
     }
 
+    /// Parses params.
     pub(crate) fn parse_params(&mut self) -> Result<Vec<Param>, Diagnostic> {
         let mut params = Vec::new();
         if self.cur.kind == TokenKind::RParen {

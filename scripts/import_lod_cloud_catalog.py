@@ -125,12 +125,14 @@ class DatasetReport:
 
 
 def slug_id(identifier: str) -> str:
+    """Slug helper for id."""
     s = identifier.strip().lower()
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-")[:64] or "lod-dataset"
 
 
 def normalize_license(raw: str | None) -> str | None:
+    """Normalizes license."""
     if not raw:
         return None
     low = raw.lower()
@@ -150,6 +152,7 @@ def normalize_license(raw: str | None) -> str | None:
 
 
 def media_to_format(media_type: str | None, url: str) -> str:
+    """Media type to format."""
     if media_type:
         mt = media_type.split(";")[0].strip().lower()
         if mt in MEDIA_TO_FORMAT:
@@ -172,6 +175,7 @@ def media_to_format(media_type: str | None, url: str) -> str:
 
 
 def estimate_size_mb(triples: Any) -> float | None:
+    """Estimates size mb."""
     if triples is None:
         return None
     if isinstance(triples, (int, float)):
@@ -229,12 +233,14 @@ def categorize(entry: dict[str, Any]) -> tuple[str, list[str], str]:
 
 
 def lod_status_ok(status: str | None) -> bool:
+    """Returns True when LOD status is OK."""
     if not status:
         return False
     return status.strip().upper().startswith("OK")
 
 
 def probe_url(url: str, kind: str, timeout: float) -> ProbeResult:
+    """Probes url."""
     if not url or not url.startswith(("http://", "https://")):
         return ProbeResult(url=url or "", ok=False, status="invalid", kind=kind)
     req = urllib.request.Request(
@@ -257,6 +263,7 @@ def probe_url(url: str, kind: str, timeout: float) -> ProbeResult:
 
 
 def _probe_get(url: str, kind: str, timeout: float) -> ProbeResult:
+    """Internal helper."""
     req = urllib.request.Request(
         url,
         method="GET",
@@ -323,6 +330,7 @@ def build_catalog_entry(
     media_type: str | None,
     existing_ids: set[str],
 ) -> dict[str, Any]:
+    """Builds catalog entry."""
     identifier = entry.get("identifier") or entry.get("_id") or entry.get("title", "lod")
     oid = slug_id(str(identifier))
     base_id = oid
@@ -359,6 +367,7 @@ def build_catalog_entry(
 
 
 def load_lod_data(path: Path | None, url: str) -> dict[str, Any]:
+    """Loads lod data."""
     if path:
         raw = path.read_text(encoding="utf-8")
     else:
@@ -372,6 +381,7 @@ def load_lod_data(path: Path | None, url: str) -> dict[str, Any]:
 
 
 def load_existing_ontology_ids(path: Path) -> set[str]:
+    """Loads existing ontology ids."""
     if not path.is_file():
         return set()
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -379,6 +389,7 @@ def load_existing_ontology_ids(path: Path) -> set[str]:
 
 
 def load_existing_download_urls(path: Path) -> set[str]:
+    """Loads existing download urls."""
     if not path.is_file():
         return set()
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -400,6 +411,7 @@ def process_dataset(
     existing_ids: set[str],
     existing_urls: set[str],
 ) -> DatasetReport:
+    """Processes dataset."""
     title = (entry.get("title") or key).strip()
     report = DatasetReport(id=slug_id(key), title=title, reachable=False)
 
@@ -466,6 +478,7 @@ def process_dataset(
 
 
 def write_proposed_yaml(path: Path, entries: list[dict[str, Any]]) -> None:
+    """Writes proposed yaml."""
     doc = {
         "ontologies": entries,
         "_meta": {
@@ -482,6 +495,7 @@ def write_proposed_yaml(path: Path, entries: list[dict[str, Any]]) -> None:
 
 
 def merge_into_catalog(catalog_path: Path, new_entries: list[dict[str, Any]]) -> int:
+    """Merges into catalog."""
     data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
     existing = data.get("ontologies") or []
     existing_ids = {e["id"] for e in existing if e.get("id")}
@@ -500,6 +514,7 @@ def merge_into_catalog(catalog_path: Path, new_entries: list[dict[str, Any]]) ->
 
 
 def main() -> int:
+    """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, help="Local lod-data.json (skip network fetch)")
     parser.add_argument("--url", default=LOD_URL, help="LOD Cloud JSON URL")
@@ -546,6 +561,7 @@ def main() -> int:
     new_entries: list[dict[str, Any]] = []
 
     def task(item: tuple[str, dict]) -> DatasetReport:
+        """Task helper."""
         key, entry = item
         return process_dataset(
             key,

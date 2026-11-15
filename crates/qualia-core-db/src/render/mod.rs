@@ -6,14 +6,22 @@
 //! everywhere. The WebGPU renderer core (`gpu`) compiles wherever `gpu-runtime` is enabled; only
 //! the browser facade (`portal`, `portal_wasm`) remains gated to wasm + `portal`.
 
+/// Cross-platform measured capability evidence and fail-closed acceptance gates.
+pub mod acceptance_contract;
 pub mod acoustic;
 /// Browser Anatomy render backends. Shared pack metadata remains in `anatomy_pack`.
 pub mod anatomy;
 /// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;
+/// Bounded screen-space ambient occlusion quality profiles and bilateral reconstruction.
+pub mod ao_quality;
+/// HMC packaging and digest-verified resolution for compiled render assets.
+pub mod asset_package;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
+/// Shared authored sky, lighting and analytic-atmosphere presets.
+pub mod atmosphere;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
 /// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
 /// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
@@ -35,16 +43,44 @@ pub mod barrier;
 /// Person-authored body fit applied to decoded organ vertices (CCF space).
 pub mod body_fit;
 pub mod camera;
+pub mod camera_mount;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
 pub mod compile_10d;
+/// Attach the opt-in v2 identity manifest to an existing sealed `.10d` container.
+pub mod compile_10d_manifest;
 pub mod contract;
 pub mod control;
+/// Caller-buffered CPU RGBA8 mip reducer and format-specific reference filtering.
+pub mod cpu_texture_mips;
+/// Deferred resolve CPU reference oracle and continuous EMF spectral PBR integration.
+pub mod deferred_resolve;
 pub mod derivation;
+/// Deterministic validation gates and TAA Oklab perceptual clamping for entity compilation.
+pub mod entity_compile_gates;
+/// Allocation-free frame graph resource and pass dependency model.
+pub mod frame_graph;
 /// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
 pub mod gamut;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
+/// Dynamic GPU memory & compute throughput governor.
+pub mod hardware_governor;
+/// Browser HMC mesh source verification and resident-upload lifecycle.
+pub mod hmc_playback;
+/// Generic, canvas-backed interactive HUD surface for browser render clients.
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod hud;
+/// Caller-buffered CPU frustum visibility lists with stable source-index indirection.
+pub mod instance_culling;
+/// Physically-based and stylized cinematic lighting evaluation.
+pub mod lighting;
+/// Material-section compilation and readback helpers for versioned `.10d` assets.
+pub mod material_compile;
+/// Caller-buffered seam-aware box projection and source normal generation.
+pub mod mesh_surface_frames;
+/// Caller-buffered UV-aligned tangent frames for authored normal maps.
+pub mod mesh_tangent_frames;
 /// P7.1 — Metamers as the affine fibre of the colour-matching projection.
 pub mod metamer;
 /// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
@@ -53,6 +89,8 @@ pub mod metamer;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod model_substrate;
 pub mod navigation;
+/// Scene-linear display output and manual exposure controls.
+pub mod output;
 pub mod pga;
 /// Physics of artefacts — bbox admission, kinematic joints, material/mass/momentum (Phase 2).
 pub mod physics;
@@ -70,8 +108,21 @@ pub mod physics;
 pub mod place_time;
 /// Unified manifold projection — one `project()`, many views (Phase 1.4).
 pub mod projection;
+/// Deterministic native/WASM render-quality admission and graceful-degradation budgets.
+pub mod quality_profiles;
+/// Fixed-memory adaptation policy with sustained-load hysteresis and bounded decision receipts.
+pub mod quality_runtime;
 /// N7: Scene graph — node hierarchy, lights, semantic links, duplication, IK, smooth damp.
 pub mod scene_graph;
+/// Bounded cold-path primitive assembly for authored interactive scenes.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod scene_primitives;
+/// Screen-space visual angle error, retinal slip acuity, and 4-tier virtualization classifier.
+pub mod screen_metric;
 /// Sense path — the input twin (Phase 4): microphone PCM → forward DSP → the `∫Ψ > τ → Fact`
 /// bridge, every capture under the deontic/standpoint consent gate (surveillance-refusal default).
 /// Gated like `place_time` (needs `crate::modalities`).
@@ -82,19 +133,55 @@ pub mod scene_graph;
     feature = "wasm-full"
 ))]
 pub mod sense;
+/// Caller-buffered VibeScript motor rig sampling, attachments and skinning.
+pub mod skeletal;
 pub mod spectral;
+/// Continuous EMF spectral basis functions (Jakob-Hanika), closed-form Gaussian moments, and wave optics.
+pub mod spectral_basis;
 /// P7.3 — σ spectral blend as interpolation on the spectral manifold.
 pub mod spectral_blend;
 #[cfg(test)]
 pub mod spectral_harness;
 /// P7.0 — Spectral-space kernel: SPD/CMF POD types + CIE linear-projection.
 pub mod spectral_kernel;
+/// Pure-Rust Levenberg-Marquardt spectral inversion solver, 32x32x32 LUT baker, and zero-heap trilinear sampler.
+pub mod spectral_lut;
 /// P7.7 — Unified spectral-operator API surface.
 pub mod spectral_operator;
 /// P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
 pub mod spectral_oracle;
 pub mod standpoint;
+/// Bounded authored surface maps and planar UV projection, native and WASM.
+pub mod surface_authoring;
 pub mod telemetry;
+/// Reference math and host producer models for temporal accumulation.
+pub mod temporal_producers;
+/// Bounded temporal resolve policy, history lifecycle, and CPU reference oracle.
+pub mod temporal_resolve;
+/// Bounded, caller-buffered PNG/JPEG decode from verified external texture resources.
+pub mod texture_decode;
+pub mod texture_ingestion;
+/// Allocation-free KTX2 container metadata and level-range parser (native + WASM).
+pub mod texture_ktx2;
+/// Allocation-free decoder for uncompressed single-face RGBA8 KTX2 base levels.
+pub mod texture_ktx2_rgba8;
+/// Deterministic caller-buffered texture mip residency planning and budget admission.
+pub mod texture_stream_policy;
+pub mod texture_streaming_plan;
+/// Bounded zero-heap compressed texture transcode and block decode bridge.
+pub mod texture_transcode;
+/// Bounded zero-heap vegetation instance pool and dynamic collision bending.
+pub mod vegetation;
+pub mod water_surface;
+pub use entity_compile_gates as twin_compile_gates;
+
+#[cfg(test)]
+#[path = "terrain_seam_tests.rs"]
+mod terrain_seam_tests;
+
+#[cfg(test)]
+#[path = "texture_transcode_tests.rs"]
+mod texture_transcode_tests;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated
@@ -109,6 +196,12 @@ pub mod lod_chain;
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;
+/// RDF / NQuin → 96-byte holographic node layout (10D fold, RGBA32F atlas).
+#[cfg(feature = "gpu-runtime")]
+pub mod rdf_holograph;
+/// VibeScript theatre adapter: eval `construct_theatre`, pack via `layout_placed_into`.
+#[cfg(feature = "gpu-runtime")]
+pub mod rdf_holograph_vibe;
 /// Naga bridge: WGSL → naga IR → GLSL ES 300 compilation.
 #[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
 pub mod naga_bridge;
@@ -118,5 +211,25 @@ pub mod naga_sanitize;
 /// The `#[wasm_bindgen]` portal facade (`QualiaPortal`) driving the browser viewport.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal;
+/// CPU decode for QualiaPortal `load_10d` (SurfaceReading + UV01 + MAT3/MAT4 + orbit-frame mesh).
+/// Lives outside the wasm-only `portal` facade so native tests can cover the colour/UV/MAT path.
+pub mod portal_load_10d;
+/// PNG/KTX2 ingest for `load_10d` materials. Decode budgets are not the Prolog sentinel.
+pub mod portal_load_textures;
+/// CPU admission of current EMF and explicit local-grid display projection.
+pub mod portal_load_emf;
+/// Bounded field ownership and GPU adoption/recovery state, testable natively.
+pub mod portal_emf_state;
+/// Admitted current QAC source and bounded exact-sample windows.
+pub mod portal_qac;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
+/// Borrowed source-bound pose contract and cold canonical model admission.
+pub mod source_frame;
+
+/// 4-Scale Botanical `.10d` Organ & Histology Dissection (`FLOWER` / `LEAF` / `WOOD` / `ROOT`).
+pub mod botanical_anatomy;
+/// Scale-5 Comparative Vertebrate 3-Layer `.10d` Anatomy (Skeletal / Muscular / Integument).
+pub mod vertebrate_anatomy;
+mod vertebrate_layer_materials;
+pub use vertebrate_anatomy as zoological_anatomy;

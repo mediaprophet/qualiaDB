@@ -1,9 +1,46 @@
----
-layout: qualia
-title: VibeScript Dev Docs
----
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript Dev Docs (API Index) · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <p class="mb-5 text-sm">
+            <a class="q-link" href="index.html">VibeScript Hub</a>
+            · <a class="q-link" href="playground.html">Live Playground</a>
+            · <a class="q-link" href="spec.html">Language Spec</a>
+            · <a class="q-link" href="showcase.html">Showcase</a>
+            · <a class="q-link" href="../qdnf.html">QDNF map</a>
+        </p>
+        <article class="doc-content q-prose q-card mx-auto p-6 sm:p-10">
 <div class="vibe-devdocs">
   <style>
     .vibe-devdocs .dd-layout {
@@ -30,6 +67,27 @@ title: VibeScript Dev Docs
       margin-bottom: 8px;
     }
     .vibe-devdocs .dd-search:focus { outline: none; border-color: #22d3ee; }
+    .vibe-devdocs .dd-cat-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .vibe-devdocs .dd-cat-chip {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: rgba(30,41,59,0.7);
+      border: 1px solid rgba(148,163,184,0.18);
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .vibe-devdocs .dd-cat-chip:hover,
+    .vibe-devdocs .dd-cat-chip.active {
+      color: #22d3ee;
+      border-color: rgba(34,211,238,0.45);
+      background: rgba(34,211,238,0.08);
+    }
     .vibe-devdocs .dd-module-list { list-style: none; padding: 0; margin: 0; }
     .vibe-devdocs .dd-module {
       padding: 6px 12px;
@@ -152,9 +210,11 @@ title: VibeScript Dev Docs
     <button type="button" class="dd-mobile-toggle" id="dd-mobile-toggle">Modules</button>
     <nav class="dd-sidebar">
       <input type="text" class="dd-search" id="dd-search" placeholder="Search items, signatures…" />
+      <input type="hidden" id="search" value="" />
+      <div id="catBar" class="dd-cat-bar" aria-label="Module categories"></div>
       <div id="dd-module-list"></div>
     </nav>
-    <div class="dd-content-wrap">
+    <div class="dd-content-wrap" id="detail">
       <div id="dd-intro" class="dd-intro"></div>
       <div class="dd-content" id="dd-content">
         <div class="dd-loading">Loading dev docs…</div>
@@ -166,12 +226,16 @@ title: VibeScript Dev Docs
 <script>
   let allModules = [];
   let currentModule = null;
+  const API_INDEX_FALLBACK = 'vibescript_api_index.json';
 
   (async function() {
     try {
       // Same-directory fetch works on GitHub Pages (/vibe/dev-docs.html) and
-      // a plain static server; do not require Jekyll `relative_url`.
-      const resp = await fetch(new URL('dev-docs.json', window.location.href));
+      // a plain static server without Liquid preprocessing.
+      let resp = await fetch(new URL('dev-docs.json', window.location.href));
+      if (!resp.ok) {
+        resp = await fetch(new URL(API_INDEX_FALLBACK, window.location.href));
+      }
       allModules = await resp.json();
 
       allModules.sort((a, b) => {
@@ -183,6 +247,28 @@ title: VibeScript Dev Docs
       document.getElementById('dd-mobile-toggle')?.addEventListener('click', () => {
         document.querySelector('.vibe-devdocs')?.classList.toggle('dd-nav-open');
       });
+
+      // Build category filter bar (#catBar)
+      const catBar = document.getElementById('catBar');
+      if (catBar) {
+        ['all', 'wasm', 'check', 'cosmic', 'bind'].forEach((cat) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'dd-cat-chip' + (cat === 'all' ? ' active' : '');
+          btn.textContent = cat;
+          btn.addEventListener('click', () => {
+            catBar.querySelectorAll('.dd-cat-chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const q = cat === 'all' ? '' : cat;
+            const searchEl = document.getElementById('dd-search');
+            if (searchEl) {
+              searchEl.value = q;
+              searchEl.dispatchEvent(new Event('input'));
+            }
+          });
+          catBar.appendChild(btn);
+        });
+      }
 
       // Build sidebar
       const sidebar = document.getElementById('dd-module-list');
@@ -234,10 +320,10 @@ title: VibeScript Dev Docs
       const intro = document.getElementById('dd-intro');
       if (intro) {
         intro.innerHTML = `Generated from <code>crates/vibe/src</code> plus the browser ABI in <code>crates/vibe-wasm/src/lib.rs</code>
-          (module <code>wasm</code>). Playground <strong>Run</strong> is <code>eval_program_src</code>:
+          (module <code>wasm</code>). Playground (<a href="playground.html" style="color:#22d3ee">playground.html</a>) <strong>Run</strong> is <code>eval_program_src</code>:
           LocalHost, workshop dialect, preamble then <code>effect fn main</code> when present.
-          Host catalog lives under <code>bind::host</code> (<code>trait Host</code>) and <code>bind::local</code> (<code>LocalHost</code>).
-          Grammar is current and may grow; Host catalog grows.
+          Host catalog lives under <code>bind::host</code> (<code>trait Host</code>) and <code>bind::local</code> (<code>LocalHost</code>);
+          normative language semantics are in <a href="spec.html" style="color:#22d3ee">spec.html</a>.
           <div class="dd-stats">${allModules.length} modules · ${totalItems} public items</div>`;
       }
 
@@ -368,3 +454,12 @@ title: VibeScript Dev Docs
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 </script>
+        </article>
+    </main>
+
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

@@ -20,6 +20,7 @@ pub enum ComplianceStatus {
 }
 
 impl FinancialPerformanceMetrics {
+    /// Creates zeroed financial performance metrics.
     pub fn new() -> Self {
         Self {
             total_portfolios: 0,
@@ -32,6 +33,7 @@ impl FinancialPerformanceMetrics {
 }
 
 impl RiskMetrics {
+    /// Creates default risk metrics.
     pub fn new() -> Self {
         // Default value — nothing computed. All zero, never fabricated VaR/Sharpe/etc.
         // (calculate_portfolio_risk returns InsufficientData rather than this default.)
@@ -52,6 +54,7 @@ impl RiskMetrics {
 }
 
 impl OptionParameters {
+    /// Creates default option parameters.
     pub fn new() -> Self {
         Self {
             underlying_price: 100.0,
@@ -81,6 +84,7 @@ pub enum OptionType {
 }
 
 impl OptionPrice {
+    /// Creates a default option price result.
     pub fn new() -> Self {
         Self {
             price: 5.0,
@@ -104,6 +108,7 @@ pub struct OptionPrice {
 }
 
 impl TradeResult {
+    /// Creates a default trade result.
     pub fn new() -> Self {
         Self {
             trade_id: "trade_1".to_string(),
@@ -126,6 +131,7 @@ pub enum TradeStatus {
 }
 
 impl ComplianceResult {
+    /// Creates a default compliance result.
     pub fn new() -> Self {
         Self {
             result_id: "compliance_1".to_string(),

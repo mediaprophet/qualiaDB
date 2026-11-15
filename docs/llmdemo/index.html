@@ -84,6 +84,7 @@
     </style>
     <script src="../js/menu-loader.js"></script></head>
 <body>
+<p role="note" style="padding:0.75rem;border:1px solid #b7791f">Developer inference mode: browser CPU/WebGPU compute bypasses Sentinel token acceptance. Output is ungoverned. Graph checks on this page do not authorize generated tokens.</p>
     <div class="container">
         <h1>QualiaDB Native WebGPU Inference</h1>
         <p>Models compiled Ahead-Of-Time to QualiaDB's zero-copy <code>P64</code>
@@ -126,6 +127,7 @@
     <!-- Load the WASM module -->
     <script type="module">
         import init, {
+            configureBrowserExecutionMode,
             initialize_webgpu_engine,
             inferWasmAsync,
             compileGgufToP64,
@@ -262,8 +264,9 @@
 
                 log(`P64 ready (${(p64.bytes.length / 1024 / 1024).toFixed(1)} MB, ${p64.source}).`);
                 log('Initializing resident WebGPU engine from P64…');
+                configureBrowserExecutionMode('developer', true);
                 await initialize_webgpu_engine(p64.bytes);
-                log('Engine resident. QualiaDB native pipeline active.');
+                log('Engine resident. Browser developer compute active; Sentinel token acceptance disabled.');
                 sysStatus.innerHTML = '<span style="color:green">Engine ready — generate!</span>';
                 spinner.style.display = 'none';
                 btnGenerate.disabled = false;

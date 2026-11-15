@@ -31,6 +31,7 @@ pub struct ThermalWal {
 }
 
 impl ThermalWal {
+    /// Opens the resource.
     pub fn open(path: &Path, capacity_records: usize) -> std::io::Result<Self> {
         let file_size = 64 + (capacity_records * 32);
         let file = OpenOptions::new()
@@ -63,6 +64,7 @@ impl ThermalWal {
         })
     }
 
+    /// Appends a thermal record to the mmap ring.
     pub fn append(&mut self, record: ThermalEvictionRecord) {
         let offset = 64 + (self.head * 32);
         let record_bytes = bytemuck::bytes_of(&record);

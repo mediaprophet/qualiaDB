@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QualiaDB &amp; Webizen 0.0.41 — Release Showcase &amp; Capability Navigator</title>
+  <meta name="description" content="Authoritative 0.0.41 Release Showcase &amp; Capability Navigator: explore QualiaDB, Etalon, Webizen, VibeScript, and Poet through interactive browser demos, native GPU workflows, and architecture guides.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-navigator.css">
+  <script src="js/menu-loader.js" defer></script>
+  <script src="js/release-navigator.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to capabilities</a>
+  <nav class="release-nav" aria-label="Site navigation">
+    <div class="nav-inner">
+      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Q</span>Qualia<span>DB</span></a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      <a class="nav-progress" href="progress-0.0.41.html">0.0.41 Architecture ↗</a>
+    </div>
+  </nav>
+  <header class="hero page-width">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Release 0.0.41 <span class="baseline">Tri-Source Architecture · QualiaDB · Etalon · VibeScript</span></p>
+      <h1>One connected ecosystem.<br><span>Many ways to explore.</span></h1>
+      <p class="hero-lead">Compile a semantic rule, step a 10D physical world, verify a 384-bit QSR route, or inspect a <code>.q42</code> v4 unified volume. Navigate every 0.0.41 capability across QualiaDB, Etalon, Webizen, VibeScript, and Poet by domain and runtime profile.</p>
+      <div class="hero-actions"><a class="primary-link" href="#explore">Explore 0.0.41 capabilities <span aria-hidden="true">↓</span></a><a class="text-link" href="progress-0.0.41.html#ecosystem">Tri-Source Architecture Guide ↗</a></div>
+    </div>
+    <div class="capability-map" aria-label="Capabilities connected through the semantic engine">
+      <div class="orbit-row"><span>10D &amp; OCS</span><span>Etalon GPU</span><span>QDNF 384-Bit</span></div>
+      <div class="map-core"><span class="map-symbol" aria-hidden="true">Q</span><strong>48B NQuin · .q42 v4</strong><small>5-field parity · 42 MB Sentinel</small></div>
+      <div class="orbit-row"><span>21 Modalities</span><span>VibeScript</span><span>4-Plane DID</span></div>
+      <p>Select a capability track.<br>Inspect its live runtime and verification scope.</p>
+    </div>
+  </header>
+  <main id="main" class="page-width">
+    <section class="release-context" aria-labelledby="context-title">
+      <div><p class="eyebrow">Release 0.0.41 Overview</p><h2 id="context-title">Authoritative tour of the 0.0.41 release.</h2></div>
+      <div><p>Release <strong>0.0.41</strong> unites the 29-crate <code>qualiaDB</code> semantic graph and habitat workspace, the pure-Rust <code>etalon</code> GPU/simulation/signal accelerator stack, and the <code>vibe-script</code> checked authoring environment. Together they deliver <code>.q42</code> v4 Unified Volumes with 5-field <code>NQuin</code> XOR parity, the Four-Plane Identifier Fabric (<code>Entity</code>, <code>Claim</code>, <code>Handle</code>, <code>Instrument</code>), the Omni-Scale Coordinate System (<code>OCS</code>), 384-bit Qualia Source Routing (<code>QSR</code>), and cross-platform WebGPU volumetric rendering.</p><p>Each destination below identifies its runtime profile—in-browser WebAssembly, WebGPU hardware diagnostics, native CLI/daemon execution, or architectural specification. Consult the <a href="progress-0.0.41.html">0.0.41 Release Overview &amp; Architecture Guide</a> and the <a href="release-matrix.html">0.0.41 Release Matrix</a> for full subsystem qualification tables.</p></div>
+    </section>
+    <section id="explore" class="explore" aria-labelledby="explore-title">
+      <div class="section-heading"><div><p class="eyebrow">Choose your route</p><h2 id="explore-title">Explore by capability &amp; runtime</h2></div><p>Filter by architectural domain<br>or execution environment.</p></div>
+      <form id="demo-filters" class="filter-bar" hidden role="search" aria-label="Filter capability destinations">
+        <label class="search-field">Find a destination<input id="demo-search" type="search" placeholder="Try Q42 v4, OCS, Etalon, QSR, WASM…" autocomplete="off"></label>
+        <label>Capability<select id="demo-capability"><option value="all">All capabilities</option><option value="data">Semantic data &amp; .q42 v4</option><option value="logic">Logic, DID &amp; network</option><option value="science">Scientific computing</option><option value="spatial">Spatial, OCS &amp; 10D</option><option value="gpu">Etalon GPU &amp; physics</option><option value="authoring">VibeScript authoring</option><option value="instruments">Semantic instruments</option><option value="applications">Poet applications</option><option value="runtime">Runtime &amp; harness</option></select></label>
+        <label>Experience<select id="demo-type"><option value="all">All experiences</option><option value="browser">Browser demo</option><option value="native">Native workflow</option><option value="guide">Architecture guide</option></select></label>
+        <button type="reset" class="reset-button">Reset</button>
+      </form>
+      <div class="results-line"><p id="demo-count" role="status" aria-live="polite" aria-atomic="true">13 destinations · 9 capability tracks</p><span>Local-first · Zero cloud accounts required</span></div>
+      <noscript><p class="notice">All destinations are shown below. Enable JavaScript to search and filter this navigator; demo pages have their own runtime requirements.</p></noscript>
+      <div class="demo-grid">
+        <article class="demo-card" data-capability="data" data-type="browser">
+          <div class="card-top"><span class="track">01 / Semantic data &amp; .q42 v4</span><span class="type browser">Interactive showcase</span></div>
+          <h3>EMF v4, QAC v1 &amp; DICOM Preservation Observatory</h3><p>Inspect the 128-byte envelope &amp; directory wire framing, step 3D Yee FDTD &amp; Cloude polarimetry, visualize ACN/SN3D Ambisonics &amp; BS.1770-5 loudness, and reconstruct DICOM sinograms.</p>
+          <dl><dt>Try this</dt><dd>Click header/directory byte fields to verify BLAKE3-256 domains, adjust polarizer angles to inspect Cloude Hermitian eigenvalues, or step tomographic projections.</dd><dt>What it demonstrates</dt><dd>All 8 EMF modes (<code>0x0100..=0x0107</code>), 8 QAC modes, 29 TLV schemas, and the 15-standard QualiaDB + Etalon architecture.</dd><dt>Requirements</dt><dd>Pure offline client-side Canvas &amp; JS; see also the <a href="emf-qac-architecture.html">Technical Architecture &amp; Standards Guide</a>.</dd></dl>
+          <a class="card-link" href="emf-qac-showcase.html">Open EMF &amp; QAC Showcase <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="data" data-type="browser">
+          <div class="card-top"><span class="track">01 / Semantic data &amp; .q42 v4</span><span class="type browser">Browser demo</span></div>
+          <h3>SPARQL, N3 &amp; 48-byte NQuin compilation</h3><p>Compile SPARQL, N3, Turtle, and N-Triples into 48-byte <code>NQuin</code> records with 5-field XOR parity and inspect <code>Q42LEX</code> v4 namespaced lexicons.</p>
+          <dl><dt>Try this</dt><dd>Select a Compiler preset, run Compile or Parse, and inspect the resulting Webizen bytecode and Quin bit layout.</dd><dt>What it demonstrates</dt><dd>Zero-heap query compilation, FNV-1a 60-bit token hashing, and demand-paged <code>.q42</code> v4 volume parsing.</dd><dt>Requirements</dt><dd>JavaScript and the deployed playground WASM package (<code>qualia_core_db_bg.wasm</code>).</dd></dl>
+          <a class="card-link" href="playground/index.html">Open the Playground <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="logic" data-type="browser">
+          <div class="card-top"><span class="track">02 / Logic, DID &amp; network</span><span class="type browser">Browser demo</span></div>
+          <h3>21 logical modalities &amp; SHACL constraints</h3><p>Execute N3 forward chaining, defeasible/defeater rules, paraconsistent quarantine, deontic norms, LTL traces, and SHACL shape validation.</p>
+          <dl><dt>Try this</dt><dd>Run Parse &amp; analyze on an N3 rule set, execute forward chaining, or modify a SHACL shape bound and re-validate.</dd><dt>What it demonstrates</dt><dd>Deterministic non-recursive evaluation inside the 42 MB <code>SlgArena</code> Sentinel.</dd><dt>Requirements</dt><dd>The playground WASM package and JavaScript. Wait for the WASM engine badge to report ready.</dd></dl>
+          <a class="card-link" href="logic-showcase.html">Explore Logic &amp; Shapes <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="logic" data-type="guide">
+          <div class="card-top"><span class="track">02 / Logic, DID &amp; network</span><span class="type guide">Architecture guide</span></div>
+          <h3>QDNF 384-Bit QSR &amp; Four-Plane Identifier Fabric</h3><p>Explore 384-bit radix-16 source routing, Bellman–Ford dual shortest-path witnesses, <code>SHA-384</code> <code>CSCP</code> sessions, and <code>Entity</code>/<code>Claim</code>/<code>Handle</code>/<code>Instrument</code> separation.</p>
+          <dl><dt>Try this</dt><dd>Click the interactive hexagonal protocol map to inspect QLink, DNI, QRoute, QResolve, QPolicy, and QSession/QSync.</dd><dt>What it demonstrates</dt><dd>How <code>did:q42:</code>, <code>did:webizen:</code>, and <code>did:qi:</code> remain distinct under the <code>F5</code>/<code>F6</code> anti-feature firewall and 40-scenario egress matrix.</dd><dt>Requirements</dt><dd>Interactive HTML/JS protocol explorer; links directly to the QDNF implementation status ledger.</dd></dl>
+          <a class="card-link" href="qdnf.html">Open QDNF &amp; Identifier Fabric <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="logic" data-type="guide">
+          <div class="card-top"><span class="track">02 / Logic, DID &amp; network</span><span class="type guide">Architecture guide</span></div>
+          <h3>QBDL mixed HMC streaming over QDNF</h3><p>Selective, governed streaming of a heterogeneous QBDL-profile Hyper Media Container: many entries per family, Q42 HTTP Range, native IPC, HTTP, and WSS.</p>
+          <dl><dt>Try this</dt><dd>Open the honeycomb for Describe, Planner, Mux, Q42 Range, Protect, and write_leaf, then follow the evidence ledger for what is cargo-proven versus in source.</dd><dt>What it demonstrates</dt><dd>ProtectedSession 17/17 in process; mixed mux, EMF/QAC/P64 views, and Range are in tree for the next locked cargo pass. ZIP <code>.hmc</code> is the legacy archive profile.</dd><dt>Requirements</dt><dd>Static architecture guide; native cargo verification is a later session. Browser/WASM mux remains a later gate.</dd></dl>
+          <a class="card-link" href="qbdl-streaming.html">Open QBDL Streaming <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="science" data-type="browser">
+          <div class="card-top"><span class="track">03 / Scientific computing</span><span class="type browser">Browser demo</span></div>
+          <h3>Geometric algebra, ODEs, chemistry &amp; exact CRT</h3><p>Interactive workbench for Clifford geometric algebra, RK4 ODE solvers, MCMC thermodynamics, bioinformatics, and 256-bit CRT exact arithmetic.</p>
+          <dl><dt>Try this</dt><dd>Adjust multivector components and click Compute (WASM), or switch to ODE Solvers and run a trajectory integration.</dd><dt>What it demonstrates</dt><dd>Zero-heap scientific kernels exported to WebAssembly with interactive Chart.js plotting.</dd><dt>Requirements</dt><dd>The full playground WASM artifact and JavaScript.</dd></dl>
+          <a class="card-link" href="science-playground.html">Open Science Workbench <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="spatial" data-type="browser">
+          <div class="card-top"><span class="track">04 / Spatial, OCS &amp; 10D</span><span class="type browser">Browser demo</span></div>
+          <h3>Omni-Scale Coordinates, GIS &amp; 10D containers</h3><p>Inspect <code>USRI</code> / <code>CB-USRI</code> coordinates, 27 cosmic opcodes, Lorentz boosts, IAU 2006/2000B <code>ICRS → ITRS</code>, GeoSPARQL relations, and <code>M64</code> DEM chunks.</p>
+          <dl><dt>Try this</dt><dd>Select a 3D geometry preset in the viewport, open the GeoSPARQL tab, and evaluate topological and metric predicates.</dd><dt>What it demonstrates</dt><dd>Continuous spatial indexing from Hilbert 3D terrestrial DEMs to flat &Lambda;CDM Gauss–Kronrod <em>G</em><sub>7</sub>/<em>K</em><sub>15</sub> cosmic horizons.</dd><dt>Requirements</dt><dd>JavaScript and portal/playground WASM; falls back gracefully to deterministic Canvas2D when WebGPU is unavailable.</dd></dl>
+          <a class="card-link" href="spatial.html">Explore Spatial &amp; OCS Lab <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="gpu" data-type="guide">
+          <div class="card-top"><span class="track">05 / Etalon GPU &amp; physics</span><span class="type guide">Architecture guide</span></div>
+          <h3>Etalon WebGPU rendering, PGA skinning &amp; XPBD</h3><p>Tour <code>wgpu 30.0.0-etalon</code> volumetric raymarching, PGA dual-quaternion motor skinning, 3D SDF XPBD stress fracture, 3D FDTD electromagnetics, and Holosonic audio.</p>
+          <dl><dt>Try this</dt><dd>Switch across the rendering and physics architecture tabs, then run the Browser WebGPU Live Probe.</dd><dt>What it demonstrates</dt><dd>Canonical <code>etalon-render</code>, <code>etalon-sim</code>, and <code>etalon-signal</code> pipelines plus live browser WebGPU adapter capability inspection.</dd><dt>Requirements</dt><dd>JavaScript for interactive tabs; a secure context (HTTPS or localhost) with WebGPU for the live adapter probe.</dd></dl>
+          <a class="card-link" href="graphics.html">Tour Etalon Graphics &amp; Physics <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="studio" data-type="guide">
+          <div class="card-top"><span class="track">06 / Hypermedia &amp; Synth</span><span class="type guide">150 Morphisms</span></div>
+          <h3>Hypermedia 12-Category Studio &amp; Synth</h3><p>Deterministic VibeScript-callable production across 12 categories and 150 morphisms, including <code>calibrate_biological_subject</code> and <code>evaluate_mobility_fracture_risk</code>.</p>
+          <a class="card-link" href="hypermedia-studio.html">Open Hypermedia Studio <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="sensing" data-type="browser">
+          <div class="card-top"><span class="track">07 / Vision &amp; Audio</span><span class="type browser">Interactive</span></div>
+          <h3>Qualia-Vision (rPPG / PAD) &amp; Qualia-Audio (HRTF)</h3><p>Contactless rPPG pulse/respiration + liveness PAD, and binaural HRTF / Ambisonics.</p>
+          <a class="card-link" href="vision-showcase.html">Open Qualia-Vision <span aria-hidden="true">↗</span></a>
+          <a class="card-link" href="audio-showcase.html">Open Qualia-Audio <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="core" data-type="guide">
+          <div class="card-top"><span class="track">08 / Domains &amp; Solvers</span><span class="type guide">Architecture</span></div>
+          <h3>Life-Domains &amp; Solver Dispatch</h3><p>QualiaDB life-domain habitats and unified ASP/SAT, XPBD, and FEM/LBM solver dispatch.</p>
+          <a class="card-link" href="domains-solvers.html">Explore Domains &amp; Solvers <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="gpu" data-type="native">
+          <div class="card-top"><span class="track">05 / Etalon GPU &amp; physics</span><span class="type native">Native workflow</span></div>
+          <h3>WGSL Forge shader generation &amp; Naga certification</h3><p>Inspect how <code>etalon-wgsl-forge</code> compiles typed <code>KernelSpec</code> + <code>Schedule</code> IR into WGSL, SPIR-V, PTX, and HLSL validated against a CPU oracle.</p>
+          <dl><dt>Try this</dt><dd>Review the kernel schedule IR and certification pipeline, or run <code>qualia shader --help</code> from a native CLI build.</dd><dt>What it demonstrates</dt><dd>Deterministic shader synthesis, Naga AST verification, and adapter-keyed autotuning.</dd><dt>Requirements</dt><dd>Local native CLI binary with GPU backend support to execute hardware shader certification.</dd></dl>
+          <a class="card-link" href="forge-showcase.html">Explore WGSL Forge <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="authoring" data-type="browser">
+          <div class="card-top"><span class="track">06 / VibeScript authoring</span><span class="type browser">Browser demo</span></div>
+          <h3>Author, check &amp; run VibeScript (vibe-0.03) cells</h3><p>Write functional VibeScript programs with explicit <code>effect fn</code> boundaries, value-producing <code>if-else</code> expressions, and 18 EcoPunk continuum capabilities.</p>
+          <dl><dt>Try this</dt><dd>Pick a preset program (including Cosmic geodesy or EcoPunk continuum), press Run (Ctrl+Enter), or test <code>CompiledCell.compile</code>.</dd><dt>What it demonstrates</dt><dd>In-browser parsing, type/effect checking, <code>VBC1</code> bytecode compilation, and reusable cell execution via <code>vibe-wasm</code>.</dd><dt>Requirements</dt><dd>The deployed <code>pkg/vibe/vibe_wasm.js</code> bundle and JavaScript.</dd></dl>
+          <a class="card-link" href="vibe/playground.html">Open VibeScript Playground <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="instruments" data-type="browser">
+          <div class="card-top"><span class="track">07 / Semantic instruments</span><span class="type browser">Browser demo</span></div>
+          <h3>Inspectable Semantic Instruments &amp; receipts</h3><p>Explore bounded computational instruments (<code>SI-01</code> through <code>SI-12</code>) with explicit input schemas, reference-runner boundaries, and cryptographic receipts.</p>
+          <dl><dt>Try this</dt><dd>Configure an instrument template in the interactive label builder and compare held vs. recorded execution states.</dd><dt>What it demonstrates</dt><dd>How instruments remain inspectable tools held by human operators rather than autonomous peers.</dd><dt>Requirements</dt><dd>JavaScript in any modern browser.</dd></dl>
+          <a class="card-link" href="semantic-instruments.html#playground-title">Explore Semantic Instruments <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="applications" data-type="browser">
+          <div class="card-top"><span class="track">08 / Poet applications</span><span class="type browser">Browser demo</span></div>
+          <h3>Webizen Poet creative host &amp; 10D manifolds</h3><p>Launch the packaged Webizen Poet WASM application to explore its creative tool-chest, Sanctuary volumes, and 10D manifold views.</p>
+          <dl><dt>Try this</dt><dd>Open the Poet WASM environment and navigate its workspace panels, ontology views, and creative authoring tools.</dd><dt>What it demonstrates</dt><dd>Full browser application hosting built atop the shared 48-byte <code>NQuin</code> CRDT engine.</dd><dt>Requirements</dt><dd>The deployed Poet WASM bundle served over HTTP(S).</dd></dl>
+          <a class="card-link" href="poet-app/index.html">Launch Webizen Poet <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="applications" data-type="browser">
+          <div class="card-top"><span class="track">08 / Poet &amp; Welfare applications</span><span class="type browser">Browser demo</span></div>
+          <h3>3D Welfare &amp; Maternal-Fetal Anatomy + Living World</h3><p>Interactive 17-system <code>.10d</code> + <code>.q42</code> anatomical digital twin supporting Male (XY), Female (XX), Pregnancy Trimesters 1–3 (<code>Weeks 0–40</code>), clinical/obstetric calipers, plus Living World (<code>Corymbia aparrerinja</code> Whitegum &amp; <code>Wallabia bicolor</code> Wallaby).</p>
+          <dl><dt>Try this</dt><dd>Switch between Male, Female, and Trimesters 1–3, scrub the Gestational Week slider (<code>W0–W40</code>), toggle Sagittal Cut, or switch to the Swamp Wallaby &amp; Whitegum + Mycelium tabs.</dd><dt>What it demonstrates</dt><dd>Zero-external-fetch <code>.10d</code> 17-system anatomical synthesis, obstetric/anthropometric caliper overlays, and <code>.q42</code> (<code>Q42LOGIC</code> 16×48B <code>NQuin</code>) welfare rules.</dd><dt>Requirements</dt><dd>Self-contained in-browser 3D synthesizer; loads instantaneously on desktop and mobile.</dd></dl>
+          <a class="card-link" href="playground/anatomy.html">Open 3D Welfare Anatomy Studio <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="runtime" data-type="guide">
+          <div class="card-top"><span class="track">09 / Runtime &amp; harness</span><span class="type guide">Architecture guide</span></div>
+          <h3>WASM engine profiles &amp; size gate telemetry</h3><p>Compare the three WebAssembly distribution profiles—<code>webizen-lite-wasm</code> (800 KiB), <code>qualia-portal</code> (16 MiB), and <code>wasm-full</code> playground—and inspect live exports.</p>
+          <dl><dt>Try this</dt><dd>Inspect the live raw and gzip byte meters and browse the exported symbol inventory of the deployed portal WASM binary.</dd><dt>What it demonstrates</dt><dd>Strict CI size-gate enforcement and feature-flag modularity across edge and browser targets.</dd><dt>Requirements</dt><dd>JavaScript and fetchable deployed WASM packages.</dd></dl>
+          <a class="card-link" href="wasm-engine.html">Inspect WASM Engine Profiles <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="runtime" data-type="browser">
+          <div class="card-top"><span class="track">09 / Runtime &amp; harness</span><span class="type browser">Browser demo</span></div>
+          <h3>Etalon + Vibe isolated browser device harness</h3><p>Run bounded CPU and WebGPU diagnostic suites in an isolated worker and export a deterministic JSON qualification receipt.</p>
+          <dl><dt>Try this</dt><dd>Press Run Diagnostics to execute canonical Vibe CPU transactions, Etalon WebGPU compute readbacks, and differential adapter probes.</dd><dt>What it demonstrates</dt><dd>Cryptographic asset verification, worker timeout protection, and hardware WebGPU adapter classification.</dd><dt>Requirements</dt><dd>JavaScript and the isolated <code>pkg/device-harness</code> WASM bundle; WebGPU checks require a secure context.</dd></dl>
+          <a class="card-link" href="playground/etalon-vibe-harness.html">Run Browser Device Harness <span aria-hidden="true">↗</span></a>
+        </article>
+      </div>
+      <p id="demo-empty" class="empty-state" hidden>No destinations match those filters. Try another capability or reset the filters.</p>
+    </section>
+    <section class="next-step" aria-labelledby="next-title"><div><p class="eyebrow">Architecture &amp; Qualification</p><h2 id="next-title">Deepen your technical review.</h2><p>Inspect the complete 0.0.41 tri-source architecture tables, crate ownership boundaries, and release artifacts.</p></div><div class="next-links"><a href="progress-0.0.41.html">0.0.41 Architecture Guide <span aria-hidden="true">↗</span></a><a href="release-matrix.html">0.0.41 Release Matrix <span aria-hidden="true">↗</span></a><a href="manuals/index.html">Developer Manuals <span aria-hidden="true">↗</span></a></div></section>
+  </main>
+  <footer class="page-width">QualiaDB / Webizen · Release 0.0.41 · Tri-Source Ecosystem (QualiaDB · Etalon · VibeScript) <a href="#main">Back to capabilities ↑</a></footer>
+</body>
+</html>

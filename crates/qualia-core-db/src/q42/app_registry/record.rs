@@ -17,10 +17,12 @@ pub enum AppRecordState {
 }
 
 impl AppRecordState {
+    /// `true` when active.
     pub fn is_active(&self) -> bool {
         matches!(self, Self::Active)
     }
 
+    /// `true` when `quarantined`.
     pub fn is_quarantined(&self) -> bool {
         matches!(self, Self::Quarantined { .. })
     }
@@ -36,6 +38,7 @@ pub struct PermissionIntentSummary {
 }
 
 impl PermissionIntentSummary {
+    /// Builds `PermissionIntentSummary` from `intents`.
     pub fn from_intents(intents: &[PermissionIntent]) -> Self {
         let mut kinds = Vec::new();
         let mut required = 0usize;

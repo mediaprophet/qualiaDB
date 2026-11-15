@@ -1,11 +1,6 @@
 //! Feedback comb filter with in-loop damping lowpass (Freeverb-style).
 //!
-//! `y[n] = x[n] + feedback · LP(y[n-D])` where `LP` is a one-pole lowpass whose
-//! cutoff is set by `damp`. With `damp == 0` the impulse response is a clean train
-//! of echoes at multiples of the delay `D` with amplitudes `feedback^k`.
-//!
-//! The internal delay buffer is allocated **once** in [`CombFilter::new`]; the
-//! `process_sample` / `process` paths never allocate, lock, or touch the FS.
+//! Delegated to [`etalon_signal::reverb::comb_step`].
 
 use crate::types::AudioError;
 
@@ -23,9 +18,6 @@ pub struct CombFilter {
 
 impl CombFilter {
     /// Construct with a delay of `delay_samples` (clamped to ≥ 1).
-    ///
-    /// Allocates the delay buffer exactly once. `feedback` is clamped to
-    /// `(-1, 1)` for stability; `damp` to `[0, 1)`.
     pub fn new(delay_samples: usize, feedback: f32, damp: f32) -> Result<Self, AudioError> {
         let n = delay_samples.max(1);
         if !feedback.is_finite() || !damp.is_finite() {
@@ -74,22 +66,17 @@ impl CombFilter {
     /// Process one sample. **Zero-alloc, no locks.**
     #[inline]
     pub fn process_sample(&mut self, input: f32) -> f32 {
-        // SAFETY of indexing: `index` is always kept < len below.
-        let output = self.buffer[self.index];
-        // One-pole lowpass inside the feedback path (damping).
-        self.filterstore = output * (1.0 - self.damp) + self.filterstore * self.damp;
-        self.buffer[self.index] = input + self.filterstore * self.feedback;
-        self.index += 1;
-        if self.index >= self.buffer.len() {
-            self.index = 0;
-        }
-        output
+        etalon_signal::reverb::comb_step(
+            &mut self.buffer,
+            &mut self.index,
+            self.feedback,
+            self.damp,
+            &mut self.filterstore,
+            input,
+        )
     }
 
     /// Block process: `output[i] = process_sample(input[i])`. **Zero-alloc.**
-    ///
-    /// Processes `min(input.len(), output.len())` samples; errors only if
-    /// `output` is shorter than `input`.
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), AudioError> {
         if output.len() < input.len() {
             return Err(AudioError::OutputBufferTooSmall);
@@ -107,7 +94,6 @@ mod tests {
 
     #[test]
     fn impulse_echoes_at_delay_period_with_decay() {
-        // damp = 0 → clean geometric echo train.
         let d = 7usize;
         let g = 0.6f32;
         let mut c = CombFilter::new(d, g, 0.0).unwrap();
@@ -117,8 +103,6 @@ mod tests {
         let mut out = vec![0.0f32; n];
         c.process(&input, &mut out).unwrap();
 
-        // Echoes land at D, 2D, 3D with amplitude 1, g, g^2 (Freeverb comb delays
-        // the impulse by D, then recirculates with gain g each pass).
         assert!(
             (out[d] - 1.0).abs() < 1e-6,
             "first echo at D should be ~1.0, got {}",
@@ -140,12 +124,10 @@ mod tests {
             out[4 * d]
         );
 
-        // Between taps the output is silent.
         assert!(out[1].abs() < 1e-9);
         assert!(out[d - 1].abs() < 1e-9);
         assert!(out[d + 1].abs() < 1e-9);
 
-        // Strictly decaying tap magnitudes.
         assert!(out[2 * d].abs() < out[d].abs());
         assert!(out[3 * d].abs() < out[2 * d].abs());
     }
@@ -183,7 +165,6 @@ mod tests {
         let mut out = vec![0.0f32; 4096];
         c.process(&input, &mut out).unwrap();
         assert!(out.iter().all(|x| x.is_finite()));
-        // Stable feedback < 1 → bounded steady state.
         assert!(out.iter().all(|x| x.abs() < 100.0));
     }
 

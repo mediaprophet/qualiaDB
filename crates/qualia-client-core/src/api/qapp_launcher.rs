@@ -22,6 +22,7 @@ pub fn load_installed_qapp_package(
     load_qapp_package_from_dir(&qapp_dir)
 }
 
+/// Loads qapp-package-from-dir.
 pub(crate) fn load_qapp_package_from_dir(
     qapp_dir: &Path,
 ) -> Result<qapp_registry::QappPackageManifest, String> {
@@ -167,6 +168,7 @@ struct QappReadinessReport {
     checks: Vec<AppRequirementCheck>,
 }
 
+/// Loads workspace-catalog.
 pub fn load_workspace_catalog() -> qualia_core_db::resource_catalog::ResourceCatalog {
     qualia_core_db::resource_catalog::load_default()
         .unwrap_or_else(|_| qualia_core_db::resource_catalog::ResourceCatalog::empty())
@@ -302,6 +304,7 @@ fn evaluate_capability_requirement(
     }
 }
 
+/// Inspects installed qapp readiness.
 pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
@@ -479,6 +482,7 @@ pub fn inspect_installed_qapp_readiness(qapp_name: String) -> Result<String, Str
     serde_json::to_string(&report).map_err(|e| e.to_string())
 }
 
+/// Lists installed ontology artifacts.
 pub fn list_installed_ontology_artifacts() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
@@ -504,6 +508,7 @@ pub fn list_installed_ontology_artifacts() -> Vec<String> {
     artifacts
 }
 
+/// Removes installed-ontology.
 pub fn remove_installed_ontology(ontology_id: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
@@ -534,6 +539,7 @@ pub fn remove_installed_ontology(ontology_id: String) -> Result<String, String> 
     ))
 }
 
+/// Removes installed-model.
 pub fn remove_installed_model(model_id: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
@@ -590,6 +596,7 @@ pub fn remove_installed_model(model_id: String) -> Result<String, String> {
     ))
 }
 
+/// Tests a SPARQL endpoint.
 pub fn test_sparql_endpoint(endpoint_or_id: String) -> Result<String, String> {
     let (endpoint, federation_supported) = resolve_sparql_endpoint_from_catalog(&endpoint_or_id)?;
     let client = reqwest::blocking::Client::builder()
@@ -639,6 +646,7 @@ pub fn launch_installed_qapp(qapp_name: String) -> Result<String, String> {
     launch_installed_qapp_with_context(qapp_name.clone(), None, None, None, None)
 }
 
+/// Launches an installed qapp with context.
 pub fn launch_installed_qapp_with_context(
     qapp_name: String,
     entrypoint: Option<String>,

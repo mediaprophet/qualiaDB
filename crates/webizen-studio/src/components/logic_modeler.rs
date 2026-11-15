@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct OntologicalDefinition {
@@ -74,6 +74,7 @@ fn get_toolbox_items() -> Vec<OntologicalDefinition> {
 }
 
 #[component]
+/// Aether `LogicModeler` component.
 pub fn LogicModeler() -> Element {
     let mut nodes = use_signal(|| {
         let items = get_toolbox_items();

@@ -24,6 +24,7 @@ fn fat_ledger() -> ReservationLedger {
     ReservationLedger::new(cap, cap, cap, cap, cap)
 }
 
+/// Scenario S12: protection profiles must not silently downgrade.
 pub fn s12_no_downgrade() -> Result<(), QdnfError> {
     let required = catalog_entry(ProtectionProfile::P3);
     let available = catalog_entry(ProtectionProfile::P1);
@@ -42,6 +43,7 @@ pub fn s12_no_downgrade() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S13: mandatory controls must cover the exchange.
 pub fn s13_mandatory_cover() -> Result<(), QdnfError> {
     let set = control_set_from_predicates(
         ProtectionProfile::P3,
@@ -53,6 +55,7 @@ pub fn s13_mandatory_cover() -> Result<(), QdnfError> {
     expect_err(drop_cover_for_controls(&set), QdnfError::Downgrade)
 }
 
+/// Scenario S14: observer-role peers get read-only surface.
 pub fn s14_observer() -> Result<(), QdnfError> {
     if correlation_resistance_measured() {
         return Err(QdnfError::Downgrade);
@@ -64,6 +67,7 @@ pub fn s14_observer() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario S21: clock rollback is detected and rejected.
 pub fn s21_clock_rollback() -> Result<(), QdnfError> {
     let mut q = OfflineQueue::new();
     let pkg = OfflinePackage {
@@ -80,6 +84,7 @@ pub fn s21_clock_rollback() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S25: gateway profile mapping round-trips.
 pub fn s25_gateway_mapping() -> Result<(), QdnfError> {
     let src = verified(Confidentiality::C2Sensitive, digest(1))?;
     let mut dst_fields = LabelFields::request(Confidentiality::C0Public, digest(2));
@@ -104,6 +109,7 @@ pub fn s25_gateway_mapping() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S35: no-route condition fails closed.
 pub fn s35_no_routes() -> Result<(), QdnfError> {
     let index = AdjacencyIndex::new(1);
     let mut out = [CandidatePath::EMPTY; 3];

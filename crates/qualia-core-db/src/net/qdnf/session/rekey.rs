@@ -68,6 +68,7 @@ pub struct RekeyTable {
 }
 
 impl RekeyTable {
+    /// Builds `RekeyTable` from `keys`.
     pub fn from_keys(
         send: [u8; AEAD_KEY_LEN],
         recv: [u8; AEAD_KEY_LEN],
@@ -90,10 +91,12 @@ impl RekeyTable {
     }
 
     #[inline]
+    /// `RekeyTable::current_generation`.
     pub fn current_generation(&self) -> u64 {
         self.current
     }
 
+    /// `RekeyTable::current_generation_token`.
     pub fn current_generation_token(&self) -> Generation {
         Generation(self.current)
     }
@@ -164,6 +167,7 @@ impl RekeyTable {
         Ok(self.current)
     }
 
+    /// Rekey phase.
     pub fn phase(&self, generation: u64) -> Result<KeyPhase, QdnfError> {
         if generation == self.current {
             return Ok(KeyPhase::Current);
@@ -183,6 +187,7 @@ impl RekeyTable {
         Err(QdnfError::Expired)
     }
 
+    /// Rekey slot.
     pub fn slot(&self, generation: u64) -> Result<TrafficKeySlot, QdnfError> {
         Ok(TrafficKeySlot {
             generation,
@@ -207,6 +212,21 @@ impl RekeyTable {
             i += 1;
         }
         Err(QdnfError::Expired)
+    }
+
+    /// True when `generation` has been retired from both current and old key slots (`R04`).
+    pub fn is_generation_zeroized(&self, generation: u64) -> bool {
+        if self.current_keys.occupied && self.current_keys.generation == generation {
+            return false;
+        }
+        let mut i = 0;
+        while i < MAX_OLD_KEYS {
+            if self.old_keys[i].occupied && self.old_keys[i].generation == generation {
+                return false;
+            }
+            i += 1;
+        }
+        true
     }
 }
 
@@ -359,5 +379,17 @@ mod tests {
     fn all_zero_or_equal_keys_are_rejected() {
         assert!(RekeyTable::from_keys([0u8; 32], [1u8; 32]).is_err());
         assert!(RekeyTable::from_keys([1u8; 32], [1u8; 32]).is_err());
+    }
+
+    #[test]
+    fn r04_retired_slot_is_zeroized_after_rotation_window() {
+        let mut table = RekeyTable::from_keys([3u8; 32], [4u8; 32]).unwrap();
+        assert!(!table.is_generation_zeroized(1));
+        table.rotate().unwrap(); // gen 2 current, [1] in old
+        table.rotate().unwrap(); // gen 3 current, [2, 1] in old
+        assert!(!table.is_generation_zeroized(1));
+        table.rotate().unwrap(); // gen 4 current, [3, 2] in old -> gen 1 erased
+        assert!(table.is_generation_zeroized(1));
+        assert_eq!(table.keys(1), Err(QdnfError::Expired));
     }
 }

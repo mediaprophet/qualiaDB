@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Webizen Poet — Tool-Chest & Manifolds</title>
+  <title>Webizen Poet WASM — Tool-Chest & Manifolds</title>
   <meta name="author" content="Timothy Charles Holborn">
   <meta name="copyright" content="Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +38,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       if (el && !document.querySelector('.app')) {
         const msg = e.error ? String(e.error) : (e.message || 'Unknown error');
         el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
-          '<h3 style="margin:0 0 10px;">Webizen Poet — Window Error</h3>' +
+          '<h3 style="margin:0 0 10px;">Webizen Poet WASM — Window Error</h3>' +
           '<pre style="white-space:pre-wrap;word-break:break-all;">' + msg.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
           '\n\nat ' + (e.filename||'') + ':' + (e.lineno||'') + '</pre></div>';
         el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';
@@ -49,14 +49,14 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       const el = document.getElementById('loading');
       if (el && !document.querySelector('.app')) {
         el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
-          '<h3 style="margin:0 0 10px;">Webizen Poet — WASM Init Error</h3>' +
+          '<h3 style="margin:0 0 10px;">Webizen Poet WASM — WASM Init Error</h3>' +
           '<pre style="white-space:pre-wrap;word-break:break-all;">' + String(e.reason).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>' +
           '</div>';
         el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';
       }
     });
   </script>
-  <div id="loading">Loading Webizen Poet…</div>
+  <div id="loading">Loading Webizen Poet WASM…</div>
   <script type="module">
     // Fallback: if app doesn't appear within 45s, show error
     setTimeout(() => {
@@ -64,7 +64,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         const el = document.getElementById('loading');
         if (el) {
           el.innerHTML = '<div style="color:#ff4444;font-family:monospace;font-size:12px;padding:20px;max-width:600px;">' +
-            '<h3 style="margin:0 0 10px;">Webizen Poet — Timeout</h3>' +
+            '<h3 style="margin:0 0 10px;">Webizen Poet WASM — Timeout</h3>' +
             '<p>WASM did not initialize within 45 seconds. Check browser console (F12) for errors.</p>' +
             '</div>';
           el.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;';

@@ -242,7 +242,9 @@ pub fn fallback_ref_organs() -> Vec<RefOrgan> {
 /// Fetch one organ's GLB bytes from its CDN URL (blocking).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fetch_glb(glb_url: &str) -> Result<Vec<u8>, CcfError> {
-    let bytes = reqwest::blocking::Client::new()
+    let bytes = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(180))
+        .build()?
         .get(glb_url)
         .header(reqwest::header::USER_AGENT, HTTP_USER_AGENT)
         .send()?

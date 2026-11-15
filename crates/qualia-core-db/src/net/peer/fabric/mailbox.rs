@@ -17,6 +17,7 @@ pub struct PrivateMailbox {
 }
 
 impl PrivateMailbox {
+    /// Creates a default `PrivateMailbox`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
@@ -52,6 +53,7 @@ impl PrivateMailbox {
         self.publish(d)
     }
 
+    /// Publishes `d` as the current contact.
     pub fn publish(&mut self, d: ContactDescriptor) -> Result<(), FabricError> {
         if d.contact_key == [0u8; 32] {
             return Err(FabricError::Illegal);
@@ -73,6 +75,7 @@ impl PrivateMailbox {
         Ok(())
     }
 
+    /// Resolves the published contact.
     pub fn resolve(
         &self,
         key: &PeerId,
@@ -95,6 +98,7 @@ impl PrivateMailbox {
         Ok(d)
     }
 
+    /// Ingests a wire-format contact record.
     pub fn ingest_wire(
         &mut self,
         bytes: &[u8],
@@ -109,6 +113,7 @@ impl PrivateMailbox {
         self.resolve(&d.contact_key, now_unix, disclosure)
     }
 
+    /// Encodes the current contact for the wire.
     pub fn encode_current(
         &self,
         key: &PeerId,

@@ -291,6 +291,7 @@ pub struct ComponentReliability {
 }
 
 impl ComponentReliability {
+    /// Creates a `ComponentReliability` with empty registries / default configuration.
     pub fn new(
         name: impl Into<String>,
         failure_probability: f64,
@@ -318,6 +319,7 @@ pub struct ReliabilityConfig {
 }
 
 impl Default for ReliabilityConfig {
+    /// Returns the default `ReliabilityConfig` configuration.
     fn default() -> Self {
         Self {
             num_simulations: 10_000,
@@ -328,6 +330,7 @@ impl Default for ReliabilityConfig {
 }
 
 impl ReliabilityConfig {
+    /// Creates a `ReliabilityConfig` with empty registries / default configuration.
     pub fn new(system_model: SystemModel, components: Vec<ComponentReliability>) -> Self {
         Self {
             num_simulations: 10_000,
@@ -366,6 +369,7 @@ pub struct ReliabilityResult {
     pub confidence_interval: (f64, f64),
 }
 impl ReliabilityAnalyzer {
+    /// Creates a `ReliabilityAnalyzer` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             reliability_methods: ReliabilityMethods::new(),
@@ -384,6 +388,7 @@ impl ReliabilityAnalyzer {
         self.statistical_computing = lib;
     }
 
+    /// Readies `ReliabilityAnalyzer`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.reliability_methods.initialize()?;
         self.failure_analysis.initialize()?;
@@ -391,6 +396,7 @@ impl ReliabilityAnalyzer {
         Ok(())
     }
 
+    /// Checks the model has at least geometry dimensions; `ValidationError` otherwise.
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -400,6 +406,12 @@ impl ReliabilityAnalyzer {
         Ok(())
     }
 
+    /// First-principles reliability analysis from material properties and
+    /// applied loads: applied stress `F/A`, safety factor
+    /// `yield/applied`, failure probability `Φ(−β)` with β from a
+    /// coefficient-of-variation proxy (ultimate/yield ratio), reliability
+    /// index `β = −Φ⁻¹(Pf)`, and `MTTF = 1/Pf`. Missing inputs return
+    /// `InsufficientData`; never a fabricated result.
     pub fn analyze(
         &mut self,
         model: &EngineeringModel,
@@ -793,6 +805,7 @@ fn system_reliability_from_component_reliabilities(r: &[f64], model: &SystemMode
 }
 
 impl ReliabilityMethods {
+    /// Creates a `ReliabilityMethods` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             probability_analysis: ProbabilityAnalysis::new(),
@@ -801,6 +814,7 @@ impl ReliabilityMethods {
         }
     }
 
+    /// Readies `ReliabilityMethods`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -827,6 +841,7 @@ impl ReliabilityMethods {
 }
 
 impl ProbabilityAnalysis {
+    /// Creates a `ProbabilityAnalysis` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             probability_distribution: ProbabilityDistribution::Weibull,
@@ -836,6 +851,7 @@ impl ProbabilityAnalysis {
 }
 
 impl ReliabilityFunction {
+    /// Creates a `ReliabilityFunction` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             function_type: ReliabilityFunctionType::Weibull,
@@ -845,6 +861,7 @@ impl ReliabilityFunction {
 }
 
 impl StatisticalAnalysis {
+    /// Creates a `StatisticalAnalysis` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             confidence_interval: ConfidenceInterval::new(),
@@ -854,6 +871,7 @@ impl StatisticalAnalysis {
 }
 
 impl ConfidenceInterval {
+    /// Creates a `ConfidenceInterval` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             confidence_level: 0.95,
@@ -864,6 +882,7 @@ impl ConfidenceInterval {
 }
 
 impl HypothesisTesting {
+    /// Creates a `HypothesisTesting` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             null_hypothesis: "No failure".to_string(),
@@ -875,6 +894,7 @@ impl HypothesisTesting {
 }
 
 impl MonteCarlo {
+    /// Creates a `MonteCarlo` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             num_simulations: 10000,
@@ -899,6 +919,7 @@ impl MonteCarlo {
 }
 
 impl RandomVariable {
+    /// Creates a `RandomVariable` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             variable_name: "load".to_string(),
@@ -909,6 +930,7 @@ impl RandomVariable {
 }
 
 impl FailureAnalysis {
+    /// Creates a `FailureAnalysis` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             failure_modes: FailureModes::new(),
@@ -917,6 +939,7 @@ impl FailureAnalysis {
         }
     }
 
+    /// Readies `FailureAnalysis`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -953,6 +976,7 @@ impl FailureAnalysis {
 }
 
 impl FailureModes {
+    /// Creates a `FailureModes` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             failure_mode_id: "fm_1".to_string(),
@@ -964,6 +988,7 @@ impl FailureModes {
 }
 
 impl FaultTree {
+    /// Creates a `FaultTree` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             tree_id: "ft_1".to_string(),
@@ -975,6 +1000,7 @@ impl FaultTree {
 }
 
 impl FMEA {
+    /// Creates a `FMEA` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             fmea_id: "fmea_1".to_string(),
@@ -984,6 +1010,7 @@ impl FMEA {
 }
 
 impl MaintenanceOptimization {
+    /// Creates a `MaintenanceOptimization` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             preventive_maintenance: PreventiveMaintenance::new(),
@@ -992,6 +1019,7 @@ impl MaintenanceOptimization {
         }
     }
 
+    /// Readies `MaintenanceOptimization`; initializes any owned sub-engines (no-op for leaf structs).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -1028,6 +1056,7 @@ impl MaintenanceOptimization {
 }
 
 impl PreventiveMaintenance {
+    /// Creates a `PreventiveMaintenance` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             maintenance_interval: 30,
@@ -1037,6 +1066,7 @@ impl PreventiveMaintenance {
 }
 
 impl MaintenanceTask {
+    /// Creates a `MaintenanceTask` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             task_id: "task_1".to_string(),
@@ -1048,6 +1078,7 @@ impl MaintenanceTask {
 }
 
 impl PredictiveMaintenance {
+    /// Creates a `PredictiveMaintenance` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             prediction_model: PredictionModel::Weibull,
@@ -1057,6 +1088,7 @@ impl PredictiveMaintenance {
 }
 
 impl ConditionBasedMaintenance {
+    /// Creates a `ConditionBasedMaintenance` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             monitoring_parameters: Vec::new(),
@@ -1066,6 +1098,7 @@ impl ConditionBasedMaintenance {
 }
 
 impl MonitoringParameter {
+    /// Creates a `MonitoringParameter` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             parameter_name: "vibration".to_string(),

@@ -538,9 +538,10 @@ impl<'a> PatternParser<'a> {
         Ok(ChildSpec::Triple { s, p, o })
     }
 
-    /// Resolve a SERVICE endpoint. Local endpoints (`local:` / `qualia:` / a
-    /// `did:` IRI) get the executor's `0x8` DID prefix so its `Service` operator
-    /// runs the inner pattern against the local graph. A remote `http(s)`
+    /// Resolve a SERVICE endpoint. The exact reserved `local:graph` handle
+    /// selects the caller-provided graph. Other `local:` / `qualia:` / `did:`
+    /// references retain their qualified endpoint identifier; a prefix alone
+    /// never admits an arbitrary endpoint as local. A remote `http(s)`
     /// endpoint is rejected with an honest error — real network egress is a
     /// governance decision and is intentionally not wired (see the plan). A
     /// variable endpoint (dynamic SERVICE) is likewise deferred.
@@ -564,7 +565,9 @@ impl<'a> PatternParser<'a> {
             other => return Err(format!("invalid SERVICE endpoint token: {other:?}")),
         };
         let lower = iri.to_ascii_lowercase();
-        if lower.starts_with("local:") || lower.starts_with("qualia:") || lower.starts_with("did:")
+        if iri == "local:graph" {
+            Ok(DID_PREFIX)
+        } else if lower.starts_with("local:") || lower.starts_with("qualia:") || lower.starts_with("did:")
         {
             Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()) | DID_PREFIX)
         } else if lower.starts_with("http://") || lower.starts_with("https://") {
@@ -754,6 +757,16 @@ mod tests {
     fn parses_local_service() {
         let (_ctx, pat) = root_pattern("{ SERVICE <local:health> { ?s ?p ?o } }");
         assert!(matches!(pat, Pattern::Service { .. }), "got {pat:?}");
+    }
+
+    #[test]
+    fn only_exact_reserved_local_graph_selects_the_default_graph() {
+        let (_, local) = root_pattern("{ SERVICE <local:graph> { ?s ?p ?o } }");
+        assert!(matches!(local, Pattern::Service { endpoint_did_id: 0x8000_0000_0000_0000, .. }));
+        for endpoint in ["local:health", "LOCAL:graph", "qualia:graph", "did:example:remote"] {
+            let (_, qualified) = root_pattern(&format!("{{ SERVICE <{endpoint}> {{ ?s ?p ?o }} }}"));
+            assert!(matches!(qualified, Pattern::Service { endpoint_did_id, .. } if endpoint_did_id != 0x8000_0000_0000_0000));
+        }
     }
 
     #[test]

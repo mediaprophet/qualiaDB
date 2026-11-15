@@ -24,6 +24,7 @@ pub struct Draft {
 
 impl Draft {
     #[inline]
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             tokens: [0; MAX_DRAFT],
@@ -31,6 +32,7 @@ impl Draft {
         }
     }
     #[inline]
+    /// Slice view.
     pub fn as_slice(&self) -> &[u32] {
         &self.tokens[..self.len]
     }

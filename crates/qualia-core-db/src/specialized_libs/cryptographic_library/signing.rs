@@ -145,6 +145,7 @@ pub struct SignaturePerformanceMetrics {
     pub cache_hit_rate: f64,
 }
 impl SignatureEngine {
+    /// Creates the engine with fresh storage, audit log, and performance optimizer.
     pub fn new() -> Self {
         Self {
             signing_algorithms: HashMap::new(),
@@ -154,6 +155,7 @@ impl SignatureEngine {
         }
     }
 
+    /// Initializes storage and optimizer; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.signature_storage.initialize()?;
         self.performance_optimizer.initialize()?;
@@ -210,6 +212,7 @@ impl SignatureEngine {
         }
     }
 
+    /// Signs `data` per the key's algorithm (ML-DSA, SPHINCS+, Ed25519-hash fallback; ECDSA/RSA behind `interop-crypto`); stores the signature, audits, and records timing.
     pub fn sign_data(
         &mut self,
         private_key: &Key,
@@ -269,7 +272,7 @@ impl SignatureEngine {
                     use rsa::pkcs1v15::SigningKey;
                     use rsa::sha2::Sha256;
                     use rsa::signature::{SignatureEncoding, Signer};
-                    use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
+                    use rsa::{RsaPrivateKey, pkcs8::DecodePrivateKey};
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let signing_key = SigningKey::<Sha256>::new(priv_key);
@@ -281,6 +284,11 @@ impl SignatureEngine {
                         "RSA requires interop-crypto feature".to_string(),
                     ));
                 }
+            }
+            KeyAlgorithm::X25519 | KeyAlgorithm::Kyber | KeyAlgorithm::NTRU => {
+                return Err(CryptographicError::UnsupportedAlgorithm(
+                    "key agreement keys cannot sign or verify".into(),
+                ));
             }
             _ => {
                 // Ed25519 over a SHA-256 digest of the data.
@@ -322,6 +330,7 @@ impl SignatureEngine {
         Ok(signature)
     }
 
+    /// Verifies `signature` over `data` under `public_key` using real algorithm dispatch (ML-DSA, SLH-DSA/SPHINCS+, ECDSA/RSA behind `interop-crypto`, Ed25519 over SHA-256 for other keys); records verification + audit entries honestly.
     pub fn verify_signature(
         &mut self,
         public_key: &Key,
@@ -385,7 +394,7 @@ impl SignatureEngine {
                     use rsa::pkcs1v15::{Signature as RsaSignature, VerifyingKey};
                     use rsa::sha2::Sha256;
                     use rsa::signature::Verifier;
-                    use rsa::{pkcs8::DecodePublicKey, RsaPublicKey};
+                    use rsa::{RsaPublicKey, pkcs8::DecodePublicKey};
                     let pub_key = RsaPublicKey::from_public_key_der(&public_key.key_data)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
                     let verifying_key = VerifyingKey::<Sha256>::new(pub_key);
@@ -399,6 +408,11 @@ impl SignatureEngine {
                         "RSA requires interop-crypto feature".to_string(),
                     ));
                 }
+            }
+            KeyAlgorithm::X25519 | KeyAlgorithm::Kyber | KeyAlgorithm::NTRU => {
+                return Err(CryptographicError::UnsupportedAlgorithm(
+                    "key agreement keys cannot sign or verify".into(),
+                ));
             }
             _ => {
                 let hash = self.compute_data_hash(data)?;
@@ -496,6 +510,7 @@ impl SignatureEngine {
 }
 
 impl SignatureStorage {
+    /// Creates empty signature storage (HashMap + audit log).
     pub fn new() -> Self {
         Self {
             signatures: HashMap::new(),
@@ -504,16 +519,19 @@ impl SignatureStorage {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory storage needs no setup.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
 
+    /// Stores `signature` keyed by `signature_id`.
     pub fn store_signature(&mut self, signature: Signature) -> Result<(), CryptographicError> {
         self.signatures
             .insert(signature.signature_id.clone(), signature);
         Ok(())
     }
 
+    /// Appends a verification record to the audit trail.
     pub fn store_verification_record(
         &mut self,
         record: VerificationRecord,
@@ -525,6 +543,7 @@ impl SignatureStorage {
 }
 
 impl SignatureAuditLog {
+    /// Creates an empty audit log.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -575,6 +594,7 @@ impl SignatureAuditLog {
 }
 
 impl SignaturePerformanceOptimizer {
+    /// Creates a zeroed performance optimizer.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -591,6 +611,7 @@ impl SignaturePerformanceOptimizer {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -645,6 +666,7 @@ impl SignaturePerformanceOptimizer {
 }
 
 impl SignaturePerformanceMetrics {
+    /// Creates zeroed `SignaturePerformanceMetrics`.
     pub fn new() -> Self {
         Self {
             average_signing_time: 0.0,

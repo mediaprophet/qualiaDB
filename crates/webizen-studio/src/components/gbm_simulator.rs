@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 struct Lcg {
     state: u64,
@@ -27,6 +27,7 @@ impl Lcg {
 }
 
 #[component]
+/// Aether `GbmSimulator` component.
 pub fn GbmSimulator() -> Element {
     let mut s0 = use_signal(|| 100.0f64);
     let mut mu = use_signal(|| 0.08f64);

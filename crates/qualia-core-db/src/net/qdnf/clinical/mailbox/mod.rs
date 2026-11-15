@@ -35,12 +35,14 @@ pub struct OfflineQueue {
 }
 
 impl OfflineQueue {
+    /// Creates a default `OfflineQueue`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
         }
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, slot: usize) -> Result<OfflineSlot, QdnfError> {
         if slot >= MAX_SLOTS {
             return Err(QdnfError::Range);
@@ -55,6 +57,7 @@ impl Default for OfflineQueue {
     }
 }
 
+/// Enqueues an offline message.
 pub fn enqueue_offline(
     queue: &mut OfflineQueue,
     slot: OfflineSlot,
@@ -171,6 +174,7 @@ pub struct InterchangeAdapter {
     pub retains_full_label: bool,
 }
 
+/// Exports the mailbox as interchange.
 pub fn export_interchange(
     label: &VerifiedLabel,
     adapter: &InterchangeAdapter,

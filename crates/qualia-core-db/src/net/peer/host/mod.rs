@@ -48,16 +48,19 @@ pub struct NativePeer {
 
 impl NativePeer {
     #[inline]
+    /// `NativePeer::identity`.
     pub fn identity(&self) -> ControllerIdentity {
         self.identity
     }
 
     #[inline]
+    /// Locator.
     pub fn locator(&self) -> ObservedLocator {
         self.bearer.locator()
     }
 
     #[inline]
+    /// `NativePeer::local_link`.
     pub fn local_link(&self) -> LinkId {
         self.local_link
     }
@@ -97,6 +100,7 @@ impl NativePeer {
         Err(QdnfError::Unauthorized)
     }
 
+    /// `NativePeer::remote_or_reject`.
     pub(crate) fn remote_or_reject(&self) -> Result<LinkId, QdnfError> {
         let mut want = LinkId::ZERO;
         want.0[0] = if self.local_link.0[0] == 1 { 2 } else { 1 };
@@ -107,6 +111,7 @@ impl NativePeer {
         }
     }
 
+    /// `neighbor` count.
     pub fn neighbor_count(&self) -> usize {
         self.neighbors.len()
     }
@@ -297,5 +302,23 @@ mod tests {
             a.poll_recv(now.saturating_add(60), now.saturating_add(60), &mut out),
             Err(QdnfError::Expired)
         );
+    }
+
+    #[test]
+    fn r01_r02_unconfirmed_or_zero_keys_cannot_activate_protected_session() {
+        let scope = ScopeEpoch { scope: 1, epoch: 1 };
+        let (a, _b) = NativePeer::pair_ipc(b"did:q42:a", b"did:q42:b", scope, 1280).unwrap();
+        let now = 1_700_000_000u64;
+        let mut owner = AuthorityOwner::new();
+        let binding =
+            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-r01").unwrap();
+        let (_cred, _contact, handle) = owner
+            .install_grant(binding, now, now.saturating_add(3600), ContactState::Active)
+            .unwrap();
+        let permit = owner.issue_permit(handle, binding, now, 4096).unwrap();
+        // Zero or unconfirmed keys must fail before any session slot becomes Active.
+        assert!(InstalledSessionKeys::new(Generation(1), [0u8; 32], [2u8; 32], true).is_err());
+        assert!(InstalledSessionKeys::new(Generation(1), [1u8; 32], [2u8; 32], false).is_err());
+        let _ = (a.live_session_count(), permit);
     }
 }

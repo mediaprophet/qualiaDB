@@ -17,6 +17,7 @@ pub struct CoverInterval {
     pub end: u8,
 }
 
+/// Validates `cover`.
 pub fn validate_cover(children: &[CoverInterval]) -> Result<(), QdnfError> {
     if children.is_empty() {
         return Err(QdnfError::Incomplete);

@@ -41,6 +41,7 @@ struct RuleStore {
 }
 
 impl RuleStore {
+    /// Record `rule`→`action` in the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn insert(&mut self, rule: &str, action: RuleAction) {
         self.rules.insert(
             rule.to_string(),
@@ -50,6 +51,7 @@ impl RuleStore {
             },
         );
     }
+    /// Delete `rule` from the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn remove(&mut self, rule: &str) {
         self.rules.remove(rule);
     }
@@ -154,6 +156,7 @@ pub struct EbpfLinuxFilter {
 }
 
 impl EbpfLinuxFilter {
+    /// Construct a `EbpfLinuxFilter`.
     pub fn new(is_wsl2: bool) -> Self {
         #[cfg(target_os = "linux")]
         let prog_fd = bpf_prog_load(&PASS_ALL_CBPF).unwrap_or(-1);
@@ -182,6 +185,7 @@ impl EbpfLinuxFilter {
 }
 
 impl Drop for EbpfLinuxFilter {
+    /// Release OS resources (eBPF fd / WFP engine handle / XPC connection).
     fn drop(&mut self) {
         if self.prog_fd >= 0 {
             #[cfg(target_os = "linux")]
@@ -194,10 +198,12 @@ impl Drop for EbpfLinuxFilter {
 }
 
 impl NetworkFilter for EbpfLinuxFilter {
+    /// The `NetworkFilterKind` tag for this backend.
     fn kind(&self) -> NetworkFilterKind {
         NetworkFilterKind::EbpfLinux
     }
 
+    /// Record `rule` as Allow in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call (eBPF map update / `FwpmFilterAdd0` / XPC message / JNI bridge) is not wired — see STUBS.md.
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
         // Production: update the eBPF map (BPF_MAP_UPDATE_ELEM) to allow
@@ -206,6 +212,7 @@ impl NetworkFilter for EbpfLinuxFilter {
         Ok(())
     }
 
+    /// Record `rule` as Deny in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call is not wired — see STUBS.md.
     fn deny(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Deny);
         // Production: update eBPF map to drop packets matching rule.
@@ -213,17 +220,19 @@ impl NetworkFilter for EbpfLinuxFilter {
         Ok(())
     }
 
+    /// Delete `rule` from the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn remove(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().remove(rule);
         log::debug!("[ebpf] REMOVE {rule}");
         Ok(())
     }
 
+    /// Human-readable backend status, including noop/fallback state.
     fn describe(&self) -> &str {
         if self.is_wsl2 {
-            "EbpfLinuxFilter (WSL2 — enforcement scoped to VM vNIC, host traffic invisible)"
+            "EbpfLinuxFilter (WSL2 — in-memory rule store; VM vNIC kernel hook pending)"
         } else {
-            "EbpfLinuxFilter (Linux native bpf(2) socket filter)"
+            "EbpfLinuxFilter (Linux native bpf(2) — in-memory rule store; socket filter hook pending)"
         }
     }
 }
@@ -253,6 +262,7 @@ unsafe impl Send for WfpFilter {}
 unsafe impl Sync for WfpFilter {}
 
 impl WfpFilter {
+    /// Construct a `WfpFilter` with default field values.
     pub fn new() -> Self {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         {
@@ -299,6 +309,7 @@ impl WfpFilter {
 }
 
 impl Drop for WfpFilter {
+    /// Release OS resources (eBPF fd / WFP engine handle / XPC connection).
     fn drop(&mut self) {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         if self.engine_handle != 0 {
@@ -313,16 +324,19 @@ impl Drop for WfpFilter {
 }
 
 impl Default for WfpFilter {
+    /// Default `Default`.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl NetworkFilter for WfpFilter {
+    /// The `NetworkFilterKind` tag for this backend.
     fn kind(&self) -> NetworkFilterKind {
         NetworkFilterKind::WfpWindows
     }
 
+    /// Record `rule` as Allow in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call (eBPF map update / `FwpmFilterAdd0` / XPC message / JNI bridge) is not wired — see STUBS.md.
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
         if self.active {
@@ -333,6 +347,7 @@ impl NetworkFilter for WfpFilter {
         Ok(())
     }
 
+    /// Record `rule` as Deny in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call is not wired — see STUBS.md.
     fn deny(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Deny);
         if self.active {
@@ -342,6 +357,7 @@ impl NetworkFilter for WfpFilter {
         Ok(())
     }
 
+    /// Delete `rule` from the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn remove(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().remove(rule);
         if self.active {
@@ -351,9 +367,10 @@ impl NetworkFilter for WfpFilter {
         Ok(())
     }
 
+    /// Human-readable backend status, including noop/fallback state.
     fn describe(&self) -> &str {
         if self.engine_handle != 0 {
-            "WfpFilter (Windows Filtering Platform — FwpmFilterAdd0 active)"
+            "WfpFilter (Windows Filtering Platform session opened; in-memory rule store; dynamic kernel hook pending)"
         } else {
             "WfpFilter (WFP unavailable — noop mode)"
         }
@@ -395,6 +412,7 @@ impl MacNetworkExtFilter {
     #[cfg(target_os = "macos")]
     const XPC_SERVICE: &'static str = "com.qualiadb.netfilter";
 
+    /// The XPC Mach service name the Network Extension listens on.
     pub fn service_name(&self) -> &'static str {
         #[cfg(target_os = "macos")]
         {
@@ -406,6 +424,7 @@ impl MacNetworkExtFilter {
         }
     }
 
+    /// Construct a `MacNetworkExtFilter` with default field values.
     pub fn new() -> Self {
         #[cfg(target_os = "macos")]
         {
@@ -414,11 +433,13 @@ impl MacNetworkExtFilter {
             // If the Network Extension target is present the dynamic library
             // will resolve; otherwise the pointer is null and we run as noop.
             extern "C" {
+                /// FFI: open an XPC connection to a named Mach service.
                 fn xpc_connection_create_mach_service(
                     name: *const libc::c_char,
                     queue: *mut libc::c_void,
                     flags: u64,
                 ) -> *mut libc::c_void;
+                /// FFI: resume a suspended XPC connection.
                 fn xpc_connection_resume(conn: *mut libc::c_void);
             }
             use std::ffi::CString;
@@ -462,6 +483,7 @@ impl MacNetworkExtFilter {
     }
 
     #[cfg(target_os = "macos")]
+    /// **Stub**: empty body — the production XPC dictionary send to `NEFilterControlProvider` is not implemented.
     fn send_xpc(&self, _action: &str, _rule: &str) {
         // Production: build an xpc_dictionary_t with keys "action" and "rule",
         // then call xpc_connection_send_message_with_reply_sync() to the
@@ -471,10 +493,12 @@ impl MacNetworkExtFilter {
 }
 
 impl Drop for MacNetworkExtFilter {
+    /// Release OS resources (eBPF fd / WFP engine handle / XPC connection).
     fn drop(&mut self) {
         #[cfg(target_os = "macos")]
         if let Some(conn) = self.xpc_conn.take() {
             extern "C" {
+                /// FFI: release an XPC object reference.
                 fn xpc_release(obj: *mut libc::c_void);
             }
             // SAFETY: conn is a valid xpc_connection_t; we own the reference.
@@ -486,16 +510,19 @@ impl Drop for MacNetworkExtFilter {
 }
 
 impl Default for MacNetworkExtFilter {
+    /// Default `Default`.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl NetworkFilter for MacNetworkExtFilter {
+    /// The `NetworkFilterKind` tag for this backend.
     fn kind(&self) -> NetworkFilterKind {
         NetworkFilterKind::MacNetworkExtension
     }
 
+    /// Record `rule` as Allow in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call (eBPF map update / `FwpmFilterAdd0` / XPC message / JNI bridge) is not wired — see STUBS.md.
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         log::debug!("[{}] allow rule {rule}", self.service_name());
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
@@ -506,6 +533,7 @@ impl NetworkFilter for MacNetworkExtFilter {
         Ok(())
     }
 
+    /// Record `rule` as Deny in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call is not wired — see STUBS.md.
     fn deny(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Deny);
         #[cfg(target_os = "macos")]
@@ -515,6 +543,7 @@ impl NetworkFilter for MacNetworkExtFilter {
         Ok(())
     }
 
+    /// Delete `rule` from the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn remove(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().remove(rule);
         #[cfg(target_os = "macos")]
@@ -524,9 +553,10 @@ impl NetworkFilter for MacNetworkExtFilter {
         Ok(())
     }
 
+    /// Human-readable backend status, including noop/fallback state.
     fn describe(&self) -> &str {
         if self.connected {
-            "MacNetworkExtFilter (NEFilterDataProvider via XPC — active)"
+            "MacNetworkExtFilter (NEFilterDataProvider via XPC connected; in-memory rule store; content-filter extension pending)"
         } else {
             "MacNetworkExtFilter (Network Extension not installed — noop)"
         }
@@ -551,6 +581,7 @@ pub struct AndroidVpnFilter {
 }
 
 impl AndroidVpnFilter {
+    /// Construct a `AndroidVpnFilter`.
     pub fn new(tun_fd: i32) -> Self {
         if tun_fd >= 0 {
             log::info!("[android-vpn] VpnService TUN interface fd={tun_fd}");
@@ -563,10 +594,12 @@ impl AndroidVpnFilter {
 }
 
 impl NetworkFilter for AndroidVpnFilter {
+    /// The `NetworkFilterKind` tag for this backend.
     fn kind(&self) -> NetworkFilterKind {
         NetworkFilterKind::AndroidVpnService
     }
 
+    /// Record `rule` as Allow in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call (eBPF map update / `FwpmFilterAdd0` / XPC message / JNI bridge) is not wired — see STUBS.md.
     fn allow(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Allow);
         // Production: write allow rule to the JNI bridge; the VpnService
@@ -574,20 +607,23 @@ impl NetworkFilter for AndroidVpnFilter {
         Ok(())
     }
 
+    /// Record `rule` as Deny in the `RuleStore` and return `Ok`. **Record-only**: the platform enforcement call is not wired — see STUBS.md.
     fn deny(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().insert(rule, RuleAction::Deny);
         // Production: JNI → VpnService drops / rejects matching packets.
         Ok(())
     }
 
+    /// Delete `rule` from the in-memory store. **No kernel state is updated** — the platform enforcement path is not implemented.
     fn remove(&self, rule: &str) -> Result<(), StorageError> {
         self.rules.lock().unwrap().remove(rule);
         Ok(())
     }
 
+    /// Human-readable backend status, including noop/fallback state.
     fn describe(&self) -> &str {
         if self.tun_fd >= 0 {
-            "AndroidVpnFilter (VpnService TUN — user-space packet interception active)"
+            "AndroidVpnFilter (VpnService TUN fd open; in-memory rule store; packet interception pending)"
         } else {
             "AndroidVpnFilter (no TUN interface — noop)"
         }

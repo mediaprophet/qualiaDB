@@ -1,0 +1,271 @@
+{
+  "schema": "qbs08-storage-job-v1-placeholder-transcripts",
+  "status": "provisional",
+  "construction": "JSON transcripts of existing TransferTicket/cancel/complete_io names only. bundle/stream/runtime/jobs and storage/native/job.rs are not present in this working tree. No production runtime, no durable store, no network.",
+  "provenance": {
+    "types": "crates/qualia-core-db/src/bundle/stream/runtime/types.rs",
+    "admit_complete": "crates/qualia-core-db/src/bundle/stream/runtime/transfer.rs",
+    "poll_credit_cancel": "crates/qualia-core-db/src/bundle/stream/runtime/dispatch.rs",
+    "storage_stage": "crates/qualia-core-db/src/bundle/stream/runtime/storage_stage.rs",
+    "owner_key": "crates/qualia-core-db/src/bundle/stream/runtime/owner.rs",
+    "contract": "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/evidence/qbs08-runtime-contract.md",
+    "scope": "Name/state transcripts. Not verified storage, not authority, not a jobs-module freeze."
+  },
+  "names": {
+    "TransferTicket": {
+      "fields": ["key", "spent"],
+      "key_type": "CompletionKey"
+    },
+    "CompletionKey": {
+      "fields": ["owner", "slot", "generation", "operation"]
+    },
+    "RequestCredit": {
+      "fields": ["key", "bytes", "cancel_epoch"]
+    },
+    "TransferState": ["Vacant", "Queued", "Ready", "InFlight", "Cancelling"],
+    "CancelReason": ["Cancelled", "Expired", "Revoked"],
+    "FinishOutcome": ["Released", "Cancelled", "Expired", "Revoked"],
+    "RuntimePoll": ["Ready", "Cancelled", "External"],
+    "RuntimeProfile": {
+      "Constrained": { "inflight_limit": 8, "window_bytes": 8388608 },
+      "Desktop": { "inflight_limit": 30, "window_bytes": 33554432 }
+    }
+  },
+  "calls": [
+    "admit",
+    "poll",
+    "issue_credit",
+    "cancel",
+    "expire",
+    "state",
+    "cancel_epoch",
+    "storage_stage",
+    "StorageStage::recheck",
+    "StorageStage::cancel",
+    "StorageStage::buffers",
+    "complete_io"
+  ],
+  "transcripts": [
+    {
+      "id": "ticket-inflight-complete-released",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "TransferTicket",
+          "state_after": "Queued",
+          "spent": false
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": "RuntimePoll::Ready",
+          "state_after": "Ready"
+        },
+        {
+          "call": "issue_credit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "RequestCredit",
+          "state_after": "InFlight"
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 1 },
+          "returns": { "FinishOutcome": "Released" },
+          "spent": true
+        }
+      ]
+    },
+    {
+      "id": "ticket-inflight-cancel-complete-cancelled",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "TransferTicket",
+          "state_after": "Queued"
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": "RuntimePoll::Ready",
+          "state_after": "Ready"
+        },
+        {
+          "call": "issue_credit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "RequestCredit",
+          "state_after": "InFlight"
+        },
+        {
+          "call": "cancel",
+          "state_after": { "Cancelling": "Cancelled" }
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 10 },
+          "returns": { "FinishOutcome": "Cancelled" },
+          "spent": true
+        }
+      ]
+    },
+    {
+      "id": "ticket-inflight-expire-complete-expired",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 }, "deadline": 10 },
+          "returns": "TransferTicket",
+          "state_after": "Queued"
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": "RuntimePoll::Ready",
+          "state_after": "Ready"
+        },
+        {
+          "call": "issue_credit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "RequestCredit",
+          "state_after": "InFlight"
+        },
+        {
+          "call": "expire",
+          "args": { "now": 10 },
+          "returns": 1,
+          "state_after": { "Cancelling": "Expired" }
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 10 },
+          "returns": { "FinishOutcome": "Expired" },
+          "spent": true
+        }
+      ]
+    },
+    {
+      "id": "ticket-ready-stale-policy-complete-revoked",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "TransferTicket",
+          "state_after": "Queued"
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": "RuntimePoll::Ready",
+          "state_after": "Ready"
+        },
+        {
+          "call": "issue_credit",
+          "args": { "now": 0, "current_policy": { "Generation": 2 } },
+          "returns": { "QdnfError": "Revoked" },
+          "state_after": { "Cancelling": "Revoked" }
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 0 },
+          "returns": { "FinishOutcome": "Revoked" },
+          "spent": true
+        }
+      ]
+    },
+    {
+      "id": "storage-stage-inflight-cancel-complete-cancelled",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "TransferTicket",
+          "state_after": "Queued"
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": "RuntimePoll::Ready",
+          "state_after": "Ready"
+        },
+        {
+          "call": "issue_credit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "RequestCredit",
+          "state_after": "InFlight"
+        },
+        {
+          "call": "storage_stage",
+          "required_state": "InFlight",
+          "returns": "StorageStage"
+        },
+        {
+          "call": "StorageStage::cancel",
+          "state_after": { "Cancelling": "Cancelled" }
+        },
+        {
+          "call": "StorageStage::recheck",
+          "args": { "now": 1, "current_policy": { "Generation": 1 } },
+          "returns": { "QdnfError": "Cancelled" }
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 1 },
+          "returns": { "FinishOutcome": "Cancelled" },
+          "spent": true
+        }
+      ]
+    },
+    {
+      "id": "queued-cancel-complete-wouldblock-until-poll",
+      "status": "provisional",
+      "profile": "Constrained",
+      "steps": [
+        {
+          "call": "admit",
+          "args": { "now": 0, "current_policy": { "Generation": 1 } },
+          "returns": "TransferTicket",
+          "state_after": "Queued"
+        },
+        {
+          "call": "cancel",
+          "state_after": { "Cancelling": "Cancelled" },
+          "queued": true
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 0 },
+          "returns": { "QdnfError": "WouldBlock" }
+        },
+        {
+          "call": "poll",
+          "args": { "now": 0 },
+          "returns": { "RuntimePoll": "Cancelled", "CancelReason": "Cancelled" },
+          "queued": false
+        },
+        {
+          "call": "complete_io",
+          "args": { "key": "CompletionKey", "now": 0 },
+          "returns": { "FinishOutcome": "Cancelled" },
+          "spent": true
+        }
+      ]
+    }
+  ],
+  "completion_key_placeholder": {
+    "owner": "UNVERIFIED",
+    "slot": "UNVERIFIED",
+    "generation": "UNVERIFIED",
+    "operation": "UNVERIFIED"
+  }
+}

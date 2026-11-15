@@ -24,6 +24,7 @@ pub struct ContactDescriptor {
 }
 
 impl ContactDescriptor {
+    /// `ContactDescriptor::mailbox`.
     pub const fn mailbox(contact_key: PeerId, generation: u32, expiry_unix: u32) -> Self {
         Self {
             contact_key,
@@ -35,6 +36,7 @@ impl ContactDescriptor {
         }
     }
 
+    /// `true` when `expired`.
     pub const fn is_expired(&self, now_unix: u32) -> bool {
         now_unix >= self.expiry_unix
     }
@@ -44,6 +46,7 @@ impl ContactDescriptor {
         last_known_generation != 0 && self.generation < last_known_generation
     }
 
+    /// `true` when direct-locator.
     pub const fn is_direct_locator(&self) -> bool {
         matches!(self.kind, LocatorKind::Direct)
     }

@@ -15,6 +15,7 @@ pub mod mcp;
 pub mod mesh;
 pub mod qpu;
 pub mod query;
+mod qwen_testing;
 pub mod resources;
 pub mod science;
 mod service;
@@ -47,6 +48,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match &cli.command {
+        Commands::InferencePolicy { profile, action } => {
+            handlers::inference_policy::handle(profile, action)?;
+        }
+        Commands::App { action } => {
+            handlers::app::handle(action)?;
+        }
         Commands::Llm { action } => {
             handlers::llm::handle(action).await?;
         }
@@ -76,6 +83,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Q42 { action } => {
             handlers::misc::handle_q42(action)?;
+        }
+        Commands::Hmc { action } => {
+            handlers::misc::handle_hmc(action)?;
         }
         Commands::Dump { out_path } => {
             handlers::misc::handle_dump(out_path)?;
@@ -109,8 +119,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             dataset,
             memory_mib,
             temp_gib,
+            encoder,
+            omit_predicates,
+            omit_preset,
+            require_isomorphism,
         } => {
-            handlers::misc::handle_verify_graph(input, dataset, *memory_mib, *temp_gib)?;
+            handlers::misc::handle_verify_graph(
+                input,
+                dataset,
+                *memory_mib,
+                *temp_gib,
+                encoder,
+                omit_predicates.as_deref(),
+                omit_preset.as_deref(),
+                *require_isomorphism,
+            )?;
         }
         Commands::Import {
             input,
@@ -121,10 +144,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             url,
             job_dir,
             resume,
+            omit_predicates,
+            omit_preset,
         } => {
             handlers::misc::handle_import(
                 input.as_ref(),
-                output,
+                output.as_ref(),
                 *strip_literals,
                 *segment_mib,
                 *progress,
@@ -132,6 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 url.as_deref(),
                 job_dir.as_ref(),
                 *resume,
+                omit_predicates.as_deref(),
+                omit_preset.as_deref(),
             );
         }
         Commands::IngestJob { action } => {
@@ -178,6 +205,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Compile { action } => {
             handlers::misc::handle_compile(action);
+        }
+        Commands::EntityCompile(args) => {
+            handlers::entity_compile::handle(args)?;
+        }
+        Commands::TwinCompile(args) => {
+            handlers::twin_compile::handle(args)?;
+        }
+        Commands::EntityVerify(args) => {
+            handlers::entity_verify::handle(args)?;
+        }
+        Commands::TwinVerify(args) => {
+            handlers::twin_verify::handle(args)?;
         }
     }
 

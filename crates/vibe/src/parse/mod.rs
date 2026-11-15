@@ -5,6 +5,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::lex::{Lexer, Token, TokenKind};
 use crate::span::Span;
 
+mod cond;
 mod expr;
 mod items;
 mod preamble;
@@ -13,20 +14,23 @@ mod stmt;
 pub struct Parser<'a> {
     pub(crate) lex: Lexer<'a>,
     pub(crate) cur: Token,
+    /// Current nesting depth of value-producing `if` expressions.
+    pub(crate) cond_depth: u16,
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new `Parser`.
     pub fn new(src: &'a str) -> Result<Self, Diagnostic> {
         let mut lex = Lexer::new(src);
         let cur = lex.next_token()?;
-        Ok(Self { lex, cur })
+        Ok(Self {
+            lex,
+            cur,
+            cond_depth: 0,
+        })
     }
 
-    #[allow(dead_code)]
-    pub fn source(&self) -> &'a str {
-        self.lex.source()
-    }
-
+    /// Parses program.
     pub fn parse_program(&mut self) -> Result<Program, Diagnostic> {
         let start = self.cur.span.start;
         let mut locales = Vec::new();
@@ -77,10 +81,14 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses cell-body.
     pub fn parse_cell_body(&mut self) -> Result<Expr, Diagnostic> {
         self.expect(TokenKind::Eq, "cell body must start with '='")?;
         let expr = self.parse_expr()?;
-        if self.cur.kind != TokenKind::Eof && self.cur.kind != TokenKind::Semicolon {
+        if self.cur.kind == TokenKind::Semicolon {
+            self.bump()?;
+        }
+        if self.cur.kind != TokenKind::Eof {
             return Err(self.err("unexpected tokens after cell expression"));
         }
         Ok(expr)
@@ -229,6 +237,7 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// `true` when named-arg-key.
 pub(super) fn is_named_arg_key(s: &str) -> bool {
     matches!(
         s,
@@ -244,9 +253,20 @@ pub(super) fn is_named_arg_key(s: &str) -> bool {
             | "workspace"
             | "output"
             | "tolerance"
+            // Civics / LocalHost stdlib kernels (Econ, Statistics, PhysicalUnits)
+            | "incomes"
+            | "utilities"
+            | "epsilon"
+            | "x"
+            | "y"
+            | "value"
+            | "from"
+            | "to"
+            | "poverty_line"
     )
 }
 
+/// `true` when stmt-kw.
 pub(super) fn is_stmt_kw(s: &str) -> bool {
     let canon = if let Some((_, c)) = crate::locale::LocaleRegistry::default().resolve(s) {
         c
@@ -274,6 +294,7 @@ pub(super) fn is_stmt_kw(s: &str) -> bool {
     )
 }
 
+/// Binary operator.
 pub(super) fn bin(left: Expr, op: BinOp, right: Expr) -> Expr {
     Expr {
         span: left.span.merge(right.span),
@@ -285,6 +306,7 @@ pub(super) fn bin(left: Expr, op: BinOp, right: Expr) -> Expr {
     }
 }
 
+/// Item span.
 pub(super) fn item_span(item: &Item) -> Span {
     match item {
         Item::Function(f) => f.span,
@@ -301,6 +323,7 @@ pub(super) fn item_span(item: &Item) -> Span {
     }
 }
 
+/// Parses color-literal.
 pub(super) fn parse_color_literal(
     raw: &str,
     span: Span,
@@ -347,10 +370,12 @@ pub(super) fn parse_color_literal(
     }
 }
 
+/// Strips an IRI wrapper.
 pub(super) fn strip_iri(s: &str) -> String {
     s.trim_start_matches('<').trim_end_matches('>').to_string()
 }
 
+/// Unquotes a string.
 pub(super) fn unquote(s: &str, span: Span) -> Result<String, Diagnostic> {
     let inner = s
         .strip_prefix('"')
@@ -400,6 +425,7 @@ pub(super) fn unquote(s: &str, span: Span) -> Result<String, Diagnostic> {
     Ok(out)
 }
 
+/// Parses int.
 pub(super) fn parse_int(s: &str, span: Span) -> Result<Literal, Diagnostic> {
     let raw = s
         .trim_end_matches("i32")
@@ -433,6 +459,7 @@ pub(super) fn parse_int(s: &str, span: Span) -> Result<Literal, Diagnostic> {
     }
 }
 
+/// Parses float-bits.
 pub(super) fn parse_float_bits(s: &str, span: Span) -> Result<u64, Diagnostic> {
     let raw = s
         .trim_end_matches("f32")
@@ -443,6 +470,7 @@ pub(super) fn parse_float_bits(s: &str, span: Span) -> Result<u64, Diagnostic> {
         .map_err(|_| Diagnostic::new(DiagCode::E001, span, "bad float"))
 }
 
+/// Parses quantity-literal.
 pub(super) fn parse_quantity_literal(raw: &str, span: Span) -> Result<(u64, String), Diagnostic> {
     let mut num_end = 0;
     let chars: Vec<char> = raw.chars().collect();
@@ -476,10 +504,12 @@ pub(super) fn parse_quantity_literal(raw: &str, span: Span) -> Result<(u64, Stri
     Ok((val.to_bits(), unit_str))
 }
 
+/// Parses program.
 pub fn parse_program(src: &str) -> Result<Program, Diagnostic> {
     Parser::new(src)?.parse_program()
 }
 
+/// Parses cell.
 pub fn parse_cell(src: &str) -> Result<Expr, Diagnostic> {
     Parser::new(src)?.parse_cell_body()
 }

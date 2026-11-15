@@ -1,7 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::q42_volume::StreamingQ42VolumeWriter;
 use crate::NQuin;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -17,6 +16,20 @@ use std::path::{Path, PathBuf};
 const CHUNK_SIZE_LIMIT: usize = 1_000_000;
 /// Bound simultaneously open sorted runs and their reader buffers.
 pub(super) const MAX_MERGE_FAN_IN: usize = 32;
+
+/// Quins and SuperBlocks written by a final [`ExternalSorter::merge`].
+///
+/// Callers must read the field they mean: ingest accounting reports quins
+/// ("five triples in, five quins out"), block accounting reads `blocks`.
+/// Before this struct the native merge returned the block count while the
+/// WASM merge returned the quin count — a split-brain API.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MergeStats {
+    /// Super-Quins written into the final volume.
+    pub quins: u64,
+    /// SuperBlocks written into the final volume.
+    pub blocks: u64,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 mod volume_publisher;
@@ -45,6 +58,7 @@ pub struct ExternalSorter {
 }
 
 impl ExternalSorter {
+    /// External sorter spooling runs into `temp_dir`.
     pub fn new(temp_dir: PathBuf) -> Self {
         // Ensure temp_dir exists
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -64,12 +78,14 @@ impl ExternalSorter {
         }
     }
 
+    /// Install a diagnostic-message sink (progress/notes).
     pub fn set_note_sink(&mut self, sink: std::sync::Arc<dyn Fn(&str) + Send + Sync>) {
         self.note = Some(sink.clone());
         #[cfg(not(target_arch = "wasm32"))]
         self.lex.set_note_sink(sink);
     }
 
+    /// Emit a note through the sink when one is installed.
     fn note(&self, msg: impl AsRef<str>) {
         let msg = msg.as_ref();
         if let Some(sink) = &self.note {
@@ -79,6 +95,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Buffer a quin; flush a sorted chunk to disk when full.
     pub fn push(&mut self, quin: NQuin) -> std::io::Result<()> {
         self.buffer.push(quin);
         self.total_quins += 1;
@@ -115,6 +132,8 @@ impl ExternalSorter {
         }
     }
 
+    /// Intern a (hash, term) pair into the native lexicon —
+    /// collision count is refreshed from the lexicon.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
         self.lex.intern(hash, term)?;
@@ -122,16 +141,19 @@ impl ExternalSorter {
         Ok(())
     }
 
+    /// Intern a (hash, term) pair into the WASM lex run buffer.
     #[cfg(target_arch = "wasm32")]
     pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
         self.push_lex(hash, term);
         Ok(())
     }
 
+    /// Lexicon hash collisions detected during interning.
     pub fn lex_collision_count(&self) -> u64 {
         self.lex_collisions
     }
 
+    /// Total terms interned so far.
     pub fn lex_interned_count(&self) -> u64 {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -143,6 +165,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Number of sorted quin runs on disk.
     pub fn quin_run_count(&self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -154,16 +177,20 @@ impl ExternalSorter {
         }
     }
 
+    /// Total quins pushed across all runs.
     pub fn quin_total(&self) -> u64 {
         self.total_quins
     }
 
+    /// Adopt externally produced run files as the sorter's chunks
+    /// (used when runs were written by a parallel stage).
     pub fn replace_chunks(&mut self, files: Vec<PathBuf>, total_quins: u64) {
         self.chunk_files = files;
         self.total_quins = total_quins;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Finalize buffered lexicon entries into sorted lex runs.
     pub fn adopt_lex_runs(&mut self) -> std::io::Result<()> {
         self.lex.adopt_existing_runs()
     }
@@ -199,6 +226,7 @@ impl ExternalSorter {
         Ok(sorter)
     }
 
+    /// Number of sorted lexicon runs.
     pub fn lex_run_count(&self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -210,6 +238,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Sort the in-memory chunk and write it as a run file.
     fn flush_chunk(&mut self) -> std::io::Result<()> {
         if self.buffer.is_empty() {
             return Ok(());
@@ -250,9 +279,28 @@ impl ExternalSorter {
         Ok(())
     }
 
-    /// K-way merge sorted chunks into a unified v2 `.q42` volume.
+    /// K-way merge sorted chunks into a unified v3 `.q42` volume.
+    ///
+    /// Defaults to [`IngestAccessPolicy::Restricted`] (QW-10): never mints
+    /// `FLAG_PERMISSIVE_COMMONS` unless the caller uses
+    /// [`Self::merge_with_access_policy`] with `PublicRedistributable`.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(self, final_q42: &Path) -> std::io::Result<MergeStats> {
+        self.merge_with_access_policy(
+            final_q42,
+            crate::q42_volume::IngestAccessPolicy::Restricted,
+            None,
+        )
+    }
+
+    /// Merge with an explicit access policy and optional provenance companion (QW-10).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn merge_with_access_policy(
+        mut self,
+        final_q42: &Path,
+        policy: crate::q42_volume::IngestAccessPolicy,
+        provenance: Option<&crate::q42_volume::IngestProvenanceRecord>,
+    ) -> std::io::Result<MergeStats> {
         // Flush any remaining quins
         self.flush_chunk()?;
 
@@ -274,13 +322,18 @@ impl ExternalSorter {
             }
         };
         let mut writer = StreamingQ42VolumeWriter::new(&lex_map)?;
-        // Catalog ontologies (Pages ingest), not personal records.
-        // Sanctuary bits on a Quin still win inside the writer.
-        writer.declare_permissive_commons();
+        // QW-10: never default to permissive-commons. Only an explicit
+        // PublicRedistributable decision may set the Commons header flag.
+        if policy.may_declare_permissive_commons() {
+            writer.declare_permissive_commons();
+        }
 
         if self.chunk_files.is_empty() {
             writer.finish(final_q42)?;
-            return Ok(0);
+            if let Some(prov) = provenance {
+                prov.write_beside_volume(final_q42)?;
+            }
+            return Ok(MergeStats::default());
         }
 
         // Compact raw sorted runs hierarchically before the final Q42 merge.
@@ -302,17 +355,20 @@ impl ExternalSorter {
         }
 
         impl Ord for HeapItem {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 // Min-heap based on object hash
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for HeapItem {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for HeapItem {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }
@@ -332,9 +388,11 @@ impl ExternalSorter {
 
         let mut block_buffer = Vec::with_capacity(QUINS_PER_BLOCK);
         let mut block_seq = 0u64;
+        let mut quins_written = 0u64;
 
         while let Some(item) = heap.pop() {
             block_buffer.push(item.quin);
+            quins_written += 1;
 
             // Fetch next from the same reader
             let idx = item.reader_idx;
@@ -359,19 +417,23 @@ impl ExternalSorter {
         }
 
         writer.finish(final_q42)?;
-
+        if let Some(prov) = provenance {
+            prov.write_beside_volume(final_q42)?;
+        }
         // Cleanup temp files
         for chunk_path in &chunk_files {
             let _ = std::fs::remove_file(chunk_path);
         }
-
-        Ok(block_seq)
+        Ok(MergeStats {
+            quins: quins_written,
+            blocks: block_seq,
+        })
     }
 
     /// In-memory k-way merge of sorted Quin runs. Browser WASM has no spill
     /// files; fan-in stays bounded by [`MAX_MERGE_FAN_IN`].
     #[cfg(target_arch = "wasm32")]
-    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<u64> {
+    pub fn merge(mut self, final_q42: &Path) -> std::io::Result<MergeStats> {
         self.flush_chunk()?;
         let mut runs = std::mem::take(&mut self.memory_runs);
         let mut pass = 0usize;
@@ -390,6 +452,10 @@ impl ExternalSorter {
         }
         let merged = Self::merge_memory_runs(&runs);
         let count = merged.len() as u64;
+        let stats = MergeStats {
+            quins: count,
+            blocks: (count + QUINS_PER_BLOCK as u64 - 1) / QUINS_PER_BLOCK as u64,
+        };
         let fallback = self.temp_dir.join("merged.q42");
         let mut path = final_q42;
         let mut file = match File::create(path) {
@@ -406,7 +472,7 @@ impl ExternalSorter {
                                 | std::io::ErrorKind::PermissionDenied
                         ) =>
                     {
-                        return Ok(count);
+                        return Ok(stats);
                     }
                     Err(err) => return Err(err),
                 }
@@ -419,27 +485,31 @@ impl ExternalSorter {
             }
             writer.flush()?;
         }
-        Ok(count)
+        Ok(stats)
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
+    /// K-way merge of in-memory sorted quin runs.
+fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
         #[derive(Eq)]
         struct Item {
             quin: NQuin,
             reader: usize,
         }
         impl Ord for Item {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for Item {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for Item {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }
@@ -473,6 +543,7 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Read the next 48-byte quin; `None` at EOF.
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];
         match reader.read_exact(&mut bytes) {
@@ -483,6 +554,8 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Merge run files down to the compaction target (bounded
+    /// fan-in per pass).
     fn compact_runs(&self) -> std::io::Result<Vec<PathBuf>> {
         let mut runs = self.chunk_files.clone();
         let mut pass = 0usize;
@@ -510,7 +583,9 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn merge_raw_runs(inputs: &[PathBuf], output: &Path) -> std::io::Result<()> {
+    /// K-way merge of on-disk quin runs into `output`, preserving
+/// global order.
+fn merge_raw_runs(inputs: &[PathBuf], output: &Path) -> std::io::Result<()> {
         if inputs.is_empty() || inputs.len() > MAX_MERGE_FAN_IN {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -523,16 +598,19 @@ impl ExternalSorter {
             reader: usize,
         }
         impl Ord for Item {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for Item {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for Item {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }
@@ -631,8 +709,10 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn merge_declares_permissive_commons_for_catalog_ingest() {
-        use crate::q42_volume::{Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY};
+    fn merge_requires_explicit_public_redistributable_for_commons_flag() {
+        use crate::q42_volume::{
+            IngestAccessPolicy, Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY,
+        };
 
         let dir = TempDir::new().unwrap();
         let mut sorter = ExternalSorter::new(dir.path().join("sort"));
@@ -648,18 +728,45 @@ mod tests {
             .unwrap();
         sorter.push_lex(1, "urn:q42:catalog-subject");
         let out = dir.path().join("catalog.q42");
-        sorter.merge(&out).unwrap();
-        let volume = Q42Volume::open(&out).unwrap();
-        let flags = volume.header().flags;
-        assert_ne!(
-            flags & FLAG_PERMISSIVE_COMMONS,
-            0,
-            "Pages catalog merge must set FLAG_PERMISSIVE_COMMONS"
-        );
+        // Default merge is Restricted — must NOT mint Commons (QW-10).
+        let stats = sorter.merge(&out).unwrap();
         assert_eq!(
-            flags & FLAG_SANCTUARY,
-            0,
-            "unmarked catalog Quins must not flip Sanctuary"
+            stats,
+            MergeStats {
+                quins: 1,
+                blocks: 1
+            },
+            "merge must report Super-Quins and SuperBlocks separately"
         );
+        let volume = Q42Volume::open(&out).unwrap();
+        assert_eq!(
+            volume.header().flags & FLAG_PERMISSIVE_COMMONS,
+            0,
+            "default merge must not set FLAG_PERMISSIVE_COMMONS"
+        );
+
+        let mut sorter2 = ExternalSorter::new(dir.path().join("sort2"));
+        sorter2
+            .push(NQuin {
+                subject: 1,
+                predicate: 2,
+                object: 3,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            })
+            .unwrap();
+        sorter2.push_lex(1, "urn:q42:catalog-subject");
+        let out2 = dir.path().join("catalog-public.q42");
+        sorter2
+            .merge_with_access_policy(&out2, IngestAccessPolicy::PublicRedistributable, None)
+            .unwrap();
+        let volume2 = Q42Volume::open(&out2).unwrap();
+        assert_ne!(
+            volume2.header().flags & FLAG_PERMISSIVE_COMMONS,
+            0,
+            "explicit PublicRedistributable must set FLAG_PERMISSIVE_COMMONS"
+        );
+        assert_eq!(volume2.header().flags & FLAG_SANCTUARY, 0);
     }
 }

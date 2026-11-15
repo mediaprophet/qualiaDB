@@ -1,0 +1,71 @@
+{
+  "oracle": "C:\\github\\qualiaDB\\docs\\plans\\emf-qac-evolution-2026-11-13\\vectors\\tools\\generator\\digests.py",
+  "oracle_sha256": "0e44751bbf9c3259ca6238372e4007d4759d93e7a0f6a56c064613b312648a50",
+  "fixtures": [
+    {
+      "path": "tensor.qac",
+      "expected": "accept",
+      "sha256": "3a4a54b1a4ca668fae9b2d76348d334575b995ea3cf5c2c6b7a92f6dc4bfa2db"
+    },
+    {
+      "path": "tensor.emf",
+      "expected": "accept",
+      "sha256": "d18b466063e0e4527b82f77f78009034035cd1c78e1f4179434f3cd654d2f96f"
+    },
+    {
+      "path": "events.qac",
+      "expected": "accept",
+      "sha256": "7a6d32f0ab279dfcbfa5edae130904443acd3870dd264199b42c96ec6a3fb3bc"
+    },
+    {
+      "path": "events.emf",
+      "expected": "accept",
+      "sha256": "0859a5c424def50acf55cf1652f5a55e637a213b1bf09aaf10a306a13458a8d9"
+    },
+    {
+      "path": "correlation.qac",
+      "expected": "accept",
+      "sha256": "3b7cd46a71eba54b62fe8b6cd1b0f9eef702b558679abadd7f0922143aed824f"
+    },
+    {
+      "path": "correlation.emf",
+      "expected": "accept",
+      "sha256": "c02056cb99b1da5d5a82fc526a7c0c229895c9e53e1514db20e72a4f2c630423"
+    },
+    {
+      "path": "lineage.qac",
+      "expected": "accept",
+      "sha256": "c5420a9070d803c2995de570a1b07c101ce47fe44befe0f63d6a42ecffa002f0"
+    },
+    {
+      "path": "lineage.emf",
+      "expected": "accept",
+      "sha256": "405bd216b184478783a0cb60534f99bae5edbaf3706366ad701288b1775b7b81"
+    },
+    {
+      "path": "unknown-critical.qac",
+      "expected": "reject",
+      "sha256": "8a85bbec594f0450f3ee0386e57864f60fb0a6c267937e7893400a483cd142c5"
+    },
+    {
+      "path": "unknown-optional.qac",
+      "expected": "accept",
+      "sha256": "149125527d3ac707d72fa379cf7b6cf4fcdf6887700ca66c4c174af67e146982"
+    },
+    {
+      "path": "bad-ref.qac",
+      "expected": "reject",
+      "sha256": "ad786798f632df546355513ecb47f7684df3aa5e6375e2d73c3da3fa688c085c"
+    },
+    {
+      "path": "bad-hash.qac",
+      "expected": "reject",
+      "sha256": "1896f5ef1495ad66f063bc2daed74f863d4548749d996f7a259f037742e56c1d"
+    },
+    {
+      "path": "overflow-stride.qac",
+      "expected": "reject",
+      "sha256": "4073bab742609ed742ca006e6b9476fd36db181c7a231746a2052889088df484"
+    }
+  ]
+}

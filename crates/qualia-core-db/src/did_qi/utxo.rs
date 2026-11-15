@@ -57,15 +57,18 @@ pub struct ChainId {
 }
 
 impl ChainId {
+    /// Raw chain-id bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes[..self.len as usize]
     }
 
+    /// `true` when this is a BIP-122 chain id.
     pub fn is_bip122(&self) -> bool {
         self.as_bytes().starts_with(b"bip122:")
     }
 }
 
+/// Parses a chain id; `QiError` on malformed input.
 pub fn parse_chain_id(s: &[u8]) -> Result<ChainId, QiError> {
     if s.len() < 8 || s.len() > MAX_CAIP2 || !s.starts_with(b"bip122:") {
         return Err(QiError::MalformedChainId);
@@ -160,6 +163,7 @@ fn dsha256(bytes: &[u8]) -> [u8; 32] {
     sha256_32(&sha256_32(bytes))
 }
 
+/// Extracts the UTXO commitment from a transaction's OP_RETURN.
 pub fn extract_op_return(tx: &[u8]) -> Result<UtxoCommitment, QiError> {
     if tx.len() < 10 {
         return Err(QiError::MalformedTx);
@@ -232,6 +236,7 @@ pub fn extract_op_return(tx: &[u8]) -> Result<UtxoCommitment, QiError> {
     })
 }
 
+/// Verifies a commitment digest in `tx`; returns the outpoint.
 pub fn verify_commitment(tx: &[u8], digest: &[u8; 32]) -> Result<Outpoint, QiError> {
     let c = extract_op_return(tx)?;
     if c.tombstone || &c.digest != digest {
@@ -240,6 +245,7 @@ pub fn verify_commitment(tx: &[u8], digest: &[u8; 32]) -> Result<Outpoint, QiErr
     Ok(c.outpoint)
 }
 
+/// Encodes a commitment transaction.
 pub fn encode_commitment_tx(
     prev_txid: &[u8; 32],
     prev_vout: u32,
@@ -295,6 +301,7 @@ pub fn encode_commitment_tx(
     Ok(i)
 }
 
+/// Applies a UTXO attestation into store `S`.
 pub fn apply_utxo_attestation<S: QiStore>(
     store: &mut S,
     id: &DidQi,

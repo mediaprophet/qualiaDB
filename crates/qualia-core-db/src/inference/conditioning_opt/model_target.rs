@@ -23,6 +23,7 @@ pub enum ModelFamily {
 }
 
 impl ModelFamily {
+    /// Stable string form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Llama => "llama",
@@ -34,6 +35,7 @@ impl ModelFamily {
         }
     }
 
+    /// Default chat-template family for the model target.
     pub fn default_template_family(&self) -> ChatFamily {
         match self {
             Self::Llama => ChatFamily::Llama3,
@@ -62,6 +64,7 @@ pub struct ModelPrecisionTarget {
 }
 
 impl ModelPrecisionTarget {
+    /// Creates `ModelPrecisionTarget` with the given state.
     pub fn new(
         model_id: impl Into<String>,
         family: ModelFamily,
@@ -121,6 +124,7 @@ pub struct ModelPrecisionRegistry {
 }
 
 impl ModelPrecisionRegistry {
+    /// Creates a default `ModelPrecisionRegistry`.
     pub fn new() -> Self {
         Self::default()
     }
@@ -148,6 +152,14 @@ impl ModelPrecisionRegistry {
     ) -> Result<(), &'static str> {
         let target = self.targets.get_mut(model_id).ok_or("model not found")?;
         target.active_profile_id = Some(profile_id.into());
+        target.active_contract = None;
+        Ok(())
+    }
+
+    /// Clear any active conditioning profile and contract from a model target.
+    pub fn clear_active_profile(&mut self, model_id: &str) -> Result<(), &'static str> {
+        let target = self.targets.get_mut(model_id).ok_or("model not found")?;
+        target.active_profile_id = None;
         target.active_contract = None;
         Ok(())
     }
@@ -244,6 +256,7 @@ mod tests {
                 output_tokens: 128,
                 tool_rounds: 2,
                 max_bytes: 4096,
+                thinking_token_budget: None,
             },
             PrefixConfiguration::CanonicalCacheAligned,
             CompressionStrategy::PreservePrefix,

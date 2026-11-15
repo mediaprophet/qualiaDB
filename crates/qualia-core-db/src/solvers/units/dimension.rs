@@ -21,6 +21,7 @@ pub const AMOUNT: usize = 5;
 pub const LUMINOSITY: usize = 6;
 
 impl Dimension {
+    /// Creates a default `Dimension`.
     pub const fn new(exponents: [i8; 7]) -> Self {
         Self { exponents }
     }
@@ -59,6 +60,7 @@ impl Dimension {
     /// Frequency = T⁻¹ (hertz).
     pub const FREQUENCY: Dimension = Dimension::new([0, 0, -1, 0, 0, 0, 0]);
 
+    /// `true` when dimensionless.
     pub fn is_dimensionless(&self) -> bool {
         self.exponents == [0; 7]
     }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl MLOptimizationEngine {
+    /// Creates `MLOptimizationEngine` with the given state.
     pub fn new() -> Self {
         Self {
             optimization_algorithms: HashMap::new(),
@@ -15,6 +16,7 @@ impl MLOptimizationEngine {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -55,6 +57,7 @@ impl MLOptimizationEngine {
         &self.optimization_constraints
     }
 
+    /// `MLOptimizationEngine::optimize_model`.
     pub fn optimize_model(
         &mut self,
         model_id: &str,
@@ -67,6 +70,7 @@ impl MLOptimizationEngine {
 }
 
 impl OptimizationObjective {
+    /// Creates a default `OptimizationObjective`.
     pub fn new() -> Self {
         Self {
             objective_id: "objective_1".to_string(),
@@ -78,6 +82,7 @@ impl OptimizationObjective {
 }
 
 impl OptimizationConstraint {
+    /// Creates a default `OptimizationConstraint`.
     pub fn new() -> Self {
         Self {
             constraint_id: "constraint_1".to_string(),

@@ -1,12 +1,9 @@
 //! Machine schema exports for all bound host call ids (T51).
 //!
-//! Every `ALL_BOUND` id exports a machine schema — not English prose.
-//! Arguments, effect class, honesty label, and return type are
-//! declared in the same table that the catalog uses. This is the
-//! MCP replacement: the schema IS the protocol.
-//!
-//! The schema is generated from the dispatch table so it can never
-//! drift from the actual implementation. A host can query
+//! Explicit schemas for the covered host and runtime operations.
+//! This registry is maintained alongside dispatch; source presence does not
+//! establish provider availability or full dispatch/schema conformance.
+//! A host can query
 //! `host.schema()` to get the full catalog, or `host.schema_for(id)`
 //! to get a single entry.
 //!
@@ -17,6 +14,30 @@
 
 use crate::value::Value;
 use std::collections::BTreeMap;
+#[path = "capability_schema/geo_geodesy_entries.rs"]
+pub mod geo_geodesy_entries;
+#[path = "capability_schema/geo_terrain_node_entries.rs"]
+pub mod geo_terrain_node_entries;
+#[path = "capability_schema/geo_geomorph_strata_entries.rs"]
+pub mod geo_geomorph_strata_entries;
+#[path = "capability_schema/geo_gis_io_entries.rs"]
+pub mod geo_gis_io_entries;
+#[path = "capability_schema/geo_sparql_deontic_entries.rs"]
+pub mod geo_sparql_deontic_entries;
+#[path = "capability_schema/geo_vector_gp_entries.rs"]
+pub mod geo_vector_gp_entries;
+#[path = "capability_schema/geo_spatial_stats_algebra_entries.rs"]
+pub mod geo_spatial_stats_algebra_entries;
+#[path = "capability_schema/geo_wgsl_forge_entries.rs"]
+pub mod geo_wgsl_forge_entries;
+#[path = "capability_schema/geo_cartography_poet_entries.rs"]
+pub mod geo_cartography_poet_entries;
+#[path = "capability_schema/geo_viewport_entries.rs"]
+pub mod geo_viewport_entries;
+#[path = "capability_schema/etalon_vibe_entries.rs"]
+pub mod etalon_vibe_entries;
+#[path = "capability_schema/runtime_entries.rs"]
+mod runtime_entries;
 
 /// The effect class of a host call (T51).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,6 +53,7 @@ pub enum EffectClass {
 }
 
 impl EffectClass {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Pure => "pure",
@@ -56,6 +78,7 @@ pub enum HonestyLabel {
 }
 
 impl HonestyLabel {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Always => "always",
@@ -80,6 +103,7 @@ pub struct SchemaArg {
 }
 
 impl SchemaArg {
+    /// Creates a new `SchemaArg`.
     pub fn new(name: &str, ty: &str, required: bool) -> Self {
         Self {
             name: name.into(),
@@ -89,11 +113,13 @@ impl SchemaArg {
         }
     }
 
+    /// Builder — sets description.
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = desc.into();
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
@@ -127,6 +153,7 @@ pub struct SchemaEntry {
 }
 
 impl SchemaEntry {
+    /// Creates a new `SchemaEntry`.
     pub fn new(id: &str, effect: EffectClass, honesty: HonestyLabel, returns: &str) -> Self {
         Self {
             id: id.into(),
@@ -138,16 +165,19 @@ impl SchemaEntry {
         }
     }
 
+    /// Builder — sets arg.
     pub fn with_arg(mut self, arg: SchemaArg) -> Self {
         self.args.push(arg);
         self
     }
 
+    /// Builder — sets description.
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = desc.into();
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("id".into(), Value::String(self.id.clone()));
@@ -177,7 +207,7 @@ impl SchemaEntry {
 /// the actual implementation. New host calls must be added here AND
 /// in the dispatch table — the schema test verifies they match.
 pub fn all_schemas() -> Vec<SchemaEntry> {
-    vec![
+    let mut schemas = vec![
         // ── Graph ─────────────────────────────────────────────────────
         SchemaEntry::new(
             "graph.query",
@@ -529,7 +559,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile", "Record", true).with_description("Conditioning profile or spec record"))
+        .with_arg(
+            SchemaArg::new("profile", "Record", true)
+                .with_description("Conditioning profile or spec record"),
+        )
         .with_description("Validate one profile and return structured violations"),
         SchemaEntry::new(
             "Conditioning.compile",
@@ -537,9 +570,17 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("spec", "Record", true).with_description("Conditioning specification"))
-        .with_arg(SchemaArg::new("capabilities", "Record", false).with_description("Target backend capabilities"))
-        .with_arg(SchemaArg::new("authority", "Record", false).with_description("Authority view and graph scopes"))
+        .with_arg(
+            SchemaArg::new("spec", "Record", true).with_description("Conditioning specification"),
+        )
+        .with_arg(
+            SchemaArg::new("capabilities", "Record", false)
+                .with_description("Target backend capabilities"),
+        )
+        .with_arg(
+            SchemaArg::new("authority", "Record", false)
+                .with_description("Authority view and graph scopes"),
+        )
         .with_description("Compile conditioning contract against capabilities and authority"),
         SchemaEntry::new(
             "Conditioning.inspect",
@@ -547,7 +588,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::Always,
             "Record",
         )
-        .with_arg(SchemaArg::new("spec", "Record", true).with_description("Conditioning spec or plan summary"))
+        .with_arg(
+            SchemaArg::new("spec", "Record", true)
+                .with_description("Conditioning spec or plan summary"),
+        )
         .with_description("Return a redacted requirement, token, and evidence trace"),
         SchemaEntry::new(
             "Conditioning.evaluate",
@@ -555,7 +599,10 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("split", "string", true).with_description("Evaluation split: search, dev, test"))
+        .with_arg(
+            SchemaArg::new("split", "string", true)
+                .with_description("Evaluation split: search, dev, test"),
+        )
         .with_description("Start a bounded evaluation campaign"),
         SchemaEntry::new(
             "Conditioning.activate",
@@ -563,8 +610,13 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile_id", "string", true).with_description("Profile URN to activate"))
-        .with_arg(SchemaArg::new("version", "u64", true).with_description("Version number to activate"))
+        .with_arg(
+            SchemaArg::new("profile_id", "string", true)
+                .with_description("Profile URN to activate"),
+        )
+        .with_arg(
+            SchemaArg::new("version", "u64", true).with_description("Version number to activate"),
+        )
         .with_description("Move active registry pointer after approval gates"),
         SchemaEntry::new(
             "Conditioning.rollback",
@@ -572,10 +624,29 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
             HonestyLabel::CapabilityLease,
             "Record",
         )
-        .with_arg(SchemaArg::new("profile_id", "string", true).with_description("Profile URN to rollback"))
-        .with_arg(SchemaArg::new("target_version", "u64", false).with_description("Target version or previous active if omitted"))
+        .with_arg(
+            SchemaArg::new("profile_id", "string", true)
+                .with_description("Profile URN to rollback"),
+        )
+        .with_arg(
+            SchemaArg::new("target_version", "u64", false)
+                .with_description("Target version or previous active if omitted"),
+        )
         .with_description("Restore a prior approved version"),
-    ]
+    ];
+    schemas.extend(runtime_entries::entries());
+    schemas.extend(geo_geodesy_entries::entries());
+    schemas.extend(geo_terrain_node_entries::entries());
+    schemas.extend(geo_geomorph_strata_entries::entries());
+    schemas.extend(geo_gis_io_entries::entries());
+    schemas.extend(geo_sparql_deontic_entries::entries());
+    schemas.extend(geo_vector_gp_entries::entries());
+    schemas.extend(geo_spatial_stats_algebra_entries::entries());
+    schemas.extend(geo_wgsl_forge_entries::entries());
+    schemas.extend(geo_cartography_poet_entries::entries());
+    schemas.extend(geo_viewport_entries::entries());
+    schemas.extend(etalon_vibe_entries::entries());
+    schemas
 }
 
 /// Get the schema for a single host call id.

@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const __wbg_compiledcell_free: (a: number, b: number) => void;
 export const apply_structural_edit: (a: number, b: number, c: number, d: number) => any;
 export const apply_structural_edits: (a: number, b: number, c: number, d: number) => any;
 export const ast_schema_json: () => [number, number];
@@ -8,13 +9,25 @@ export const capability_invoke: (a: number, b: number, c: number, d: number) => 
 export const check_cell_src: (a: number, b: number) => any;
 export const check_program_src: (a: number, b: number) => any;
 export const compile_cell_bytecode: (a: number, b: number) => any;
+export const compiledcell_code_size: (a: number) => number;
+export const compiledcell_compile: (a: number, b: number) => [number, number, number];
+export const compiledcell_constants: (a: number) => number;
+export const compiledcell_disassembly: (a: number) => [number, number];
+export const compiledcell_from_bytes: (a: number, b: number) => [number, number, number];
+export const compiledcell_functions: (a: number) => number;
+export const compiledcell_run: (a: number) => any;
+export const compiledcell_top_locals: (a: number) => number;
 export const decode_and_run: (a: number, b: number) => any;
+export const decode_program_cborld_wasm: (a: number, b: number) => [number, number, number];
 export const diagnose_src: (a: number, b: number) => any;
 export const diagnostic_schema_json: () => [number, number];
 export const ebnf_grammar: () => [number, number];
 export const encode_cell_bytecode: (a: number, b: number) => any;
+export const encode_program_cborld_wasm: (a: number, b: number) => [number, number, number];
 export const eval_cell_json: (a: number, b: number) => any;
+export const eval_cell_src: (a: number, b: number) => any;
 export const eval_program_src: (a: number, b: number) => any;
+export const eval_program_with_receipt_wasm: (a: number, b: number) => any;
 export const gbnf_grammar: () => [number, number];
 export const host_version: () => [number, number];
 export const language_version: () => [number, number];
@@ -23,11 +36,11 @@ export const parse_program_src: (a: number, b: number) => any;
 export const project_source: (a: number, b: number) => any;
 export const run_cell_bytecode: (a: number, b: number) => any;
 export const run_program_bytecode: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
-export const eval_cell_src: (a: number, b: number) => any;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __externref_table_dealloc: (a: number) => void;
 export const __wbindgen_start: () => void;

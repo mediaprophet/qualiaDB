@@ -20,6 +20,7 @@ PAT = re.compile(
 )
 
 def tag_file(path):
+    """Tags a file."""
     text = open(path, encoding="utf-8").read().replace("\r\n", "\n").replace("\r", "\n")
     out, changed = [], 0
     for ln in text.split("\n"):
@@ -33,6 +34,7 @@ def tag_file(path):
     return changed
 
 def main():
+    """CLI entry point."""
     total = files = 0
     for pat in ("core-ontologies/un-instruments/*.n3", "core-ontologies/concepts/*.n3"):
         for f in sorted(glob.glob(pat)):

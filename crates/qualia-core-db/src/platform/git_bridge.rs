@@ -130,6 +130,7 @@ pub struct DagStore {
 }
 
 impl DagStore {
+    /// Creates a default `DagStore`.
     pub fn new() -> Self {
         Self {
             nodes: Vec::new(),

@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -35,6 +35,7 @@ pub struct SupervisorState {
 }
 
 #[component]
+/// Aether `ProblemsPane` component.
 pub fn ProblemsPane() -> Element {
     let mut state = use_signal(|| SupervisorState::default());
     let mut error = use_signal(|| None::<String>);

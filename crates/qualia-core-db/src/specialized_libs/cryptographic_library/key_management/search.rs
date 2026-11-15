@@ -143,6 +143,7 @@ pub struct SearchResult {
 }
 
 impl KeySearchEngine {
+    /// Creates `KeySearchEngine` with the given state.
     pub fn new(engine_type: SearchEngineType) -> Self {
         let indexing_strategy = match engine_type {
             SearchEngineType::Encrypted => IndexingStrategy::Encrypted,

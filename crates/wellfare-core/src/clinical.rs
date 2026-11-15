@@ -150,6 +150,7 @@ pub struct ClinicalReport {
 }
 
 impl ClinicalReport {
+    /// Creates a new instance.
     pub fn new(
         title: impl Into<String>,
         report_type: ClinicalReportType,
@@ -193,6 +194,7 @@ pub struct AttachmentMeta {
 }
 
 impl AttachmentMeta {
+    /// Creates a new instance.
     pub fn new(
         filename: impl Into<String>,
         media_type: impl Into<String>,
@@ -209,10 +211,12 @@ impl AttachmentMeta {
     }
 }
 
+///  record ID.
 pub fn clinical_report_record_id(uuid: &str) -> String {
     format!("urn:wellfair:clinical_report:{uuid}")
 }
 
+///  record ID.
 pub fn clinical_attachment_record_id(uuid: &str) -> String {
     format!("urn:wellfair:clinical_attachment:{uuid}")
 }
@@ -303,6 +307,7 @@ pub fn build_clinical_attachment_envelope(
     }
 }
 
+///  summary.
 pub fn clinical_report_summary(report: &ClinicalReport) -> String {
     serde_json::json!({
         "title": report.title,
@@ -315,6 +320,7 @@ pub fn clinical_report_summary(report: &ClinicalReport) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn clinical_attachment_summary(meta: &AttachmentMeta) -> String {
     serde_json::json!({
         "filename": meta.filename,

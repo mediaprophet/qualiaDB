@@ -65,12 +65,7 @@ pub fn mono_f32_to_i16_le(samples: &[f32], out: &mut [u8]) -> Result<(), AudioEr
     if out.len() < samples.len() * 2 {
         return Err(AudioError::OutputBufferTooSmall);
     }
-    for (i, &s) in samples.iter().enumerate() {
-        let v = (s.clamp(-1.0, 1.0) * 32767.0) as i16;
-        let b = v.to_le_bytes();
-        out[i * 2] = b[0];
-        out[i * 2 + 1] = b[1];
-    }
+    etalon_signal::resample::pcm_f32_to_i16_le_into(samples, out);
     Ok(())
 }
 

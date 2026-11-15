@@ -132,6 +132,7 @@ pub async fn ingest_document(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Ingests document.
 pub async fn ingest_document(
     _u: &str,
     _m: &str,
@@ -182,6 +183,7 @@ pub async fn ingest_file_hex(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Ingests file-hex.
 pub async fn ingest_file_hex(
     _u: &str,
     _m: &str,
@@ -254,6 +256,7 @@ pub async fn search_library(facet: &str, value: &str) -> Result<serde_json::Valu
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Searches library.
 pub async fn search_library(_f: &str, _v: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
@@ -264,11 +267,13 @@ pub async fn list_library() -> Result<serde_json::Value, String> {
     list_library_section(None).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists library.
 pub async fn list_library() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Lists library-section.
 pub async fn list_library_section(section: Option<&str>) -> Result<serde_json::Value, String> {
     let wellfair_args = js_sys::Object::new();
     if let Some(s) = section {
@@ -286,11 +291,13 @@ pub async fn list_library_section(section: Option<&str>) -> Result<serde_json::V
     invoke_library_json("library_list", vf, "wellfair_list_library", wellfair_args).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists library-section.
 pub async fn list_library_section(_s: Option<&str>) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets library-commons.
 pub async fn set_library_commons(
     asset_uri: &str,
     visibility: &str,
@@ -317,11 +324,13 @@ pub async fn set_library_commons(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets library-commons.
 pub async fn set_library_commons(_u: &str, _v: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn library_commons_share_card(asset_uri: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -339,6 +348,7 @@ pub async fn library_commons_share_card(asset_uri: &str) -> Result<serde_json::V
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn library_commons_share_card(_u: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
@@ -368,11 +378,13 @@ pub async fn search_library_time(start: i64, end: i64) -> Result<serde_json::Val
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Searches library-time.
 pub async fn search_library_time(_s: i64, _e: i64) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Searches library-text.
 pub async fn search_library_text(query: &str) -> Result<serde_json::Value, String> {
     let wellfair_args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -390,6 +402,7 @@ pub async fn search_library_text(query: &str) -> Result<serde_json::Value, Strin
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Searches library-text.
 pub async fn search_library_text(_q: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
@@ -424,6 +437,7 @@ pub async fn query_library_faceted(
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn query_library_faceted(
     _filter: &serde_json::Value,
     _sort: &str,
@@ -432,6 +446,7 @@ pub async fn query_library_faceted(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_seed_studio_qapps", wasm_bindgen::JsValue::NULL)
         .await
@@ -442,6 +457,7 @@ pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
@@ -483,6 +499,7 @@ pub async fn seed_perception_library() -> Result<serde_json::Value, String> {
     }
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn seed_perception_library() -> Result<serde_json::Value, String> {
     Err("Perception library seed requires the Tauri desktop host".into())
 }
@@ -499,6 +516,7 @@ fn normalize_seed_report(v: serde_json::Value) -> serde_json::Value {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Ingests legislation-text.
 pub async fn ingest_legislation_text(
     text: &str,
     register_id: Option<&str>,
@@ -545,6 +563,7 @@ pub async fn ingest_legislation_text(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Ingests legislation-text.
 pub async fn ingest_legislation_text(
     _text: &str,
     _register_id: Option<&str>,
@@ -555,6 +574,7 @@ pub async fn ingest_legislation_text(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Ingests legislation-pdf-hex.
 pub async fn ingest_legislation_pdf_hex(
     hex_bytes: &str,
     register_id: Option<&str>,
@@ -601,6 +621,7 @@ pub async fn ingest_legislation_pdf_hex(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Ingests legislation-pdf-hex.
 pub async fn ingest_legislation_pdf_hex(
     _hex: &str,
     _register_id: Option<&str>,
@@ -611,6 +632,7 @@ pub async fn ingest_legislation_pdf_hex(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Lists qapp-catalog-categories.
 pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String> {
     let js = tauri_invoke(
         "wellfair_list_qapp_catalog_categories",
@@ -624,11 +646,13 @@ pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String>
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists qapp-catalog-categories.
 pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn library_stats() -> Result<serde_json::Value, String> {
     let wellfair_args = js_sys::Object::new();
     invoke_library_json(
@@ -640,11 +664,13 @@ pub async fn library_stats() -> Result<serde_json::Value, String> {
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn library_stats() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Removes library-entry.
 pub async fn remove_library_entry(asset_uri: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -662,11 +688,13 @@ pub async fn remove_library_entry(asset_uri: &str) -> Result<serde_json::Value, 
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Removes library-entry.
 pub async fn remove_library_entry(_u: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Exports library-graph.
 pub async fn export_library_graph() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_export_library_graph", wasm_bindgen::JsValue::NULL)
         .await
@@ -677,6 +705,7 @@ pub async fn export_library_graph() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Exports library-graph.
 pub async fn export_library_graph() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }

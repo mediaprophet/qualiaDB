@@ -414,35 +414,35 @@
 - Human input needed: Ethernet capture + CAP_NET_RAW for NET-01.14; reviewed COSE_Sign1 freeze; whether daemons may drop default `libp2p-compat`.
 - Next: remaining CORE-03 disk durability classes, NET-04 QSR evaluation vs Kademlia, default-feature isolation. Packages stay open.
 
-## 2026-09-08 — merge networking onto `0.0.37` (in progress)
+## 2026-09-08 — merge networking onto `0.0.40` (in progress)
 
-- Integrator merges `origin/0.0.37` into `cursor/qdnf-native-fabric-cc6e` so QDNF/QPR rides with Poet/Vibe waves 22–40. Shared file expected: `poet_host/invoke/mod.rs` (keep 0.0.37 LA/GEOM arms and `gpu-runtime` cfg on GPU render arms).
+- Integrator merges `origin/0.0.40` into `cursor/qdnf-native-fabric-cc6e` so QDNF/QPR rides with Poet/Vibe waves 22–40. Shared file expected: `poet_host/invoke/mod.rs` (keep 0.0.40 LA/GEOM arms and `gpu-runtime` cfg on GPU render arms).
 - Do not tick qdnf-imp checkboxes. Packages remain open.
 - Human input needed: none this step.
 
-## 2026-09-08 — merge networking onto `0.0.37` — done, packages remain open
+## 2026-09-08 — merge networking onto `0.0.40` — done, packages remain open
 
-- Merged `origin/0.0.37` (Poet/Vibe waves 22–40, 42 commits) into `cursor/qdnf-native-fabric-cc6e`. Merge-base was `0.0.36-dev` (`d05f1ef6`). Only overlapping file: `poet_host/invoke/mod.rs` — auto-merged; both LA/GEOM arms and `gpu-runtime` cfg remain.
+- Merged `origin/0.0.40` (Poet/Vibe waves 22–40, 42 commits) into `cursor/qdnf-native-fabric-cc6e`. Merge-base was `0.0.40-dev` (`d05f1ef6`). Only overlapping file: `poet_host/invoke/mod.rs` — auto-merged; both LA/GEOM arms and `gpu-runtime` cfg remain.
 - Wave 14 `multihop.rs` unused imports (`PIPE_SLOTS`, `independent_hop_limit`) gated behind `cfg(test)` so the default-feature check stays warning-clean on those names.
 - Measured after merge (`cargo +stable`):
   - `check -p qualia-core-db --no-default-features --features qdnf --lib` → **Finished**, 0 errors.
   - `check -p qualia-core-db --lib` (default, GPU on) → **Finished**, 0 errors.
   - Combined native filter → **471 passed**, 0 failed.
   - `qualia-peer` lib tests + `native_ipc_peers` → **2 passed**; `native ipc exchanged 11 bytes (libp2p not used)`.
-- Not Ethernet. Not Native Independent for default daemons. Not package completion. Not landing the PR onto `0.0.37` (retarget only).
-- Human input needed: whether to land the retargeted PR onto `0.0.37`.
+- Not Ethernet. Not Native Independent for default daemons. Not package completion. Not landing the PR onto `0.0.40` (retarget only).
+- Human input needed: whether to land the retargeted PR onto `0.0.40`.
 - Next: remaining CORE-03 / NET-04 as before. Packages stay open.
 
-## 2026-09-08 — land networking onto `0.0.37` — the prior step was the wrong direction
+## 2026-09-08 — land networking onto `0.0.40` — the prior step was the wrong direction
 
-- Harm: the instruction was merge QDNF/QPR **onto** `0.0.37`. The previous step merged `0.0.37` into the feature branch and retargeted a draft. `origin/0.0.37` still lacked the networking commits (`83607188`; networking ancestor check: no).
-- Remedy: fast-forward `0.0.37` to the networking HEAD so Poet work on `0.0.37` contains waves 1–14. Packages remain open. Not Ethernet. Not Native Independent for default daemons. Not package completion.
+- Harm: the instruction was merge QDNF/QPR **onto** `0.0.40`. The previous step merged `0.0.40` into the feature branch and retargeted a draft. `origin/0.0.40` still lacked the networking commits (`83607188`; networking ancestor check: no).
+- Remedy: fast-forward `0.0.40` to the networking HEAD so Poet work on `0.0.40` contains waves 1–14. Packages remain open. Not Ethernet. Not Native Independent for default daemons. Not package completion.
 - Human input needed: none this step.
 
 ## 2026-09-09 — implementation review and detailed enhancement programme
 
-- Reviewed `0.0.37` at `17b6b467c8a4548e302f603674dd594a67be7398`; three independent read-only audits covered crypto/session/bearers, QSR/replication and semantics/clinical/economics. Parent reviewed facade, leases, memory and integration.
-- Saved the [enhancement plan](0.0.37-enhancement-plan.md), [sensitive-operations blueprint](sensitive-operations-blueprint.md) and [advanced algorithm recipes](advanced-algorithm-recipes.md). They contain 19 baseline findings, 22 enhancement packages, 133 child checks, seven completion checks, 40 algorithm assignments and 40 sensitive-operation scenarios.
+- Reviewed `0.0.40` at `17b6b467c8a4548e302f603674dd594a67be7398`; three independent read-only audits covered crypto/session/bearers, QSR/replication and semantics/clinical/economics. Parent reviewed facade, leases, memory and integration.
+- Saved the [enhancement plan](0.0.40-enhancement-plan.md), [sensitive-operations blueprint](sensitive-operations-blueprint.md) and [advanced algorithm recipes](advanced-algorithm-recipes.md). They contain 19 baseline findings, 22 enhancement packages, 133 child checks, seven completion checks, 40 algorithm assignments and 40 sensitive-operation scenarios.
 - The plan preserves native replacement of libp2p, shared Q42/core ownership, Webizen, 42 MiB total passes, 512 MiB ordinary cells, enterprise parallelism, finite commons recovery, humanitarian exemptions and selective evidence preservation. Added explicit hostile-environment profiles, medical/biometric handling and enforced propagation of markings to responses and derived outputs.
 - A separate document reviewer identified five gaps; added per-source release-authority composition, host-owned dependency tracking, atomic revocation/release ordering, corrected profile/evidence sequencing and biometric qualification thresholds.
 - Extended the read-only plan validator with a focused enhancement validator; original registry completion checks remain intact. Measured: 22 enhancement packages/133 checks/7 final checks/40 recipe assignments/40 scenarios and acyclic dependencies pass. Original 30-package/490-child/72-edge programme remains intact. Negative controls detected an injected dependency cycle, duplicate child and duplicate scenario using bounded temporary copies, which were cleaned up.
@@ -635,17 +635,17 @@
 - Human input needed: expert answers **A–E** in the brief (confirm/reject the three-layer design; who operates the first dialable WSS/443 URL; signalling; TURN URIs for browsers; reject libp2p circuit-relay), **or** Barrier A+D (`LISTEN_ADDR` + passphrase) if grok-bot can listen.
 - Next: with a dialable relay URL, add the WSS/443 dialer against that URL. With a reachable UDP listen, run `internet_connect_if_env_set`. Neither can be minted inside this pod.
 
-## 2026-09-10 — landed on origin/0.0.38
+## 2026-09-10 — landed on origin/0.0.40
 
-- Step: principal directed the complete update onto `0.0.38` (not only the `cursor/` working branch). Status: **done**. Fast-forward `origin/0.0.38` `f17ebd69` → `16ed59e7`. No rebase, no force-push.
-- Built: nothing new this step. The expert brief, outbound relay, STUN observe, mesh-probe, and SocialWebNet QDNF overlay are now on `0.0.38`.
-- Measured: `origin/0.0.38` == `16ed59e7`. Path present: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/nat-traversal-expert-brief.md`.
-- Human input needed: consultant should `git fetch origin 0.0.38`. Expert answers A–E still open.
+- Step: principal directed the complete update onto `0.0.40` (not only the `cursor/` working branch). Status: **done**. Fast-forward `origin/0.0.40` `f17ebd69` → `16ed59e7`. No rebase, no force-push.
+- Built: nothing new this step. The expert brief, outbound relay, STUN observe, mesh-probe, and SocialWebNet QDNF overlay are now on `0.0.40`.
+- Measured: `origin/0.0.40` == `16ed59e7`. Path present: `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/nat-traversal-expert-brief.md`.
+- Human input needed: consultant should `git fetch origin 0.0.40`. Expert answers A–E still open.
 - Next: same as prior entry (dialable relay URL or `LISTEN_ADDR`).
 
 ## 2026-09-10 — consultant connectivity architecture landed (docs only)
 
-- Step: principal delivered [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). Status: **docs landed on `0.0.38`**. No connection-manager refactor, no runtime tests, no deployment. Enhancement-plan checkboxes were **not** marked.
+- Step: principal delivered [internet-peer-connectivity-architecture.md](./internet-peer-connectivity-architecture.md). Status: **docs landed on `0.0.40`**. No connection-manager refactor, no runtime tests, no deployment. Enhancement-plan checkboxes were **not** marked.
 - Built:
   - In-tree copy of the proposal at `qdnf-imp/internet-peer-connectivity-architecture.md`.
   - Recorded A–E in `nat-traversal-expert-brief.md` §6. Direction: retain WireGuard; concurrent relay + ICE; complementary TURN/UDP and WSS/443; privacy filters probes; durable QSession across reconnect; disconnection is a delivery mode.

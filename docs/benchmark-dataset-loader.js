@@ -210,7 +210,7 @@ function isUnifiedQ42Volume(buffer) {
     return bytes.length === 4 && Q42_MAGIC.every((b, i) => bytes[i] === b);
 }
 
-function parseUnifiedQ42Volume(buffer) {
+function parseUnifiedQ42Volume(buffer, maxBlocks = Infinity) {
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
     if (bytes.byteLength < Q42_VOLUME_HEADER_SIZE) {
@@ -223,8 +223,9 @@ function parseUnifiedQ42Volume(buffer) {
     const lexOffset = Number(readBigUint64Safe(view, 8));
     const lexLength = Number(readBigUint64Safe(view, 16));
     const blocks = [];
+    const limit = Math.min(blockCount, maxBlocks);
 
-    for (let i = 0; i < blockCount; i++) {
+    for (let i = 0; i < limit; i++) {
         const dirOffset = blockDirOffset + i * 16;
         if (dirOffset + 16 > bytes.byteLength) break;
         const relOffset = Number(readBigUint64Safe(view, dirOffset));
@@ -248,8 +249,11 @@ function parseUnifiedQ42Volume(buffer) {
         ? bytes.subarray(lexOffset, lexOffset + lexLength)
         : null;
     const labelMap = parseLexiconBytes(lexBytes);
+    const flattened = flattenSuperblockBytes(blocks);
     return {
-        ...flattenSuperblockBytes(blocks),
+        ...flattened,
+        totalBlockCount: blockCount,
+        sampled: blockCount > limit,
         labelMap,
     };
 }
@@ -408,23 +412,26 @@ export async function loadDataset(manifest, storageFormat) {
     }
 
     const buffer = await res.arrayBuffer();
+    const maxBlocks = manifest.max_interactive_blocks || (manifest.n_triples > 100000 ? 64 : Infinity);
     const parsed = storageFormat === 'q42'
-        ? (isUnifiedQ42Volume(buffer) ? parseUnifiedQ42Volume(buffer) : parseSuperblockQ42(buffer))
+        ? (isUnifiedQ42Volume(buffer) ? parseUnifiedQ42Volume(buffer, maxBlocks) : parseSuperblockQ42(buffer))
         : parseCq42(buffer);
     const sidecarLexPath = manifest.paths?.q42_lex || (storageFormat === 'q42' ? `${url}.lex` : null);
     const labelMap = parsed.labelMap?.size ? parsed.labelMap : await fetchOptionalLexicon(manifest, sidecarLexPath);
     const index = buildSubjectIndex(parsed.db);
+    const displayCount = manifest.n_triples || parsed.quinCount;
     return {
         db: parsed.db,
         index,
-        quinCount: parsed.quinCount,
+        quinCount: displayCount,
+        sampledCount: parsed.quinCount,
         triples: null,
         labelMap: labelMap || null,
         format: storageFormat === 'q42' ? 'q42-superblock' : 'cq42-lz4',
         loadMs: performance.now() - started,
         label: storageFormat === 'q42'
-            ? `.q42 SuperBlocks (${parsed.quinCount.toLocaleString()} quins)`
-            : `.c.q42 LZ4 (${parsed.quinCount.toLocaleString()} quins)`,
+            ? `.q42 SuperBlocks (${displayCount.toLocaleString()} quins${parsed.sampled ? ' · BIDX' : ''})`
+            : `.c.q42 LZ4 (${displayCount.toLocaleString()} quins)`,
     };
 }
 

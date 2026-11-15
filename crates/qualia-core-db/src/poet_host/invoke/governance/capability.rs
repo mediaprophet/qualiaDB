@@ -279,6 +279,7 @@ pub fn agency_evaluate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::agency_evaluate`.
 pub fn agency_evaluate(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Agency.evaluate"))
 }

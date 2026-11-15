@@ -4,6 +4,7 @@
 //! inputs. Tuning is therefore allowed to change work distribution without
 //! changing the mathematical operation being certified.
 
+pub mod attention;
 pub mod audio;
 pub mod backend;
 // W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
@@ -18,6 +19,7 @@ pub mod execute;
 pub mod graph_ops;
 pub mod ir;
 pub mod manifest;
+pub mod observer_kernels;
 pub mod oracle;
 pub mod physics;
 pub mod roofline;
@@ -27,118 +29,119 @@ pub mod tune;
 pub mod validate;
 
 #[cfg(test)]
+mod etalon_iq_compat_tests;
+
+#[cfg(test)]
+/// `?::test_gpu_available`.
 pub(crate) fn test_gpu_available() -> bool {
     use std::sync::OnceLock;
     static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    #[cfg(not(target_arch = "wasm32"))]
+    install_device_policy();
     *AVAILABLE.get_or_init(|| execute::WgpuComputeContext::new(64 * 1024).is_ok())
 }
 
 #[cfg(all(test, feature = "cuda"))]
+/// `?::test_cuda_available`.
 pub(crate) fn test_cuda_available() -> bool {
     use std::sync::OnceLock;
     static AVAILABLE: OnceLock<bool> = OnceLock::new();
     *AVAILABLE.get_or_init(|| execute::CudaComputeContext::new(64 * 1024).is_ok())
 }
 
-pub use backend::resolve_execution_backend;
-pub use cache::ManifestCache;
+pub use etalon_wgsl_forge::numerical::*;
+pub use observer_kernels::*;
+pub use runtime::ForgeRuntime;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn install_device_policy() {
+    use etalon_wgsl_forge::numerical::device_options::{self, DevicePolicy};
+    let _ = device_options::install(DevicePolicy {
+        backend: crate::gpu_context::qualia_backend_override,
+        experimental: crate::gpu_context::experimental_features_allowed,
+        shared: || {
+            crate::gpu_context::try_shared_gpu()
+                .map(|g| (g.device.clone(), g.queue.clone(), g.adapter_caps.clone()))
+        },
+    });
+}
+
 pub use dispatch::{
     caps, coopmat_usable, fft_f32, gemm_cpu_f64, gemm_f32, gemm_f32_tc, gemm_f32_tc_coopmat,
     gemm_f32_tc_reduced, gemm_f64, gemm_f64_df64, gemv_cpu_f64, gemv_f32, gemv_f64,
-    pairwise_sq_dist_cpu_f64, pairwise_sq_dist_f64, ComputeCaps, GEMM_GPU_THRESHOLD,
+    pairwise_sq_dist_cpu_f64, pairwise_sq_dist_f64,
 };
-pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
-pub use ir::{
-    BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op, P64GpuWords64,
-    ScalarType, SharedLen, SharedMemorySpec,
-};
-pub use manifest::{
-    AdapterIdentity, CertificationManifest, HardwareProfile, TimingSource, TimingSummary,
-    TuningManifest, ValidationLevel,
-};
-pub use oracle::{
-    candidate_evaluation, certify_builtin, compare_f32, dft_cpu, evaluate_builtin, evaluate_ffn,
-    evaluate_fft, evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors,
-    fft_inputs, matmul_cpu, p64_project_cpu, p64_records, topk_cpu, topk_inputs, AffineParams,
-    ComparisonReport, FfnParams, FftParams, GpuEvaluation, OracleCase, OracleTolerance, TopKParams,
-};
-#[cfg(feature = "cuda")]
-pub use oracle::{evaluate_affine_cuda, evaluate_ffn_cuda, evaluate_topk_cuda};
-pub use roofline::{roofline_for, RooflineBound, RooflineEstimate};
-pub use runtime::ForgeRuntime;
-pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
-pub use tune::{
-    tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
-};
-pub use validate::{validate_native, validate_wgsl, ValidationReport};
 
-pub const FORGE_SCHEMA_VERSION: u32 = 2;
-pub const WGPU_API_VERSION: &str = "30.0.0";
-pub const NAGA_API_VERSION: &str = "30.0.0";
-/// `cudarc` crate API version the cross-backend (CUDA) oracle is built against.
-/// Folded into the tuning/certification cache key (plan §8) so reuse is
-/// invalidated when the CUDA toolchain surface changes.
-pub const CUDARC_API_VERSION: &str = "0.19";
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod shared_device_tests;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ForgeError {
-    UnknownKernel(String),
-    InvalidKernel(String),
-    InvalidSchedule(String),
-    Emission(String),
-    WgslParse(String),
-    WgslValidation(String),
-    GpuUnavailable(String),
-    GpuValidation(String),
-    /// The compute device was lost (driver reset, removal, or a fatal poll
-    /// failure). Unified across backends so callers handle one variant rather
-    /// than backend-specific panics (plan §7).
-    DeviceLost(String),
-    OracleMismatch(String),
-    Serialization(String),
-    Io(String),
-}
+#[cfg(all(test, feature = "gpu-runtime"))]
+mod etalon_bridge_validation_tests;
 
-impl core::fmt::Display for ForgeError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let (kind, message) = match self {
-            Self::UnknownKernel(message) => ("unknown kernel", message),
-            Self::InvalidKernel(message) => ("invalid kernel", message),
-            Self::InvalidSchedule(message) => ("invalid schedule", message),
-            Self::Emission(message) => ("WGSL emission", message),
-            Self::WgslParse(message) => ("WGSL parse", message),
-            Self::WgslValidation(message) => ("WGSL validation", message),
-            Self::GpuUnavailable(message) => ("GPU unavailable", message),
-            Self::GpuValidation(message) => ("GPU validation", message),
-            Self::DeviceLost(message) => ("device lost", message),
-            Self::OracleMismatch(message) => ("oracle mismatch", message),
-            Self::Serialization(message) => ("serialization", message),
-            Self::Io(message) => ("I/O", message),
+#[cfg(all(test, feature = "gpu-runtime"))]
+mod etalon_bridge_tests {
+    use super::*;
+
+    #[test]
+    fn test_target_backend_conversion() {
+        use etalon_bridge::*;
+        for target in [
+            TargetBackend::Wgsl,
+            TargetBackend::Msl,
+            TargetBackend::Hlsl,
+            TargetBackend::Ptx,
+            TargetBackend::CudaC,
+            TargetBackend::Spirv,
+        ] {
+            let etalon_target: EtalonTargetBackend = target.into();
+            let roundtrip: TargetBackend = etalon_target.into();
+            assert_eq!(target, roundtrip);
+            assert_eq!(to_etalon_target(target), etalon_target);
+            assert_eq!(from_etalon_target(etalon_target), target);
+        }
+    }
+
+    #[test]
+    fn test_builtin_kernel_conversion() {
+        use etalon_bridge::*;
+        for kernel in BuiltinKernel::ALL {
+            let etalon_kernel: EtalonBuiltinKernel = kernel.into();
+            let roundtrip: BuiltinKernel = etalon_kernel.into();
+            assert_eq!(kernel, roundtrip);
+            assert_eq!(to_etalon_builtin(kernel), etalon_kernel);
+            assert_eq!(from_etalon_builtin(etalon_kernel), kernel);
+        }
+    }
+
+    #[test]
+    fn test_schedule_conversion() {
+        use etalon_bridge::*;
+        let s = Schedule {
+            workgroup_size: 128,
+            items_per_invocation: 4,
+            vector_width: 2,
         };
-        write!(f, "{kind}: {message}")
+        let etalon_s: EtalonSchedule = s.into();
+        let roundtrip: Schedule = etalon_s.into();
+        assert_eq!(s, roundtrip);
+        assert_eq!(to_etalon_schedule(s), etalon_s);
+        assert_eq!(from_etalon_schedule(etalon_s), s);
     }
-}
 
-impl std::error::Error for ForgeError {}
-
-impl From<std::io::Error> for ForgeError {
-    fn from(value: std::io::Error) -> Self {
-        Self::Io(value.to_string())
+    #[test]
+    fn test_generate_and_certify_affine_via_etalon() {
+        let result = generate_and_certify_via_etalon(
+            BuiltinKernel::AffineF32,
+            Schedule::default(),
+            TargetBackend::Wgsl,
+        );
+        assert!(
+            result.is_ok(),
+            "generate_and_certify_via_etalon failed: {:?}",
+            result.err()
+        );
+        let shader = result.unwrap();
+        assert!(!shader.source.is_empty());
+        assert_eq!(shader.kernel_id, "affine-f32");
     }
-}
-
-impl From<serde_json::Error> for ForgeError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::Serialization(value.to_string())
-    }
-}
-
-pub fn generate_builtin(
-    builtin: BuiltinKernel,
-    schedule: Schedule,
-    target: TargetBackend,
-) -> Result<GeneratedShader, ForgeError> {
-    let kernel = builtin.spec();
-    schedule.validate(&kernel, &AdapterConstraints::portable())?;
-    emit_shader(&kernel, schedule, target)
 }

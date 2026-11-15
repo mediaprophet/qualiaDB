@@ -38,6 +38,7 @@ pub struct StreamState {
 }
 
 impl StreamState {
+    /// Creates a default `StreamState`.
     pub const fn new() -> Self {
         Self {
             next_offset: 0,
@@ -49,10 +50,12 @@ impl StreamState {
         }
     }
 
+    /// `StreamState::unread_bytes`.
     pub const fn unread_bytes(&self) -> u32 {
         self.unread_bytes
     }
 
+    /// Consumes `n` flow-control bytes; error over limit.
     pub fn consume(&mut self, n: u32) -> Result<(), QdnfError> {
         if n > self.unread_bytes {
             return Err(QdnfError::Range);
@@ -61,6 +64,7 @@ impl StreamState {
         Ok(())
     }
 
+    /// Accepts a `StreamFrame`, updating flow state.
     pub fn accept(&mut self, frame: StreamFrame) -> Result<(), QdnfError> {
         if !self.open {
             return Err(QdnfError::Closed);
@@ -197,12 +201,14 @@ pub struct StreamTable {
 }
 
 impl StreamTable {
+    /// Creates a default `StreamTable`.
     pub const fn new() -> Self {
         Self {
             states: [StreamState::new(); MAX_STREAMS_PER_DIR],
         }
     }
 
+    /// Routes `frame` to its stream state.
     pub fn accept(&mut self, frame: StreamFrame) -> Result<(), QdnfError> {
         let id = frame.stream_id as usize;
         if id >= MAX_STREAMS_PER_DIR {
@@ -211,6 +217,7 @@ impl StreamTable {
         self.states[id].accept(frame)
     }
 
+    /// Stream state for `id`; error when absent.
     pub fn stream(&self, id: u16) -> Result<&StreamState, QdnfError> {
         let idx = id as usize;
         if idx >= MAX_STREAMS_PER_DIR {
@@ -219,6 +226,7 @@ impl StreamTable {
         Ok(&self.states[idx])
     }
 
+    /// Mutable stream state for `id`.
     pub fn stream_mut(&mut self, id: u16) -> Result<&mut StreamState, QdnfError> {
         let idx = id as usize;
         if idx >= MAX_STREAMS_PER_DIR {

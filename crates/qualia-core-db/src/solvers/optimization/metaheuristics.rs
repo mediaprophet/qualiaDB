@@ -10,6 +10,7 @@
 /// Deterministic RNG (LCG + Box-Muller) so searches are reproducible.
 pub struct Rng(pub u64);
 impl Rng {
+    /// `Rng::unit`.
     pub fn unit(&mut self) -> f64 {
         self.0 = self
             .0
@@ -17,9 +18,11 @@ impl Rng {
             .wrapping_add(1442695040888963407);
         ((self.0 >> 11) as f64) / ((1u64 << 53) as f64)
     }
+    /// `true` when below the bound.
     pub fn below(&mut self, b: usize) -> usize {
         (self.unit() * b as f64) as usize % b.max(1)
     }
+    /// Gaussian step.
     pub fn gaussian(&mut self) -> f64 {
         let u1 = self.unit().max(1e-12);
         let u2 = self.unit();

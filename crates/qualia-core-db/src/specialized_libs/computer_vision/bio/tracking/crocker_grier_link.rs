@@ -118,6 +118,7 @@ impl Default for CrockerGrierLinker {
 }
 
 impl CrockerGrierLinker {
+    /// Creates a default `CrockerGrierLinker`.
     pub fn new(params: CrockerGrierParams) -> Self {
         Self {
             slots: [TrackSlot::EMPTY; MAX_PARTICLE_TRACKS],
@@ -126,6 +127,7 @@ impl CrockerGrierLinker {
         }
     }
 
+    /// `active-track` count.
     pub fn active_track_count(&self) -> usize {
         self.slots.iter().filter(|s| s.active).count()
     }

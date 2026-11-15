@@ -19,7 +19,7 @@ use super::host_client::{
 };
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const SECTIONS: &[(&str, &str, &str)] = &[
     ("all", "All", "Everything you can see"),
@@ -322,6 +322,7 @@ fn category_label(slug: &str) -> String {
 }
 
 #[component]
+/// Aether `WellfairLibraryPanel` component.
 pub fn WellfairLibraryPanel() -> Element {
     let mut results = use_signal(Vec::<serde_json::Value>::new);
     let mut stats = use_signal(|| serde_json::json!({}));

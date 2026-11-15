@@ -65,6 +65,7 @@ pub fn clear_finished_local_jobs() -> Result<usize, String> {
     crate::local_job_scheduler::LocalJobScheduler::global().clear_finished()
 }
 
+/// Schedules a model download.
 pub fn schedule_model_download(
     url: String,
     filename: String,
@@ -80,12 +81,14 @@ pub fn schedule_model_download(
     serde_json::to_value(job).map_err(|e| e.to_string())
 }
 
+/// Schedules model activation.
 pub fn schedule_model_activation(model_name: String) -> Result<serde_json::Value, String> {
     let job = crate::local_job_scheduler::LocalJobScheduler::global()
         .enqueue(crate::local_job_scheduler::LocalJobKind::ModelActivation { model_name })?;
     serde_json::to_value(job).map_err(|e| e.to_string())
 }
 
+/// Schedules an anatomy-asset acquire.
 pub fn schedule_anatomy_asset_acquire(model: String) -> Result<serde_json::Value, String> {
     // Validate before queueing so typo failures are immediate and visible at the initiating control.
     crate::wellfair::api::parse_anatomy_model(&model)?;
@@ -107,6 +110,7 @@ pub fn schedule_job_on_device(
     serde_json::to_value(job).map_err(|e| e.to_string())
 }
 
+/// Ensures chat-session.
 pub fn ensure_chat_session() -> Result<String, String> {
     if let Some(id) = get_last_chat_session_id() {
         let state = crate::state::APP_STATE.get().unwrap();
@@ -118,6 +122,7 @@ pub fn ensure_chat_session() -> Result<String, String> {
     create_chat_session(None)
 }
 
+/// Creates group-chat-session.
 pub fn create_group_chat_session(
     title: Option<String>,
     participant_dids: Vec<String>,
@@ -128,6 +133,7 @@ pub fn create_group_chat_session(
         .map_err(|e| e.to_string())
 }
 
+/// Adds chat-participant.
 pub fn add_chat_participant(
     session_id: String,
     participant_did: String,
@@ -140,6 +146,7 @@ pub fn add_chat_participant(
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
+/// Removes chat-participant.
 pub fn remove_chat_participant(
     session_id: String,
     participant_did: String,
@@ -152,6 +159,7 @@ pub fn remove_chat_participant(
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
+/// Gets chat-participants.
 pub fn get_chat_participants(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -160,6 +168,7 @@ pub fn get_chat_participants(session_id: String) -> Result<serde_json::Value, St
     serde_json::to_value(participants).map_err(|e| e.to_string())
 }
 
+/// Gets local-agent-config.
 pub fn get_local_agent_config(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -167,6 +176,7 @@ pub fn get_local_agent_config(session_id: String) -> Result<serde_json::Value, S
     serde_json::to_value(cfg).map_err(|e| e.to_string())
 }
 
+/// Updates agent outcome sharing.
 pub fn update_agent_outcome_sharing(
     session_id: String,
     policy_json: String,
@@ -179,6 +189,7 @@ pub fn update_agent_outcome_sharing(
     serde_json::to_value(cfg).map_err(|e| e.to_string())
 }
 
+/// Gets default-outcome-sharing.
 pub fn get_default_outcome_sharing(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();

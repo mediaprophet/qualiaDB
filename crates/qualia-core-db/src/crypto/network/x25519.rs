@@ -8,6 +8,7 @@ use super::errors::CryptoError;
 pub struct X25519Secret([u8; 32]);
 
 impl X25519Secret {
+    /// Wraps a raw X25519 secret.
     pub fn from_bytes(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
@@ -16,10 +17,12 @@ impl X25519Secret {
         StaticSecret::from(self.0)
     }
 
+    /// Derives the public key.
     pub fn public(&self) -> [u8; 32] {
         PublicKey::from(&self.secret()).to_bytes()
     }
 
+    /// X25519 DH with `peer`; fails closed on low-order point.
     pub fn diffie_hellman(&self, peer: &[u8; 32]) -> Result<[u8; 32], CryptoError> {
         let peer = PublicKey::from(*peer);
         let shared = self.secret().diffie_hellman(&peer);
@@ -37,6 +40,7 @@ impl Drop for X25519Secret {
     }
 }
 
+/// Derives the public key from `secret` without holding a lease.
 pub fn public_from_secret(secret: &[u8; 32]) -> [u8; 32] {
     X25519Secret::from_bytes(*secret).public()
 }

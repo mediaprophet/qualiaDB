@@ -28,10 +28,12 @@ const FORBIDDEN_KEYS: [&[u8]; 16] = [
     b"\"tcp\":",
 ];
 
+/// `needle` occurs anywhere in `buf`.
 fn contains(buf: &[u8], needle: &[u8]) -> bool {
     find_from(buf, 0, needle).is_some()
 }
 
+/// First index of `needle` at or after `from`.
 fn find_from(buf: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
     if needle.is_empty() || from > buf.len() {
         return None;
@@ -46,10 +48,12 @@ fn find_from(buf: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
     None
 }
 
+/// Slice of `buf` immediately following the first `key` occurrence.
 fn after<'a>(buf: &'a [u8], key: &[u8]) -> Option<&'a [u8]> {
     find_from(buf, 0, key).map(|i| &buf[i + key.len()..])
 }
 
+/// Leading token up to the first `,`/`}`/`]`/whitespace delimiter.
 fn take_token(s: &[u8]) -> &[u8] {
     let mut i = 0;
     while i < s.len() && s[i] != b'"' {
@@ -58,10 +62,12 @@ fn take_token(s: &[u8]) -> &[u8] {
     &s[..i]
 }
 
+/// `true` when the token at `s` spells `true`.
 fn parse_bool_at(s: &[u8]) -> bool {
     s.starts_with(b"true")
 }
 
+/// Leading decimal digits at `s` as u32 (0 on no digits).
 fn parse_u32_at(s: &[u8]) -> u32 {
     let mut v = 0u32;
     let mut i = 0;
@@ -72,12 +78,15 @@ fn parse_u32_at(s: &[u8]) -> u32 {
     v
 }
 
+/// `true` when the document's services carry the relay-only
+/// disclosure marker.
 fn json_is_relay_only(buf: &[u8]) -> bool {
     contains(buf, b"ApprovedRelaysOnly")
         || contains(buf, b"QualifiedMultiHop")
         || contains(buf, b"Isolated")
 }
 
+/// Slice spanning the `service` array body.
 fn service_slice(buf: &[u8]) -> &[u8] {
     match find_from(buf, 0, b"\"service\":") {
         Some(i) => &buf[i..],
@@ -85,6 +94,8 @@ fn service_slice(buf: &[u8]) -> &[u8] {
     }
 }
 
+/// Dotted-quad shape check (four 0–255 octets) — rejected as a
+/// locator.
 fn looks_like_ipv4(s: &[u8]) -> bool {
     let mut dots = 0u8;
     let mut digits = 0u8;
@@ -111,6 +122,7 @@ fn looks_like_ipv4(s: &[u8]) -> bool {
     dots == 3 && digits > 0
 }
 
+/// Colon-separated IPv6 shape check — rejected as a locator.
 fn looks_like_ipv6(s: &[u8]) -> bool {
     if s.is_empty() || s.len() > 45 {
         return false;
@@ -130,6 +142,8 @@ fn looks_like_ipv6(s: &[u8]) -> bool {
     colons >= 2
 }
 
+/// `host:port` shape check — direct network endpoints are forbidden
+/// locators in this profile.
 fn looks_like_host_port(s: &[u8]) -> bool {
     if let Some(colon) = s.iter().position(|&c| c == b':') {
         if colon == 0 || colon + 1 >= s.len() {
@@ -152,6 +166,8 @@ fn looks_like_host_port(s: &[u8]) -> bool {
     }
 }
 
+/// `true` when any quoted string in the service object is a
+/// forbidden locator (IP/host-port form).
 fn quoted_strings_forbidden(service: &[u8]) -> bool {
     let mut i = 0;
     while i < service.len() {
@@ -204,6 +220,7 @@ pub fn ingest_unsigned_json(buf: &[u8], out: &mut QiDocument) -> Result<(), QiEr
     decode_canonical(buf, out)
 }
 
+/// Decode a `z…` multibase string back to its 32 raw bytes.
 fn decode_mb32(mb: &[u8], out: &mut [u8; 32]) -> Result<(), QiError> {
     if mb.first() != Some(&b'z') || mb.len() < 2 {
         return Err(QiError::MalformedDocument);
@@ -211,6 +228,8 @@ fn decode_mb32(mb: &[u8], out: &mut [u8; 32]) -> Result<(), QiError> {
     decode_b58(&mb[1..], out).map(|_| ())
 }
 
+/// Decode a `z…` multibase Ed25519 key — strips and verifies the
+/// `0xed01` multicodec prefix.
 fn decode_pk_multibase(mb: &[u8], pk: &mut [u8; 32]) -> Result<(), QiError> {
     if mb.first() != Some(&b'z') || mb.len() < 2 {
         return Err(QiError::MalformedDocument);
@@ -224,6 +243,7 @@ fn decode_pk_multibase(mb: &[u8], pk: &mut [u8; 32]) -> Result<(), QiError> {
     Ok(())
 }
 
+/// ASCII hex digit → nibble value; `QiError` on non-hex.
 fn hex_nibble(c: u8) -> Result<u8, QiError> {
     match c {
         b'0'..=b'9' => Ok(c - b'0'),
@@ -233,6 +253,7 @@ fn hex_nibble(c: u8) -> Result<u8, QiError> {
     }
 }
 
+/// Decode a 64-char hex string to 32 bytes.
 fn decode_hex32(s: &[u8], out: &mut [u8; 32]) -> Result<(), QiError> {
     if s.len() != 64 {
         return Err(QiError::MalformedDocument);
@@ -245,6 +266,8 @@ fn decode_hex32(s: &[u8], out: &mut [u8; 32]) -> Result<(), QiError> {
     Ok(())
 }
 
+/// Parse the `alsoKnownAs` array into the fixed `aka` slots —
+/// bounded, errors on overflow.
 fn parse_aka(buf: &[u8], out: &mut QiDocument) -> Result<(), QiError> {
     let Some(rest) = after(buf, b"\"alsoKnownAs\":") else {
         return Ok(());
@@ -286,6 +309,7 @@ fn parse_aka(buf: &[u8], out: &mut QiDocument) -> Result<(), QiError> {
     }
 }
 
+/// Parse the disclosure token (`approved-relays-only` / public).
 fn parse_disclosure(s: &[u8]) -> Result<Disclosure, QiError> {
     if s.starts_with(b"DirectPermitted") {
         Ok(Disclosure::DirectPermitted)
@@ -300,6 +324,7 @@ fn parse_disclosure(s: &[u8]) -> Result<Disclosure, QiError> {
     }
 }
 
+/// Parse the locator class token into `LocatorClass`.
 fn parse_kind(s: &[u8]) -> Result<LocatorClass, QiError> {
     if s.starts_with(b"mailbox") {
         Ok(LocatorClass::Mailbox)
@@ -312,6 +337,8 @@ fn parse_kind(s: &[u8]) -> Result<LocatorClass, QiError> {
     }
 }
 
+/// Parse the `hints` object into the mailbox (relay priorities,
+/// disclosures).
 fn parse_hints(obj: &[u8], mailbox: &mut CscpMailbox) -> Result<(), QiError> {
     let Some(rest) = after(obj, b"\"relayHints\":") else {
         return Ok(());
@@ -367,6 +394,8 @@ fn parse_hints(obj: &[u8], mailbox: &mut CscpMailbox) -> Result<(), QiError> {
     }
 }
 
+/// Parse one service object into a `CscpMailbox` (endpoint, kind,
+/// hints).
 fn parse_mailbox(obj: &[u8]) -> Result<CscpMailbox, QiError> {
     let mut m = CscpMailbox::mailbox([0u8; 32], Disclosure::DirectPermitted);
     if let Some(rest) = after(obj, b"\"contactKeyMultibase\":\"") {
@@ -388,6 +417,8 @@ fn parse_mailbox(obj: &[u8]) -> Result<CscpMailbox, QiError> {
     Ok(m)
 }
 
+/// Next `{…}` object in an array starting at `from` — returns its
+/// end index and body slice.
 fn next_object<'a>(arr: &'a [u8], from: usize) -> Option<(usize, &'a [u8])> {
     let mut i = from;
     while i < arr.len() {
@@ -413,6 +444,8 @@ fn next_object<'a>(arr: &'a [u8], from: usize) -> Option<(usize, &'a [u8])> {
     None
 }
 
+/// Parse the `service` array into the fixed `services` slots —
+/// mailbox objects plus the hostname-alias entry.
 fn parse_services(buf: &[u8], out: &mut QiDocument) -> Result<(), QiError> {
     let Some(svc_at) = find_from(buf, 0, b"\"service\":") else {
         return Ok(());

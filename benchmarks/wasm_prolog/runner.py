@@ -22,6 +22,7 @@ _MODULES = os.path.join(os.path.dirname(__file__), "node_modules")
 
 
 def _check_deps():
+    """Internal helper."""
     if not shutil.which("node"):
         return "node not found — install Node.js >= 18"
     if not os.path.isdir(_MODULES):
@@ -30,6 +31,7 @@ def _check_deps():
 
 
 def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """Benchmark set."""
     if dataset is None:
         dataset = {
             "n_triples": n,

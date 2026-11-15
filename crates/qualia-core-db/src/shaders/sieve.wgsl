@@ -19,11 +19,11 @@ struct FilterMask {
 }
 
 // Binding 0: flat Quin array (variable length — one full block = 850 Quins)
-@group(0) @binding(0) var<storage, read>       quins:       array<Quin>;
+@group(0) @binding(0) var<storage, read>       quins:        array<Quin>;
 // Binding 1: output bitmask — ceil(850 / 32) = 27 u32 words, atomically written
-@group(0) @binding(1) var<storage, read_write> out_bitmask: array<atomic<u32>, 27>;
+@group(0) @binding(1) var<storage, read_write> out_bitmask:  array<atomic<u32>, 27>;
 // Binding 2: 64-bit filter mask split into lo/hi u32 (matches Rust FilterMask64)
-@group(0) @binding(2) var<uniform>             filter:      FilterMask;
+@group(0) @binding(2) var<uniform>             sieve_filter: FilterMask;
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -34,7 +34,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let meta_hi = quins[index].meta_hi;
 
     // Both halves of the 64-bit metadata field must satisfy the mask
-    if (meta_lo & filter.lo) == filter.lo && (meta_hi & filter.hi) == filter.hi {
+    if (meta_lo & sieve_filter.lo) == sieve_filter.lo && (meta_hi & sieve_filter.hi) == sieve_filter.hi {
         let bucket    = index / 32u;
         let bit_shift = index % 32u;
         atomicOr(&out_bitmask[bucket], 1u << bit_shift);

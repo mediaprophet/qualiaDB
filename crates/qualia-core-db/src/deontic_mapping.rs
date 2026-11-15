@@ -38,6 +38,7 @@ pub enum ActionPermission {
 
 #[cfg(feature = "zk-culling")]
 impl ActionPermission {
+    /// Decodes from u8.
     pub fn from_u8(value: u8) -> Option<Self> {
         match value {
             0 => Some(ActionPermission::Read),
@@ -48,6 +49,7 @@ impl ActionPermission {
         }
     }
     
+    /// Views `self` as `u8`.
     pub fn as_u8(self) -> u8 {
         self as u8
     }

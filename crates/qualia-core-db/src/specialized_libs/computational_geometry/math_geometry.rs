@@ -75,6 +75,7 @@ pub enum MathGeometryError {
     EmptyInput,
 }
 
+/// Embed `p` in projective space as `(x, y, z, 1)`.
 pub fn projective_from_point(p: Point3) -> HomogeneousPoint3 {
     HomogeneousPoint3 {
         x: p.x,
@@ -84,6 +85,8 @@ pub fn projective_from_point(p: Point3) -> HomogeneousPoint3 {
     }
 }
 
+/// Dehomogenize `(x,y,z,w)` → `(x/w, y/w, z/w)`; errors when `w` is
+/// zero (point at infinity).
 pub fn point_from_projective(p: HomogeneousPoint3) -> Result<Point3, MathGeometryError> {
     if p.w.abs() < 1e-14 {
         return Err(MathGeometryError::DegenerateFrame);
@@ -91,10 +94,13 @@ pub fn point_from_projective(p: HomogeneousPoint3) -> Result<Point3, MathGeometr
     Ok(Point3::new(p.x / p.w, p.y / p.w, p.z / p.w))
 }
 
+/// Signed plane equation `n·p + d` at `p` (positive = normal side).
 pub fn hyperplane_eval(plane: Hyperplane3, p: Point3) -> f64 {
     dot(plane.normal, p) + plane.offset
 }
 
+/// Cross-ratio `(a−c)(b−d)/((a−d)(b−c))` of four collinear scalars;
+/// errors on coincident denominator points.
 pub fn cross_ratio_1d(a: f64, b: f64, c: f64, d: f64) -> Result<f64, MathGeometryError> {
     let denom = (a - d) * (b - c);
     if denom.abs() < 1e-14 {
@@ -103,6 +109,7 @@ pub fn cross_ratio_1d(a: f64, b: f64, c: f64, d: f64) -> Result<f64, MathGeometr
     Ok(((a - c) * (b - d)) / denom)
 }
 
+/// `origin + u·c0 + v·c1 + w·c2` — frame coords to world.
 pub fn frame_to_world(frame: AffineFrame3, coords: [f64; 3]) -> Point3 {
     add(
         frame.origin,
@@ -113,6 +120,10 @@ pub fn frame_to_world(frame: AffineFrame3, coords: [f64; 3]) -> Point3 {
     )
 }
 
+/// Inverse of `frame_to_frame`: solve for `p`'s coordinates in
+/// `frame`'s basis; errors on a degenerate (non-invertible) frame.
+/// Inverse of `frame_to_world`: solve for `p`'s coordinates in
+/// `frame`'s basis; errors on a degenerate (non-invertible) frame.
 pub fn world_to_frame(frame: AffineFrame3, p: Point3) -> Result<[f64; 3], MathGeometryError> {
     let v = sub(p, frame.origin);
     let det = dot(frame.e0, cross(frame.e1, frame.e2));
@@ -126,6 +137,8 @@ pub fn world_to_frame(frame: AffineFrame3, p: Point3) -> Result<[f64; 3], MathGe
     ])
 }
 
+/// Barycentric coordinates of `p` in the tetrahedron `(a,b,c,d)` via
+/// signed sub-volumes; errors on a degenerate tetra.
 pub fn barycentric_tetra(
     p: Point3,
     a: Point3,
@@ -144,6 +157,7 @@ pub fn barycentric_tetra(
     Ok([l0, l1, l2, l3])
 }
 
+/// Unit quaternion (zero-norm inputs return identity).
 pub fn quaternion_normalize(q: Quaternion) -> Quaternion {
     let n = (q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z).sqrt();
     if n == 0.0 {
@@ -163,6 +177,8 @@ pub fn quaternion_normalize(q: Quaternion) -> Quaternion {
     }
 }
 
+/// Spherical linear interpolation `a→b` at `t∈[0,1]`, with the
+/// nlerp fallback for nearly-parallel inputs.
 pub fn quaternion_slerp(a: Quaternion, b: Quaternion, t: f64) -> Quaternion {
     let a = quaternion_normalize(a);
     let mut b = quaternion_normalize(b);
@@ -195,6 +211,8 @@ pub fn quaternion_slerp(a: Quaternion, b: Quaternion, t: f64) -> Quaternion {
     }
 }
 
+/// Least-squares translation aligning point set `a` to `b`
+/// (centroid difference); errors on empty or mismatched inputs.
 pub fn best_translation_registration(
     source: &[Point3],
     target: &[Point3],
@@ -208,6 +226,8 @@ pub fn best_translation_registration(
     Ok(sub(centroid(target), centroid(source)))
 }
 
+/// Carathéodory reduction: express `target` as a convex combination
+/// of ≤4 points from `hull_points` (iterative simplex descent).
 pub fn caratheodory_reduce_3d(
     points: &[Point3],
     target: Point3,
@@ -271,6 +291,8 @@ pub fn caratheodory_reduce_3d(
     Err(MathGeometryError::DegenerateSimplex)
 }
 
+/// Convexity certificate for a polyline: consistent-turn test —
+/// reports `Convex`/`Concave`/`Degenerate` with the witness index.
 pub fn convexity_certificate_polyline(points: &[Point3]) -> ConvexityCertificate {
     if points.len() < 4 {
         return ConvexityCertificate {
@@ -307,11 +329,14 @@ pub fn convexity_certificate_polyline(points: &[Point3]) -> ConvexityCertificate
     }
 }
 
+/// Householder reflection of `v` across the plane with `normal`:
+/// `v − 2(v·n̂)n̂`.
 pub fn householder_reflect(v: Point3, normal: Point3) -> Point3 {
     let n = normalize(normal);
     sub(v, scale(n, 2.0 * dot(v, n)))
 }
 
+/// `q` as a 3×3 rotation matrix (assumes near-unit quaternion).
 pub fn quaternion_to_matrix(q: Quaternion) -> [[f64; 3]; 3] {
     let q = quaternion_normalize(q);
     let (w, x, y, z) = (q.w, q.x, q.y, q.z);
@@ -334,6 +359,8 @@ pub fn quaternion_to_matrix(q: Quaternion) -> [[f64; 3]; 3] {
     ]
 }
 
+/// Solve a diagonal quadratic system — each equation involves only
+/// one variable squared (closed form, no iteration).
 pub fn solve_diagonal_quadratic(
     diag: [f64; 3],
     linear: [f64; 3],
@@ -356,6 +383,8 @@ pub fn solve_diagonal_quadratic(
     })
 }
 
+/// Schur-complement elimination for a 2×2 block system —
+/// `S = D − C·A⁻¹·B`.
 pub fn schur_complement_2x2(
     a00: f64,
     a01: f64,
@@ -369,6 +398,8 @@ pub fn schur_complement_2x2(
     Ok(b[0] * b[0] * a11 / det - 2.0 * b[0] * b[1] * a01 / det + b[1] * b[1] * a00 / det)
 }
 
+/// SO(3) exponential map: axis-angle vector → unit quaternion
+/// (Rodrigues' formula, small-angle safe).
 pub fn so3_exp(axis_angle: Point3) -> Quaternion {
     let theta = norm(axis_angle);
     if theta < 1e-12 {
@@ -389,6 +420,8 @@ pub fn so3_exp(axis_angle: Point3) -> Quaternion {
     }
 }
 
+/// SO(3) logarithm: unit quaternion → axis-angle vector
+/// (inverse of `so3_exp`).
 pub fn so3_log(q: Quaternion) -> Point3 {
     let q = quaternion_normalize(q);
     let v = Point3::new(q.x, q.y, q.z);
@@ -400,6 +433,8 @@ pub fn so3_log(q: Quaternion) -> Point3 {
     scale(v, theta / s)
 }
 
+/// Differential geometry of a curve at `t`: tangent, curvature, and
+/// Frenet frame from sampled derivatives.
 pub fn curve_differential(
     p0: Point3,
     p1: Point3,
@@ -435,6 +470,8 @@ pub fn curve_differential(
     })
 }
 
+/// First/second fundamental forms of a surface patch at `(u,v)` —
+/// normal and principal-curvature estimates from partials.
 pub fn surface_patch_differential(
     center: Point3,
     du: Point3,
@@ -467,6 +504,7 @@ pub fn surface_patch_differential(
     })
 }
 
+/// Orthogonally project every point onto `plane` (caller-buffered).
 pub fn project_points_to_plane(
     points: &[Point3],
     plane: Hyperplane3,
@@ -482,6 +520,8 @@ pub fn project_points_to_plane(
     Ok(points.len())
 }
 
+/// Find a plane separating two AABBs along a dominant axis when one
+/// exists — the axis-level separating-axis test.
 pub fn separating_plane_aabb(
     a_min: Point3,
     a_max: Point3,
@@ -527,6 +567,7 @@ pub fn separating_plane_aabb(
     None
 }
 
+/// Arithmetic-mean centre of a point set (empty input → origin).
 fn centroid(points: &[Point3]) -> Point3 {
     let mut c = Point3::new(0.0, 0.0, 0.0);
     for &p in points {
@@ -535,10 +576,14 @@ fn centroid(points: &[Point3]) -> Point3 {
     scale(c, 1.0 / points.len() as f64)
 }
 
+/// Six times the signed volume of tetrahedron `(a,b,c,d)` —
+/// `(b−a)·((c−a)×(d−a))`.
 fn signed_volume6(a: Point3, b: Point3, c: Point3, d: Point3) -> f64 {
     dot(sub(b, a), cross(sub(c, a), sub(d, a)))
 }
 
+/// Barycentric coordinates of `p` in triangle `(a,b,c)` via the
+/// dot-product method.
 fn barycentric_triangle(p: Point3, a: Point3, b: Point3, c: Point3) -> Option<[f64; 3]> {
     let v0 = sub(b, a);
     let v1 = sub(c, a);
@@ -557,22 +602,27 @@ fn barycentric_triangle(p: Point3, a: Point3, b: Point3, c: Point3) -> Option<[f
     Some([1.0 - v - w, v, w])
 }
 
+/// Component-wise vector addition.
 fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
+/// Component-wise vector subtraction (a − b).
 fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
+/// Scalar multiplication of a point vector.
 fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 
+/// Dot product of two point vectors.
 fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 
+/// Cross product a × b.
 fn cross(a: Point3, b: Point3) -> Point3 {
     Point3::new(
         a.y * b.z - a.z * b.y,
@@ -581,10 +631,12 @@ fn cross(a: Point3, b: Point3) -> Point3 {
     )
 }
 
+/// Euclidean norm ‖a‖.
 fn norm(a: Point3) -> f64 {
     dot(a, a).sqrt()
 }
 
+/// Unit vector a/‖a‖ (zero vector → zero).
 fn normalize(a: Point3) -> Point3 {
     let n = norm(a);
     if n > 0.0 {
@@ -594,6 +646,7 @@ fn normalize(a: Point3) -> Point3 {
     }
 }
 
+/// Squared Euclidean distance between two `Point3`s.
 fn distance_sq(a: Point3, b: Point3) -> f64 {
     dot(sub(a, b), sub(a, b))
 }

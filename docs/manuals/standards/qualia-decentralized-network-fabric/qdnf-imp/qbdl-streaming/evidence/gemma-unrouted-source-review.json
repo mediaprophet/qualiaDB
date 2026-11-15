@@ -1,0 +1,77 @@
+{
+  "state": "Unrouted; source inspection and rustfmt only; no build or tests executed",
+  "files": [
+    {
+      "file": "attention.rs",
+      "sha256": "805b11c458366ae945f7f85a33083b98bcf0ec0bfaebdf7cac3acb7ec3fbddf5",
+      "lines": 255,
+      "tests": 0
+    },
+    {
+      "file": "bridge.rs",
+      "sha256": "2d1c043d345ec1d595d88ec1bc4f16c331d94e6372002523b6beec0b076b1df3",
+      "lines": 145,
+      "tests": 0
+    },
+    {
+      "file": "ffn.rs",
+      "sha256": "11e9ff25a5118f39f7e3c59f5b741e92a8d37e78e6ad42c6a67755254be388dc",
+      "lines": 301,
+      "tests": 0
+    },
+    {
+      "file": "fixtures.rs",
+      "sha256": "f6d31219d24521f3631111474adf6a9c3d1e826ee25f9942955508bab1267a13",
+      "lines": 128,
+      "tests": 0
+    },
+    {
+      "file": "metadata.rs",
+      "sha256": "572d96ce14deef5266102b538aaf6b064c9b502ca64dcd2c270665254877b74f",
+      "lines": 235,
+      "tests": 0
+    },
+    {
+      "file": "metadata_tests.rs",
+      "sha256": "0384b832d3b80151d00c73dcccdaee9ace9166f38658dc5fe0190ad145ec8d0f",
+      "lines": 136,
+      "tests": 3
+    },
+    {
+      "file": "mod.rs",
+      "sha256": "11128141a34d85c43215e5358cc1f6d44febcae168165ba8ad8d340876a83447",
+      "lines": 17,
+      "tests": 0
+    },
+    {
+      "file": "plan.rs",
+      "sha256": "5d234f01b9ac1dfd6b691c855982a15a06e263b6f1a646df891683c3ef4ae38a",
+      "lines": 281,
+      "tests": 0
+    },
+    {
+      "file": "ple.rs",
+      "sha256": "e62bf1b536aab3a6e77c0f158a9461b58f55256bc026c0928bb425694ed7ab46",
+      "lines": 137,
+      "tests": 0
+    },
+    {
+      "file": "primitives.rs",
+      "sha256": "abc26c84046d76ce8d88bb757f25d3a53f96f6bacdf7b157e14f0580a76e7168",
+      "lines": 40,
+      "tests": 0
+    },
+    {
+      "file": "session.rs",
+      "sha256": "6b60d30a2f5b10d61c22ecd648576fa40345eed2e80560a1d34aff4d94b89868",
+      "lines": 169,
+      "tests": 0
+    },
+    {
+      "file": "tests.rs",
+      "sha256": "fc82247d855b6f47515c8784735751a619a3d82b62de5f94021bd9d8b1944de1",
+      "lines": 225,
+      "tests": 8
+    }
+  ]
+}

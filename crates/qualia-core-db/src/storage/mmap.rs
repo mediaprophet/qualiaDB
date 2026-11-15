@@ -14,6 +14,7 @@ pub struct MmapStore {
 #[cfg(not(target_arch = "wasm32"))]
 impl MmapStore {
     // Opens or creates a file of exactly `capacity_quins * 48` bytes.
+    /// Opens.
     pub fn open(path: &str, capacity_quins: usize) -> Result<Self, std::io::Error> {
         let file = OpenOptions::new()
             .read(true)
@@ -34,6 +35,7 @@ impl MmapStore {
     }
 
     // Appends a Quin. Returns error if capacity exceeded.
+    /// Appends `quin` to the store; `io::Error` on write failure (cfg-gated mmap/vec backends share the signature).
     pub fn append(&mut self, quin: &NQuin) -> Result<(), std::io::Error> {
         if self.active_quins >= self.capacity_quins {
             return Err(std::io::Error::new(
@@ -51,6 +53,7 @@ impl MmapStore {
     }
 
     // Returns a zero-copy slice of all active Quins.
+    /// Live NQuin slice.
     pub fn as_slice(&self) -> &[NQuin] {
         let active_bytes = self.active_quins * 48;
         let slice = &self.mmap[..active_bytes];
@@ -66,6 +69,7 @@ pub struct MmapStore {
 
 #[cfg(target_arch = "wasm32")]
 impl MmapStore {
+    /// Opens.
     pub fn open(_path: &str, capacity_quins: usize) -> Result<Self, std::io::Error> {
         Ok(Self {
             data: Vec::with_capacity(capacity_quins),
@@ -73,6 +77,7 @@ impl MmapStore {
         })
     }
 
+    /// Appends `quin` to the store; `io::Error` on write failure (cfg-gated mmap/vec backends share the signature).
     pub fn append(&mut self, quin: &NQuin) -> Result<(), std::io::Error> {
         if self.data.len() >= self.capacity_quins {
             return Err(std::io::Error::new(
@@ -85,6 +90,7 @@ impl MmapStore {
         Ok(())
     }
 
+    /// Live NQuin slice.
     pub fn as_slice(&self) -> &[NQuin] {
         &self.data
     }

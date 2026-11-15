@@ -10,6 +10,7 @@ pub struct HandLandmark {
     pub y: f32,
 }
 
+/// Packs hand landmarks (xy).
 pub fn pack_hand_landmarks_xy(
     xy: &[f32],
     has_z: bool,

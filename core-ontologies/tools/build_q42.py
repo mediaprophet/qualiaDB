@@ -35,6 +35,7 @@ VERIFY = "--no-verify" not in sys.argv
 
 
 def find_cli() -> Path:
+    """Finds cli."""
     # Pick the most recently built binary across profiles, so a stale release
     # build never shadows a freshly-rebuilt debug one (or vice versa).
     cands = [
@@ -49,6 +50,7 @@ def find_cli() -> Path:
 
 
 def corpus_files() -> list[Path]:
+    """Corpus files."""
     # Every .n3 in the tree except generated dist artifacts.
     return sorted(p for p in ROOT.rglob("*.n3") if "dist" not in p.parts)
 
@@ -87,6 +89,7 @@ def verify(cli: Path, q42: Path) -> int:
 
 
 def main() -> None:
+    """CLI entry point."""
     try:
         sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
     except Exception:

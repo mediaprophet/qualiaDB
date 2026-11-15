@@ -10,6 +10,8 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::OperationId;
 
 pub const MAX_SCOPES: usize = 8;
+mod incarnation;
+mod inspect;
 pub const CONTROL_CAP: usize = 4;
 pub const INTERACTIVE_CAP: usize = 8;
 pub const BACKGROUND_CAP: usize = 8;
@@ -26,11 +28,13 @@ impl WorkClass {
     pub const COUNT: usize = 3;
 
     #[inline]
+    /// `WorkClass::index`.
     pub const fn index(self) -> usize {
         self as usize
     }
 
     #[inline]
+    /// `WorkClass::from_index`.
     pub const fn from_index(i: usize) -> Option<Self> {
         match i {
             0 => Some(Self::Control),
@@ -73,15 +77,18 @@ struct ScopeSlot {
 }
 
 pub struct FairScheduler {
+    incarnation: super::incarnation::CanonicalIncarnation,
     scopes: [ScopeSlot; MAX_SCOPES],
     cursor: u8,
 }
 
 impl FairScheduler {
+    /// Creates a default `FairScheduler`.
     pub const fn new() -> Self {
         Self::with_quanta(1, 1, 1)
     }
 
+    /// Builder: `quanta`.
     pub const fn with_quanta(control: u32, interactive: u32, background: u32) -> Self {
         let blank = ScopeSlot {
             occupied: false,
@@ -97,11 +104,30 @@ impl FairScheduler {
             background_len: 0,
         };
         Self {
+            incarnation: super::incarnation::CanonicalIncarnation::UNASSIGNED,
             scopes: [blank; MAX_SCOPES],
             cursor: 0,
         }
     }
 
+    /// Read-only identity check for adapters sharing this canonical queue.
+    /// Caller must retain exclusive access through the subsequent enqueue.
+    pub fn contains_operation(&self, operation: OperationId) -> bool {
+        self.scopes
+            .iter()
+            .filter(|scope| scope.occupied)
+            .any(|scope| {
+                scope
+                    .control
+                    .iter()
+                    .chain(scope.interactive.iter())
+                    .chain(scope.background.iter())
+                    .flatten()
+                    .any(|work| work.operation == operation)
+            })
+    }
+
+    /// Enqueues a task.
     pub fn enqueue(&mut self, work: ScheduledWork) -> Result<(), QdnfError> {
         if work.cost == 0 {
             return Err(QdnfError::Malformed);
@@ -143,6 +169,7 @@ impl FairScheduler {
         Err(QdnfError::WouldBlock)
     }
 
+    /// `class` length.
     pub fn class_len(&self, scope: u64, class: WorkClass) -> usize {
         match self.scope_index(scope) {
             None => 0,
@@ -275,6 +302,30 @@ mod tests {
             cost: 1,
             deadline: u64::MAX,
         }
+    }
+
+    #[test]
+    fn identity_lookup_covers_classes_and_scopes_without_removing_work() {
+        let mut sched = FairScheduler::new();
+        let a = work(10, WorkClass::Control);
+        let mut b = work(11, WorkClass::Interactive);
+        b.scope = 2;
+        let mut c = work(12, WorkClass::Background);
+        c.scope = 3;
+        for item in [a, b, c] {
+            sched.enqueue(item).unwrap();
+        }
+        for id in [a.operation, b.operation, c.operation] {
+            assert!(sched.contains_operation(id));
+        }
+        assert!(!sched.contains_operation(op(99)));
+        for _ in 0..3 {
+            let PollOutcome::Ready(item) = sched.poll(0).unwrap() else {
+                panic!("unexpected expiry");
+            };
+            assert!(!sched.contains_operation(item.operation));
+        }
+        assert_eq!(sched.poll(0), Err(QdnfError::WouldBlock));
     }
 
     #[test]

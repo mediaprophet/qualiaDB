@@ -50,6 +50,7 @@ pub struct CalibrationRecord {
 }
 
 impl CalibrationRecord {
+    /// Creates `CalibrationRecord` with the given state.
     pub const fn new(
         model_name: &'static str,
         data_hash: u64,

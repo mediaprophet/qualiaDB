@@ -4,13 +4,38 @@ on:
   push:
     paths:
       - crates/qualia-core-db/**
+      - crates/qualia-core-db/src/q42/**
+      - crates/qualia-core-db/src/audio/qac/**
+      - crates/qualia-core-db/src/sensing/**
+      - crates/qualia-core-db/src/medical/**
+      - crates/qualia-core-db/src/bundle/stream/**
+      - crates/qualia-audio/**
+      - crates/qualia-etalon-sensing-bridge/**
       - crates/qualia-peer/**
+      - schemas/**
+      - tools/container-format-conformance/**
+      - tools/qbdl-stream-conformance/**
       - .github/workflows/qdnf-msvc.yml
+      - Cargo.toml
+      - Cargo.lock
   pull_request:
     paths:
       - crates/qualia-core-db/**
+      - crates/qualia-core-db/src/q42/**
+      - crates/qualia-core-db/src/audio/qac/**
+      - crates/qualia-core-db/src/sensing/**
+      - crates/qualia-core-db/src/medical/**
+      - crates/qualia-core-db/src/bundle/stream/**
+      - crates/qualia-audio/**
+      - crates/qualia-etalon-sensing-bridge/**
       - crates/qualia-peer/**
+      - schemas/**
+      - tools/container-format-conformance/**
+      - tools/qbdl-stream-conformance/**
       - .github/workflows/qdnf-msvc.yml
+      - Cargo.toml
+      - Cargo.lock
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -86,7 +111,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
 
       # Same QDNF slice as windows-msvc. Documented Linux native runner; no vendor/, so no --offline.
+      # HostAdmission plus Gemma 4 PLE TLS can exceed the default 8 MiB Linux stack.
       - name: QDNF slice (qualia-core-db)
+        env:
+          RUST_MIN_STACK: "33554432"
         run: |
           cargo test -p qualia-core-db --lib -- \
             --test-threads=1 \

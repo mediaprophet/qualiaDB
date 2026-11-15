@@ -8,7 +8,7 @@
 //! This is epistemic anchor coordination for quantum context selection and
 //! wavefunction collapse via ray casting through the 10D manifold.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Epistemic state for quantum context management
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -60,7 +60,7 @@ pub fn SceneInteraction() -> Element {
     let mut node_info = use_signal(|| String::new());
 
     // Handle mouse move for hovering over epistemic anchors
-    let on_mouse_move = move |evt: dioxus::prelude::MouseEvent| {
+    let on_mouse_move = move |evt: aether::prelude::MouseEvent| {
         let coords = evt.client_coordinates();
         let mut state = interaction_state.write();
         state.mouse_pos = (coords.x as f64, coords.y as f64);
@@ -80,7 +80,7 @@ pub fn SceneInteraction() -> Element {
     };
 
     // Handle mouse click for coordinating epistemic anchor
-    let on_mouse_click = move |evt: dioxus::prelude::MouseEvent| {
+    let on_mouse_click = move |evt: aether::prelude::MouseEvent| {
         let coords = evt.client_coordinates();
         let mut state = interaction_state.write();
         state.mouse_pos = (coords.x as f64, coords.y as f64);

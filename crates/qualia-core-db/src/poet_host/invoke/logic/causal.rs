@@ -10,6 +10,7 @@ use vibe::{Diagnostic, Span, Value};
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
+/// Vibe fn: evaluates `caused(roots, effect)` over live quins; wasm-lite profile fails closed with E300.
 pub fn caused(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::modalities::causal::caused as caused_of;
     let effect = rec_hash(args_v, "effect")
@@ -42,6 +43,7 @@ pub fn caused(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, 
     feature = "wasm-scientific",
     feature = "wasm-full"
 )))]
+/// Vibe fn: evaluates `caused(roots, effect)` over live quins; wasm-lite profile fails closed with E300.
 pub fn caused(_snap: &PoetSnapshot, _args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(vibe::Diagnostic::new(
         vibe::DiagCode::E300,
@@ -56,6 +58,7 @@ pub fn caused(_snap: &PoetSnapshot, _args: &Value, span: Span) -> Result<Value, 
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
+/// Vibe fn: Gödel t-norm `min(a,b)`; wasm-lite profile fails closed.
 pub fn t_norm(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::modalities::fuzzy::t_norm_godel;
     let (a, b) = args::pair_f64(args_v, span, "t_norm")?;
@@ -68,6 +71,7 @@ pub fn t_norm(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     feature = "wasm-scientific",
     feature = "wasm-full"
 )))]
+/// Vibe fn: Gödel t-norm `min(a,b)`; wasm-lite profile fails closed.
 pub fn t_norm(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     caused(&PoetSnapshot::default(), _args, span)
 }

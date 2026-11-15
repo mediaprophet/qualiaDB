@@ -4,6 +4,7 @@ use crate::animation::pga::Motor;
 use crate::animation::presets::AnimationSample;
 use crate::animation::spring::{SpringConfig, SpringState1D};
 
+/// Evaluates the families family.
 pub fn eval(preset: &str, t: f64) -> AnimationSample {
     match preset {
         "spring_settle" | "spring" => {

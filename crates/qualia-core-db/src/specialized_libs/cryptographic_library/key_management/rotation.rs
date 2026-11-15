@@ -113,6 +113,7 @@ pub struct RotationHistoryEntry {
 }
 
 impl KeyRotator {
+    /// Creates a rotator with empty policy/schedule/history.
     pub fn new() -> Self {
         Self {
             rotation_policies: HashMap::new(),
@@ -121,6 +122,7 @@ impl KeyRotator {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         // Initialize rotation policies
         self.rotation_policies.insert(
@@ -132,6 +134,7 @@ impl KeyRotator {
         Ok(())
     }
 
+    /// Generates a successor for `old_key` under its algorithm and records the rotation.
     pub fn rotate_key(&mut self, old_key: &Key) -> Result<Key, CryptographicError> {
         let new_key_id = format!(
             "{}_rotated_{}",
@@ -189,6 +192,7 @@ impl KeyRotator {
 }
 
 impl RotationPolicy {
+    /// Creates a rotation policy for `algorithm`.
     pub fn new(algorithm: KeyAlgorithm) -> Self {
         Self {
             policy_id: format!("rotation_policy_{:?}", algorithm),
@@ -206,6 +210,7 @@ impl RotationPolicy {
 }
 
 impl NotificationSettings {
+    /// Creates default rotation-notification settings.
     pub fn new() -> Self {
         Self {
             notify_before_rotation: true,
@@ -216,6 +221,7 @@ impl NotificationSettings {
 }
 
 impl RotationSchedule {
+    /// Creates an empty rotation schedule.
     pub fn new() -> Self {
         Self {
             scheduled_rotations: Vec::new(),
@@ -226,6 +232,7 @@ impl RotationSchedule {
 }
 
 impl RotationHistory {
+    /// Creates an empty rotation history.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),

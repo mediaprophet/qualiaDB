@@ -14,6 +14,7 @@ mod algebra;
 mod audio;
 mod chemistry;
 mod clinical_risk;
+mod conditioning;
 mod engineering;
 mod geometry;
 mod governance;
@@ -29,6 +30,7 @@ pub use algebra::*;
 pub use audio::*;
 pub use chemistry::*;
 pub use clinical_risk::*;
+pub use conditioning::*;
 pub use engineering::*;
 pub use geometry::*;
 pub use governance::*;
@@ -42,6 +44,7 @@ pub use vision::*;
 #[cfg(test)]
 mod tests;
 
+/// Parses `tool-args`.
 pub fn parse_tool_args(args: &[u8]) -> Result<Value, McpSystemError> {
     if args.is_empty() {
         return Ok(json!({}));
@@ -104,6 +107,7 @@ fn parse_quin(v: &Value) -> Result<NQuin, McpSystemError> {
     })
 }
 
+/// Parses a `Value` list under `key` into `NQuin`s.
 pub fn parse_quin_slice(v: &Value, key: &str) -> Result<Vec<NQuin>, McpSystemError> {
     let arr = v
         .get(key)
@@ -169,6 +173,7 @@ fn gate_verdict(
     ))
 }
 
+/// Decodes a hex string.
 pub(crate) fn hex_decode(s: &str) -> Result<Vec<u8>, McpSystemError> {
     let s = s.trim();
     if s.len() % 2 != 0 {

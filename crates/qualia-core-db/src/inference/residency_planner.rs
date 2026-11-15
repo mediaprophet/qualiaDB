@@ -83,6 +83,7 @@ pub struct EmploymentPlan {
 }
 
 impl EmploymentPlan {
+    /// Multi-line plan summary.
     pub fn summary(&self) -> String {
         let mut s = format!(
             "EmploymentPlan: {:?}  (model {:.2} GB, KV reserve {:.2} GB)\n  priority: {}\n  {}\n",

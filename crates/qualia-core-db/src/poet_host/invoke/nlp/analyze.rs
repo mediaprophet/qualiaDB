@@ -5,6 +5,7 @@ use crate::nlp::budget::reject_source;
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
+/// VibeScript seam: NLP analyze.
 pub fn analyze(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let text = match args {
         Value::String(s) => s.as_str(),

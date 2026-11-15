@@ -3,7 +3,21 @@
 use super::*;
 
 impl QTensorEngine {
+    /// KV-cache layout when the engine allocates one.
+    pub fn kv_layout(&self) -> Option<KvCacheLayout> {
+        self.kv_layout
+    }
+
+    /// KV-cache size in bytes.
     pub fn kv_cache_bytes(&self) -> u64 {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &self.qwen35_ftw {
+            return session.kv_cache_bytes() as u64;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &self.gemma4 {
+            return session.kv_cache_bytes() as u64;
+        }
         self.kv_layout
             .as_ref()
             .map(|layout| (layout.total_f32_elems * std::mem::size_of::<f32>()) as u64)
@@ -11,6 +25,7 @@ impl QTensorEngine {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Loads `gguf-checked`.
     pub fn load_gguf_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
         use std::fs::File;
 
@@ -38,7 +53,7 @@ impl QTensorEngine {
         // TODO(H3-exec): actually running overflow layers on the auxiliary circuit is the remaining
         // (out-of-scope) H3 step; the recorded plan is advisory until an execution stage consults it.
         let _ = crate::residency_planner::route_employment_from_passport(file_size as u64);
-        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let mut index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
         if index.tensor_data_start == 0
             && index.max_tensor_bytes == 0
             && index.hyperparams.n_layer == 0
@@ -47,22 +62,59 @@ impl QTensorEngine {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
+        if let Some(profile) = qwen35::gguf::Profile::parse(&mmap, &mut index)? {
+            return self.load_dense_qwen_gguf(mmap, index, profile);
+        }
+        if let Some(profile) = gemma4::Profile::parse(&mmap)? {
+            return self.load_gemma4_gguf(
+                mmap,
+                index,
+                profile,
+                MAX_CONTEXT_WINDOW as usize,
+                self.ssm_state_byte_budget,
+            );
+        }
         if let Err(msg) = index.hyperparams.decode_supported() {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
 
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         }
         self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        self.invalidate_resident_projection_weights();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
+            self.ftw_package = None;
+        }
         self.gguf_mmap = Some(Arc::new(mmap));
         self.p64_index = None;
         self.tensor_index_cache = Some(index.clone());
@@ -115,15 +167,128 @@ impl QTensorEngine {
     /// which rejects malformed or unsupported data.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load_model_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
+        let p = std::path::Path::new(path);
+        if p.is_dir() {
+            if p.join("freetoken_weight.json").exists() {
+                return self.adopt_ftw_package(p);
+            }
+        } else if path.ends_with("freetoken_weight.json") || path.ends_with(".ftw") {
+            if let Some(parent) = p.parent() {
+                if parent.join("freetoken_weight.json").exists() {
+                    return self.adopt_ftw_package(parent);
+                }
+            }
+        }
+
         let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
         let mmap = std::sync::Arc::new(
             unsafe { memmap2::MmapOptions::new().map(&file) }.map_err(|e| e.to_string())?,
         );
         if crate::p64_weight::has_p64_magic(&mmap[..]) {
             self.adopt_resident_p64_mmap(mmap)
+        } else if crate::safetensor::detect_format(&mmap[..])
+            == crate::safetensor::SourceFormat::Safetensor
+        {
+            let config_json = std::path::Path::new(path)
+                .parent()
+                .map(|p| p.join("config.json"))
+                .and_then(|p| std::fs::read_to_string(p).ok());
+            self.adopt_resident_safetensor_mmap(mmap, config_json.as_deref())
         } else {
             self.adopt_resident_mmap(mmap)
         }
+    }
+
+    /// Boot directly from an already-mapped Safetensors model (including BF16).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_resident_safetensor_mmap(
+        &mut self,
+        mmap: Arc<memmap2::Mmap>,
+        config_json: Option<&str>,
+    ) -> Result<GgufLoadReport, String> {
+        let file_size = mmap.len();
+        if file_size == 0 {
+            return Err("Empty Safetensors mmap".to_string());
+        }
+        log::info!(
+            "LLM_LOAD|safetensor|0.75|Reusing resident Safetensors mapping ({:.2} GiB)",
+            bytes_to_gib(file_size as u64)
+        );
+        let index =
+            crate::inference::safetensor_loader::parse_safetensor_to_index(&mmap[..], config_json)?;
+        if index.hyperparams.n_layer == 0 || index.hyperparams.n_embd == 0 {
+            return Err("Safetensor: missing hyperparameters".to_string());
+        }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
+        self.tensor_data_offset = index.tensor_data_start;
+        self.hyperparams = index.hyperparams;
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
+            let staging = index
+                .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
+                .max(4096)
+                .min(MAX_WGPU_WEIGHT_STAGING);
+            self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
+        }
+        self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
+            self.ftw_package = None;
+        }
+        self.gguf_mmap = Some(mmap);
+        self.p64_index = None;
+        self.tensor_index_cache = Some(index.clone());
+        #[cfg(feature = "gpu-runtime")]
+        if !self.mc8_upload_resident_logits(&index) {
+            log::info!("LLM_LOAD|safetensor-logits|0.70|skipped — per-token upload fallback");
+        }
+        let kv_cache_bytes = self.kv_cache_bytes();
+        Ok(GgufLoadReport {
+            mapped_bytes: file_size as u64,
+            tensor_data_offset: self.tensor_data_offset,
+            n_layer: self.hyperparams.n_layer,
+            n_head: self.hyperparams.n_head,
+            n_kv_head: self.hyperparams.effective_n_kv_head(),
+            max_tensor_bytes: index.max_tensor_bytes,
+            kv_cache_bytes,
+            directml_enabled: {
+                #[cfg(target_os = "windows")]
+                {
+                    self.dml.is_some()
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    false
+                }
+            },
+        })
     }
 
     /// Fail-soft wrapper retained for the agent decode path.
@@ -142,7 +307,7 @@ impl QTensorEngine {
         &mut self,
         q: &crate::p64_weight::P64TensorIndex,
     ) -> bool {
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -206,12 +371,24 @@ impl QTensorEngine {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
@@ -219,6 +396,26 @@ impl QTensorEngine {
         self.ensure_kv_cache(&hp);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("P64: KV cache allocation failed".to_string());
+        }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         // Cache index so decode never re-validates hundreds of MB of tensor CRCs.
@@ -294,17 +491,49 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         }
         self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
+            self.ftw_package = None;
+        }
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
         self.tensor_index_cache = Some(index.clone());
@@ -360,7 +589,7 @@ impl QTensorEngine {
             return false;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -377,10 +606,10 @@ impl QTensorEngine {
         let row_bytes = total / vocab;
         // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
         // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("ResidentLogits"),
             size: total as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         self.gpu_queue().write_buffer(&buf, 0, raw);
@@ -402,7 +631,9 @@ impl QTensorEngine {
     #[inline]
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn poll_wait(&self) {
-        let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
+        let _ = self
+            .gpu_device()
+            .poll(etalon::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -416,15 +647,18 @@ impl QTensorEngine {
         for _ in 0..n {
             let enc = self
                 .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                .create_command_encoder(&etalon::CommandEncoderDescriptor {
                     label: Some("EmptyRT"),
                 });
-            self.gpu_queue().submit(Some(enc.finish()));
-            let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
+            self.submit_commands(Some(enc.finish()));
+            let _ = self
+                .gpu_device()
+                .poll(etalon::PollType::wait_indefinitely());
         }
         t.elapsed().as_nanos() as u64
     }
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+    /// `QTensorEngine::adopt_resident_mmap`.
     pub fn adopt_resident_mmap(&mut self, mmap: Arc<[u8]>) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
         if file_size == 0 {
@@ -441,6 +675,8 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         let staging = index
@@ -451,6 +687,26 @@ impl QTensorEngine {
         self.ensure_kv_cache(&index.hyperparams);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
+        }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         // Full eager upload — required for coherent decode (do not defer).

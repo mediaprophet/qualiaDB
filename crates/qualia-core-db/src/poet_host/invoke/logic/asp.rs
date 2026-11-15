@@ -9,6 +9,7 @@ use crate::poet_host::PoetSnapshot;
 use crate::q_hash;
 use vibe::{Diagnostic, Span, Value};
 
+/// Evaluates and returns the result.
 pub fn evaluate(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let Some(source) = args::rec_str(args_v, "source") else {
         return enumerate_live(snap);

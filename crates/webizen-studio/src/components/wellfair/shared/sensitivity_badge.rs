@@ -1,7 +1,8 @@
 use super::super::host_dto::SensitivityClassDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `SensitivityBadge` component.
 pub fn SensitivityBadge(class: SensitivityClassDto) -> Element {
     let (label, color) = match class {
         SensitivityClassDto::Public => ("Public", "#2a9d8f"),

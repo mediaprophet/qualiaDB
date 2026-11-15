@@ -1,7 +1,7 @@
 /// Pane Registry — maps semantic type hashes to human-readable component identifiers.
 ///
 /// When the Studio canvas encounters a `PanePlacement`, it looks up the `component_id`
-/// in this registry to determine which Shoelace/Dioxus widget to render.
+/// in this registry to determine which Shoelace/Aether widget to render.
 /// This implements the SolidOS "Pane Dispatcher" pattern from redesign-web-platform.md §5.
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ pub struct PaneDefinition {
     pub component_id: String,
     /// Display name shown in the sidebar palette
     pub display_name: String,
-    /// The Shoelace/Dioxus element tag or custom component name
+    /// The Shoelace/Aether element tag or custom component name
     pub element_tag: String,
     /// Icon name (Shoelace icon library)
     pub icon: String,

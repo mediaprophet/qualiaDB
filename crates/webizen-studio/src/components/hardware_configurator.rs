@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Exact field structure for the ModuleAttachmentArgs payload.
@@ -34,6 +34,7 @@ pub struct HardwareConfigState {
 }
 
 #[component]
+/// Aether `HardwareConfigurator` component.
 pub fn HardwareConfigurator() -> Element {
     let mut state = use_signal(|| HardwareConfigState {
         baseplate_id: "baseplate_v1".to_string(),

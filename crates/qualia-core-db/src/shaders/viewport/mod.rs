@@ -1,13 +1,8 @@
-//! Viewport WGSL — migrated from webizen-render; owned by qualia-core-db.
+//! Viewport WGSL shader source catalog (`RM-03` retired to `etalon_render::shaders`).
+pub use etalon_render::shaders::*;
 
-pub const SPECTRAL_WGSL: &str = include_str!("spectral.wgsl");
-pub const AMBIENT_WGSL: &str = concat!(include_str!("spectral.wgsl"), include_str!("ambient.wgsl"));
-pub const PROJECTOR_WGSL: &str = concat!(
-    include_str!("spectral.wgsl"),
-    include_str!("projector.wgsl")
-);
-pub const MESH_WGSL: &str = include_str!("mesh.wgsl");
-pub const BLOOM_WGSL: &str = include_str!("bloom.wgsl");
-pub const EPISTEMIC_WGSL: &str = include_str!("epistemic.wgsl");
-pub const SCREEN_WGSL: &str = include_str!("screen.wgsl");
-pub const EMF_VOLUMETRIC_WGSL: &str = include_str!("emf_volumetric.wgsl");
+/// Alias for [`INSTANCE_CULL_INDIRECT_WGSL`].
+pub const INDIRECT_CULL_WGSL: &str = INSTANCE_CULL_INDIRECT_WGSL;
+
+/// Alias for [`WATER_WGSL`].
+pub const WATER_SURFACE_WGSL: &str = WATER_WGSL;

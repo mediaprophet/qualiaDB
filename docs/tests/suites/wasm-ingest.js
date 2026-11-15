@@ -240,13 +240,13 @@ export function register(runner) {
         // ── WordNet integration (MANUAL — requires dataset build) ─────────────
         // Activate: ?manual=1 in URL or window.MANUAL_TESTS = true before Run.
 
-        runner.it('wordnet.q42 reachable (manual) — unified v3, not wordnet.c.q42', async () => {
+        runner.it('wordnet.q42 reachable (manual) — unified volume, not wordnet.c.q42', async () => {
             if (!manualWordNetEnabled()) return;
             const r = await fetch('../data/wordnet/princeton.q42', { method: 'HEAD' });
             runner.expect(r.ok).toBeTruthy();
         });
 
-        runner.it('schema.org unified v3 Q42 has Q42\\0 magic (no sidecar required)', async () => {
+        runner.it('schema.org unified Q42 has Q42\\0 magic + v3/v4 header (no sidecar required)', async () => {
             const r = await fetch('../data/schemaorg/30.0/schemaorg-current-https.q42', { method: 'GET' });
             if (!r.ok) return;
             const buf = new Uint8Array(await r.arrayBuffer());
@@ -254,12 +254,12 @@ export function register(runner) {
             runner.expect(buf[1]).toBe(0x34);
             runner.expect(buf[2]).toBe(0x32);
             runner.expect(buf[3]).toBe(0x00);
-            runner.expect(buf[4]).toBe(3);
+            runner.expect(buf[4] === 3 || buf[4] === 4).toBeTruthy();
             const flags = buf[6] | (buf[7] << 8);
             runner.expect((flags & 0x0001) !== 0).toBeTruthy();
         });
 
-        runner.it('wordnet.q42 is a unified v3 volume (LZ4 SuperBlocks inside, no .c.q42 twin) (manual)', async () => {
+        runner.it('wordnet.q42 is a unified volume (LZ4 SuperBlocks inside, no .c.q42 twin) (manual)', async () => {
             if (!manualWordNetEnabled()) return;
             const r = await fetch('../data/wordnet/princeton.q42');
             runner.expect(r.ok).toBeTruthy();

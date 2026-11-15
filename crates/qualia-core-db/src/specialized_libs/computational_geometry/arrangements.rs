@@ -212,6 +212,7 @@ pub struct ArrangementCounts {
 }
 
 impl Arrangement {
+    /// Counts.
     pub fn counts(&self) -> ArrangementCounts {
         let v = self.vertices.len() as i64;
         let e = self.edges.len() as i64;

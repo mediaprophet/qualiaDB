@@ -1,0 +1,54 @@
+
+running 49 tests
+test net::peer::fabric::capsule::tests::datagram_round_trip_cscp_shaped ... ok
+test net::peer::fabric::capsule::tests::does_not_claim_masque_or_http3 ... ok
+test net::peer::fabric::capsule::tests::empty_datagram_value_ok ... ok
+test net::peer::fabric::capsule::tests::overlong_varint_is_malformed ... ok
+test net::peer::fabric::capsule::tests::oversize_payload_is_capacity ... ok
+test net::peer::fabric::capsule::tests::truncated_buffer_and_input_fail_closed ... ok
+test net::peer::fabric::capsule::tests::unknown_critical_rejected ... ok
+test net::peer::fabric::capsule::tests::unknown_noncritical_skipped_or_rejected ... ok
+test net::peer::fabric::carrier::tests::isolated_forbids_live_paths ... ok
+test net::peer::fabric::carrier::tests::relay_only_forbids_direct_classes ... ok
+test net::peer::fabric::connect::tests::isolated_connect_queues_without_session ... ok
+test net::peer::fabric::connect::tests::local_bound_udp_delivers_and_admits_session ... ok
+test net::peer::fabric::contact::tests::older_generation_is_stale ... ok
+test net::peer::fabric::evidence::tests::remote_assertion_is_not_validated ... ok
+test net::peer::fabric::experiments::tests::experiment_compromised_discovery ... ok
+test net::peer::fabric::experiments::tests::experiment_lease_expiry ... ok
+test net::peer::fabric::experiments::tests::experiment_network_switch ... ok
+test net::peer::fabric::experiments::tests::experiment_revoked_replay ... ok
+test net::peer::fabric::intent::tests::ordinary_does_not_enable_public_dht ... ok
+test net::peer::fabric::kernel::tests::mailbox_descriptor_still_probes_relayed ... ok
+test net::peer::fabric::kernel::tests::ordinary_direct_descriptor_probes_direct ... ok
+test net::peer::fabric::kernel::tests::relay_only_excludes_validated_direct ... ok
+test net::peer::fabric::kernel::tests::stale_descriptor_denies_without_direct_probe ... ok
+test net::peer::fabric::lease::tests::charge_stops_at_cap_and_expiry ... ok
+test net::peer::fabric::lease::tests::custody_is_not_a_relay_budget ... ok
+test net::peer::fabric::lease_protocol::tests::custody_is_not_a_forwarding_lease ... ok
+test net::peer::fabric::lease_protocol::tests::relay_only_clears_export_bit ... ok
+test net::peer::fabric::lease_protocol::tests::two_local_peers_exchange_under_cscp_lease ... ok
+test net::peer::fabric::mailbox::tests::ingest_relay_only_direct_does_not_retain_locator ... ok
+test net::peer::fabric::mailbox::tests::stale_and_direct_forbidden ... ok
+test net::peer::fabric::outcome::tests::remote_or_direct_under_relay_only_rejects ... ok
+test net::peer::fabric::receipt::tests::revoked_grant_cannot_commit ... ok
+test net::peer::fabric::receipt_store::tests::persist_recover_and_truncated_fail_closed ... ok
+test net::peer::fabric::relay::tests::lease_expiry_stops_forward ... ok
+test net::peer::fabric::select::tests::faster_direct_cannot_beat_relay_only_policy ... ok
+test net::peer::fabric::select::tests::ordinary_prefers_faster_validated_direct ... ok
+test net::peer::fabric::session::tests::no_public_session_without_kernel_admit ... ok
+test net::peer::fabric::session::tests::relay_only_session_rejects_direct_evidence ... ok
+test net::peer::fabric::wire::connect_msg::tests::connect_request_round_trip ... ok
+test net::peer::fabric::wire::connect_msg::tests::empty_connect_request_is_malformed ... ok
+test net::peer::fabric::wire::connect_msg::tests::unknown_critical_tlv_is_rejected ... ok
+test net::peer::fabric::wire::connect_msg::tests::wire_connect_isolated_queues ... ok
+test net::peer::fabric::wire::records::tests::accept_reject_receipt_round_trip ... ok
+test net::peer::fabric::wire::records::tests::contact_and_lease_round_trip ... ok
+test net::peer::fabric::wire::records::tests::decoded_evidence_is_never_locally_validated ... ok
+test net::peer::fabric::wire::records::tests::empty_body_and_bad_flags_fail_closed ... ok
+test net::peer::fabric::wire::records::tests::observer2_validated1_is_malformed ... ok
+test net::peer::fabric::wire::records::tests::remaining_bytes_over_max_is_malformed ... ok
+test net::peer::fabric::wire::records::tests::unknown_critical_rejected_on_every_message_type ... ok
+
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 10335 filtered out; finished in 0.15s
+

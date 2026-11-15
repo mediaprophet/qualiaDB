@@ -7,7 +7,7 @@ use super::host_client::{
     fetch_assessment_instruments, fetch_assessments, record_assessment, AssessmentInstrumentDto,
     AssessmentResultDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default)]
 struct AssessUi {
@@ -44,6 +44,7 @@ async fn load(mut ui: Signal<AssessUi>) {
 }
 
 #[component]
+/// Aether `WellfairAssessmentPanel` component.
 pub fn WellfairAssessmentPanel() -> Element {
     let mut ui = use_signal(AssessUi::default);
     let mut init_done = use_signal(|| false);

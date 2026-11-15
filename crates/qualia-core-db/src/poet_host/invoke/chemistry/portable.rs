@@ -15,6 +15,7 @@ const SYMBOLS: [&str; 104] = [
     "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr",
 ];
 
+/// Element symbol for atomic number `z`.
 pub fn element_symbol(z: u32) -> Option<&'static str> {
     SYMBOLS
         .get(z as usize)
@@ -22,6 +23,7 @@ pub fn element_symbol(z: u32) -> Option<&'static str> {
         .filter(|symbol| !symbol.is_empty())
 }
 
+/// Atomic number for `symbol`.
 pub fn atomic_number(symbol: &str) -> Option<u32> {
     SYMBOLS
         .iter()
@@ -29,6 +31,7 @@ pub fn atomic_number(symbol: &str) -> Option<u32> {
         .map(|z| z as u32)
 }
 
+/// Standard atomic weight for `element`.
 pub fn standard_atomic_weight(element: &str) -> Option<f64> {
     Some(match element {
         "H" => 1.008,
@@ -60,6 +63,7 @@ pub fn standard_atomic_weight(element: &str) -> Option<f64> {
     })
 }
 
+/// LDA exchange energy density + derivative at `rho`.
 pub fn lda_exchange(rho: f64) -> (f64, f64) {
     if rho <= 1e-12 {
         return (0.0, 0.0);
@@ -68,6 +72,7 @@ pub fn lda_exchange(rho: f64) -> (f64, f64) {
     (energy, energy * (4.0 / 3.0))
 }
 
+/// VWN LDA correlation energy + derivative at `rho`.
 pub fn lda_correlation_vwn(rho: f64) -> (f64, f64) {
     if rho <= 1e-12 {
         return (0.0, 0.0);

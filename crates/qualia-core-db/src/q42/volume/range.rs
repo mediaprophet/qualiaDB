@@ -4,9 +4,14 @@
 //! contract. The local file adapter is both useful itself and the reference
 //! implementation for response-length and boundary validation.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Read, Seek, SeekFrom};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
 use sha2::{Digest, Sha256};
@@ -14,6 +19,8 @@ use sha2::{Digest, Sha256};
 #[cfg(not(target_arch = "wasm32"))]
 use super::manifest::{Q42SegmentRangeFactory, Q42VolumeSegment};
 
+/// Build an `InvalidData` io::Error for malformed range-source
+/// content.
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
@@ -26,12 +33,14 @@ pub struct Q42ByteRange {
 }
 
 impl Q42ByteRange {
+    /// Exclusive end offset; errors on u64 overflow.
     pub fn end(self) -> io::Result<u64> {
         self.offset
             .checked_add(self.length as u64)
             .ok_or_else(|| invalid("Q42 byte range overflows u64"))
     }
 
+    /// Bounds-check the range against `source_length`.
     pub fn validate_for(self, source_length: u64) -> io::Result<()> {
         if self.end()? > source_length {
             return Err(invalid("Q42 byte range exceeds source length"));
@@ -43,18 +52,25 @@ impl Q42ByteRange {
 /// Exact, caller-buffered random access. Implementations must fail if the
 /// source returns a short response; partial data is never treated as success.
 pub trait Q42RangeSource {
+    /// Total byte length of the source.
     fn length(&self) -> io::Result<u64>;
+    /// Fill `out` with exactly `range.length` bytes at `range.offset` —
+    /// exact-fit contract, short responses must error.
     fn read_range_into(&self, range: Q42ByteRange, out: &mut [u8]) -> io::Result<()>;
 }
 
 /// Native local-file implementation. The mutex serialises seek/read pairs;
 /// high-concurrency remote adapters should instead use independent requests.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct LocalFileRangeSource {
     length: u64,
     file: Mutex<File>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LocalFileRangeSource {
+    /// Open `path` and capture its length once (immutable-source
+    /// contract — the length is not re-polled).
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
         let length = file.metadata()?.len();
@@ -65,11 +81,15 @@ impl LocalFileRangeSource {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42RangeSource for LocalFileRangeSource {
+    /// The length captured at `open`.
     fn length(&self) -> io::Result<u64> {
         Ok(self.length)
     }
 
+    /// Exact-fit `pread` under the seek mutex — bounds-checked against
+    /// the captured length.
     fn read_range_into(&self, range: Q42ByteRange, out: &mut [u8]) -> io::Result<()> {
         if out.len() != range.length {
             return Err(invalid(
@@ -156,6 +176,8 @@ pub struct HttpRangeSource {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl HttpRangeSource {
+    /// Source with a caller-attested byte length (e.g. from a manifest)
+    /// — http/https only, 10s connect / 30s request timeouts.
     pub fn new(url: &str, length: u64) -> io::Result<Self> {
         if length == 0 {
             return Err(invalid("Q42 HTTP source length must be non-zero"));
@@ -236,10 +258,14 @@ impl HttpRangeSource {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Q42RangeSource for HttpRangeSource {
+    /// The attested source length.
     fn length(&self) -> io::Result<u64> {
         Ok(self.length)
     }
 
+    /// HTTP GET with `Range: bytes=…`; requires a 206 whose
+    /// `Content-Range` exactly matches the request and the catalog
+    /// length — anything else fails closed.
     fn read_range_into(&self, range: Q42ByteRange, out: &mut [u8]) -> io::Result<()> {
         if out.len() != range.length {
             return Err(invalid(
@@ -309,6 +335,8 @@ impl Q42RangeSource for HttpRangeSource {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// `HttpRangeSource` for `{gateway}/ipfs/{cid}` — CID must be a
+/// non-empty alphanumeric token; `length` stays caller-attested.
 pub fn ipfs_gateway_range_source(
     gateway: &str,
     cid: &str,
@@ -347,6 +375,7 @@ pub struct IpfsGatewaySegmentFactory {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl IpfsGatewaySegmentFactory {
+    /// Bind the factory to an http/https gateway URL.
     pub fn new(gateway: &str) -> io::Result<Self> {
         let gateway = gateway.trim_end_matches('/');
         let url = reqwest::Url::parse(gateway)
@@ -364,6 +393,8 @@ impl IpfsGatewaySegmentFactory {
 impl Q42SegmentRangeFactory for IpfsGatewaySegmentFactory {
     type Source = HttpRangeSource;
 
+    /// Open an `ipfs://CID` locator through the gateway; the manifest-
+    /// committed byte length travels with the segment.
     fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source> {
         let cid = segment
             .ipfs_cid()
@@ -376,6 +407,7 @@ impl Q42SegmentRangeFactory for IpfsGatewaySegmentFactory {
 impl super::manifest::Q42LexiconRangeFactory for IpfsGatewaySegmentFactory {
     type Source = HttpRangeSource;
 
+    /// Open an `ipfs://CID` lexicon-shard locator through the gateway.
     fn open_lexicon_segment(
         &self,
         segment: &super::manifest::Q42LexiconSegment,
@@ -388,6 +420,8 @@ impl super::manifest::Q42LexiconRangeFactory for IpfsGatewaySegmentFactory {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Parse `Content-Range: bytes start-end/total` — rejects malformed
+/// units, intervals, and out-of-bounds ends.
 fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
     let body = value
         .strip_prefix("bytes ")
@@ -413,7 +447,7 @@ fn parse_content_range(value: &str) -> io::Result<(u64, u64, u64)> {
     Ok((start, end, total))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;

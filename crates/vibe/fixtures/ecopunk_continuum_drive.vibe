@@ -1,0 +1,28 @@
+// Ecopunk Continuum Drive — Rover 64Hz Terramechanics, Character 3D & Hilbert Streaming Fixture
+module <https://qualiadb.org/modules/ecopunk/continuum_drive>;
+using WorldContinuum;
+using SceneGraph10D;
+
+effect fn step_continuum_drive(wx_m: f64, wz_m: f64, throttle: f64, steer: f64) -> Record {
+    let elev = WorldContinuum.sample_elevation_normal({ wx_m: wx_m, wz_m: wz_m });
+    let rover = WorldContinuum.step_rover_64hz({
+        wx_m: wx_m,
+        wz_m: wz_m,
+        heading_rad: 0.35,
+        speed_mps: 12.0,
+        throttle: throttle,
+        steer: steer,
+        dt_s: 0.015625
+    });
+    let chunks = WorldContinuum.stream_hilbert_chunks({ wx_m: wx_m, wz_m: wz_m });
+    let site = WorldContinuum.locate_study_site({ wx_m: wx_m, wz_m: wz_m });
+    let cull = SceneGraph10D.cull_indirect_4tier({ instance_count: 512.0 });
+    return {
+        elevation: elev,
+        rover: rover,
+        chunks: chunks,
+        site: site,
+        cull: cull
+    };
+}
+

@@ -51,13 +51,19 @@ impl std::error::Error for SurfaceEditError {}
 /// A rectangular region in the time-frequency plane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Region {
+    /// First frame (inclusive).
     pub frame_start: usize,
+    /// Last frame (exclusive).
     pub frame_end: usize,
+    /// First frequency bin (inclusive).
     pub bin_start: usize,
+    /// Last frequency bin (exclusive).
     pub bin_end: usize,
 }
 
 impl Region {
+    /// Region covering frames `[frame_start, frame_end)` × bins
+    /// `[bin_start, bin_end)`.
     #[inline]
     pub fn new(frame_start: usize, frame_end: usize, bin_start: usize, bin_end: usize) -> Self {
         Self {
@@ -68,21 +74,25 @@ impl Region {
         }
     }
 
+    /// Region covering the entire surface.
     #[inline]
     pub fn full(frame_count: usize, bin_count: usize) -> Self {
         Self::new(0, frame_count, 0, bin_count)
     }
 
+    /// Number of frames covered (`frame_end - frame_start`, saturating).
     #[inline]
     pub fn frame_span(&self) -> usize {
         self.frame_end.saturating_sub(self.frame_start)
     }
 
+    /// Number of bins covered (`bin_end - bin_start`, saturating).
     #[inline]
     pub fn bin_span(&self) -> usize {
         self.bin_end.saturating_sub(self.bin_start)
     }
 
+    /// True when both extents are non-empty.
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.frame_end > self.frame_start && self.bin_end > self.bin_start

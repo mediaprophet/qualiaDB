@@ -38,3 +38,6 @@ pub use proofs::*;
 pub use security::*;
 pub use signing::*;
 pub use types::*;
+
+// Preserve the established native path while sharing the portable owner.
+pub use crate::crypto::network::signing_profile;

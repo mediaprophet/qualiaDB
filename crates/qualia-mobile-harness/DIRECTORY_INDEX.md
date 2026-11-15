@@ -16,7 +16,7 @@ Comprehensive index of functionality for `qualia-mobile-harness`. This document 
 
 ### Files & Exported Functionality
 - 📄 `Cargo.toml`
-- 📄 `Dioxus.toml`
+- 📄 `Aether.toml`
 
 ## Changelog
 - **2026-06-30**: Automated full index generation, extracting code definitions.

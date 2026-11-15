@@ -30,6 +30,7 @@ Comprehensive index of functionality for `core-ontologies`. This document serves
 - 📄 `capability-credentials.n3`
 - 📄 `cml.n3`
 - 📄 `humanitarian-ict.n3`
+- 📄 `inference-lifecycle.n3`
 - 📄 `jural.n3`
 - 📄 `jurisdiction.n3`
 - 📄 `modal-junctures.n3`
@@ -45,5 +46,6 @@ Comprehensive index of functionality for `core-ontologies`. This document serves
 - 📄 `values.n3`
 
 ## Changelog
+- **2026-10-01**: `inference-lifecycle.n3` — inference-stage / chat-graph / model-modality ontology (Prompt Precision chat-graph stages plan 2026-10-01).
 - **2026-09-15**: SI-01 draft `semantic-instrument*.n3` plus `fixtures/semantic-instruments/` (not a values-credential schema bump).
 - **2026-06-30**: Automated full index generation, extracting code definitions.

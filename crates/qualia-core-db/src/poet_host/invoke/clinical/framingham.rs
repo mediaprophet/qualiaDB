@@ -10,6 +10,7 @@ pub const CITATION: &str = "Wilson PW et al. Circulation 1998;97:1837-47 (ATP II
 pub const APPLICABILITY: &str = "adults 30–74 years; lipid and blood-pressure inputs required";
 pub const UNITS: &str = "age years; total_cholesterol_mmol mmol/L; hdl_cholesterol_mmol mmol/L; systolic_bp mmHg; risk_10yr fraction 0–1";
 
+/// Scores the input.
 pub fn score(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let input = FraminghamInput {
         age: required::need_age_years(args_v, span, 30, 74, APPLICABILITY)?,

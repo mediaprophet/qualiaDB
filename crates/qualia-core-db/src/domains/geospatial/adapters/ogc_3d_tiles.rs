@@ -7,6 +7,7 @@ pub struct Ogc3dTilesAdapter {
 }
 
 impl Ogc3dTilesAdapter {
+    /// Creates a default `Ogc3dTilesAdapter`.
     pub fn new(id: &'static str, endpoint: &str) -> Self {
         Self {
             id,

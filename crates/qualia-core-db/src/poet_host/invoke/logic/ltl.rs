@@ -8,10 +8,12 @@ use vibe::{DiagCode, Diagnostic, Span, Value};
 
 const MAX_TRACE: usize = 256;
 
+/// VibeScript seam: LTL `G` operator.
 pub fn globally(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     run(snap, args, span, true)
 }
 
+/// VibeScript seam: LTL `F` operator.
 pub fn finally(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     run(snap, args, span, false)
 }

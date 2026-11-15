@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
@@ -51,6 +51,7 @@ struct TauriEventPayload {
 }
 
 #[component]
+/// Aether `UpdaterPanel` component.
 pub fn UpdaterPanel() -> Element {
     let mut state = use_signal(|| UpdaterState::Idle);
 

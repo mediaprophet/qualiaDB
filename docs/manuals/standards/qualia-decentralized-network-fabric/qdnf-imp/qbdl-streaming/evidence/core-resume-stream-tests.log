@@ -1,0 +1,144 @@
+
+running 126 tests
+test bundle::stream::descriptor::tests::entry_page_mapping_is_strict_and_borrowed ... ok
+test bundle::stream::descriptor::tests::independently_spelled_context_page_bytes_and_both_directions_agree ... ok
+test bundle::stream::descriptor::tests::page_reference_geometry_required_fields_and_limits_refuse ... ok
+test bundle::stream::descriptor::tests::roots_roundtrip_exact_length_domains_and_reject_every_truncated_prefix ... ok
+test bundle::stream::formats::brick_tests::complete_brick_last_trailer_byte_is_checked_under_a_fresh_valid_outer_root ... ok
+test bundle::stream::formats::brick_tests::complete_hilbert_brick_needs_no_unfetched_entry_suffix ... ok
+test bundle::stream::formats::m64_tests::m64_and_e64_full_digest_chunks_are_borrowed_and_zero_heap ... ok
+test bundle::stream::formats::m64_tests::m64_full_blake3_trailer_checks_every_digest_and_reserved_byte ... ok
+test bundle::stream::formats::m64_tests::m64_lrm3_is_an_authenticated_required_metadata_range ... ok
+test bundle::stream::formats::m64_tests::m64_record_crc_is_checked_after_valid_full_trailer_and_outer_proof ... ok
+test bundle::stream::formats::m64_tests::m64_refuses_legacy_prefix_bad_extents_and_budget_violations ... ok
+test bundle::stream::formats::ten_d_tests::actual_mesh_decoder_consumes_selected_verified_bytes ... ok
+test bundle::stream::formats::ten_d_tests::selective_metadata_and_payload_limits_refuse ... ok
+test bundle::stream::formats::ten_d_tests::signed_descriptor_corruption_and_inner_crc_refuse ... FAILED
+test bundle::stream::formats::tests::selected_emf_chunk_uses_actual_outer_root_and_all_inner_digest_bytes ... ok
+test bundle::stream::formats::tests::selective_emf_budgets_and_mismatched_range_placement_refuse ... ok
+test bundle::stream::formats::tests::signed_overlapping_and_legacy_directories_refuse ... ok
+test bundle::stream::index::tests::both_byte_forms_and_arbitrary_field_order_materialize_without_reencoding ... ok
+test bundle::stream::index::tests::bounds_alignment_and_range_overflow_are_rejected ... ok
+test bundle::stream::index::tests::duplicate_keys_and_nonempty_overlaps_are_rejected ... ok
+test bundle::stream::index::tests::empty_ranges_never_reset_occupied_frontier ... ok
+test bundle::stream::index::tests::exact_header_and_footer_geometry_fail_closed ... ok
+test bundle::stream::index::tests::flags_and_independent_extent_are_checked_before_index ... ok
+test bundle::stream::index::tests::invalid_required_fields_and_digests_refuse ... ok
+test bundle::stream::index::tests::invalid_utf8_and_missing_required_fields_refuse ... ok
+test bundle::stream::index::tests::malformed_counts_indefinite_trailing_and_size_bombs_refuse ... ok
+test bundle::stream::index::tests::remote_u64_extent_does_not_size_resident_scratch ... ok
+test bundle::stream::index::tests::scratch_and_resident_limits_are_independent ... ok
+test bundle::stream::policy::tests::cancellation_expiry_and_unwind_never_repeat_local_acceptance ... ok
+test bundle::stream::policy::tests::canonical_manifest_roundtrip_permutation_truncation_and_metadata_budget ... ok
+test bundle::stream::policy::tests::real_paired_pin_and_descriptor_binding_then_one_shot_local_owner_use ... ok
+test bundle::stream::policy::tests::rejection::altered_descriptor_source_or_reference_and_partial_ceiling_refuse ... ok
+test bundle::stream::policy::tests::rejection::close_drop_and_unwind_reclaim_bounded_parent_slots_without_eviction ... ok
+test bundle::stream::policy::tests::rejection::manifest_role_order_duplicates_and_exact_total_limit_refuse ... ok
+test bundle::stream::policy::tests::rejection::publisher_role_signature_and_current_receipt_are_required_for_entry_roots ... ok
+test bundle::stream::policy::tests::rejection::revocation_rotation_and_foreign_owner_after_staging_refuse_current_use ... ok
+test bundle::stream::policy::tests::rejection::signed_unrecognized_issuer_and_wrong_audience_epoch_key_pair_refuse ... ok
+test bundle::stream::policy::tests::scoped::scoped_effect_cancel_and_unwind_are_terminal_and_owner_slots_reclaim ... ok
+test bundle::stream::policy::tests::scoped::scoped_effect_final_check_refuses_expiry_without_callback_recheck ... ok
+test bundle::stream::policy::tests::scoped::scoped_effect_rechecks_expiry_after_io_and_cannot_recover_from_failure ... ok
+test bundle::stream::policy::tests::wrong_pin_scope_owner_expiry_revocation_and_manifest_mutation_refuse ... ok
+test bundle::stream::publish::tests::independent::publisher_matches_independent_complete_source_and_paged_descriptor_vectors ... ok
+test bundle::stream::publish::tests::rejection::actual_metadata_cumulative_limit_refuses_without_marking_a_page_present ... ok
+test bundle::stream::publish::tests::rejection::changed_cross_context_and_omitted_pages_never_complete ... ok
+test bundle::stream::publish::tests::rejection::failed_context_sink_outboard_or_entry_sink_permanently_poison ... ok
+test bundle::stream::publish::tests::rejection::private_duplicate_ids_bad_source_and_short_scratch_refuse_before_candidate ... ok
+test bundle::stream::publish::tests::rejection::self_consistent_duplicate_context_ids_still_cannot_complete ... ok
+test bundle::stream::publish::tests::rejection::unwind_in_an_outboard_sink_cannot_finalize ... ok
+test bundle::stream::publish::tests::roundtrip::bounded_source_changes_change_the_immutable_identity ... ok
+test bundle::stream::publish::tests::roundtrip::deterministic_source_context_body_and_detached_binding_candidates ... ok
+test bundle::stream::publish::tests::roundtrip::padding_only_change_with_valid_crc_changes_full_source_commitment ... ok
+test bundle::stream::publish::tests::roundtrip::paged_inventory_requires_every_page_and_preserves_exact_source_mapping ... ok
+test bundle::stream::runtime::recovery_source::tests::actual_same_ledger_source_charge_wrong_owner_retry_and_generation_reuse ... ok
+test bundle::stream::runtime::recovery_source::tests::four_retained_slots_then_reject_before_open_without_budget_leak ... ok
+test bundle::stream::runtime::recovery_source::tests::open_failure_rolls_back_ram_only_and_source_drop_never_releases_charge ... ok
+test bundle::stream::runtime::recovery_source::tests::release_reject_returns_same_owner_and_handles_remain_live_until_correct_retry ... ok
+test bundle::stream::runtime::sparse_workspace::tests::actual_page_mark_survives_reborrow_and_exact_whole_owner_charge_releases ... ok
+test bundle::stream::runtime::sparse_workspace::tests::admission_marks_reborrow_and_release_have_zero_raw_alloc_calls ... ok
+test bundle::stream::runtime::sparse_workspace::tests::bounded_capacity_geometry_duplicates_and_governor_refuse_without_charge ... ok
+test bundle::stream::runtime::sparse_workspace::tests::bridge::actual_page_and_proof_views_allow_recheck_and_cancellation_clears_attempt ... ok
+test bundle::stream::runtime::sparse_workspace::tests::bridge::wrong_runtime_workspace_and_oversized_typed_scratch_never_invoke_effect ... ok
+test bundle::stream::runtime::sparse_workspace::tests::committed_attempt_retains_marks_but_new_facade_reset_removes_them ... ok
+test bundle::stream::runtime::sparse_workspace::tests::dropped_owner_does_not_fake_release_or_allow_runtime_close ... ok
+test bundle::stream::runtime::sparse_workspace::tests::every_store_reset_retires_old_key_and_rollover_preserves_marks_and_charge ... ok
+test bundle::stream::runtime::sparse_workspace::tests::parent_release_refusal_restores_original_handle_and_returns_retry_owner ... ok
+test bundle::stream::runtime::sparse_workspace::tests::uncommitted_attempt_or_unwind_clears_marks_without_releasing_charge ... ok
+test bundle::stream::runtime::sparse_workspace::tests::wrong_generation_refuses_and_slot_reuse_increments_without_wrap ... ok
+test bundle::stream::runtime::sparse_workspace::tests::wrong_runtime_returns_same_marked_owner_for_correct_release ... ok
+test bundle::stream::runtime::tests::capacity::canonical_external_scheduler_record_is_returned_not_discarded ... ok
+test bundle::stream::runtime::tests::capacity::deliberately_colliding_and_owner_prefix_foreign_records_remain_external ... ok
+test bundle::stream::runtime::tests::capacity::desktop_admits_thirty_with_distinct_scopes_then_preserves_control_slots ... ok
+test bundle::stream::runtime::tests::capacity::essential_control_floor_cannot_be_borrowed_by_bulk ... ok
+test bundle::stream::runtime::tests::capacity::exhausted_canonical_lease_table_rolls_back_constructor_charges ... ok
+test bundle::stream::runtime::tests::capacity::exhausted_canonical_ledger_rolls_back_static_constructor_handle ... ok
+test bundle::stream::runtime::tests::capacity::hot_metadata_overflow_and_window_rejection_are_charge_free ... ok
+test bundle::stream::runtime::tests::lifecycle::cancel_and_timeout_retain_io_until_late_completion ... ok
+test bundle::stream::runtime::tests::lifecycle::canceled_queued_record_must_be_polled_before_slot_reuse ... ok
+test bundle::stream::runtime::tests::lifecycle::expired_and_revoked_admission_and_duplicate_operation_leave_no_charge ... ok
+test bundle::stream::runtime::tests::lifecycle::malformed_overflow_and_control_class_plans_refuse ... ok
+test bundle::stream::runtime::tests::lifecycle::policy_change_after_ready_cancels_without_issuing_credit ... ok
+test bundle::stream::runtime::tests::lifecycle::scheduler_capacity_rejects_atomically_and_profiles_do_not_claim_sixty_four_io ... ok
+test bundle::stream::runtime::tests::lifecycle::stale_completion_cannot_release_reused_slot_or_other_runtime ... ok
+test bundle::stream::runtime::tests::lifecycle::success_reserves_every_component_before_one_shot_credit ... ok
+test bundle::stream::runtime::tests::storage_controlled::storage_control_rechecks_expiration_and_changed_policy_between_effects ... ok
+test bundle::stream::runtime::tests::storage_controlled::storage_control_rechecks_with_live_payload_and_proof_borrows ... ok
+test bundle::stream::runtime::tests::storage_controlled::typed_proof_scratch_counts_against_the_same_storage_charge ... ok
+test bundle::stream::runtime::tests::storage_stage::storage_stage_borrows_existing_credit_and_retains_charge_until_completion ... ok
+test bundle::stream::runtime::tests::storage_stage::storage_stage_checks_fresh_deadline_and_policy_before_effects ... ok
+test bundle::stream::selection::tests::actual_signed_body_page_and_canonical_index_select_exact_plain_entry ... ok
+test bundle::stream::selection::tests::bounded_rows_and_framing_and_zero_raw_allocation_selection ... ok
+test bundle::stream::selection::tests::changed_body_page_header_and_ordinal_refuse_without_selection ... ok
+test bundle::stream::storage::native::tests::allocation::actual_gated_native_write_success_and_preflight_reject_have_zero_raw_allocations ... ok
+test bundle::stream::storage::native::tests::geometry::actual_signed_empty_entry_selects_but_needs_no_staging_allowance ... ok
+test bundle::stream::storage::native::tests::geometry::exact_checked_final_leaf_page_and_one_tib_cost_geometry ... ok
+test bundle::stream::storage::native::tests::geometry::new_facade_requires_exact_layout_and_shared_selected_binding ... ok
+test bundle::stream::storage::native::tests::leaves::signed_legitimate_zero_leaf_is_explicitly_written_and_reverified_rewritten ... ok
+test bundle::stream::storage::native::tests::leaves::two_real_signed_leaves_use_canonical_outboard_proofs_and_exact_short_final_byte ... ok
+test bundle::stream::storage::native::tests::ordering::actual_writes_and_barriers_precede_checkpoint_and_duplicate_uses_same_charge ... ok
+test bundle::stream::storage::native::tests::ordering::every_stopped_real_protocol_boundary_poison_clears_and_new_facade_cannot_reuse_marks ... ok
+test bundle::stream::storage::native::tests::ordering::outer_authority_final_check_failure_cannot_commit_page_attempt ... ok
+test bundle::stream::storage::native::tests::process_crash::crash_writer_child ... ok
+test bundle::stream::storage::native::tests::process_crash::killed_writer_reopens_under_new_admission_and_reverifies_every_leaf ... ok
+test bundle::stream::storage::native::tests::recovery::actual_recovery_hot_path_has_zero_raw_allocation_calls ... ok
+test bundle::stream::storage::native::tests::recovery::corrupted_old_material_never_marks_or_grows_destination_and_clears_transient_bytes ... ok
+test bundle::stream::storage::native::tests::recovery::untrusted_retained_files_reverify_rewrite_into_distinct_actual_charged_destination ... ok
+test bundle::stream::storage::native::tests::resume::attacker_repaired_checkpoint_digest_cannot_splice_policy_identity ... ok
+test bundle::stream::storage::native::tests::resume::checkpoint_is_only_hint_then_actual_read_rewrite_rebuilds_current_marks ... ok
+test bundle::stream::storage::native::tests::resume::intact_unkeyed_hint_over_changed_actual_bytes_stays_unverified ... ok
+test bundle::stream::storage::native::tests::resume::sparse_holes_changed_bytes_and_nonzero_proof_padding_never_become_marks ... ok
+test bundle::stream::storage::native::tests::resume::torn_or_wrong_identity_checkpoint_is_not_trusted_and_hints_never_initialize_page ... ok
+test bundle::stream::storage::native::tests::state::current_policy_change_or_timeout_after_real_io_clears_marks_and_poison ... ok
+test bundle::stream::storage::native::tests::state::malformed_input_refuses_before_file_growth_and_does_not_poison ... ok
+test bundle::stream::storage::native::tests::state::newer_facade_over_other_backend_mechanically_rejects_old_facade_key ... ok
+test bundle::stream::storage::native::tests::state::unwind_after_real_sync_clears_armed_page_and_keeps_store_poisoned ... ok
+test bundle::stream::storage::tests::checkpoint::attacker_recomputed_checkpoint_remains_an_untrusted_hint_and_cannot_seed_current_marks ... ok
+test bundle::stream::storage::tests::checkpoint::checkpoint_exact_layout_roundtrip_and_every_truncation_refuses ... ok
+test bundle::stream::storage::tests::checkpoint::checkpoint_flags_reserved_digest_and_embedded_identity_are_all_checked ... ok
+test bundle::stream::storage::tests::checkpoint::wrong_identity_page_payload_and_nonzero_tail_are_never_accepted_as_resume_binding ... ok
+test bundle::stream::storage::tests::identity::ciphertext_epoch_zero_is_supported_without_any_encryption_authority_claim ... ok
+test bundle::stream::storage::tests::identity::exact_identity_bytes_offsets_and_big_endian_fields ... ok
+test bundle::stream::storage::tests::identity::identity_flags_reserved_classes_and_tree_ceiling_fail_closed ... ok
+test bundle::stream::storage::tests::leaf_bitmap::actual_final_leaf_proof_is_required_before_any_integrity_mark ... ok
+test bundle::stream::storage::tests::leaf_bitmap::ciphertext_view_does_not_remove_tag_or_claim_plaintext_authentication ... ok
+test bundle::stream::storage::tests::leaf_bitmap::full_identity_is_required_even_when_the_leaf_math_is_the_same ... ok
+test bundle::stream::storage::tests::leaf_bitmap::page_bounds_overflow_and_empty_entries_have_no_implied_zero_leaf ... ok
+test bundle::stream::storage::tests::leaf_bitmap::zero_filled_bitmap_is_not_zero_filled_verified_data ... ok
+
+failures:
+
+---- bundle::stream::formats::ten_d_tests::signed_descriptor_corruption_and_inner_crc_refuse stdout ----
+
+thread 'bundle::stream::formats::ten_d_tests::signed_descriptor_corruption_and_inner_crc_refuse' (31348) panicked at crates\qualia-core-db\src\bundle\stream\formats\ten_d_tests.rs:139:13:
+assertion failed: TenDDirectoryView::admit(h, t, limits(), &mut [EMPTY; 1],
+        &mut [PayloadInterval::default(); 1]).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bundle::stream::formats::ten_d_tests::signed_descriptor_corruption_and_inner_crc_refuse
+
+test result: FAILED. 125 passed; 1 failed; 0 ignored; 0 measured; 10258 filtered out; finished in 75.56s
+

@@ -23,6 +23,7 @@ pub struct RemoteBoundFields {
 
 impl RemoteBoundFields {
     #[inline]
+    /// `RemoteBoundFields::missing_any`.
     pub fn missing_any(&self) -> bool {
         self.modality.is_zero()
             || self.algorithm_version.is_zero()
@@ -71,6 +72,7 @@ pub struct QualificationCriteria {
 
 impl QualificationCriteria {
     #[inline]
+    /// `QualificationCriteria::any_zero`.
     pub const fn any_zero(self) -> bool {
         self.threshold == 0
             || self.sample_size == 0

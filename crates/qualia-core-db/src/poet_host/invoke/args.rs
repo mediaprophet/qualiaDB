@@ -7,10 +7,12 @@
 use std::collections::BTreeMap;
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
+/// Builds an error `Diagnostic` at `span` with `msg`.
 pub fn bad(span: Span, msg: impl Into<String>) -> Diagnostic {
     Diagnostic::new(DiagCode::E100, span, msg.into())
 }
 
+/// `f64` when `v` is a number, else `None`.
 pub fn as_f64(v: &Value) -> Option<f64> {
     match v {
         Value::F64(n) => Some(*n),
@@ -20,6 +22,7 @@ pub fn as_f64(v: &Value) -> Option<f64> {
     }
 }
 
+/// `u64` when `v` is a non-negative integer, else `None`.
 pub fn as_u64(v: &Value) -> Option<u64> {
     match v {
         Value::U64(n) => Some(*n),
@@ -29,6 +32,7 @@ pub fn as_u64(v: &Value) -> Option<u64> {
     }
 }
 
+/// `i64` when `v` is an integer, else `None`.
 pub fn as_i64(v: &Value) -> Option<i64> {
     match v {
         Value::I64(n) => Some(*n),
@@ -38,6 +42,7 @@ pub fn as_i64(v: &Value) -> Option<i64> {
     }
 }
 
+/// `bool` when `v` is a boolean, else `None`.
 pub fn as_bool(v: &Value) -> Option<bool> {
     match v {
         Value::Bool(b) => Some(*b),
@@ -45,6 +50,7 @@ pub fn as_bool(v: &Value) -> Option<bool> {
     }
 }
 
+/// `&str` when `v` is a string, else `None`.
 pub fn as_str(v: &Value) -> Option<&str> {
     match v {
         Value::String(s) | Value::Iri(s) => Some(s.as_str()),
@@ -55,6 +61,7 @@ pub fn as_str(v: &Value) -> Option<&str> {
     }
 }
 
+/// Field `key` of `v` when `v` is a record containing it.
 pub fn rec<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
     match v {
         Value::Record(m) => m.get(key),
@@ -62,22 +69,27 @@ pub fn rec<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
     }
 }
 
+/// Record field `key` coerced to `f64`, or `None`.
 pub fn rec_f64(v: &Value, key: &str) -> Option<f64> {
     rec(v, key).and_then(as_f64)
 }
 
+/// Record field `key` coerced to `u64`, or `None`.
 pub fn rec_u64(v: &Value, key: &str) -> Option<u64> {
     rec(v, key).and_then(as_u64)
 }
 
+/// Record field `key` coerced to `bool`, or `None`.
 pub fn rec_bool(v: &Value, key: &str) -> Option<bool> {
     rec(v, key).and_then(as_bool)
 }
 
+/// Record field `key` coerced to `i64`, or `None`.
 pub fn rec_i64(v: &Value, key: &str) -> Option<i64> {
     rec(v, key).and_then(as_i64)
 }
 
+/// Record field `key` as `&str`, or `None`.
 pub fn rec_str<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
     rec(v, key).and_then(as_str)
 }
@@ -120,6 +132,7 @@ pub fn rec_bool_list(v: &Value, key: &str) -> Option<Vec<bool>> {
     })
 }
 
+/// `v` as a `&[Value]` slice when it is a list.
 pub fn list(v: &Value) -> Option<&[Value]> {
     match v {
         Value::List(xs) => Some(xs.as_slice()),
@@ -127,10 +140,12 @@ pub fn list(v: &Value) -> Option<&[Value]> {
     }
 }
 
+/// Every element coerced to `f64`, or `None` when any element fails.
 pub fn f64s(v: &Value) -> Option<Vec<f64>> {
     list(v)?.iter().map(as_f64).collect()
 }
 
+/// Every element coerced to `u8` (0–255), or `None`.
 pub fn u8s(v: &Value) -> Option<Vec<u8>> {
     list(v)?
         .iter()
@@ -138,6 +153,7 @@ pub fn u8s(v: &Value) -> Option<Vec<u8>> {
         .collect()
 }
 
+/// Extracts exactly two `f64` args; `Diagnostic` when arity or type is wrong.
 pub fn pair_f64(args: &Value, span: Span, what: &str) -> Result<(f64, f64), Diagnostic> {
     let xs = list(args).ok_or_else(|| bad(span, format!("{what} needs [a, b]")))?;
     let a = xs
@@ -151,6 +167,7 @@ pub fn pair_f64(args: &Value, span: Span, what: &str) -> Result<(f64, f64), Diag
     Ok((a, b))
 }
 
+/// Extracts exactly two `u64` args; `Diagnostic` when arity or type is wrong.
 pub fn pair_u64(args: &Value, span: Span, what: &str) -> Result<(u64, u64), Diagnostic> {
     let xs = list(args).ok_or_else(|| bad(span, format!("{what} needs [a, b]")))?;
     let a = xs
@@ -164,6 +181,7 @@ pub fn pair_u64(args: &Value, span: Span, what: &str) -> Result<(u64, u64), Diag
     Ok((a, b))
 }
 
+/// Builds a record `Value` from `(key, value)` pairs.
 pub fn record(pairs: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
     let mut m = BTreeMap::new();
     for (k, v) in pairs {
@@ -172,10 +190,12 @@ pub fn record(pairs: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
     Value::Record(m)
 }
 
+/// Builds a list `Value` of numbers.
 pub fn f64_list_value(xs: impl IntoIterator<Item = f64>) -> Value {
     Value::List(xs.into_iter().map(Value::F64).collect())
 }
 
+/// `Diagnostic` emitted when a `family` builtin requires the scientific profile — honest capability gate (see D1).
 pub fn need_scientific(span: Span, family: &str) -> Diagnostic {
     Diagnostic::new(
         DiagCode::E300,

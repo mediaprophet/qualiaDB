@@ -1,0 +1,122 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix cap:   <https://ns.webcivics.net/capability/> .
+@prefix cml:   <https://ns.webcivics.net/cml/> .
+@prefix inf:   <https://ns.webizen.org/inference/> .
+@prefix moe:   <https://ns.webizen.org/inference/moe/> .
+@prefix thk:   <https://ns.webizen.org/inference/thinking/> .
+@prefix cg:    <https://ns.webizen.org/chat-graph/> .
+@prefix stage: <https://ns.webizen.org/inference/stage/> .
+
+# ===========================================================================
+# 1. Model Architecture & Modality Classification
+# ===========================================================================
+
+inf:ModelArchitecture a rdfs:Class ;
+    rdfs:label "Model Architecture" ;
+    rdfs:comment "Structural execution class of a foundation model or neural runtime." .
+
+inf:DenseTransformer a rdfs:Class ;
+    rdfs:subClassOf inf:ModelArchitecture ;
+    rdfs:label "Dense Transformer" .
+
+moe:SparseMoEModel a rdfs:Class ;
+    rdfs:subClassOf inf:ModelArchitecture ;
+    rdfs:label "Sparse Mixture of Experts Model" ;
+    rdfs:comment "Architecture activating a subset of experts per token via router gating." .
+
+moe:expertCount a rdf:Property ;
+    rdfs:domain moe:SparseMoEModel ; rdfs:range xsd:integer ;
+    rdfs:comment "Total number of routed experts (e.g., 64, 128, 256)." .
+
+moe:activeExpertsPerToken a rdf:Property ;
+    rdfs:domain moe:SparseMoEModel ; rdfs:range xsd:integer ;
+    rdfs:comment "Top-k routed experts evaluated per token (e.g., 2, 4, 8)." .
+
+moe:sharedExpertCount a rdf:Property ;
+    rdfs:domain moe:SparseMoEModel ; rdfs:range xsd:integer ;
+    rdfs:comment "Number of unswapped dense shared experts evaluated for every token." .
+
+moe:routingPolicy a rdf:Property ;
+    rdfs:domain moe:SparseMoEModel ;
+    rdfs:comment "Routing strategy: SoftmaxTopK, SigmoidAffinity, ClusteredAuxFree." .
+
+# Thinking / Deliberation Models
+thk:ThinkingModel a rdfs:Class ;
+    rdfs:subClassOf inf:ModelArchitecture ;
+    rdfs:label "Thinking / Deliberation Model" ;
+    rdfs:comment "Model with extended internal reasoning or scratchpad token generation." .
+
+thk:reasoningBudgetTokens a rdf:Property ;
+    rdfs:domain thk:ThinkingModel ; rdfs:range xsd:integer ;
+    rdfs:comment "Maximum allocated tokens for internal deliberation before final answer." .
+
+thk:traceDelimitation a rdf:Property ;
+    rdfs:domain thk:ThinkingModel ; rdfs:range xsd:string ;
+    rdfs:comment "Delimiting tags enclosing reasoning traces (e.g., '<think>...</think>')." .
+
+thk:isolateThinkingTrace a rdf:Property ;
+    rdfs:domain thk:ThinkingModel ; rdfs:range xsd:boolean ;
+    rdfs:comment "True if deliberation tokens must be quarantined from direct graph commitment." .
+
+# Recurrent SSM Hybrid Models
+inf:HybridSsmModel a rdfs:Class ;
+    rdfs:subClassOf inf:ModelArchitecture ;
+    rdfs:label "Hybrid Attention / SSM Model" ;
+    rdfs:comment "Architecture combining self-attention with linear state space or GatedDeltaNet layers." .
+
+# ===========================================================================
+# 2. Conversational DAG & Chat-Graph Integration
+# ===========================================================================
+
+cg:ChatFragment a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Chat Fragment" ;
+    rdfs:comment "A span-anchored text unit in a non-linear conversational DAG." .
+
+cg:ChatGraphEdge a rdfs:Class ;
+    rdfs:subClassOf prov:Association ;
+    rdfs:label "Chat Graph Edge" ;
+    rdfs:comment "A typed dialectical relation linking a child fragment to a parent fragment." .
+
+cg:branchType a rdf:Property ;
+    rdfs:domain cg:ChatGraphEdge ;
+    rdfs:comment "Dialectic branch category: Propose, Refute, Clarify, Concede, Elaborate, Synthesize." .
+
+cg:wordnetGroundingHash a rdf:Property ;
+    rdfs:domain cg:ChatGraphEdge ; rdfs:range xsd:hexBinary ;
+    rdfs:comment "FNV-1a hash of the anchoring WordNet 3.1 synset." .
+
+cg:sourceAuthorDid a rdf:Property ;
+    rdfs:domain cg:ChatFragment ; rdfs:range xsd:string ;
+    rdfs:comment "Decentralized Identifier (DID) of the fragment author." .
+
+# ===========================================================================
+# 3. Complete Inference Stage Lifecycle
+# ===========================================================================
+
+stage:InferenceStage a rdfs:Class ;
+    rdfs:label "Inference Lifecycle Stage" .
+
+# Qualia Stages
+stage:ChatGraphGrounding       a stage:InferenceStage ; rdfs:label "Chat-Graph DAG Resolution" .
+stage:OntologyRouting          a stage:InferenceStage ; rdfs:label "Semantic Intent & Ontology Routing" .
+stage:DeonticPreFlight         a stage:InferenceStage ; rdfs:label "Deontic & Permissive Commons Pre-Flight" .
+stage:ConditioningBudgeting    a stage:InferenceStage ; rdfs:label "Prioritized Exact-Budget Conditioning" .
+stage:ParaconsistentIsolation  a stage:InferenceStage ; rdfs:label "Paraconsistent Contradiction Isolation" .
+stage:SentinelMidDecodeGuard   a stage:InferenceStage ; rdfs:label "Prolog Sentinel Mid-Decode Guard" .
+stage:QuinCommitment           a stage:InferenceStage ; rdfs:label "Neuro-Symbolic Quin Commitment" .
+stage:OutcomeEvaluation        a stage:InferenceStage ; rdfs:label "Utility & Learning Claim Evaluation" .
+
+# Model-Native Stages
+stage:SensoryProjection        a stage:InferenceStage ; rdfs:label "Multimodal Sensory Projection" .
+stage:ChunkedPrefill           a stage:InferenceStage ; rdfs:label "Chunked Prefill & Paged KV Setup" .
+stage:RecurrentStateUpdate     a stage:InferenceStage ; rdfs:label "Recurrent SSM / DeltaNet State Step" .
+stage:MoEExpertDispatch        a stage:InferenceStage ; rdfs:label "Sparse MoE Gating & Expert Dispatch" .
+stage:ThinkingDeliberation     a stage:InferenceStage ; rdfs:label "Deliberation / Reasoning Token Trace" .
+stage:ToolCallInvocation       a stage:InferenceStage ; rdfs:label "Tool / Function Call Invocation" .
+stage:AutoregressiveDecode     a stage:InferenceStage ; rdfs:label "Autoregressive Answer Token Decoding" .

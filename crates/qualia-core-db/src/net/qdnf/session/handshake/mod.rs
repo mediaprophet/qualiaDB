@@ -1,5 +1,8 @@
 //! QSession handshake binding. No 0-RTT application data.
 
+// Endpoint-v1 currently requires the native managed-key owner.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod endpoint;
 mod fragmented;
 mod hello;
 
@@ -56,6 +59,7 @@ pub struct SessionBinding {
 }
 
 impl SessionBinding {
+    /// Builds `SessionBinding` from `permit`.
     pub fn from_permit(
         permit: &ExecutionPermit,
         keys: &InstalledSessionKeys,
@@ -104,35 +108,42 @@ impl SessionBinding {
     }
 
     #[inline]
+    /// Bound operation.
     pub const fn operation(self) -> OperationId {
         self.operation
     }
 
     #[inline]
+    /// Target digest.
     pub const fn target(self) -> StrongDigest {
         self.target
     }
 
     #[inline]
+    /// DNI digest.
     pub const fn dni_digest(self) -> StrongDigest {
         self.dni_digest
     }
 
     #[inline]
+    /// Purpose digest.
     pub const fn purpose(self) -> StrongDigest {
         self.purpose
     }
 
     #[inline]
+    /// Policy outcome.
     pub const fn policy(self) -> PolicyOutcome {
         self.policy
     }
 
     #[inline]
+    /// Session state.
     pub const fn state(self) -> SessionState {
         self.state
     }
 
+    /// `Ok(())` when the session admits an application.
     pub fn admit_application(&self) -> Result<(), QdnfError> {
         if self.state != SessionState::Active {
             return Err(QdnfError::Unauthorized);
@@ -144,6 +155,7 @@ impl SessionBinding {
     }
 
     #[cfg(test)]
+    /// Test-only session binding fixture.
     pub(crate) fn test_fixture(
         operation: OperationId,
         target: StrongDigest,
@@ -163,6 +175,7 @@ impl SessionBinding {
     }
 }
 
+/// Binds the session to the transcript.
 pub fn bind_session_transcript(
     path_digest: &StrongDigest,
     target: &StrongDigest,
@@ -176,6 +189,7 @@ pub fn bind_session_transcript(
     Ok(t.digest())
 }
 
+/// Confirms the Finished MAC.
 pub fn confirm_finished(
     secret: &[u8; 32],
     digest: &StrongDigest,

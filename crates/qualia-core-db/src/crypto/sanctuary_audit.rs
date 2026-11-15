@@ -59,6 +59,9 @@ pub struct AuditKeypair {
 }
 
 impl AuditKeypair {
+    /// Generate a fresh keypair from the OS RNG. Fails with
+    /// `SanctuaryAuditError::Rng` when the system RNG is unavailable —
+    /// audit keys are never fabricated deterministically.
     pub fn generate() -> Result<Self, SanctuaryAuditError> {
         let secret = rand_bytes::<32>()?;
         let public = PublicKey::from(&StaticSecret::from(secret)).to_bytes();

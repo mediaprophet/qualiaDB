@@ -3,7 +3,7 @@
 - Parent package and exact child IDs: CSCP-07.01, CSCP-07.02, CSCP-07.03
 - Outcome: a decision record. Explicit non-goals: do not add quinn/noq/iroh dependencies; do not implement QUIC; do not set `noq_transport_admitted()` true; do not edit honesty flags or Cargo.toml.
 - Agent/owner: swarm-cscp-07. Integrator owns `mod.rs` / Cargo / flags.
-- Source branch/HEAD: `0.0.38` at Wave 1 commit; do not leave the branch.
+- Source branch/HEAD: `0.0.40` at Wave 1 commit; do not leave the branch.
 - Allowed writes only:
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/decisions/CSCP-07-quic-alpn.md`
   - `docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/cscp-imp/handoffs/CSCP-07.md`

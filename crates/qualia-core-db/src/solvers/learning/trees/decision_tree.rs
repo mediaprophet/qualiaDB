@@ -312,6 +312,7 @@ impl DecisionTree {
         }
     }
 
+    /// Tree predictions.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
@@ -323,6 +324,7 @@ impl DecisionTree {
         self.predict_row(q).round() as usize
     }
 
+    /// `DecisionTree::criterion`.
     pub fn criterion(&self) -> Criterion {
         self.criterion
     }

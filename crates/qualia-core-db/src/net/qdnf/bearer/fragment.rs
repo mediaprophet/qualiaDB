@@ -70,6 +70,7 @@ pub struct HandshakeReassembler {
 }
 
 impl HandshakeReassembler {
+    /// Creates an empty fragment reassembler.
     pub fn new() -> Self {
         Self {
             slots: [Slot::empty(), Slot::empty()],
@@ -79,14 +80,17 @@ impl HandshakeReassembler {
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> u64 {
         self.generation
     }
 
+    /// Occupied count.
     pub fn occupied(&self) -> usize {
         self.slots.iter().filter(|s| s.occupied).count()
     }
 
+    /// Bytes buffered for message `msg_id`.
     pub fn buffered_len(&self, msg_id: u32) -> usize {
         self.slots
             .iter()
@@ -187,6 +191,7 @@ impl HandshakeReassembler {
         Ok(None)
     }
 
+    /// Drops reassembly state on interface loss.
     pub fn lose_interface(&mut self) {
         self.alive = false;
         let mut i = 0usize;
@@ -244,6 +249,7 @@ impl Default for HandshakeReassembler {
     }
 }
 
+/// Encodes a fragment header + payload into the frame.
 pub fn encode_fragment(
     header: FragmentHeader,
     payload: &[u8],
@@ -266,6 +272,7 @@ pub fn encode_fragment(
     Ok(total)
 }
 
+/// Decodes a fragment header, returning it with the payload slice.
 pub fn decode_fragment(src: &[u8]) -> Result<(FragmentHeader, &[u8]), QdnfError> {
     if src.len() < FRAG_HDR_LEN {
         return Err(QdnfError::Truncated);
@@ -299,6 +306,7 @@ pub fn admit_and_buffer(
     reassembler.buffer(ticket, header.offset, body, complete_out)
 }
 
+/// Payload bytes available per fragment under `mtu`.
 pub fn fragment_payload_mtu(mtu: u16) -> Result<u16, QdnfError> {
     if mtu < MIN_QDNF_MTU {
         return Err(QdnfError::Range);

@@ -1,0 +1,81 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling zerocopy v0.8.59
+   Compiling cfg-if v1.0.5
+   Compiling serde_core v1.0.229
+   Compiling getrandom v0.4.3
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.154
+   Compiling windows-link v0.2.1
+   Compiling fastrand v2.5.0
+   Compiling once_cell v1.21.4
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling windows-sys v0.61.2
+   Compiling tempfile v3.27.0
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling bytemuck_derive v1.12.1
+   Compiling zerocopy-derive v0.8.59
+   Compiling bytemuck v1.25.2
+   Compiling half v2.7.1
+   Compiling etalon-model v0.0.2 (C:\github\etalon\crates\etalon-model)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 42s
+     Running unittests src\lib.rs (C:\github\etalon\target\debug\deps\etalon_model-ac5d507baa1a3c97.exe)
+
+running 3 tests
+test ggml::tests::q5_1::q5_0_each_high_bit_preserves_signed_logical_lane ... ok
+test ggml::tests::q5_1::q5_1_each_high_bit_selects_its_exact_logical_lane ... ok
+test ggml::tests::q5_1::q5_1_split_nibbles_scale_offset_and_second_block ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; finished in 0.01s
+
+     Running tests\ftw_config.rs (C:\github\etalon\target\debug\deps\ftw_config-7375cd4d3b27d7e6.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\ggml_contract.rs (C:\github\etalon\target\debug\deps\ggml_contract-f070c4aa7acd280d.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests\gguf_contract.rs (C:\github\etalon\target\debug\deps\gguf_contract-3fa60426088fbe3c.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests\p64_contract.rs (C:\github\etalon\target\debug\deps\p64_contract-9530deb362e66662.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests\p64_plan_error_contract.rs (C:\github\etalon\target\debug\deps\p64_plan_error_contract-d1c6f0ade798ad01.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests\p64_stream_contract.rs (C:\github\etalon\target\debug\deps\p64_stream_contract-b2e5bfa426367252.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+     Running tests\p64_writer_contract.rs (C:\github\etalon\target\debug\deps\p64_writer_contract-b9fc4d925b588e0a.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+     Running tests\tokenizer_contract.rs (C:\github\etalon\target\debug\deps\tokenizer_contract-bfbf3f2e018962b8.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+

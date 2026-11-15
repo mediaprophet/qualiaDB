@@ -1,7 +1,7 @@
 //! Webizen library dialect for semantic instruments (SI-10).
 //!
 //! Held-gate copy, Demo/Reference chips, collect ≠ activate. No Host widen.
-//! Shared by Desktop Dioxus and WASM Poet. No Dioxus tree here.
+//! Shared by Desktop Aether and WASM Poet. No Aether tree here.
 
 /// Soft why-text for missing / unknown pack. Never "broken".
 pub const HELD_WHY: &str = "held / not yet — open a pack or seed demos";
@@ -27,6 +27,7 @@ pub enum LibraryAction {
     ViewReceipt,
 }
 
+/// Action label.
 pub fn action_label(action: LibraryAction) -> &'static str {
     match action {
         LibraryAction::Inspect => "inspect",
@@ -60,20 +61,18 @@ pub enum LibraryOutcome {
     Ready(LibraryCard),
 }
 
+/// Catalog chips.
 pub fn catalog_chips() -> &'static [&'static str] {
     &[DEMO_CHIP, REFERENCE_CHIP]
 }
 
+/// Sanitizes a held reason.
 pub fn sanitize_held_why(raw: &str) -> String {
     let folded = raw.to_ascii_lowercase();
-    if folded.contains("broken")
-        || raw.trim().is_empty()
-        || folded.contains("unavailable")
-    {
+    if folded.contains("broken") || raw.trim().is_empty() || folded.contains("unavailable") {
         return HELD_WHY.to_string();
     }
-    if folded.contains("held") || folded.contains("open a pack") || folded.contains("seed demo")
-    {
+    if folded.contains("held") || folded.contains("open a pack") || folded.contains("seed demo") {
         raw.trim().to_string()
     } else {
         HELD_WHY.to_string()
@@ -135,6 +134,7 @@ fn extract_quoted_field(src: &str, key: &str) -> Option<String> {
     None
 }
 
+/// `true` when copy avoids broken terms.
 pub fn copy_avoids_broken(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("broken")
 }

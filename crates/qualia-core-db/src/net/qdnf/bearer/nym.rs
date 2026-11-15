@@ -103,6 +103,7 @@ pub struct NymSimulatedBearer {
 }
 
 impl NymSimulatedBearer {
+    /// Creates a default `NymSimulatedBearer`.
     pub fn new(local_locator: ObservedLocator, peer_locator: ObservedLocator) -> Self {
         Self {
             local_locator,
@@ -116,6 +117,7 @@ impl NymSimulatedBearer {
     }
 
     #[inline]
+    /// `NymSimulatedBearer::local_locator`.
     pub fn local_locator(&self) -> &ObservedLocator {
         &self.local_locator
     }

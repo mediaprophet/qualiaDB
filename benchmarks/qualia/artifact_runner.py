@@ -23,6 +23,7 @@ _PREP_CMD = (
 
 
 def _bench_executable() -> str:
+    """Internal helper."""
     if os.path.isfile(_BENCH_BIN):
         return _BENCH_BIN
     if os.path.isfile(_BENCH_BIN_UNIX):
@@ -31,6 +32,7 @@ def _bench_executable() -> str:
 
 
 def _run_bench(engine: str, input_path: str, fmt: str, dataset: dict) -> dict:
+    """Internal helper."""
     result = {
         "engine": engine,
         "n_triples": dataset.get("n_triples", 0),
@@ -100,14 +102,30 @@ def _run_bench(engine: str, input_path: str, fmt: str, dataset: dict) -> dict:
 
 
 def benchmark_set_nt(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """NT benchmark set."""
     if dataset is None:
         dataset = {"n_triples": n, "queries": {}, "dataset_info": {}}
     info = dataset.get("dataset_info") or {}
     nt_path = dataset.get("source_path") or info.get("source_path")
-    return _run_bench("qualia_nt", nt_path, "ntriples", dataset)
+    temp_path = None
+    try:
+        if (not nt_path or not os.path.isfile(nt_path)) and dataset.get("nt_bytes"):
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".nt", delete=False) as f:
+                f.write(dataset["nt_bytes"])
+                temp_path = f.name
+            nt_path = temp_path
+        return _run_bench("qualia_nt", nt_path, "ntriples", dataset)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 def benchmark_set_q42(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """q42 benchmark set."""
     if dataset is None:
         dataset = {"n_triples": n, "queries": {}, "dataset_info": {}}
     info = dataset.get("dataset_info") or {}

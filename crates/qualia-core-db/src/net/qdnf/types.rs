@@ -11,17 +11,20 @@ impl StrongDigest {
     pub const ZERO: Self = Self([0u8; 48]);
 
     #[inline]
+    /// 48-byte digest bytes.
     pub const fn as_bytes(&self) -> &[u8; 48] {
         &self.0
     }
 
     #[inline]
+    /// Digest from bytes; error on wrong length.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, QdnfError> {
         let arr: [u8; 48] = bytes.try_into().map_err(|_| QdnfError::Range)?;
         Ok(Self(arr))
     }
 
     #[inline]
+    /// `true` when zero.
     pub const fn is_zero(self) -> bool {
         let mut i = 0;
         while i < 48 {
@@ -54,6 +57,7 @@ impl LinkId {
     pub const ZERO: Self = Self([0u8; 16]);
 
     #[inline]
+    /// `true` when zero.
     pub const fn is_zero(self) -> bool {
         let mut i = 0;
         while i < 16 {
@@ -89,6 +93,7 @@ impl ObservedLocator {
         len: 0,
     };
 
+    /// Builds `ObservedLocator` from `slice`.
     pub fn from_slice(src: &[u8]) -> Result<Self, QdnfError> {
         if src.len() > 32 {
             return Err(QdnfError::Capacity);
@@ -102,6 +107,7 @@ impl ObservedLocator {
     }
 
     #[inline]
+    /// Locator bytes.
     pub fn as_slice(&self) -> &[u8] {
         &self.bytes[..self.len as usize]
     }
@@ -135,6 +141,7 @@ impl Generation {
     pub const ZERO: Self = Self(0);
 
     #[inline]
+    /// Next generation; error on overflow.
     pub const fn next(self) -> Result<Self, QdnfError> {
         match self.0.checked_add(1) {
             Some(n) => Ok(Self(n)),
@@ -152,6 +159,7 @@ impl OperationId {
     pub const ZERO: Self = Self([0u8; 16]);
 
     #[inline]
+    /// `true` when zero.
     pub const fn is_zero(self) -> bool {
         let mut i = 0;
         while i < 16 {
@@ -191,6 +199,7 @@ impl Sequence {
     pub const ZERO: Self = Self(0);
 
     #[inline]
+    /// Next sequence; error on overflow.
     pub const fn next(self) -> Result<Self, QdnfError> {
         match self.0.checked_add(1) {
             Some(n) => Ok(Self(n)),

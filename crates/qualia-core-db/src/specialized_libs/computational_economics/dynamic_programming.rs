@@ -66,6 +66,7 @@ impl DpError {
 
 impl From<DpError> for EconStatus {
     #[inline]
+    /// Map a `DpError` into the outer error type.
     fn from(err: DpError) -> Self {
         err.to_status()
     }
@@ -75,11 +76,14 @@ impl From<DpError> for EconStatus {
 const ROW_SUM_TOL: f64 = 1e-9;
 
 #[inline]
+/// Flat index into the row-major reward table for (state, action).
 fn reward_index(s: usize, a: usize, n_actions: usize) -> usize {
     s * n_actions + a
 }
 
 #[inline]
+/// Flat index into the transition table for
+/// (state, action, next-state).
 fn trans_index(s: usize, a: usize, sp: usize, n_actions: usize, n_states: usize) -> usize {
     s * n_actions * n_states + a * n_states + sp
 }

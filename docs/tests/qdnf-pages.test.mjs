@@ -28,7 +28,7 @@ assert.match(css, /\.hex:hover/);
 
 const qdnf = read('qdnf.html');
 assert.match(qdnf, /data-theme="release-038"/);
-assert.match(qdnf, /0\.0\.39/);
+assert.match(qdnf, /0\.0\.40/);
 assert.match(qdnf, /Space\+Grotesk/);
 assert.match(qdnf, /family=Inter/);
 assert.match(qdnf, /JetBrains\+Mono/);
@@ -79,11 +79,12 @@ assert.doesNotMatch(qdnf, /public_relay_dialed\(\)\s*=\s*true/);
 assert.doesNotMatch(qdnf, /MASQUE evidence flags stay <strong>true/);
 
 const qdnfStatus = read('qdnf-status.html');
-assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.39/);
+assert.match(qdnfStatus, /QDNF \/ QPR · implementation status · 0\.0\.40/);
 assert.match(qdnfStatus, /Implemented in tree/);
 assert.match(qdnfStatus, /Implemented identity slice/);
 assert.match(qdnfStatus, /Nym mixnet framing/);
-assert.match(qdnfStatus, /Not established/);
+assert.match(qdnfStatus, /Building next/);
+assert.match(qdnfStatus, /Present/);
 assert.match(qdnfStatus, /public relay, Internet two-host, MASQUE, QUIC\/noq/i);
 assert.match(qdnfStatus, /do not become Native Independent merely by carrying a QFrame/);
 
@@ -106,5 +107,24 @@ assert.match(read('qdnf-did-qi.html'), /CscpMailbox/);
 
 const menuLoader = read('js/menu-loader.js');
 assert.match(menuLoader, /rawName === 'Webizen'/);
+
+function checkNoSovereignInHtml(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const rel = path.relative(docsRoot, full).replace(/\\/g, '/');
+    if (rel.startsWith('pkg') || rel.startsWith('rustdoc') || rel.includes('init-draft-standards-wip-main')) continue;
+    if (entry.isDirectory()) {
+      checkNoSovereignInHtml(full);
+    } else if (entry.name.endsWith('.html')) {
+      const html = fs.readFileSync(full, 'utf8');
+      assert.doesNotMatch(
+        html,
+        /\bsovereign(?:ty)?\b/i,
+        `${rel} must use human-rights instrument terminology (human dignity, agency, self-determination, human-centric) instead of 'sovereign' (ADR 0011 / rights_ontology.ttl)`,
+      );
+    }
+  }
+}
+checkNoSovereignInHtml(docsRoot);
 
 console.log('qdnf Pages chrome checks passed.');

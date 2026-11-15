@@ -23,6 +23,7 @@ pub struct Entry {
 }
 
 impl Entry {
+    /// Title.
     pub fn title(&self) -> &str {
         if self.manifest.source.title.is_empty() {
             &self.manifest.source.filename
@@ -73,10 +74,12 @@ impl Library {
         })
     }
 
+    /// Length.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

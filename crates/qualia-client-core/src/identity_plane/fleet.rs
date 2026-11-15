@@ -186,20 +186,24 @@ fn snapshot_from(person: PersonPublic, fleet: &DeviceFleetFile) -> IdentityPlane
     }
 }
 
+/// Gets identity-plane.
 pub fn get_identity_plane() -> Result<IdentityPlaneSnapshot, String> {
     ensure_local_apparatus(None)
 }
 
+/// Lists devices.
 pub fn list_devices() -> Result<Vec<DeviceRecordPublic>, String> {
     Ok(get_identity_plane()?.devices)
 }
 
+/// Syncs the local device context.
 pub fn sync_local_device_context(
     device_context: &DeviceContext,
 ) -> Result<IdentityPlaneSnapshot, String> {
     ensure_local_apparatus(Some(device_context.clone()))
 }
 
+/// Exports a person public bundle.
 pub fn export_person_public() -> Result<PersonPublic, String> {
     Ok(PersonPrincipal::load_or_create(None)?.to_public())
 }
@@ -267,6 +271,7 @@ pub fn set_local_control_base_url(url: impl Into<String>) -> Result<IdentityPlan
     Ok(plane)
 }
 
+/// Resolves job placement.
 pub fn resolve_job_placement(target_device_id: Option<&str>) -> Result<JobPlacement, String> {
     let plane = ensure_local_apparatus(None)?;
     let Some(target) = target_device_id.map(str::trim).filter(|s| !s.is_empty()) else {

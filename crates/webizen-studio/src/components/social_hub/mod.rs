@@ -14,7 +14,7 @@ pub mod reception;
 pub mod types;
 
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;

@@ -114,6 +114,7 @@ pub fn chroma12_from_mel(
     }
 }
 
+/// Music-class onset.
 pub fn music_class_onset() -> u64 {
     q_hash("https://ns.webizen.org/q42/music/onset")
 }
@@ -126,6 +127,7 @@ pub struct TempoEstimate {
     pub n_onsets_used: u32,
 }
 
+/// Estimates tempo from onsets.
 pub fn estimate_tempo_from_onsets(
     onsets: &[OnsetEvent],
     sample_rate: u32,

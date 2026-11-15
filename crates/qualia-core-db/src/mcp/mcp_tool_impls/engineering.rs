@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches engineering analysis.
 pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::engineering_analysis::{
         AnalysisType, EngineeringAnalysisLibrary, EngineeringModel, Geometry, GeometryType, Load,
@@ -93,6 +94,7 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP tool: dispatches bioinformatics alignment.
 pub fn bioinformatics_align(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::domains::biological::bioinformatics::{align_nucleotide, align_protein};
 

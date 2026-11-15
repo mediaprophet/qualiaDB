@@ -91,6 +91,7 @@ pub fn diagnostic_to_lsp_with_src(diag: &Diagnostic, src: &str) -> Value {
 }
 
 #[allow(dead_code)]
+/// Diagnostic to LSP form.
 pub fn diagnostic_to_lsp(diag: &Diagnostic) -> Value {
     let (line, character) = (0, diag.span.start as usize);
     json!({
@@ -138,6 +139,7 @@ pub struct LspServer<R: BufRead, W: Write> {
 }
 
 impl<R: BufRead, W: Write> LspServer<R, W> {
+    /// Creates a new instance.
     pub fn new(reader: R, writer: W) -> Self {
         Self {
             reader,

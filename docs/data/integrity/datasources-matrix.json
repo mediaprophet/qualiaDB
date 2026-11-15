@@ -1,0 +1,159 @@
+{
+  "source_root": "C:\\github\\ontology",
+  "entries": [
+    {
+      "path": "C:\\github\\ontology\\chebi.owl",
+      "bytes": 866211680,
+      "support": "rdf_import_verify",
+      "format_hint": "RdfXml",
+      "note": "import + verify-graph --encoder=import"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\CDNO.zip",
+      "bytes": 620227,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\CTD.zip",
+      "bytes": 165219437,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\ChEBI.zip",
+      "bytes": 15414539,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\FDC.zip",
+      "bytes": 3119866,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\FlavorDB.zip",
+      "bytes": 522808,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\FoodOn.zip",
+      "bytes": 3960891,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\HSDB.zip",
+      "bytes": 182158,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\Lit2KG.zip",
+      "bytes": 23506099,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\MeSH.zip",
+      "bytes": 63978732,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\PubChem.zip",
+      "bytes": 3255826508,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\biomarkers.csv.zip",
+      "bytes": 146750,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\cancer_associations.csv.zip",
+      "bytes": 31365,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\composition-data.xlsx.zip",
+      "bytes": 444178,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\concentrations.csv.zip",
+      "bytes": 354049,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\correlations.csv.zip",
+      "bytes": 196051,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\environmental_pollutants.csv.zip",
+      "bytes": 10450,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\metabolomic_associations.csv.zip",
+      "bytes": 15655,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\microbial_metabolite_identifications.csv.zip",
+      "bytes": 19843,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\microbial_metabolites.csv.zip",
+      "bytes": 60337,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\datasources\\reproducibilities.csv.zip",
+      "bytes": 69159,
+      "support": "zip_bag",
+      "format_hint": "zip",
+      "note": "unpack then audit members; RDF members are Tier-2"
+    },
+    {
+      "path": "C:\\github\\ontology\\english-wordnet-2025-plus\\english-wordnet-2025-plus.ttl",
+      "bytes": 238063458,
+      "support": "rdf_import_verify",
+      "format_hint": "Turtle",
+      "note": "import + verify-graph --encoder=import"
+    }
+  ]
+}

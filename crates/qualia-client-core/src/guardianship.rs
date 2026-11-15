@@ -12,6 +12,7 @@ const MAX_RATIFIED: usize = 32;
 static SUSPENDED_QUEUE: OnceLock<Mutex<SuspendedTransactionQueue>> = OnceLock::new();
 static RATIFIED_IDS: OnceLock<Mutex<[Option<u64>; MAX_RATIFIED]>> = OnceLock::new();
 
+/// Suspended-transaction queue.
 pub fn suspended_queue() -> &'static Mutex<SuspendedTransactionQueue> {
     SUSPENDED_QUEUE.get_or_init(|| Mutex::new(SuspendedTransactionQueue::new()))
 }
@@ -56,6 +57,7 @@ pub enum GuardianTokenOutcome {
     NotFound,
 }
 
+/// Lists pending affirmations.
 pub fn list_pending_affirmations() -> Vec<SuspendedTxView> {
     let guard = suspended_queue().lock().expect("suspended_queue");
     let mut out = Vec::new();
@@ -81,10 +83,12 @@ pub fn list_pending_affirmations() -> Vec<SuspendedTxView> {
     out
 }
 
+/// Pending affirmation count.
 pub fn pending_affirmation_count() -> usize {
     list_pending_affirmations().len()
 }
 
+/// `true` when agreement-ratified.
 pub fn is_agreement_ratified(agreement_id: u64) -> bool {
     ratified_ids()
         .lock()

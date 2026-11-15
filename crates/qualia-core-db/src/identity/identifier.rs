@@ -1,7 +1,9 @@
-//! `did:q42` topological coordinate resolver.
+//! `did:q42` Q42 Resource Coordinate (`QrcCoordinate`) resolver.
 //!
-//! A `did:q42` URI is a **physical topological coordinate** — an absolute
-//! pointer into the Qualia disk/memory layout — not a human identity.
+//! A `did:q42` URI is a **60-bit + MSB (`1 << 63`) Q42 Resource Coordinate (QRC)**
+//! belonging to `Plane::Handle` / `Plane::Instrument` — a physical/topological
+//! coordinate into the Qualia disk/memory layout — **never** a W3C DID Document
+//! root and **never** a `NaturalAgent` (`Who`) identity.
 //!
 //! # Zero-allocation guarantee
 //! All operations work directly on `&[u8]`.  No `String` or `Vec` is
@@ -9,37 +11,39 @@
 //!
 //! # MSB flag convention
 //! Any `u64` returned by this module has bit 63 set to `1`.  The Webizen VM
-//! uses that bit to distinguish absolute hardware/disk pointers (MSB = 1) from
-//! local dictionary hashes produced by `q_hash` (MSB = 0).
+//! uses that bit to distinguish absolute hardware/disk QRC pointers (MSB = 1)
+//! from local dictionary hashes produced by `q_hash` (MSB = 0).
 
 /// The mandatory URI prefix for all `did:q42` coordinates.
 const PREFIX: &[u8] = b"did:q42:";
+/// Display-formatted pointer prefix emitted by `resolver::format_ntriples_to`.
+const PTR_PREFIX: &[u8] = b"did:q42:ptr/";
 
-/// Errors returned by [`parse_did_q42`].
-#[derive(Debug, PartialEq)]
+/// Errors returned by [`parse_did_q42`] and [`parse_did_q42_or_ptr`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IdentifierError {
     /// The byte slice does not begin with `did:q42:`.
     InvalidPrefix,
     /// The payload section (after the prefix) is empty or contains bytes that
-    /// cannot form a valid base-58 / multibase coordinate.
+    /// cannot form a valid coordinate or hex pointer.
     MalformedHash,
     /// Reserved for future checksum verification of the multicodec payload.
     InvalidChecksum,
 }
 
-/// Parse a `did:q42:` URI byte slice into a 64-bit topological pointer.
+/// Parse a `did:q42:` URI byte slice into a 64-bit Q42 Resource Coordinate (QRC).
 ///
 /// # Contract
 /// * Input must start with `b"did:q42:"`.
 /// * The payload after the prefix must be non-empty.
 /// * The returned `u64` always has **bit 63 set** — signalling to the Webizen
-///   VM that this value is a hardware/disk coordinate, not a dictionary hash.
+///   VM that this value is a QRC coordinate, not a dictionary hash.
 ///
 /// # Example
 /// ```
 /// use qualia_core_db::identifier::parse_did_q42;
 /// let ptr = parse_did_q42(b"did:q42:z6MkpTHR8VNs").unwrap();
-/// assert_eq!(ptr >> 63, 1, "MSB must be set for topological coordinates");
+/// assert_eq!(ptr >> 63, 1, "MSB must be set for QRC coordinates");
 /// ```
 pub fn parse_did_q42(uri: &[u8]) -> Result<u64, IdentifierError> {
     // 1. Prefix check — `starts_with` operates entirely on `&[u8]`.
@@ -63,6 +67,46 @@ pub fn parse_did_q42(uri: &[u8]) -> Result<u64, IdentifierError> {
     let pointer = base_hash | (1u64 << 63);
 
     Ok(pointer)
+}
+
+/// Parse either a standard `did:q42:<payload>` coordinate or a display-serialized
+/// `did:q42:ptr/<hex>` / `<did:q42:ptr/<hex>>` coordinate emitted by
+/// `resolver::format_ntriples_to`, returning the canonical 64-bit QRC pointer
+/// (`MSB = 1`, low 60 bits = coordinate payload).
+///
+/// Note: `did:q42:ptr/{hex}` is strictly a display round-trip parser and never
+/// grants raw memory dereference authority.
+pub fn parse_did_q42_or_ptr(uri: &[u8]) -> Result<u64, IdentifierError> {
+    let inner = if uri.len() >= 2 && uri[0] == b'<' && uri[uri.len() - 1] == b'>' {
+        &uri[1..uri.len() - 1]
+    } else {
+        uri
+    };
+
+    if inner.starts_with(PTR_PREFIX) {
+        let hex = &inner[PTR_PREFIX.len()..];
+        if hex.is_empty() || hex.len() > 16 {
+            return Err(IdentifierError::MalformedHash);
+        }
+        let mut val: u64 = 0;
+        for &b in hex {
+            let nibble = match b {
+                b'0'..=b'9' => (b - b'0') as u64,
+                b'a'..=b'f' => (b - b'a' + 10) as u64,
+                b'A'..=b'F' => (b - b'A' + 10) as u64,
+                _ => return Err(IdentifierError::MalformedHash),
+            };
+            val = (val << 4) | nibble;
+        }
+        // Bits 60..62 are reserved for inline type tags when MSB=0; for QRC
+        // pointers (MSB=1), only bit 63 and the 60-bit payload may be set.
+        if (val & 0x7000_0000_0000_0000) != 0 {
+            return Err(IdentifierError::MalformedHash);
+        }
+        return Ok((val & 0x0FFF_FFFF_FFFF_FFFF) | (1u64 << 63));
+    }
+
+    parse_did_q42(inner)
 }
 
 /// FNV-1a over a raw byte slice — identical to `crate::q_hash` (60-bit identity).
@@ -131,10 +175,16 @@ mod tests {
 
     #[test]
     fn pointer_is_base_hash_or_msb() {
-        // The contract is pointer == q_hash(payload) | (1 << 63), regardless
-        // of whether q_hash already has bit 63 set for this particular input.
         let plain = crate::q_hash("z6MkpTHR8VNs");
         let pointer = parse_did_q42(b"did:q42:z6MkpTHR8VNs").unwrap();
         assert_eq!(pointer, plain | (1u64 << 63));
+    }
+
+    #[test]
+    fn test_parse_did_q42_or_ptr_roundtrip() {
+        let orig = parse_did_q42(b"did:q42:z6MkpTHR8VNs").unwrap();
+        let formatted = format!("<did:q42:ptr/{orig:016x}>");
+        let recovered = parse_did_q42_or_ptr(formatted.as_bytes()).unwrap();
+        assert_eq!(recovered, orig);
     }
 }

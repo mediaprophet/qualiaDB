@@ -23,6 +23,7 @@ pub struct BoundUdpRelay {
 }
 
 impl BoundUdpRelay {
+    /// Binds a UDP socket from `lease`.
     pub fn bind(lease: RelayLease) -> Result<Self, FabricError> {
         let sock = UdpSocket::bind("127.0.0.1:0").map_err(|_| FabricError::Capacity)?;
         sock.set_read_timeout(Some(Duration::from_millis(250)))
@@ -35,6 +36,7 @@ impl BoundUdpRelay {
         })
     }
 
+    /// Bound local address.
     pub fn addr(&self) -> Result<SocketAddr, FabricError> {
         self.sock.local_addr().map_err(|_| FabricError::Capacity)
     }
@@ -82,6 +84,7 @@ impl BoundUdpRelay {
         Ok(len)
     }
 
+    /// Transport witness at `now_ms`.
     pub fn witness(&self, now_ms: u64) -> TransportWitness {
         TransportWitness::from_local(
             PathClass::Relayed,
@@ -93,6 +96,7 @@ impl BoundUdpRelay {
     }
 }
 
+/// Encodes a relay frame.
 pub fn encode(
     lease: &RelayLease,
     from: &PeerId,
@@ -118,6 +122,7 @@ pub fn encode(
     Ok(19 + payload.len())
 }
 
+/// Decodes a relay payload slice; fails closed on malformed input.
 pub fn decode_payload(buf: &[u8]) -> Result<&[u8], FabricError> {
     if buf.len() < 19 || &buf[..4] != MAGIC {
         return Err(FabricError::Illegal);

@@ -39,12 +39,20 @@ pub mod ggml_quants;
 pub mod gguf_sharder;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub mod metal_bridge;
+pub mod moe;
 pub mod neuro_symbolic_sieve;
+#[cfg(feature = "vision-onnx")]
+pub mod onnx_runtime;
+pub mod operator_converter;
+pub mod operator_package;
+pub mod operator_runtime;
 pub mod orchestrator;
+pub mod qwen;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod residency_planner;
 pub mod resident_model;
 pub mod safetensor;
+pub mod safetensor_loader;
 pub mod semantic_culler;
 pub mod spatial_sieve;
 pub mod tensor_roles;
@@ -168,3 +176,19 @@ pub mod conditioning_eval;
 
 // Model mapping and precision optimization pipeline
 pub mod conditioning_opt;
+
+// Etalon-tensor accelerated inference bridge (forward arena, FlashAttention, sieve Top-K, DML/CUDA).
+#[cfg(feature = "gpu-runtime")]
+pub mod etalon_tensor_bridge;
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_tensor_bridge::{
+    build_forward_arena_on, build_fused_attention_on, build_topk_pipeline_on,
+    online_softmax_rescale, AttentionParams, CapturedCudaMegaPass, CudaMegaPassExecutor,
+    DirectMlComputeLane, DmlGemmOp, DmlGemmParams, DmlLane, ForwardArena, ForwardMode,
+    FusedAttentionPipeline, KvCacheLayout, LogitMaskHeader, PagedKvBlockTable, QuantScheme,
+    TensorView, TopkParams, TopkReductionPipeline, FUSED_ATTENTION_WGSL, TOPK_REDUCTION_WGSL,
+};
+#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+pub use etalon_tensor_bridge::{
+    try_shared_forward_arena, try_shared_fused_attention, try_shared_topk_pipeline,
+};

@@ -1,0 +1,85 @@
+{
+  "binary": "C:\\github\\qualiaDB\\target\\debug\\deps\\qualia_core_db-c4560c081fa48873.exe",
+  "sha256": "AEB51C76F464C585D459C5B7D330D948DBECB015361A0B7D45612CF601FEC53D",
+  "completed": "2026-11-13T11:33:07.9143739+11:00",
+  "results": [
+    {
+      "selector": "bundle::stream",
+      "exit_code": 101,
+      "summary": [
+        "test result: FAILED. 174 passed; 2 failed; 0 ignored; 0 measured; 10311 filtered out; finished in 25.05s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-bundle-stream.log"
+    },
+    {
+      "selector": "net::peer::replication::qbdl",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 10469 filtered out; finished in 0.59s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-net-peer-replication-qbdl.log"
+    },
+    {
+      "selector": "net::qdnf::session::handshake::endpoint",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 10454 filtered out; finished in 19.27s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-net-qdnf-session-handshake-endpoint.log"
+    },
+    {
+      "selector": "net::qdnf::bearer::ipc",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 10483 filtered out; finished in 0.02s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-net-qdnf-bearer-ipc.log"
+    },
+    {
+      "selector": "q42::emf_container",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 10471 filtered out; finished in 0.03s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-q42-emf_container.log"
+    },
+    {
+      "selector": "q42::m64_matter",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 10448 filtered out; finished in 0.04s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-q42-m64_matter.log"
+    },
+    {
+      "selector": "container_10d::mesh_section",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 10471 filtered out; finished in 0.05s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-container_10d-mesh_section.log"
+    },
+    {
+      "selector": "net::peer::runtime",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 10460 filtered out; finished in 0.02s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-net-peer-runtime.log"
+    },
+    {
+      "selector": "specialized_libs::cryptographic_library::key_management::managed_object",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 10483 filtered out; finished in 0.29s"
+      ],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-specialized_libs-cryptographic_library-key_management-managed_object.log"
+    },
+    {
+      "selector": "gguf_bridge::gemma4",
+      "exit_code": -1,
+      "summary": [],
+      "log": "C:\\github\\qualiaDB\\docs\\manuals\\standards\\qualia-decentralized-network-fabric\\qdnf-imp\\qbdl-streaming\\evidence\\handoff-test-gguf_bridge-gemma4.log"
+    }
+  ]
+}

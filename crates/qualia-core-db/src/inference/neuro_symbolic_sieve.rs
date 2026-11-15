@@ -30,6 +30,7 @@ impl SieveStateMask {
     };
 
     #[inline]
+    /// `true` when `token_id` is permitted in the current sieve state.
     pub fn allows(&self, token_id: u32) -> bool {
         if self.len == 0 {
             return true;
@@ -43,6 +44,7 @@ impl SieveStateMask {
     }
 
     #[inline]
+    /// Lexicon hash bound to `token_id`, or `None`.
     pub fn lexicon_hash_for(&self, token_id: u32) -> Option<u64> {
         for i in 0..self.len as usize {
             if self.slots[i].token_id == token_id {
@@ -52,6 +54,7 @@ impl SieveStateMask {
         None
     }
 
+    /// Appends a token_id/lexicon_hash pair to the mask table.
     pub(crate) fn push(&mut self, token_id: u32, lexicon_hash: u64) {
         let n = self.len as usize;
         if n >= MAX_SIEVE_ALLOW {
@@ -107,6 +110,7 @@ impl SieveLexSpec {
         objects_len: 0,
     };
 
+    /// Appends a subject hash to the lex spec.
     pub fn push_subject(&mut self, hash: u64) {
         let n = self.subjects_len as usize;
         if n < MAX_SIEVE_ALLOW {
@@ -115,6 +119,7 @@ impl SieveLexSpec {
         }
     }
 
+    /// Appends a predicate hash.
     pub fn push_predicate(&mut self, hash: u64) {
         let n = self.predicates_len as usize;
         if n < MAX_SIEVE_ALLOW {
@@ -123,6 +128,7 @@ impl SieveLexSpec {
         }
     }
 
+    /// Appends an object hash.
     pub fn push_object(&mut self, hash: u64) {
         let n = self.objects_len as usize;
         if n < MAX_SIEVE_ALLOW {
@@ -167,6 +173,30 @@ pub struct NeuroSymbolicSieve {
 }
 
 impl NeuroSymbolicSieve {
+    /// Exact initial owned mask/state identity after cold lexicon resolution.
+    /// Execution mutates only this private request's state, never the lex file.
+    #[allow(dead_code)]
+    pub(crate) fn prepared_digest(&self) -> [u8; 32] {
+        use sha2::{Digest, Sha256};
+        let mut hash = Sha256::new();
+        hash.update(b"qualia:prepared-sieve:v1\0");
+        hash.update([self.state as u8, self.emitted_len]);
+        for mask in &self.masks {
+            hash.update([mask.len]);
+            for slot in &mask.slots {
+                hash.update(slot.token_id.to_le_bytes());
+                hash.update(slot.lexicon_hash.to_le_bytes());
+            }
+        }
+        for value in [self.subject_hash, self.predicate_hash, self.object_hash] {
+            hash.update(value.to_le_bytes());
+        }
+        for value in self.emitted_tokens {
+            hash.update(value.to_le_bytes());
+        }
+        hash.finalize().into()
+    }
+
     /// Build masks from a memory-mapped `.q42.lex` view and GGUF tokenizer (load-time only).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_lex_and_tokenizer(
@@ -221,6 +251,7 @@ impl NeuroSymbolicSieve {
         sieve
     }
 
+    /// Creates a sieve in the empty FSM state.
     pub(crate) fn empty_fsm() -> Self {
         Self {
             masks: [SieveStateMask::EMPTY; 3],
@@ -234,21 +265,25 @@ impl NeuroSymbolicSieve {
     }
 
     #[inline]
+    /// Current sieve FSM state.
     pub fn state(&self) -> SieveState {
         self.state
     }
 
     #[inline]
+    /// `true` when the sieve reached a complete state.
     pub fn is_complete(&self) -> bool {
         self.state == SieveState::Complete
     }
 
     #[inline]
+    /// Length of the emitted-token buffer.
     pub fn emitted_len(&self) -> u8 {
         self.emitted_len
     }
 
     #[inline]
+    /// The current state's token mask.
     pub fn current_mask(&self) -> &SieveStateMask {
         match self.state {
             SieveState::ExpectSubject => &self.masks[0],
@@ -307,6 +342,7 @@ impl NeuroSymbolicSieve {
         quin
     }
 
+    /// `true` when masks for all states have been provisioned.
     pub fn masks_ready(&self) -> bool {
         self.masks[0].len > 0 && self.masks[1].len > 0 && self.masks[2].len > 0
     }
@@ -344,9 +380,10 @@ fn fill_mask_from_lex(
     tok: &crate::gguf_sharder::GgufTokenizer,
     hashes: &[u64],
 ) {
+    let mut term = String::new();
     for &hash in hashes {
-        if let Some(text) = lex.lookup_hash(hash) {
-            let ids = tok.encode(text);
+        if lex.resolve_term_into(hash, &mut term) {
+            let ids = tok.encode(&term);
             if let Some(&id) = ids.first() {
                 mask.push(id, hash);
             }

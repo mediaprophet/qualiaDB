@@ -76,6 +76,7 @@ impl SmoothingSpline {
         })
     }
 
+    /// Prediction for one input.
     pub fn predict_one(&self, x: f64) -> f64 {
         let m = basis_len(self.degree, self.knots.len());
         let mut row = vec![0.0; m];
@@ -83,6 +84,7 @@ impl SmoothingSpline {
         row.iter().zip(&self.coefficients).map(|(b, c)| b * c).sum()
     }
 
+    /// Predictions for inputs.
     pub fn predict(&self, x: &[f64]) -> Vec<f64> {
         x.iter().map(|&xi| self.predict_one(xi)).collect()
     }

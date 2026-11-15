@@ -66,6 +66,8 @@ impl Default for AcousticUniform {
     }
 }
 
+/// Compute binaural gains/ITD/azimuth/elevation from the uniform's position
+/// and listener yaw, and set room damping from the manifold weight.
 #[inline]
 pub fn apply_binaural_to_uniform(u: &mut AcousticUniform, listener_yaw: f32) {
     let g = binaural_from_position(u.position, listener_yaw);
@@ -90,6 +92,8 @@ pub struct AcousticParams {
 }
 
 impl AcousticParams {
+    /// Extract the acoustic subset of a 10D tensor node (position, velocity
+    /// track, manifold weight, epistemic q, spectral preview bins).
     #[inline]
     pub fn from_tensor(t: &Tensor10D) -> Self {
         Self {
@@ -103,6 +107,9 @@ impl AcousticParams {
         }
     }
 
+    /// Pack the params into a worklet `AcousticUniform`, deriving FM index
+    /// and frequency via `configure_voice_from_tensor`. `enabled` sets the
+    /// uniform's on/off flag for the synth.
     #[inline]
     pub fn to_uniform(self, enabled: bool) -> AcousticUniform {
         let mut voice = crate::audio::dsp_kernel::ParametricVoiceState::default();
@@ -147,6 +154,8 @@ impl AcousticParams {
     }
 }
 
+/// Alias for `phenomenal_acoustic_params` — the canonical tensor→params
+/// extraction used by the U3 plane.
 #[inline]
 pub fn acoustic_params_from_tensor(t: &Tensor10D) -> AcousticParams {
     phenomenal_acoustic_params(t)
@@ -176,6 +185,8 @@ pub struct SonicTokenRing {
 unsafe impl Sync for SonicTokenRing {}
 
 impl SonicTokenRing {
+    /// Create an empty ring. `const` so the global `SONIC_TOKEN_RING` can be
+    /// a static.
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([0u64; SONIC_RING_CAP]),
@@ -184,6 +195,8 @@ impl SonicTokenRing {
         }
     }
 
+    /// Number of tokens currently queued (wraps correctly across u32
+    /// sequence wraparound).
     #[inline]
     pub fn len(&self) -> usize {
         let w = self.write_seq.load(Ordering::Acquire);
@@ -191,11 +204,14 @@ impl SonicTokenRing {
         (w.wrapping_sub(r)) as usize
     }
 
+    /// True when no tokens are queued.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Enqueue a token. Returns false (drops the token) when the ring is
+    /// full — producers must tolerate loss. Producer-side only (SPSC).
     pub fn try_push(&self, token: SonicToken) -> bool {
         let w = self.write_seq.load(Ordering::Relaxed);
         let r = self.read_seq.load(Ordering::Acquire);
@@ -210,6 +226,8 @@ impl SonicTokenRing {
         true
     }
 
+    /// Dequeue the oldest token, or `None` when empty. Consumer-side only
+    /// (SPSC).
     pub fn try_pop(&self) -> Option<SonicToken> {
         let r = self.read_seq.load(Ordering::Relaxed);
         let w = self.write_seq.load(Ordering::Acquire);
@@ -225,16 +243,19 @@ impl SonicTokenRing {
 
 static SONIC_TOKEN_RING: SonicTokenRing = SonicTokenRing::new();
 
+/// The process-global U3 sonic token ring.
 #[inline]
 pub fn sonic_token_ring() -> &'static SonicTokenRing {
     &SONIC_TOKEN_RING
 }
 
+/// Push a token onto the global ring; false when full (token dropped).
 #[inline]
 pub fn push_sonic_token(token: SonicToken) -> bool {
     sonic_token_ring().try_push(token)
 }
 
+/// Pop the oldest token from the global ring, if any.
 #[inline]
 pub fn pop_sonic_token() -> Option<SonicToken> {
     sonic_token_ring().try_pop()

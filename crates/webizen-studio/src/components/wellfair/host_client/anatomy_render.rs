@@ -30,6 +30,7 @@ pub async fn render_body_snapshot(azimuth: f64, elevation: f64) -> Result<(), St
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Renders body-snapshot.
 pub async fn render_body_snapshot(_azimuth: f64, _elevation: f64) -> Result<(), String> {
     Err("The 3D Anatomy render surface requires the Tauri desktop host".into())
 }
@@ -106,6 +107,7 @@ pub async fn body_assets_status(model: &str) -> Result<BodyAssetsStatus, String>
     serde_json::from_str::<BodyAssetsStatus>(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn body_assets_status(_model: &str) -> Result<BodyAssetsStatus, String> {
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }
@@ -130,6 +132,7 @@ pub async fn acquire_body_assets(model: &str) -> Result<AcquireReport, String> {
     serde_json::from_str::<AcquireReport>(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn acquire_body_assets(_model: &str) -> Result<AcquireReport, String> {
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }
@@ -161,6 +164,7 @@ pub async fn cached_body_organ_percepts(
     Ok((resp.painted, resp.unmapped))
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn cached_body_organ_percepts(
     _model: &str,
 ) -> Result<(Vec<OrganPerceptDto>, Vec<String>), String> {
@@ -183,6 +187,7 @@ pub async fn clear_body_cache(model: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Clears body-cache.
 pub async fn clear_body_cache(_model: &str) -> Result<(), String> {
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }

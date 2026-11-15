@@ -182,35 +182,87 @@ impl WriteAheadLog {
 
 #[cfg(target_arch = "wasm32")]
 impl WriteAheadLog {
+    /// Opens.
     pub fn open<P: AsRef<Path>>(_path: P) -> std::io::Result<Self> {
+        let mut file = Vec::with_capacity(1024);
+        file.extend_from_slice(&[0u8; 32]);
         Ok(Self {
-            file: Vec::new(),
+            file,
             prev_dag_hash: [0; 32],
         })
     }
-    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> {
+
+    /// Appends a durable mutation record for `quin`.
+    pub fn append_mutation(&mut self, quin: &NQuin) -> std::io::Result<()> {
+        self.file.extend_from_slice(quin_as_bytes(quin));
         Ok(())
     }
+
+    /// Appends a mutation flagged volatile (not expected to survive crash recovery).
     pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
+        self.file.extend_from_slice(quin_as_bytes(quin));
         scrub_quin_volatile(quin);
         Ok(())
     }
+
+    /// Replays the log, returning all durable mutations in order.
     pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> {
-        Ok(Vec::new())
+        if self.file.len() < WAL_HEADER_SIZE as usize {
+            return Ok(Vec::new());
+        }
+        let quin_size = std::mem::size_of::<NQuin>();
+        let data = &self.file[WAL_HEADER_SIZE as usize..];
+        let mut recovered = Vec::with_capacity(data.len() / quin_size);
+
+        for chunk in data.chunks_exact(quin_size) {
+            let quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
+            recovered.push(quin);
+        }
+
+        Ok(recovered)
     }
+
+    /// Clears the log after successful checkpoint.
     pub fn truncate(&mut self) -> std::io::Result<()> {
+        self.file.truncate(WAL_HEADER_SIZE as usize);
         Ok(())
     }
+
+    /// Checkpoints buffered mutations into the DAG store.
     pub fn checkpoint_to_dag(
         &mut self,
-        _dag_store: &mut crate::git_bridge::DagStore,
-        _author_did: u64,
-        _timestamp_ms: u64,
+        dag_store: &mut crate::git_bridge::DagStore,
+        author_did: u64,
+        timestamp_ms: u64,
     ) -> std::io::Result<[u8; 32]> {
-        Ok(self.prev_dag_hash)
+        let quins = self.recover()?;
+        if quins.is_empty() {
+            return Ok(self.prev_dag_hash);
+        }
+
+        let new_hash = if self.prev_dag_hash == [0u8; 32] {
+            dag_store.genesis_node(&quins, author_did, timestamp_ms, WAL_CHECKPOINT_MSG)
+        } else {
+            dag_store.commit_node(
+                self.prev_dag_hash,
+                &quins,
+                author_did,
+                timestamp_ms,
+                WAL_CHECKPOINT_MSG,
+            )
+        };
+
+        if self.file.len() >= 32 {
+            self.file[0..32].copy_from_slice(&new_hash);
+        }
+        self.prev_dag_hash = new_hash;
+        Ok(new_hash)
     }
+
+    /// Mutations buffered but not yet checkpointed.
     pub fn buffered_count(&mut self) -> std::io::Result<usize> {
-        Ok(0)
+        let data_len = self.file.len().saturating_sub(WAL_HEADER_SIZE as usize);
+        Ok(data_len / std::mem::size_of::<NQuin>())
     }
 }
 

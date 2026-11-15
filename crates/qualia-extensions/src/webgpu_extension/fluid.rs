@@ -18,6 +18,7 @@ fn wrap(i: i64, n: i64) -> usize {
     (((i % n) + n) % n) as usize
 }
 
+/// Solves.
 pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     let nx = dim(params.grid_size.0, 32);
     let ny = dim(params.grid_size.1, 32);

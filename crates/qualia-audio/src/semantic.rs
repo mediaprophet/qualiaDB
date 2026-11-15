@@ -25,6 +25,7 @@ pub struct AudioQuin {
 }
 
 impl AudioQuin {
+    /// Builder — sets parity.
     pub fn with_parity(s: u64, p: u64, o: u64, c: u64, m: u64) -> Self {
         Self {
             subject: s,
@@ -37,6 +38,7 @@ impl AudioQuin {
     }
 }
 
+/// Compiles auditory quins.
 pub fn compile_auditory_quins(
     media: MediaDigest,
     events: &[AuditoryEvent],
@@ -82,6 +84,7 @@ pub fn compile_auditory_quins(
     w
 }
 
+/// Human-reject attestation quin.
 pub fn human_reject_quin(human: u64, instance: u64, reason: u64) -> AudioQuin {
     AudioQuin::with_parity(
         human,
@@ -92,6 +95,7 @@ pub fn human_reject_quin(human: u64, instance: u64, reason: u64) -> AudioQuin {
     )
 }
 
+/// Human-correct attestation quin.
 pub fn human_correct_quin(human: u64, instance: u64, new_class: u64) -> AudioQuin {
     AudioQuin::with_parity(
         human,

@@ -31,6 +31,7 @@ pub struct AudioMediaStore {
 }
 
 impl AudioMediaStore {
+    /// Opens.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, String> {
         let root = root.into();
         fs::create_dir_all(root.join("audio/by-hash")).map_err(|e| e.to_string())?;
@@ -38,6 +39,7 @@ impl AudioMediaStore {
         Ok(Self { root })
     }
 
+    /// Imports bytes.
     pub fn import_bytes(
         &self,
         bytes: &[u8],
@@ -98,6 +100,7 @@ pub fn synth_tone_f32(freq_hz: f32, sample_rate: u32, frames: usize, amp: f32) -
     v
 }
 
+/// Synthesizes silence.
 pub fn synth_silence(frames: usize) -> Vec<f32> {
     vec![0.0f32; frames]
 }

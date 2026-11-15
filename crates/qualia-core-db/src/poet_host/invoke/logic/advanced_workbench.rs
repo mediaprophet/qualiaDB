@@ -6,6 +6,7 @@ use crate::{q_hash, NQuin};
 use vibe::{Diagnostic, Span, Value};
 
 const MAX_ITEMS: usize = 128;
+/// Computes the result.
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mode = args::rec_str(args_v, "mode")
         .ok_or_else(|| args::bad(span, "AdvancedLogic.compute needs mode"))?;

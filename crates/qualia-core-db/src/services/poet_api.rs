@@ -150,6 +150,7 @@ fn eval_response(
     }
 }
 
+/// HTTP `eval` handler.
 pub async fn eval_handler(body: Bytes) -> Response {
     let request: NativeEvalRequest = match decode_json(&body) {
         Ok(request) => request,
@@ -212,6 +213,7 @@ fn json_to_vibe(
     })
 }
 
+/// HTTP `invoke` handler.
 pub async fn invoke_handler(body: Bytes) -> Response {
     let request: NativeInvokeRequest = match decode_json(&body) {
         Ok(request) => request,
@@ -251,6 +253,7 @@ pub async fn invoke_handler(body: Bytes) -> Response {
     })
 }
 
+/// HTTP `gazetteer` handler.
 pub async fn gazetteer_handler(body: Bytes) -> Response {
     let request: NativeGazetteerRequest = match decode_json(&body) {
         Ok(request) => request,

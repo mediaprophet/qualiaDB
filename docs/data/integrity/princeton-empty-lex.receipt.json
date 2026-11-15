@@ -1,0 +1,8 @@
+{
+  "schema": "qualia.integrity.receipt/v1",
+  "pair": "princeton.q42 empty lexicon",
+  "title": "Historical empty-lex caution",
+  "status": "WARN",
+  "summary": "Hosted princeton.q42 is Q42 v3 with an empty/minimal Q42LEX (hashed-only). q42 inspect reports lexicon_has_no_terms. Different edition from OEWN 2025-plus; do not treat as an OEWN twin.",
+  "note": "Full OEWN equivalence is operator-local (~227 MB TTL). Pages integrity download path is Schema.org only."
+}

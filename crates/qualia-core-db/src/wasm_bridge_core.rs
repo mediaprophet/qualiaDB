@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+/// WASM bridge: parse-cbor-ld.
 pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
     match crate::cbor_compiler::parse_cbor_ld_to_quin(payload) {
         Ok(q) => {
@@ -34,6 +35,7 @@ struct JsonLdFlatTriple {
 }
 
 #[wasm_bindgen]
+/// WASM bridge: parse-json.
 pub fn parse_json_wasm(payload: &str) -> JsValue {
     if let Ok(triples) = serde_json::from_str::<Vec<JsonLdFlatTriple>>(payload) {
         #[derive(Serialize)]

@@ -152,16 +152,19 @@ pub fn phase_snapshot() -> LlmPhaseSnapshot {
 // them; not part of the crate-public surface.
 
 #[inline]
+/// Milliseconds.
 pub(super) fn ms(d: Duration) -> f64 {
     d.as_secs_f64() * 1000.0
 }
 
 #[inline]
+/// ns → ms.
 pub(super) fn ns_to_ms(ns: u64) -> f64 {
     ns as f64 / 1_000_000.0
 }
 
 #[inline]
+/// Tokens per second.
 pub(super) fn tok_per_s(tokens: u64, ns: u64) -> f64 {
     if ns == 0 || tokens == 0 {
         0.0

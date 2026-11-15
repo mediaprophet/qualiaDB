@@ -63,6 +63,7 @@ pub enum IndexingStrategy {
 }
 
 impl DataCatalog {
+    /// Creates an empty data catalog.
     pub fn new() -> Self {
         Self {
             datasets: HashMap::new(),
@@ -72,6 +73,7 @@ impl DataCatalog {
         }
     }
 
+    /// Initializes the search index; `StatisticalError` propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.search_index.initialize()?;
         Ok(())
@@ -195,6 +197,7 @@ impl DataCatalog {
 }
 
 impl SearchIndex {
+    /// Creates an empty search index.
     pub fn new() -> Self {
         Self {
             index_entries: HashMap::new(),
@@ -202,6 +205,7 @@ impl SearchIndex {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -256,6 +260,7 @@ impl SearchIndex {
 }
 
 impl SearchEngine {
+    /// Creates a search engine over the catalog.
     pub fn new() -> Self {
         Self {
             engine_type: SearchEngineType::FullText,

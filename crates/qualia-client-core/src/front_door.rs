@@ -307,7 +307,10 @@ mod tests {
         assert!(txt.contains("qdp:nym \"alice_id.sphinx_key@gateway_id\""));
 
         let back = FrontDoorRecord::from_dns_txt("alice.example", &txt).unwrap();
-        assert_eq!(back.nym_address, Some("alice_id.sphinx_key@gateway_id".into()));
+        assert_eq!(
+            back.nym_address,
+            Some("alice_id.sphinx_key@gateway_id".into())
+        );
 
         let turtle = rec.to_turtle();
         assert!(turtle.contains("QDP:nymAddress \"alice_id.sphinx_key@gateway_id\""));

@@ -64,6 +64,7 @@ fn validate_non_overlapping(sections: &[Option<Section>]) -> io::Result<()> {
     Ok(())
 }
 
+/// Validates `volume-structure`.
 pub(crate) fn validate_volume_structure(header: &Q42VolumeHeader, bytes: &[u8]) -> io::Result<()> {
     let flags = header.flags;
     let block_size = header.block_size;

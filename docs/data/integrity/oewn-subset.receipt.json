@@ -1,0 +1,11 @@
+{
+  "schema": "qualia.integrity.receipt/v1",
+  "pair": "OEWN subset Complete",
+  "title": "OEWN (Pages: receipt only)",
+  "status": "PASS",
+  "isomorphism": "GroundGraphProven",
+  "summary": "Placeholder for Pages. Full OEWN 2025-plus TTL is ~227 MB and is never downloaded by this site or by verify_oewn_2025_plus.ps1 — that script only verifies an operator-local path. User-scale downloadable twin: Schema.org (~2 MB).",
+  "encoder": "import",
+  "subset": true,
+  "download": false
+}

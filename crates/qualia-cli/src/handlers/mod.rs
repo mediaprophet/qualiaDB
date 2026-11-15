@@ -1,9 +1,15 @@
+pub mod app;
 pub mod bench;
 pub mod evaluate;
+pub mod inference_policy;
 pub mod llm;
 pub mod misc;
 pub mod qpu;
 pub mod science;
 pub mod solid;
 pub mod solve;
+pub mod entity_compile;
+pub use entity_compile as twin_compile;
+pub mod entity_verify;
+pub use entity_verify as twin_verify;
 pub mod webizen;

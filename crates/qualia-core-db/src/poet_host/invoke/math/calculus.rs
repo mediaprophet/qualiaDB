@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::calculus::dense::simpson;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: numerical integration.
 pub fn integrate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64(args_v, "a").ok_or_else(|| args::bad(span, "simpson needs a"))?;
     let b = args::rec_f64(args_v, "b").ok_or_else(|| args::bad(span, "simpson needs b"))?;

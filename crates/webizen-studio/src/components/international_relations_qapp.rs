@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `InternationalRelationsQapp` component.
 pub fn InternationalRelationsQapp() -> Element {
     rsx! {
         QAppEngine {

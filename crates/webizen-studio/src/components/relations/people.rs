@@ -1,6 +1,6 @@
 use crate::components::settings::host::invoke_json;
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn text(value: &serde_json::Value, keys: &[&str]) -> String {
     for key in keys {
@@ -14,6 +14,7 @@ fn text(value: &serde_json::Value, keys: &[&str]) -> String {
 }
 
 #[component]
+/// Aether `PeopleOverview` component.
 pub fn PeopleOverview() -> Element {
     let mut contacts = use_signal(Vec::<serde_json::Value>::new);
     let mut peers = use_signal(Vec::<serde_json::Value>::new);

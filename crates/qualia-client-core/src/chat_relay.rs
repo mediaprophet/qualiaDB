@@ -64,6 +64,7 @@ fn fs_read_json<T: for<'de> Deserialize<'de>>(path: PathBuf) -> Option<T> {
     serde_json::from_str(&text).ok()
 }
 
+/// Local relay-base-url.
 pub fn local_relay_base_url() -> String {
     let port = crate::api::get_active_daemon_port();
     if let Some(profile) = profile_relay_base() {
@@ -106,6 +107,7 @@ fn sign_envelope(envelope: &mut RelayEnvelope) {
     envelope.signature_hex = hex::encode(sig.to_bytes());
 }
 
+/// Wraps a message in an envelope.
 pub fn message_to_envelope(
     session_id: &str,
     msg: &crate::chat_session::ChatMessage,
@@ -134,6 +136,7 @@ pub fn message_to_envelope(
     envelope
 }
 
+/// Publishes a session message.
 pub fn publish_session_message(
     storage_root: &Path,
     session_id: &str,
@@ -151,6 +154,7 @@ pub fn publish_session_message(
     publish_envelope(&session.meta.participants, &envelope)
 }
 
+/// Publishes an envelope to the relay.
 pub fn publish_envelope(
     participants: &[crate::chat_session::ChatParticipant],
     envelope: &RelayEnvelope,
@@ -199,6 +203,7 @@ pub struct PullResponse {
     latest_lamport: u64,
 }
 
+/// Pulls envelopes from the relay.
 pub fn pull_from_relay(
     base_url: &str,
     session_id: &str,
@@ -314,6 +319,7 @@ pub fn apply_incoming_envelope(
     ingest_remote_message(storage_root, session_id, envelope)
 }
 
+/// Syncs a session with the relay.
 pub fn sync_session_relay(storage_root: &Path, session_id: &str) -> Result<usize, String> {
     let session =
         crate::chat_session::load_session(storage_root, session_id).map_err(|e| e.to_string())?;
@@ -355,6 +361,7 @@ pub fn sync_session_relay(storage_root: &Path, session_id: &str) -> Result<usize
     Ok(ingested)
 }
 
+/// Syncs all group sessions.
 pub fn sync_all_group_sessions() -> Result<usize, String> {
     let state = crate::state::APP_STATE
         .get()
@@ -373,6 +380,7 @@ pub fn sync_all_group_sessions() -> Result<usize, String> {
     Ok(total)
 }
 
+/// Starts the relay poller.
 pub fn start_relay_poller() {
     if RELAY_POLLER_STARTED.swap(true, Ordering::SeqCst) {
         return;
@@ -389,6 +397,7 @@ pub fn start_relay_poller() {
 static RELAY_NOTIFY: OnceLock<std::sync::Mutex<Option<tokio::sync::broadcast::Sender<String>>>> =
     OnceLock::new();
 
+/// Relay notify channel.
 pub fn relay_notify_channel() -> tokio::sync::broadcast::Sender<String> {
     RELAY_NOTIFY
         .get_or_init(|| {
@@ -401,6 +410,7 @@ pub fn relay_notify_channel() -> tokio::sync::broadcast::Sender<String> {
         .expect("relay notify tx")
 }
 
+/// Notifies a session update.
 pub fn notify_session_updated(session_id: &str) {
     let _ = relay_notify_channel().send(session_id.to_string());
 }

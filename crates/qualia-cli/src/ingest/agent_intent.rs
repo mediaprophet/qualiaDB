@@ -23,6 +23,7 @@ use qualia_core_db::specialized_libs::physics_simulation::PhysicsSimulationLibra
 
 use crate::ingest::IngestStats;
 
+/// Ingests an agent intent.
 pub fn ingest_agent_intent(
     input: &Path,
     output: &Path,
@@ -189,11 +190,11 @@ pub fn ingest_agent_intent(
         let _lib = CryptographicLibrary::new();
     }
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,

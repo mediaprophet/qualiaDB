@@ -539,6 +539,7 @@ pub enum CueKind {
 }
 
 impl CueKind {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Haptic => "Haptic",
@@ -548,6 +549,7 @@ impl CueKind {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Haptic" => Some(Self::Haptic),

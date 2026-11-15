@@ -52,6 +52,12 @@ pub const BUNDLE_HEADER_SIZE: usize = 64;
 /// the `Page` alignment tier of the `container_10d` writer and `p64_weight`.
 pub const BUNDLE_ENTRY_ALIGN: usize = 64;
 
+/// OS page alignment (4096 bytes) for zero-copy direct mmap paging of embedded assets.
+pub const BUNDLE_PAGE_ALIGN_4096: usize = 4096;
+
+/// Header flag indicating every entry and index footer is aligned to 4096 bytes.
+pub const BUNDLE_FLAG_PAGE_ALIGN_4096: u16 = 0x0001;
+
 // --- header field byte offsets ---
 pub(crate) const OFF_MAGIC: usize = 0;
 pub(crate) const OFF_VERSION: usize = 4;
@@ -127,6 +133,12 @@ pub enum BundleError {
         offset: u64,
         length: u64,
     },
+    /// An entry was not aligned to the expected byte boundary.
+    UnpageAligned {
+        key: String,
+        offset: u64,
+        alignment: usize,
+    },
     /// The CBOR index could not be encoded/decoded.
     Cbor(String),
     /// An I/O error (mmap/open), native only.
@@ -171,6 +183,16 @@ impl std::fmt::Display for BundleError {
                 write!(
                     f,
                     "bundle: entry {key:?} out of bounds (offset {offset}, length {length})"
+                )
+            }
+            BundleError::UnpageAligned {
+                key,
+                offset,
+                alignment,
+            } => {
+                write!(
+                    f,
+                    "bundle: entry {key:?} at offset {offset} is not aligned to {alignment} bytes"
                 )
             }
             BundleError::Cbor(e) => write!(f, "bundle: CBOR error: {e}"),

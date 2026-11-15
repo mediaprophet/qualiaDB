@@ -2,6 +2,8 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
+#[cfg(windows)]
+mod native_secure_lock;
 
 fn generate_master_secret() -> Result<[u8; 32], String> {
     let mut secret = [0u8; 32];
@@ -9,7 +11,7 @@ fn generate_master_secret() -> Result<[u8; 32], String> {
     Ok(secret)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(test)))]
 fn keyring_entry_for(storage_dir: &str) -> Result<keyring::Entry, String> {
     let mut hasher = Sha256::new();
     hasher.update(storage_dir.as_bytes());
@@ -17,14 +19,188 @@ fn keyring_entry_for(storage_dir: &str) -> Result<keyring::Entry, String> {
     let username = format!("master_{}", hex::encode(&digest[..8]));
     keyring::Entry::new("qualia_db", &username).map_err(|e| format!("Keyring error: {e}"))
 }
+#[cfg(all(not(target_arch = "wasm32"), test))]
+fn keyring_entry_for(_storage_dir: &str) -> Result<keyring::Entry, String> {
+    Err("OS credentials are unavailable to isolated unit-test vault fixtures".into())
+}
+
+/// Closed v1 `idf:keyRole` values for purpose-separated vault material.
+///
+/// Unknown roles stay held / not-yet — never map to other-id / who.
+/// `Mixnet` is Nym client identity seed; it MUST NOT collapse into
+/// `SessionAuthentication` (or pack-publish / transport AEAD).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum KeyRole {
+    ControllerSigning,
+    RouteUpdate,
+    SessionAuthentication,
+    TransportAead,
+    QlinkEphemeralDh,
+    CapabilityPresentation,
+    DiscoveryPsk,
+    GroupDiscovery,
+    PackPublish,
+    /// Nym mixnet client identity — purpose-separated from session-authentication.
+    Mixnet,
+}
+
+impl KeyRole {
+    /// Wire / UI id (`mixnet`, `session-authentication`, …).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ControllerSigning => "controller-signing",
+            Self::RouteUpdate => "route-update",
+            Self::SessionAuthentication => "session-authentication",
+            Self::TransportAead => "transport-aead",
+            Self::QlinkEphemeralDh => "qlink-ephemeral-dh",
+            Self::CapabilityPresentation => "capability-presentation",
+            Self::DiscoveryPsk => "discovery-psk",
+            Self::GroupDiscovery => "group-discovery",
+            Self::PackPublish => "pack-publish",
+            Self::Mixnet => "mixnet",
+        }
+    }
+
+    /// Parse a closed-v1 role id. Unknown → None (held / not-yet).
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "controller-signing" => Some(Self::ControllerSigning),
+            "route-update" => Some(Self::RouteUpdate),
+            "session-authentication" => Some(Self::SessionAuthentication),
+            "transport-aead" => Some(Self::TransportAead),
+            "qlink-ephemeral-dh" => Some(Self::QlinkEphemeralDh),
+            "capability-presentation" => Some(Self::CapabilityPresentation),
+            "discovery-psk" => Some(Self::DiscoveryPsk),
+            "group-discovery" => Some(Self::GroupDiscovery),
+            "pack-publish" => Some(Self::PackPublish),
+            "mixnet" => Some(Self::Mixnet),
+            _ => None,
+        }
+    }
+
+    /// HKDF / derive_key context — stable, purpose-tagged, never shared across roles.
+    pub fn vault_context(self) -> &'static str {
+        match self {
+            Self::ControllerSigning => "idf:keyRole:controller-signing:v1",
+            Self::RouteUpdate => "idf:keyRole:route-update:v1",
+            Self::SessionAuthentication => "idf:keyRole:session-authentication:v1",
+            Self::TransportAead => "idf:keyRole:transport-aead:v1",
+            Self::QlinkEphemeralDh => "idf:keyRole:qlink-ephemeral-dh:v1",
+            Self::CapabilityPresentation => "idf:keyRole:capability-presentation:v1",
+            Self::DiscoveryPsk => "idf:keyRole:discovery-psk:v1",
+            Self::GroupDiscovery => "idf:keyRole:group-discovery:v1",
+            Self::PackPublish => "idf:keyRole:pack-publish:v1",
+            Self::Mixnet => "idf:keyRole:mixnet:v1",
+        }
+    }
+
+    /// Closed v1 inventory (inference namespace + mixnet + pack-publish).
+    pub fn closed_v1() -> &'static [KeyRole] {
+        &[
+            Self::ControllerSigning,
+            Self::RouteUpdate,
+            Self::SessionAuthentication,
+            Self::TransportAead,
+            Self::QlinkEphemeralDh,
+            Self::CapabilityPresentation,
+            Self::DiscoveryPsk,
+            Self::GroupDiscovery,
+            Self::PackPublish,
+            Self::Mixnet,
+        ]
+    }
+}
 
 /// High-level Key Management module for the Qualia Node.
 pub struct KeyVault {
     master_key: Option<SigningKey>,
     storage_dir: Option<String>,
+    native_secure: bool,
 }
 
 impl KeyVault {
+    /// Native operator vault. Uses the OS credential store exclusively: no
+    /// plaintext keystore, auto-generation on read failure or legacy fallback.
+    /// `create` must follow an explicit native operator create gesture.
+    #[cfg(all(windows, not(test)))]
+    pub fn open_native_secure(storage_dir: &str, create: bool) -> Result<Self, String> {
+        if storage_dir.is_empty() || storage_dir.len() > 4096 {
+            return Err("native secure vault requires bounded profile path".into());
+        }
+        let (profile_path, _profile_lock) =
+            native_secure_lock::acquire(Path::new(storage_dir), create)?;
+        if profile_path.join("keystore.bin").exists() {
+            return Err("legacy plaintext vault requires explicit protected migration".into());
+        }
+        // Build directly from the concrete OS store. A replaceable global default
+        // (including test/mock stores) cannot supply production enrollment keys.
+        use keyring_core::api::CredentialStoreApi;
+        let store = windows_native_keyring_store::Store::new()
+            .map_err(|e| format!("Windows Credential Manager unavailable: {e}"))?;
+        let mut hasher = Sha256::new();
+        hasher.update(profile_path.to_string_lossy().as_bytes());
+        let profile = format!("native_{}", hex::encode(hasher.finalize()));
+        let modifiers = std::collections::HashMap::from([("persistence", "Local")]);
+        let entry = store
+            .build("qualia_native_authoring_v1", &profile, Some(&modifiers))
+            .map_err(|e| format!("native OS credential construction: {e}"))?;
+        let mut secret = zeroize::Zeroizing::new([0u8; 32]);
+        match entry.get_password() {
+            Ok(encoded) => {
+                if create {
+                    return Err("native secure vault already exists".into());
+                }
+                let encoded = zeroize::Zeroizing::new(encoded);
+                hex::decode_to_slice(encoded.as_str(), secret.as_mut())
+                    .map_err(|_| "invalid OS credential vault key")?;
+            }
+            Err(keyring_core::Error::NoEntry) if create => {
+                *secret = generate_master_secret()?;
+                let encoded = zeroize::Zeroizing::new(hex::encode(secret.as_ref()));
+                entry
+                    .set_password(encoded.as_str())
+                    .map_err(|e| format!("OS credential write failed: {e}"))?;
+                let verified = zeroize::Zeroizing::new(
+                    entry
+                        .get_password()
+                        .map_err(|e| format!("OS credential readback failed: {e}"))?,
+                );
+                if verified.as_str() != encoded.as_str() {
+                    return Err("OS credential readback mismatch".into());
+                }
+            }
+            Err(e) => return Err(format!("native secure vault unavailable: {e}")),
+        }
+        if *secret == [0; 32] {
+            return Err("empty native secure vault key".into());
+        }
+        if entry
+            .get_attributes()
+            .map_err(|e| format!("OS credential persistence unavailable: {e}"))?
+            .get("persistence")
+            .is_none_or(|p| p != "Local")
+        {
+            return Err("native enrollment requires OS Local persistence".into());
+        }
+        // No generic unlock fallback: secure callers reopen this explicit method.
+        Ok(Self {
+            master_key: Some(SigningKey::from_bytes(&secret)),
+            storage_dir: None,
+            native_secure: true,
+        })
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(windows), not(test)))]
+    pub fn open_native_secure(_storage_dir: &str, _create: bool) -> Result<Self, String> {
+        Err("native enrollment OS credential backend is not qualified on this target".into())
+    }
+    #[cfg(all(not(target_arch = "wasm32"), test))]
+    pub fn open_native_secure(_storage_dir: &str, _create: bool) -> Result<Self, String> {
+        Err("OS credential operations are explicitly disabled in unit tests".into())
+    }
+    pub fn is_native_secure(&self) -> bool {
+        self.native_secure
+    }
     /// Creates an in-memory KeyVault with a fresh ephemeral key (for tests/stubs only).
     pub fn new() -> Self {
         use sha2::{Digest, Sha256};
@@ -36,18 +212,22 @@ impl KeyVault {
         Self {
             master_key: Some(SigningKey::from_bytes(&secret)),
             storage_dir: None,
+            native_secure: false,
         }
     }
 
+    /// `true` when `locked`.
     pub fn is_locked(&self) -> bool {
         self.master_key.is_none()
     }
 
+    /// Locks the vault.
     pub fn lock(&mut self) {
         self.master_key = None;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Unlocks the vault.
     pub fn unlock(&mut self) -> Result<(), String> {
         let dir = self
             .storage_dir
@@ -59,6 +239,7 @@ impl KeyVault {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Unlocks the vault.
     pub fn unlock(&mut self) -> Result<(), String> {
         let temp = Self::load_or_generate("")?;
         self.master_key = temp.master_key;
@@ -66,12 +247,13 @@ impl KeyVault {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Loads an existing vault or generates one.
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
-        let entry = keyring_entry_for(storage_dir)?;
+        let entry = keyring_entry_for(storage_dir).ok();
 
-        let master_key = match entry.get_password() {
-            Ok(secret_hex) => {
+        let master_key = match entry.as_ref().and_then(|e| e.get_password().ok()) {
+            Some(secret_hex) => {
                 let bytes =
                     hex::decode(secret_hex).map_err(|e| format!("Invalid hex in keyring: {e}"))?;
                 if bytes.len() != 32 {
@@ -81,7 +263,7 @@ impl KeyVault {
                 secret.copy_from_slice(&bytes[0..32]);
                 SigningKey::from_bytes(&secret)
             }
-            Err(_) => {
+            None => {
                 if vault_path.exists() {
                     let bytes = fs::read(&vault_path)
                         .map_err(|e| format!("Failed to read keystore: {e}"))?;
@@ -89,7 +271,9 @@ impl KeyVault {
                         return Err("Corrupted master key length".into());
                     }
                     let secret_hex = hex::encode(&bytes[0..32]);
-                    let _ = entry.set_password(&secret_hex);
+                    if let Some(ref entry) = entry {
+                        let _ = entry.set_password(&secret_hex);
+                    }
                     let mut secret = [0u8; 32];
                     secret.copy_from_slice(&bytes[0..32]);
                     SigningKey::from_bytes(&secret)
@@ -97,10 +281,14 @@ impl KeyVault {
                     let secret = generate_master_secret()?;
                     let new_key = SigningKey::from_bytes(&secret);
                     let secret_hex = hex::encode(secret);
-                    let _ = entry.set_password(&secret_hex);
+                    if let Some(ref entry) = entry {
+                        let _ = entry.set_password(&secret_hex);
+                    }
                     if let Some(parent) = vault_path.parent() {
-                        fs::create_dir_all(parent)
-                            .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                        if !parent.as_os_str().is_empty() {
+                            fs::create_dir_all(parent)
+                                .map_err(|e| format!("Failed to create keystore dir: {e}"))?;
+                        }
                     }
                     fs::write(&vault_path, secret)
                         .map_err(|e| format!("Failed to write keystore: {e}"))?;
@@ -112,10 +300,12 @@ impl KeyVault {
         Ok(Self {
             master_key: Some(master_key),
             storage_dir: Some(storage_dir.to_string()),
+            native_secure: false,
         })
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Loads an existing vault or generates one.
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
 
@@ -146,6 +336,7 @@ impl KeyVault {
         Ok(Self {
             master_key: Some(master_key),
             storage_dir: Some(storage_dir.to_string()),
+            native_secure: false,
         })
     }
 
@@ -161,6 +352,39 @@ impl KeyVault {
         let mut child_secret = [0u8; 32];
         child_secret.copy_from_slice(&result);
         SigningKey::from_bytes(&child_secret)
+    }
+
+    /// Purpose-separated child key for a closed `KeyRole`.
+    ///
+    /// Host paths request this (or [`Self::request_role_seed`]) at use-time.
+    /// Agents never hold the returned material — only the vault does.
+    pub fn derive_key_for_role(&self, role: KeyRole) -> SigningKey {
+        self.derive_key(role.vault_context())
+    }
+
+    /// Request 32-byte seed for `role` (host-only). Never log or put in Quins.
+    ///
+    /// Returns Err when the vault is locked. Callers must zeroize after use
+    /// when the seed is no longer needed for the active operation.
+    pub fn request_role_seed(&self, role: KeyRole) -> Result<[u8; 32], String> {
+        if self.is_locked() {
+            return Err(format!(
+                "KeyVault locked — cannot release keyRole {}",
+                role.as_str()
+            ));
+        }
+        Ok(self.derive_key_for_role(role).to_bytes())
+    }
+
+    /// Agent-facing grant: purpose metadata only — never key material.
+    pub fn agent_request_role(&self, role: KeyRole) -> KeyRoleGrant {
+        KeyRoleGrant {
+            role: role.as_str().to_string(),
+            holder: "keyvault".into(),
+            vault_locked: self.is_locked(),
+            purpose: role.vault_context().to_string(),
+            material_held_by_agent: false,
+        }
     }
 
     /// Computes an Ed25519 signature over a generic byte payload
@@ -384,6 +608,17 @@ impl KeyVault {
     }
 }
 
+/// Agent-visible ticket for a keyRole request. Never carries secret bytes.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct KeyRoleGrant {
+    pub role: String,
+    pub holder: String,
+    pub vault_locked: bool,
+    pub purpose: String,
+    /// Always false — agents request, never hold.
+    pub material_held_by_agent: bool,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct QappSessionTokenV2 {
     pub qapp_did: String,
@@ -466,6 +701,7 @@ impl SubgraphKey {
         &self.key_bytes
     }
 
+    /// Subgraph layer.
     pub fn layer(&self) -> SubgraphLayer {
         self.layer
     }
@@ -714,6 +950,27 @@ mod subgraph_key_tests {
     }
 
     #[test]
+    fn keystore_file_fallback_roundtrip() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let path = tmp.path().to_str().unwrap();
+        let key_1 = {
+            let vault = KeyVault::load_or_generate(path).expect("vault");
+            vault.get_master_key_bytes()
+        };
+        // Verify keystore.bin was created on disk
+        let keystore_file = tmp.path().join("keystore.bin");
+        assert!(keystore_file.exists());
+        assert_eq!(fs::read(&keystore_file).unwrap().len(), 32);
+
+        // Load again from same directory and verify same master key
+        let key_2 = {
+            let vault = KeyVault::load_or_generate(path).expect("vault reloaded");
+            vault.get_master_key_bytes()
+        };
+        assert_eq!(key_1, key_2);
+    }
+
+    #[test]
     fn decapsulate_wrong_key_fails() {
         let vault = test_vault();
         let layer_key = vault.generate_layer_key(SubgraphLayer::Legal);
@@ -733,5 +990,45 @@ mod subgraph_key_tests {
         let wrong_secret = [0xFFu8; 32];
         let result = vault.decapsulate(&encapsulated, &wrong_secret);
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod key_role_tests {
+    use super::*;
+
+    fn test_vault() -> KeyVault {
+        // Ephemeral vault — no OS keyring required in CI/box.
+        KeyVault::new()
+    }
+
+    #[test]
+    fn mixnet_seed_differs_from_session_authentication() {
+        let vault = test_vault();
+        let mix = vault.request_role_seed(KeyRole::Mixnet).expect("mixnet");
+        let sess = vault
+            .request_role_seed(KeyRole::SessionAuthentication)
+            .expect("session");
+        assert_ne!(mix, sess);
+        assert_ne!(
+            KeyRole::Mixnet.vault_context(),
+            KeyRole::SessionAuthentication.vault_context()
+        );
+    }
+
+    #[test]
+    fn agent_request_never_holds_material() {
+        let vault = test_vault();
+        let g = vault.agent_request_role(KeyRole::Mixnet);
+        assert_eq!(g.role, "mixnet");
+        assert_eq!(g.holder.as_str(), "keyvault");
+        assert!(!g.material_held_by_agent);
+        assert!(!g.vault_locked);
+    }
+
+    #[test]
+    fn unknown_role_parse_is_none() {
+        assert!(KeyRole::parse("other-id").is_none());
+        assert_eq!(KeyRole::parse("mixnet"), Some(KeyRole::Mixnet));
     }
 }

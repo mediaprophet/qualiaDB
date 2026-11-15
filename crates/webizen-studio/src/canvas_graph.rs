@@ -123,6 +123,7 @@ pub fn graph_neighbors(
     out
 }
 
+/// Edge visual descriptor.
 pub fn edge_visual(strength: u8) -> (f64, f64, &'static str) {
     let s = strength.max(1) as f64;
     let width = (1.0 + s * 0.45).min(4.5);

@@ -1,5 +1,16 @@
 use super::*;
 
+/// Explicit fixture; the empty constructor contributes no atoms or coordinates.
+fn carbon_molecule() -> Molecule {
+    let carbon = Atom::new();
+    Molecule {
+        formula: "C".to_string(),
+        coordinates: vec![carbon.coordinates.clone()],
+        atoms: vec![carbon],
+        ..Molecule::new()
+    }
+}
+
 #[test]
 fn test_chemistry_library_creation() {
     let mut library = ChemistryModelingLibrary::new();
@@ -71,10 +82,7 @@ fn test_molecular_dynamics() {
     assert!(result.result.frames.len() >= 2);
 
     // An empty molecule must be refused, never faked.
-    let empty = Molecule {
-        atoms: Vec::new(),
-        ..Molecule::new()
-    };
+    let empty = Molecule::new();
     assert!(matches!(
         library.run_molecular_dynamics(SimulationConfig::new(), empty),
         Err(ChemistryError::InsufficientData(_))
@@ -101,10 +109,9 @@ fn test_quantum_properties() {
         result.result.total_energy
     );
 
-    // HONEST: an element beyond H/He (Molecule::new() is a carbon atom) still
-    // reports NotImplemented rather than fabricating an energy.
+    // An explicit carbon atom is beyond H/He and must report NotImplemented.
     let unsupported =
-        library.calculate_quantum_properties(Molecule::new(), QuantumMethodType::HartreeFock);
+        library.calculate_quantum_properties(carbon_molecule(), QuantumMethodType::HartreeFock);
     assert!(matches!(
         unsupported,
         Err(ChemistryError::NotImplemented(_))
@@ -151,7 +158,7 @@ fn test_property_prediction() {
     let mut library = ChemistryModelingLibrary::new();
     library.initialize().unwrap();
 
-    let molecule = Molecule::new(); // single C atom (mass 12.01)
+    let molecule = carbon_molecule(); // explicit single C atom (mass 12.01)
     let properties = vec![PropertyType::BoilingPoint];
 
     // REAL: a group-contribution QSPR model for boiling point is now

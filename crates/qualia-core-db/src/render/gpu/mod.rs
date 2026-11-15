@@ -2,137 +2,444 @@
 //!
 //! Phenomenal viewport: projector (depth write) → ambient → optional T2 Kawase bloom.
 
+mod ao;
+mod atmosphere;
+mod instance_stream;
+mod instance_visibility;
+mod material_draws;
+mod material_textures;
+mod materials;
+mod picking;
+pub use instance_stream::MeshInstanceUploadError;
+mod texture_precomputed;
+mod texture_residency;
+pub use temporal_resolve_gpu::{
+    TemporalProducerAvailability, TemporalProducerViews, TemporalResolveGpu, TemporalResolveInputs,
+    TemporalSubmissionState,
+};
+pub use texture_mips::AlphaCoverageDiagnostics;
+pub use texture_mips::TextureMipSemantic;
+pub use texture_residency::{TextureColorSpace, TextureUploadError};
+mod animated_upload;
+pub mod holographic;
+mod source_frame;
+pub use holographic::{HolographicNodeGpu, HolographicPipelineGpu, HolographicPrimitive};
+pub mod ibl_cubemap;
+pub use ibl_cubemap::{
+    cubemap_face_uv_to_direction, eval_procedural_sky_radiance_zero_heap,
+    integrate_split_sum_brdf_zero_heap, IblCubemapGenerator, IblCubemapParams,
+    IBL_CUBEMAP_CONVOLVE_WGSL,
+};
+pub mod indirect_cull;
+pub use indirect_cull::{
+    build_hzb_mip_chain_zero_heap, cull_and_select_lod_indirect_zero_heap,
+    select_lod_tier_with_hysteresis, CullUniformsGpu, DrawIndexedIndirectCommand, HzbPyramidView,
+    IndirectCullPipelineGpu, IndirectCullStreamCounts, InstanceCullDescriptor,
+    RepresentationPolicy,
+};
+pub mod mesh_slab;
+pub use mesh_slab::{
+    AssetRepresentationKind, MeshSlabArenaDescriptor, MeshSlabArenaGpu, MeshSlabVertex,
+    ProceduralSynthesisGpu, ResidentAssetEntry, SkinAttrVertex, SlabRange, SlabRangeAllocator,
+    SubmeshSlice,
+};
+pub use portal_gpu::lighting_passes::{
+    ClusterGridParamsGpu, ClusterLightPipelineGpu, DeferredSpectralResolvePipelineGpu,
+    DielectricVolumeIopGpu, FoliageLodPipelineGpu,
+};
+pub use shadows::{
+    camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
+    Csm4ShadowUniform, ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,
+};
+pub mod emf_cue_bridge;
+pub mod frame_lock;
+mod mesh_normals;
+mod mesh_upload;
+mod output_pass;
+pub mod residency_budget;
+mod scene_depth;
+mod shadows;
+mod sky;
+mod temporal_producers_gpu;
+mod temporal_resolve_gpu;
+mod texture_mips;
+mod water;
+pub use frame_lock::*;
+
 use crate::gpu_context::{
     ambient_draw_instances, global_vram_ledger, universe_orchestrator, ComputeUniverse,
     OperationalMode,
 };
 use crate::render::camera::CameraState;
-use crate::render::navigation::PICK_SENTINEL;
 use crate::render::pga::{motor_to_mat4_col, Motor};
-use crate::render::physics::{Aabb, Admission, Joint};
-use crate::render::standpoint::spectator_default;
+use crate::render::physics::{Aabb, Joint};
 use crate::render::telemetry::{
-    AmbientUniforms, ObserverStandpoint, ParticleInstance, SystemTelemetry,
+    AmbientUniforms, CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry,
 };
-use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, MESH_WGSL, PROJECTOR_WGSL};
-use crate::tensor::buffer_export::{
-    read_tensor_at, tensor_node_count, TENSOR_HEADER_BYTES, TENSOR_STRIDE,
-};
+use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, TENSOR_STRIDE};
 
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+thread_local! {
+    static PORTAL_GPU_INIT_ABORTED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    static PORTAL_GPU_CANVAS_CLAIMED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Resets portal-GPU init flags.
+pub(crate) fn reset_portal_gpu_init_flags() {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.set(false));
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(false));
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Aborts portal-GPU init.
+pub(crate) fn abort_portal_gpu_init() {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.set(true));
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// `true` when init was aborted.
+pub(crate) fn portal_gpu_init_aborted() -> bool {
+    PORTAL_GPU_INIT_ABORTED.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// `true` when the canvas is claimed.
+pub(crate) fn portal_gpu_canvas_claimed() -> bool {
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.get())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Marks the canvas claimed.
+pub(crate) fn mark_portal_gpu_canvas_claimed() {
+    PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(true));
+}
 
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
-const HDR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
-const BLOOM_THRESHOLD: f32 = 1.0;
-const BLOOM_INTENSITY: f32 = 1.15;
-const BLOOM_STRENGTH: f32 = 0.85;
-const BLOOM_EXPOSURE: f32 = 1.05;
-const KAWASE_OFFSETS: [f32; 4] = [1.0, 2.0, 4.0, 8.0];
 
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct BloomParamsGpu {
-    threshold: f32,
-    intensity: f32,
-    offset: f32,
-    _pad: f32,
+/// Creates `ao-prepass-camera-layout`.
+pub(super) fn create_ao_prepass_camera_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
+    device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
+        label: Some("qualia-ao-prepass-camera-layout"),
+        entries: &[
+            uniform_128_bind_entry(0, etalon::ShaderStages::VERTEX_FRAGMENT),
+            uniform_128_bind_entry(1, etalon::ShaderStages::VERTEX_FRAGMENT),
+            etalon::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: etalon::ShaderStages::FRAGMENT,
+                ty: etalon::BindingType::Buffer {
+                    ty: etalon::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: std::num::NonZeroU64::new(
+                        std::mem::size_of::<ao::AoUniform>() as u64,
+                    ),
+                },
+                count: None,
+            },
+        ],
+    })
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct CompositeParamsGpu {
-    exposure: f32,
-    bloom_strength: f32,
-    _pad0: f32,
-    _pad1: f32,
+/// Creates `ao-prepass-camera-bind`.
+pub(super) fn create_ao_prepass_camera_bind(
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    camera: &etalon::Buffer,
+    observer: &etalon::Buffer,
+    ao: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
+        label: Some("qualia-ao-prepass-camera-and-uniform"),
+        layout,
+        entries: &[
+            etalon::BindGroupEntry {
+                binding: 0,
+                resource: camera.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 1,
+                resource: observer.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 2,
+                resource: ao.as_entire_binding(),
+            },
+        ],
+    })
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct BloomUniformBlock {
-    bloom: BloomParamsGpu,
-    composite: CompositeParamsGpu,
+/// Creates `mesh-frame-layout`.
+pub(super) fn create_mesh_frame_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
+    let uniform_entry = |binding, visibility, size| etalon::BindGroupLayoutEntry {
+        binding,
+        visibility,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size: std::num::NonZeroU64::new(size),
+        },
+        count: None,
+    };
+    let depth_texture_entry = |binding| etalon::BindGroupLayoutEntry {
+        binding,
+        visibility: etalon::ShaderStages::FRAGMENT,
+        ty: etalon::BindingType::Texture {
+            sample_type: etalon::TextureSampleType::Depth,
+            view_dimension: etalon::TextureViewDimension::D2,
+            multisampled: false,
+        },
+        count: None,
+    };
+    let float_texture_entry = |binding| etalon::BindGroupLayoutEntry {
+        binding,
+        visibility: etalon::ShaderStages::FRAGMENT,
+        ty: etalon::BindingType::Texture {
+            sample_type: etalon::TextureSampleType::Float { filterable: false },
+            view_dimension: etalon::TextureViewDimension::D2,
+            multisampled: false,
+        },
+        count: None,
+    };
+    let entries = [
+        uniform_128_bind_entry(0, etalon::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(1, etalon::ShaderStages::VERTEX_FRAGMENT),
+        depth_texture_entry(2),
+        depth_texture_entry(3),
+        etalon::BindGroupLayoutEntry {
+            binding: 4,
+            visibility: etalon::ShaderStages::FRAGMENT,
+            ty: etalon::BindingType::Sampler(etalon::SamplerBindingType::Comparison),
+            count: None,
+        },
+        uniform_entry(
+            5,
+            etalon::ShaderStages::VERTEX_FRAGMENT,
+            std::mem::size_of::<shadows::ShadowUniform>() as u64,
+        ),
+        float_texture_entry(6),
+        float_texture_entry(7),
+        uniform_entry(
+            8,
+            etalon::ShaderStages::FRAGMENT,
+            std::mem::size_of::<ao::AoUniform>() as u64,
+        ),
+        uniform_entry(
+            9,
+            etalon::ShaderStages::FRAGMENT,
+            std::mem::size_of::<atmosphere::AtmosphereUniform>() as u64,
+        ),
+    ];
+    device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
+        label: Some("portal-mesh-frame-lighting-layout"),
+        entries: &entries,
+    })
 }
 
-/// HDR scene target + half-res Kawase ping-pong (allocated only in `OperationalMode::Full`).
-struct BloomChain {
-    hdr_texture: wgpu::Texture,
-    hdr_view: wgpu::TextureView,
-    blur_a: wgpu::Texture,
-    blur_a_view: wgpu::TextureView,
-    blur_b: wgpu::Texture,
-    blur_b_view: wgpu::TextureView,
-    dummy_view: wgpu::TextureView,
-    sampler: wgpu::Sampler,
-    uniform_buf: wgpu::Buffer,
-    bind_layout: wgpu::BindGroupLayout,
-    extract_pipeline: wgpu::RenderPipeline,
-    kawase_pipeline: wgpu::RenderPipeline,
-    composite_pipeline: wgpu::RenderPipeline,
-    half_width: u32,
-    half_height: u32,
-    vram_bytes: u64,
+#[allow(clippy::too_many_arguments)]
+/// Creates `mesh-frame-bind`.
+pub(super) fn create_mesh_frame_bind(
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    camera: &etalon::Buffer,
+    observer: &etalon::Buffer,
+    shadow_views: [&etalon::TextureView; 2],
+    shadow_sampler: &etalon::Sampler,
+    shadow_uniform: &etalon::Buffer,
+    ao_view: &etalon::TextureView,
+    ao_surface_view: &etalon::TextureView,
+    ao_uniform: &etalon::Buffer,
+    atmosphere_uniform: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
+        label: Some("portal-mesh-frame-lighting-bind"),
+        layout,
+        entries: &[
+            etalon::BindGroupEntry {
+                binding: 0,
+                resource: camera.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 1,
+                resource: observer.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 2,
+                resource: etalon::BindingResource::TextureView(shadow_views[0]),
+            },
+            etalon::BindGroupEntry {
+                binding: 3,
+                resource: etalon::BindingResource::TextureView(shadow_views[1]),
+            },
+            etalon::BindGroupEntry {
+                binding: 4,
+                resource: etalon::BindingResource::Sampler(shadow_sampler),
+            },
+            etalon::BindGroupEntry {
+                binding: 5,
+                resource: shadow_uniform.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 6,
+                resource: etalon::BindingResource::TextureView(ao_view),
+            },
+            etalon::BindGroupEntry {
+                binding: 7,
+                resource: etalon::BindingResource::TextureView(ao_surface_view),
+            },
+            etalon::BindGroupEntry {
+                binding: 8,
+                resource: ao_uniform.as_entire_binding(),
+            },
+            etalon::BindGroupEntry {
+                binding: 9,
+                resource: atmosphere_uniform.as_entire_binding(),
+            },
+        ],
+    })
 }
 
-impl BloomChain {
-    /// HDR scene target extent in pixels.
-    pub(super) fn hdr_extent(&self) -> (u32, u32) {
-        (self.hdr_texture.width(), self.hdr_texture.height())
-    }
-
-    /// Half-resolution Kawase ping-pong extent.
-    pub(super) fn blur_extent(&self) -> (u32, u32) {
-        (self.half_width, self.half_height)
-    }
-
-    /// Keep texture handles alive for resize validation / VRAM accounting.
-    pub(super) fn texture_handles(&self) -> (&wgpu::Texture, &wgpu::Texture, &wgpu::Texture) {
-        (&self.hdr_texture, &self.blur_a, &self.blur_b)
-    }
+/// `portal_fixed_buffer_bytes`.
+pub(super) fn portal_fixed_buffer_bytes() -> Option<u64> {
+    [
+        std::mem::size_of::<AmbientUniforms>(),
+        std::mem::size_of::<SystemTelemetry>(),
+        std::mem::size_of::<CameraUniform>(),
+        std::mem::size_of::<ObserverStandpoint>(),
+        std::mem::size_of::<[[f32; 4]; 4]>(),
+        std::mem::size_of::<shadows::ShadowUniform>(),
+        std::mem::size_of::<ao::AoUniform>(),
+    ]
+    .into_iter()
+    .try_fold(0u64, |total, size| total.checked_add(size as u64))
 }
-
+const HDR_FORMAT: etalon::TextureFormat = etalon::TextureFormat::Rgba16Float;
+type BloomChain = etalon_render::bloom::BloomChain<crate::gpu_context::VramReservation<'static>>;
 /// WebGPU phenomenal viewport — tensor projector + ambient particles.
 /// GPU buffers for an imported triangle mesh (Phase 1.2). Positions are model-space `f32x3`
 /// (already centred + scaled to the orbit frame by the caller); `index_count` is `triangles * 3`.
 struct MeshGpu {
-    vertex_buf: wgpu::Buffer,
-    color_buf: wgpu::Buffer,
-    index_buf: wgpu::Buffer,
-    index_count: u32,
+    buffers: etalon_render::mesh::MeshBuffers<crate::gpu_context::VramReservation<'static>>,
+    material_gpu: materials::MaterialGpu,
+    shadow_draws: Vec<materials::MaterialDraw>,
+    receives_shadows: bool,
+    // Cold-path source geometry retained so pose updates can refresh normals
+    // without allocating or reading back the GPU buffers.
+    cpu_positions: Vec<[f32; 3]>,
+    cpu_indices: Vec<u32>,
+    normal_workspace: mesh_normals::MeshNormalWorkspace,
+}
+
+impl std::ops::Deref for MeshGpu {
+    type Target = etalon_render::mesh::MeshBuffers<crate::gpu_context::VramReservation<'static>>;
+    fn deref(&self) -> &Self::Target {
+        &self.buffers
+    }
+}
+
+fn default_gpu_tangent(normal: [f32; 3]) -> [f32; 4] {
+    let axis = if normal[0].abs() < 0.8 {
+        [1.0, 0.0, 0.0]
+    } else {
+        [0.0, 1.0, 0.0]
+    };
+    let cross = [
+        normal[1] * axis[2] - normal[2] * axis[1],
+        normal[2] * axis[0] - normal[0] * axis[2],
+        normal[0] * axis[1] - normal[1] * axis[0],
+    ];
+    let length = (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt();
+    if length > f32::EPSILON {
+        [cross[0] / length, cross[1] / length, cross[2] / length, 1.0]
+    } else {
+        [1.0, 0.0, 0.0, 1.0]
+    }
 }
 
 pub struct PortalGpu {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-    surface: Option<wgpu::Surface<'static>>,
-    config: Option<wgpu::SurfaceConfiguration>,
-    offscreen_texture: Option<wgpu::Texture>,
+    device: Arc<etalon::Device>,
+    queue: Arc<etalon::Queue>,
+    device_lost: Arc<std::sync::atomic::AtomicBool>,
+    surface: Option<etalon::Surface<'static>>,
+    config: Option<etalon::SurfaceConfiguration>,
+    offscreen_texture: Option<etalon::Texture>,
     /// Cached view of the offscreen texture — avoids `create_view` per frame.
     /// Invalidated (set to `None`) when the texture is recreated (resize).
-    offscreen_view: Option<wgpu::TextureView>,
-    readback_buf: Option<wgpu::Buffer>,
+    offscreen_view: Option<etalon::TextureView>,
+    readback_buf: Option<etalon::Buffer>,
     readback_bytes_per_row: u32,
-    color_format: wgpu::TextureFormat,
-    depth_texture: wgpu::Texture,
-    depth_view: wgpu::TextureView,
-    picking_texture: wgpu::Texture,
-    picking_view: wgpu::TextureView,
-    picking_pipeline: wgpu::RenderPipeline,
-    pick_staging_buf: wgpu::Buffer,
-    pending_pick: Option<(u32, u32)>,
-    pick_copy_submitted: bool,
-    pick_result: Option<u32>,
-    ambient_pipeline: wgpu::RenderPipeline,
-    projector_pipeline: wgpu::RenderPipeline,
-    ambient_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    projector_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    mesh_pipeline: wgpu::RenderPipeline,
-    mesh_pipeline_hdr: Option<wgpu::RenderPipeline>,
+    _readback_staging_reservation: Option<crate::gpu_context::VramReservation<'static>>,
+    color_format: etalon::TextureFormat,
+    scene_depth: scene_depth::SceneDepthOwner,
+    temporal_resolve: Option<temporal_resolve_gpu::TemporalResolveGpu>,
+    temporal_producers: Option<temporal_producers_gpu::TemporalProducersGpu>,
+    temporal_reset_pending: bool,
+    previous_camera_view_projection: Option<crate::render::temporal_producers::Mat4ColumnMajor>,
+    picking_texture: etalon::Texture,
+    picking_view: etalon::TextureView,
+    _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
+    _fixed_buffer_reservation: crate::gpu_context::VramReservation<'static>,
+    picking_pipeline: etalon::RenderPipeline,
+    mesh_picking_pipeline: etalon::RenderPipeline,
+    pick_readback: etalon_render::picking_readback::PickingReadback<
+        crate::gpu_context::VramReservation<'static>,
+    >,
+    pick_semantic_result: Option<u64>,
+    ambient_pipeline: etalon::RenderPipeline,
+    projector_pipeline: etalon::RenderPipeline,
+    sky_pipeline: etalon::RenderPipeline,
+    ambient_pipeline_hdr: Option<etalon::RenderPipeline>,
+    projector_pipeline_hdr: Option<etalon::RenderPipeline>,
+    sky_pipeline_hdr: Option<etalon::RenderPipeline>,
+    mesh_pipeline: etalon::RenderPipeline,
+    mesh_pipeline_blend: etalon::RenderPipeline,
+    mesh_pipeline_hdr: Option<etalon::RenderPipeline>,
+    mesh_pipeline_hdr_blend: Option<etalon::RenderPipeline>,
+    mesh_material_layout: etalon::BindGroupLayout,
+    mesh_texture_layout: etalon::BindGroupLayout,
+    mesh_frame_layout: etalon::BindGroupLayout,
+    mesh_frame_bind: etalon::BindGroup,
+    ao_prepass_camera_layout: etalon::BindGroupLayout,
+    ao_prepass_camera_bind: etalon::BindGroup,
+    shadow_target: Option<shadows::ShadowTarget>,
+    shadow_enabled: bool,
+    shadow_map_dirty: bool,
+    shadow_uniform_buf: etalon::Buffer,
+    shadow_uniform_bind: etalon::BindGroup,
+    shadow_sampler: etalon::Sampler,
+    shadow_uniform_cpu: shadows::ShadowUniform,
+    shadow_pipelines: [etalon::RenderPipeline; shadows::SHADOW_CASCADE_COUNT],
+    mesh_model_layout: etalon::BindGroupLayout,
+    mesh_instance_layout: etalon::BindGroupLayout,
+    /// Complete source stream retained for shadow-caster correctness.
+    mesh_instances: instance_stream::GpuInstanceStream,
+    /// Camera-visible compact stream used by the forward and AO passes.
+    visible_mesh_instances: instance_stream::GpuInstanceStream,
+    /// Bounded CPU-side source/scratch storage. These vectors are allocated at renderer creation;
+    /// camera-driven culling and compaction reuse them without frame-time heap growth.
+    mesh_instance_source: Vec<crate::render::instance_culling::GpuInstanceRecord>,
+    visible_instance_indices: Vec<u32>,
+    visible_instance_scratch: Vec<crate::render::instance_culling::GpuInstanceRecord>,
+    last_visibility_key: Option<([[f32; 4]; 4], [[f32; 4]; 4])>,
+    ao_targets: Option<ao::AoTargets>,
+    ao_uniform_buf: etalon::Buffer,
+    atmosphere_uniform_buf: etalon::Buffer,
+    ao_enabled: bool,
+    ao_radius: f32,
+    ao_strength: f32,
+    ao_bias: f32,
+    ao_sample_count: u32,
+    material_texture_defaults: material_textures::MaterialTextureDefaults,
+    mip_generator: texture_mips::MipGenerator,
+    resident_textures: texture_residency::ResidentTextureMap,
     mesh: Option<MeshGpu>,
-    model_buf: wgpu::Buffer,
-    mesh_model_bind: wgpu::BindGroup,
+    mesh_generation: u64,
+    source_motion: crate::render::source_frame::SourceFrameState,
+    water: water::WaterGpu,
+    model_buf: etalon::Buffer,
+    mesh_model_bind: etalon::BindGroup,
     artefact_joint: Option<Joint>,
     /// Sim-time at which the current joint was engaged; the joint is driven by *elapsed* time
     /// (`time − artefact_t0`), not absolute sim-time, so a slide/spin always starts from rest when
@@ -143,26 +450,36 @@ pub struct PortalGpu {
     last_admitted: Motor,
     last_refused: bool,
     bloom: Option<BloomChain>,
-    ambient_bind_group_layout: wgpu::BindGroupLayout,
-    ambient_bind_group: wgpu::BindGroup,
-    projector_camera_layout: wgpu::BindGroupLayout,
-    projector_tensor_layout: wgpu::BindGroupLayout,
-    projector_camera_bind: wgpu::BindGroup,
-    projector_tensor_bind: Option<wgpu::BindGroup>,
-    uniform_buf: wgpu::Buffer,
-    telemetry_buf: wgpu::Buffer,
-    camera_buf: wgpu::Buffer,
-    observer_buf: wgpu::Buffer,
+    output_chain: Option<output_pass::OutputChain>,
+    bloom_policy_snapshot: bool,
+    hdr_exposure_ev: f32,
+    white_balance_gains: [f32; 3],
+    ambient_bind_group_layout: etalon::BindGroupLayout,
+    ambient_bind_group: etalon::BindGroup,
+    projector_tensor_layout: etalon::BindGroupLayout,
+    projector_camera_layout: etalon::BindGroupLayout,
+    projector_camera_bind: etalon::BindGroup,
+    projector_tensor_bind: Option<etalon::BindGroup>,
+    holographic: Option<portal_gpu::holograph::RdfHolographGpu>,
+    uniform_buf: etalon::Buffer,
+    telemetry_buf: etalon::Buffer,
+    camera_buf: etalon::Buffer,
+    observer_buf: etalon::Buffer,
     camera: CameraState,
     observer: ObserverStandpoint,
-    particle_buf: wgpu::Buffer,
-    tensor_raw_buf: Option<wgpu::Buffer>,
+    particle_buf: etalon::Buffer,
+    _particle_reservation: crate::gpu_context::VramReservation<'static>,
+    tensor_raw_buf: Option<etalon::Buffer>,
+    _tensor_field_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     tensor_node_count: u32,
+    /// Whether semantic Tensor10D nodes are projected as visible sprites.
+    /// The tensor remains resident for picking when this is false.
+    tensor_projection_enabled: bool,
     particle_count: u32,
-    /// Whether the ambient particle field is drawn. **Off by default** — the field is a random
-    /// decorative cloud (`generate_particles`, `epistemic_q = 0`) unless a Tensor10D is uploaded,
-    /// which sets this true because the particles then ARE the epistemic nodes. The mixer's "ambient"
-    /// channel toggles it explicitly.
+    /// Whether the ambient particle field is drawn. **Off by default** and opt-in: the field is
+    /// the tensor-node particle cloud (`generate_particles` / uploaded tensor); the mixer's
+    /// "ambient" channel (or an explicit `set_ambient_enabled(true)`) turns it on. A Tensor10D
+    /// upload never forces it — hosts that want the particle view enable it explicitly.
     ambient_enabled: bool,
     /// WebGPU compute dispatch state: pipeline cache + pending readback slot
     /// (plan §7.3 W6 — `Render.gpu_compute_dispatch` / `Render.gpu_compute_readback`).
@@ -177,1082 +494,142 @@ pub struct PortalGpu {
     uniform_belt: uniform_belt::UniformBelt,
     width: u32,
     height: u32,
+    clear_color: [f64; 4],
+    sky_enabled: bool,
 }
 
 impl PortalGpu {
-    /// Build a native offscreen renderer on QualiaDB's process-wide shared GPU device.
-    ///
-    /// The output target is linear `Rgba8Unorm`. Call [`Self::render`] and then
-    /// [`Self::read_rgba8_into`] to retrieve tightly packed pixels into a caller-owned buffer.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
-        let shared = crate::gpu_context::shared_gpu();
-        pollster::block_on(Self::from_device(
-            Arc::new(shared.device.clone()),
-            Arc::new(shared.queue.clone()),
-            width.max(1),
-            height.max(1),
-            wgpu::TextureFormat::Rgba8Unorm,
-            None,
-            None,
-            particle_cap,
-        ))
-    }
-
-    /// Async offscreen WebGPU renderer on the process-wide shared device.
-    /// Logic/scientific/LLM WASM packages construct this without a canvas.
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    pub async fn new_offscreen_async(
-        width: u32,
-        height: u32,
-        particle_cap: usize,
-    ) -> Result<Self, String> {
-        crate::gpu_context::ensure_shared_gpu().await?;
-        let shared = crate::gpu_context::try_shared_gpu()
-            .ok_or_else(|| "shared WebGPU device missing after ensure_shared_gpu".to_string())?;
-        Self::from_device(
-            Arc::new(shared.device.clone()),
-            Arc::new(shared.queue.clone()),
-            width.max(1),
-            height.max(1),
-            wgpu::TextureFormat::Rgba8Unorm,
-            None,
-            None,
-            particle_cap,
-        )
-        .await
-    }
-
-    /// Build a native **surface** renderer that draws directly to a window's GPU swapchain.
-    ///
-    /// This is the native desktop path — no PNG round-trip, no webview `<img>`. The surface
-    /// is created from a raw window handle (HWND on Windows) and frames are presented directly
-    /// to the OS swapchain.
-    ///
-    /// The surface format is chosen from the adapter's capabilities (sRGB preferred).
-    /// Call [`Self::render`] to draw a frame; the swapchain present is automatic.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub fn new_surface(
-        hwnd: isize,
-        width: u32,
-        height: u32,
-        particle_cap: usize,
-    ) -> Result<Self, String> {
-        use raw_window_handle::{
-            RawDisplayHandle, RawWindowHandle, Win32WindowHandle, WindowsDisplayHandle,
-        };
-
-        // Create a DEDICATED instance/adapter/device for the surface renderer.
-        // The shared GPU context is optimised for compute (LLM inference) and its
-        // adapter may not support presentation to an HWND (e.g. Vulkan without a
-        // VkSurfaceKHR, or a compute-only adapter). A dedicated instance ensures
-        // the surface, adapter, and device are all from the same wgpu instance and
-        // the adapter is picked with surface compatibility.
-        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        desc.backends = wgpu::Backends::all();
-        let instance = wgpu::Instance::new(desc);
-
-        let win32_handle =
-            Win32WindowHandle::new(std::num::NonZeroIsize::new(hwnd).ok_or("invalid HWND (zero)")?);
-        let raw_window = RawWindowHandle::Win32(win32_handle);
-        let raw_display = RawDisplayHandle::Windows(WindowsDisplayHandle::new());
-
-        let surface = unsafe {
-            instance
-                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                    raw_display_handle: Some(raw_display),
-                    raw_window_handle: raw_window,
-                })
-                .map_err(|e| format!("create_surface from HWND: {e:?}"))?
-        };
-
-        // Request an adapter that supports the surface
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: Some(&surface),
-            ..Default::default()
-        }))
-        .map_err(|e| format!("Failed to find wgpu adapter for surface: {e}"))?;
-
-        let caps = surface.get_capabilities(&adapter);
-        if caps.formats.is_empty() {
-            return Err(format!(
-                "Surface supports no formats — adapter backend {:?} may not support presentation to HWND",
-                adapter.get_info().backend
-            ));
-        }
-        let format = caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(caps.formats[0]);
-
-        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("Webizen GPU Surface"),
-            required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits::downlevel_defaults(),
-            memory_hints: wgpu::MemoryHints::default(),
-            ..Default::default()
-        }))
-        .map_err(|e| format!("Failed to request device for surface: {e}"))?;
-
-        let device = Arc::new(device);
-        let queue = Arc::new(queue);
-
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format,
-            width: width.max(1),
-            height: height.max(1),
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: caps
-                .alpha_modes
-                .first()
-                .copied()
-                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-            // wgpu 30: surfaces declare their colour space; Auto preserves the
-            // pre-30 (implicit sRGB/linear-by-format) behaviour.
-            color_space: wgpu::SurfaceColorSpace::Auto,
-        };
-
-        surface.configure(&device, &config);
-
-        pollster::block_on(Self::from_device(
-            device,
-            queue,
-            width.max(1),
-            height.max(1),
-            format,
-            Some(surface),
-            Some(config),
-            particle_cap,
-        ))
-    }
-
-    /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
-    /// cannot block). Native callers use the `try_new` wrapper above.
-    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-    pub async fn try_new_async(
-        canvas: &web_sys::HtmlCanvasElement,
-        particle_cap: usize,
-    ) -> Result<Self, String> {
-        let width = canvas.width().max(1);
-        let height = canvas.height().max(1);
-
-        let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
-        let instance = wgpu::Instance::new(instance_desc);
-
-        let surface = instance
-            .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
-            .map_err(|e| format!("surface: {e}"))?;
-
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::LowPower,
-                compatible_surface: Some(&surface),
-                // `..Default::default()` covers force_fallback_adapter (false) and
-                // wgpu 30's apply_limit_buckets, and stays robust to future fields.
-                ..Default::default()
-            })
-            .await
-            .map_err(|e| format!("no WebGPU adapter: {e}"))?;
-
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                label: Some("qualia-portal-gpu"),
-                required_features: wgpu::Features::empty(),
-                // Request exactly the adapter's advertised limits. `Limits::default()`
-                // under wgpu 30 asks for desktop-tier limits that a browser WebGPU
-                // adapter does not grant, so `request_device` would fail device
-                // validation. `adapter.limits()` never over-requests and still preserves
-                // the non-zero storage-buffer limits the portal pipelines need (unlike
-                // `downlevel_webgl2_defaults`, which zeroes them and blacks out the view).
-                required_limits: adapter.limits(),
-                ..Default::default()
-            })
-            .await
-            .map_err(|e| format!("device: {e}"))?;
-
-        let caps = surface.get_capabilities(&adapter);
-        let format = caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| f.is_srgb())
-            .unwrap_or(caps.formats[0]);
-
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format,
-            width,
-            height,
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: caps.alpha_modes[0],
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-            // wgpu 30: Auto preserves pre-30 colour-space behaviour.
-            color_space: wgpu::SurfaceColorSpace::Auto,
-        };
-        surface.configure(&device, &config);
-
-        Self::from_device(
-            Arc::new(device),
-            Arc::new(queue),
-            width,
-            height,
-            format,
-            Some(surface),
-            Some(config),
-            particle_cap,
-        )
-        .await
-    }
-
-    async fn from_device(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
-        width: u32,
-        height: u32,
-        format: wgpu::TextureFormat,
-        surface: Option<wgpu::Surface<'static>>,
-        config: Option<wgpu::SurfaceConfiguration>,
-        particle_cap: usize,
-    ) -> Result<Self, String> {
-        let particle_count = particle_cap.clamp(256, MAX_AMBIENT_INSTANCES);
-
-        // Capture deferred pipeline/shader creation errors on both Dawn and native backends.
-        let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-
-        let (depth_texture, depth_view) = create_depth_texture(&device, width, height);
-        let (picking_texture, picking_view) = create_picking_texture(&device, width, height);
-        let offscreen_texture = if surface.is_none() {
-            Some(create_offscreen_texture(&device, format, width, height))
-        } else {
-            None
-        };
-        // Pre-create the offscreen texture view so the render loop doesn't
-        // call `create_view` every frame (VC3 zero-alloc).
-        let offscreen_view = offscreen_texture
-            .as_ref()
-            .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
-        // Uniform belt: pre-allocated pool of mapped staging buffers for
-        // zero-alloc uniform writes (VC3). 256 bytes covers all per-frame
-        // uniform structs (ambient ~16B, telemetry ~256B, camera ~96B,
-        // observer ~64B, model ~64B). Pool size 8 ensures we never wrap
-        // around within a single frame (5 writes per frame) — the oldest
-        // buffer's copy has completed by the time we wrap around.
-        let uniform_belt = uniform_belt::UniformBelt::new(&device, 256, 8);
-        let readback_bytes_per_row = padded_bytes_per_row(width);
-        let readback_buf = if surface.is_none() {
-            Some(create_readback_buffer(
-                &device,
-                readback_bytes_per_row,
-                height,
-            ))
-        } else {
-            None
-        };
-
-        let particles = generate_particles(particle_count);
-        let particle_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-particles"),
-            contents: bytemuck::cast_slice(&particles),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-ambient-uniforms"),
-            contents: bytemuck::bytes_of(&AmbientUniforms {
-                time: 0.0,
-                view_width: width as f32,
-                view_height: height as f32,
-                _padding: 0.0,
-            }),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let telemetry_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-telemetry"),
-            contents: bytemuck::bytes_of(&SystemTelemetry::default()),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let camera = CameraState::default();
-        let aspect = width as f32 / height.max(1) as f32;
-        let camera_uniform = camera.to_uniform(aspect, false);
-        let camera_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-camera"),
-            contents: bytemuck::bytes_of(&camera_uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let session_nonce = crate::render::standpoint::generate_session_nonce();
-        let observer = spectator_default(session_nonce);
-        let observer_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-observer"),
-            contents: bytemuck::bytes_of(&observer),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let ambient_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("portal-ambient"),
-            source: wgpu::ShaderSource::Wgsl(AMBIENT_WGSL.into()),
-        });
-
-        let projector_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("portal-projector"),
-            source: wgpu::ShaderSource::Wgsl(PROJECTOR_WGSL.into()),
-        });
-
-        let mesh_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("portal-mesh"),
-            source: wgpu::ShaderSource::Wgsl(MESH_WGSL.into()),
-        });
-
-        let ambient_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-ambient-layout"),
-                entries: &ambient_bind_entries(),
-            });
-
-        let ambient_bind_group = make_ambient_bind_group(
-            &device,
-            &ambient_bind_group_layout,
-            &uniform_buf,
-            &telemetry_buf,
-            &camera_buf,
-            &observer_buf,
-            &particle_buf,
-        );
-
-        let projector_camera_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-projector-camera-layout"),
-                entries: &[
-                    uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX),
-                    uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
-                ],
-            });
-
-        let projector_tensor_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("portal-projector-tensor-layout"),
-                entries: &[tensor_storage_bind_entry()],
-            });
-
-        let projector_camera_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("portal-projector-camera-bind"),
-            layout: &projector_camera_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: observer_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        let depth_state = depth_stencil_state(wgpu::TextureFormat::Depth32Float);
-
-        let ambient_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("portal-ambient-pipeline-layout"),
-                bind_group_layouts: &[Some(&ambient_bind_group_layout)],
-                immediate_size: 0,
-            });
-
-        let projector_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("portal-projector-pipeline-layout"),
-                bind_group_layouts: &[
-                    Some(&projector_camera_layout),
-                    Some(&projector_tensor_layout),
-                ],
-                immediate_size: 0,
-            });
-
-        let ambient_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("portal-ambient-pipeline"),
-            layout: Some(&ambient_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &ambient_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &ambient_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(color_target_state(format))],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_stencil_state_read_only()),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        let projector_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("portal-projector-pipeline"),
-            layout: Some(&projector_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &projector_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &projector_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(color_target_state(format))],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        // Per-artefact model transform (Phase 2 kinematic joint), group 1 of the mesh pipeline.
-        const IDENTITY_MAT4: [[f32; 4]; 4] = [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ];
-        let model_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("portal-mesh-model"),
-            contents: bytemuck::cast_slice(&IDENTITY_MAT4),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-        let mesh_model_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("portal-mesh-model-layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(64),
-                },
-                count: None,
-            }],
-        });
-        let mesh_model_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("portal-mesh-model-bind"),
-            layout: &mesh_model_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: model_buf.as_entire_binding(),
-            }],
-        });
-
-        // Triangle-mesh pipeline (Phase 1.2). Reuses the projector camera bind layout (mesh shader
-        // declares only camera@0, a valid subset); one f32x3 vertex buffer at slot 0; cull disabled
-        // (imported meshes carry inconsistent winding). HDR variant built in the bloom block below.
-        let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("portal-mesh-pipeline-layout"),
-            bind_group_layouts: &[Some(&projector_camera_layout), Some(&mesh_model_layout)],
-            immediate_size: 0,
-        });
-        let mesh_vertex_layout = wgpu::VertexBufferLayout {
-            array_stride: 12,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x3,
-                offset: 0,
-                shader_location: 0,
-            }],
-        };
-        let mesh_color_layout = wgpu::VertexBufferLayout {
-            array_stride: 16,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x4,
-                offset: 0,
-                shader_location: 1,
-            }],
-        };
-        let mesh_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("portal-mesh-pipeline"),
-            layout: Some(&mesh_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &mesh_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[
-                    Some(mesh_vertex_layout.clone()),
-                    Some(mesh_color_layout.clone()),
-                ],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &mesh_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(color_target_state(format))],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                cull_mode: None,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        let picking_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("portal-picking-pipeline"),
-            layout: Some(&projector_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &projector_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &projector_shader,
-                entry_point: Some("picking_fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(picking_color_target_state())],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        let pick_staging_size = padded_bytes_per_row(1) as u64;
-        let pick_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("portal-pick-staging"),
-            size: pick_staging_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let bloom_wanted = portal_bloom_enabled() && probe_hdr_format(&device);
-        let (ambient_pipeline_hdr, projector_pipeline_hdr, mesh_pipeline_hdr, bloom) =
-            if bloom_wanted {
-                let ambient_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("portal-ambient-hdr"),
-                    layout: Some(&ambient_pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &ambient_shader,
-                        entry_point: Some("vertex_main"),
-                        compilation_options: Default::default(),
-                        buffers: &[],
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &ambient_shader,
-                        entry_point: Some("fragment_main"),
-                        compilation_options: Default::default(),
-                        targets: &[Some(hdr_color_target_state())],
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(depth_stencil_state_read_only()),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-                let projector_hdr =
-                    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                        label: Some("portal-projector-hdr"),
-                        layout: Some(&projector_pipeline_layout),
-                        vertex: wgpu::VertexState {
-                            module: &projector_shader,
-                            entry_point: Some("vertex_main"),
-                            compilation_options: Default::default(),
-                            buffers: &[],
-                        },
-                        fragment: Some(wgpu::FragmentState {
-                            module: &projector_shader,
-                            entry_point: Some("fragment_main"),
-                            compilation_options: Default::default(),
-                            targets: &[Some(hdr_color_target_state())],
-                        }),
-                        primitive: wgpu::PrimitiveState {
-                            topology: wgpu::PrimitiveTopology::TriangleList,
-                            ..Default::default()
-                        },
-                        depth_stencil: Some(depth_state.clone()),
-                        multisample: wgpu::MultisampleState::default(),
-                        multiview_mask: None,
-                        cache: None,
-                    });
-                let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: Some("portal-mesh-hdr"),
-                    layout: Some(&mesh_pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &mesh_shader,
-                        entry_point: Some("vertex_main"),
-                        compilation_options: Default::default(),
-                        buffers: &[
-                            Some(mesh_vertex_layout.clone()),
-                            Some(mesh_color_layout.clone()),
-                        ],
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &mesh_shader,
-                        entry_point: Some("fragment_main"),
-                        compilation_options: Default::default(),
-                        targets: &[Some(hdr_color_target_state())],
-                    }),
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        cull_mode: None,
-                        ..Default::default()
-                    },
-                    depth_stencil: Some(depth_state.clone()),
-                    multisample: wgpu::MultisampleState::default(),
-                    multiview_mask: None,
-                    cache: None,
-                });
-                let bloom = create_bloom_chain(&device, width, height, format);
-                (
-                    Some(ambient_hdr),
-                    Some(projector_hdr),
-                    Some(mesh_hdr),
-                    bloom,
-                )
-            } else {
-                (None, None, None, None)
-            };
-
-        let mut render_bytes = (particle_count * std::mem::size_of::<ParticleInstance>()) as u64;
-        if let Some(ref chain) = bloom {
-            render_bytes += chain.vram_bytes;
-        }
-        global_vram_ledger().record_render(render_bytes);
-
-        // Surface otherwise-silent deferred pipeline/shader creation errors. Dawn (WebGPU) is far
-        // stricter than the native backends, so a pipeline that builds on desktop can be invalid in
-        // the browser and silently render nothing; log it instead of leaving a black viewport.
-        //
-        // On wasm we CANNOT await this pop under wgpu 30.0.0: `GPUDevice.popErrorScope()` resolves
-        // to `GPUError | null`, and on the (common) no-error path it returns JS `null`. wgpu's
-        // `future_pop_error_scope` feeds that through `JsOption::into_option()`, which — since
-        // wasm-bindgen 0.2.123 — treats `null` as a *present* value (only `undefined` is absent).
-        // So a null (no error) becomes `Some(null)`, wgpu calls `Error::from_js(null)`, and
-        // webgpu.rs:85 panics `"Unexpected error"`, aborting the module before the canvas ever
-        // renders. Dropping the guard still pops the scope (discarding any captured error) but
-        // never polls that buggy future, so it cannot panic. Tracked in
-        // docs/WGPU_UPSTREAM_TRACKING.md for a proper soft-fork of `future_pop_error_scope`.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let scope_err = error_scope.pop().await;
-            if let Some(err) = scope_err {
-                return Err(format!("renderer pipeline/shader creation failed: {err}"));
-            }
-        }
-        #[cfg(target_arch = "wasm32")]
-        drop(error_scope);
-
-        let emf_state = emf_pipeline::EmfState::new(&device, format);
-
-        Ok(Self {
-            device,
-            queue,
-            surface,
-            config,
-            offscreen_texture,
-            offscreen_view,
-            readback_buf,
-            readback_bytes_per_row,
-            color_format: format,
-            depth_texture,
-            depth_view,
-            picking_texture,
-            picking_view,
-            picking_pipeline,
-            pick_staging_buf,
-            pending_pick: None,
-            pick_copy_submitted: false,
-            pick_result: None,
-            ambient_pipeline,
-            projector_pipeline,
-            ambient_pipeline_hdr,
-            projector_pipeline_hdr,
-            mesh_pipeline,
-            mesh_pipeline_hdr,
-            mesh: None,
-            model_buf,
-            mesh_model_bind,
-            artefact_joint: None,
-            artefact_t0: None,
-            mesh_base_aabb: None,
-            artefact_world: None,
-            last_admitted: Motor::identity(),
-            last_refused: false,
-            bloom,
-            ambient_bind_group_layout,
-            ambient_bind_group,
-            projector_camera_layout,
-            projector_tensor_layout,
-            projector_camera_bind,
-            projector_tensor_bind: None,
-            uniform_buf,
-            telemetry_buf,
-            camera_buf,
-            observer_buf,
-            camera,
-            observer,
-            particle_buf,
-            tensor_raw_buf: None,
-            tensor_node_count: 0,
-            particle_count: particle_count as u32,
-            ambient_enabled: false,
-            compute: compute::ComputeState::new(),
-            emf: emf_state,
-            uniform_belt,
-            width,
-            height,
-        })
-    }
-
-    /// Enable/disable the ambient particle field draw. Off by default (a plain mesh/anatomy view has
-    /// no use for the decorative random cloud); a Tensor10D upload turns it on since the particles then
-    /// encode epistemic nodes. The mixer's "ambient" channel drives this.
-    pub fn set_ambient_enabled(&mut self, on: bool) {
-        self.ambient_enabled = on;
-    }
-
-    pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
-        let (header, _) =
-            crate::tensor::buffer_export::parse_header(bytes).map_err(|e| e.to_string())?;
-        let count = header.node_count;
-        if count == 0 {
-            return Ok(0);
-        }
-
-        let particles = particles_from_tensor(bytes, MAX_AMBIENT_INSTANCES)?;
-        let instance_count = particles.len() as u32;
-
-        let particle_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-tensor-particles"),
-                contents: bytemuck::cast_slice(&particles),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            });
-
-        // Upload the SOA *body* only (skip the 32-byte header). WebGPU requires storage-buffer
-        // binding offsets to be a multiple of minStorageBufferOffsetAlignment (256), so we cannot
-        // bind at offset 32 the way native backends allow — start the buffer at the first record
-        // and bind at offset 0.
-        let body = bytes
-            .get(TENSOR_HEADER_BYTES..)
-            .ok_or_else(|| "tensor buffer shorter than header".to_string())?;
-        let tensor_raw_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-tensor-raw-soa"),
-                contents: body,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            });
-
-        self.ambient_bind_group = make_ambient_bind_group(
-            &self.device,
-            &self.ambient_bind_group_layout,
-            &self.uniform_buf,
-            &self.telemetry_buf,
-            &self.camera_buf,
-            &self.observer_buf,
-            &particle_buf,
-        );
-
-        self.projector_camera_bind = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("portal-projector-camera-bind"),
-            layout: &self.projector_camera_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.camera_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.observer_buf.as_entire_binding(),
-                },
-            ],
-        });
-
-        self.projector_tensor_bind = Some(make_projector_tensor_bind_group(
-            &self.device,
-            &self.projector_tensor_layout,
-            &tensor_raw_buf,
-            count,
-        )?);
-
-        let particle_bytes = (particles.len() * std::mem::size_of::<ParticleInstance>()) as u64;
-        global_vram_ledger().record_render(particle_bytes);
-        global_vram_ledger().record_tensor(bytes.len() as u64);
-
-        self.particle_buf = particle_buf;
-        self.tensor_raw_buf = Some(tensor_raw_buf);
-        self.tensor_node_count = count;
-        self.particle_count = instance_count.max(1);
-        // The particle field now carries real tensor nodes (not the decorative random cloud) — show it.
-        self.ambient_enabled = true;
-
-        Ok(count)
-    }
-
-    pub fn tensor_node_count(&self) -> u32 {
-        self.tensor_node_count
-    }
-
-    /// Drive the loaded mesh by a kinematic joint (Phase 2). `None` freezes it at identity.
-    pub fn set_artefact_joint(&mut self, joint: Option<Joint>) {
-        self.artefact_joint = joint;
-        self.artefact_t0 = None; // re-engage from rest: the slide/spin starts at elapsed t = 0
-        self.last_admitted = Motor::identity();
-        self.last_refused = false;
-    }
-
-    /// Constrain the artefact to a world bound; a joint pose that would leave it is refused
-    /// (the artefact holds at the last admitted pose). `None` = unconstrained.
-    pub fn set_artefact_world(&mut self, world: Option<Aabb>) {
-        self.artefact_world = world;
-    }
-
-    /// Whether last frame's proposed joint pose was deterministically refused (clamped at the bound).
-    pub fn artefact_refused(&self) -> bool {
-        self.last_refused
-    }
-
-    /// Resolve this frame's per-artefact model transform: the joint pose at `time`, gated through
-    /// the admission policy (refuse out-of-world → hold the last admitted pose), then write it.
-    fn update_model(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
-        let proposed = match self.artefact_joint {
-            // Drive by *elapsed* time since the joint was engaged, not absolute sim-time, so a slide
-            // always starts from rest when armed (the t0 is latched on this first post-arm frame).
-            Some(j) => {
-                let t0 = *self.artefact_t0.get_or_insert(time);
-                j.motor_at(time - t0)
-            }
-            None => Motor::identity(),
-        };
-        let motor = match (self.mesh_base_aabb, self.artefact_world) {
-            (Some(base), Some(world)) => {
-                match Admission::new(0.0, Some(world)).admit(&base, proposed, [1.0, 1.0, 1.0]) {
-                    Ok(_) => {
-                        self.last_refused = false;
-                        self.last_admitted = proposed;
-                        proposed
-                    }
-                    Err(_) => {
-                        self.last_refused = true;
-                        self.last_admitted // deterministic refusal: hold at the boundary
-                    }
-                }
-            }
-            _ => {
-                self.last_refused = false;
-                proposed
-            }
-        };
-        let model = motor_to_mat4_col(motor);
-        // VC3: Use UniformBelt for zero-alloc buffer writes.
-        let bytes = bytemuck::cast_slice(&model);
-        self.uniform_belt.write_and_unmap(bytes);
-        self.uniform_belt.record_copy(encoder, &self.model_buf, 0);
-        self.uniform_belt.advance(&self.device);
-    }
-
-    pub fn has_tensor_buffer(&self) -> bool {
-        self.tensor_raw_buf.is_some()
-    }
-
-    /// Upload an imported triangle mesh (Phase 1.2). `positions` are model-space `f32x3` (the caller
-    /// centres + scales them to the orbit frame); `indices` is a flat triangle list (`tris * 3`).
-    /// Returns the triangle count; clears any prior mesh when empty.
-    pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
-        self.upload_mesh_colored(positions, &[], indices)
-    }
-
-    /// Upload a triangle mesh with per-vertex linear RGBA colours. When `colors` is empty the
-    /// engine's neutral blue-grey material is used; any non-empty slice must match `positions`.
-    pub fn upload_mesh_colored(
-        &mut self,
-        positions: &[[f32; 3]],
-        colors: &[[f32; 4]],
-        indices: &[u32],
-    ) -> u32 {
-        if positions.is_empty() || indices.len() < 3 {
-            self.mesh = None;
-            return 0;
-        }
-        if !colors.is_empty() && colors.len() != positions.len() {
-            self.mesh = None;
-            return 0;
-        }
-        let default_colors;
-        let colors = if colors.is_empty() {
-            default_colors = vec![[0.50, 0.60, 0.82, 1.0]; positions.len()];
-            default_colors.as_slice()
-        } else {
-            colors
-        };
-        let vertex_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-verts"),
-                contents: bytemuck::cast_slice(positions),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
-        let color_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-colors"),
-                contents: bytemuck::cast_slice(colors),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
-        let index_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-indices"),
-                contents: bytemuck::cast_slice(indices),
-                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            });
-        let index_count = indices.len() as u32;
-        self.mesh = Some(MeshGpu {
-            vertex_buf,
-            color_buf,
-            index_buf,
-            index_count,
-        });
-        self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
-        self.last_admitted = Motor::identity();
-        self.last_refused = false;
-        index_count / 3
-    }
-
-    /// Whether a mesh surface is resident.
-    pub fn has_mesh(&self) -> bool {
-        self.mesh.is_some()
-    }
-
-    pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
-        self.camera = CameraState { yaw, pitch, zoom }.clamped();
-    }
-
-    pub fn set_standpoint(&mut self, observer: ObserverStandpoint) {
-        self.observer = observer;
-    }
-
-    pub fn observer_standpoint(&self) -> ObserverStandpoint {
-        self.observer
-    }
-
-    pub fn camera_state(&self) -> CameraState {
-        self.camera
-    }
-
-    /// Configured surface/depth size. The swapchain texture follows the canvas backing store,
-    /// so callers compare this to `canvas.width()/height()` and `resize()` on divergence —
-    /// otherwise color and depth attachments mismatch and the render pass fails validation.
-    pub fn surface_size(&self) -> (u32, u32) {
-        (self.width, self.height)
-    }
-
-    /// Access the shared GPU device (test/diagnostic helper).
-    pub fn device(&self) -> &wgpu::Device {
-        &self.device
-    }
-
-    /// Access the shared GPU queue (test/diagnostic helper).
-    pub fn queue(&self) -> &wgpu::Queue {
-        &self.queue
-    }
-
-    // VC3 test helpers — expose uniform belt internals for allocation measurement.
     #[cfg(test)]
+    /// Writes `data` to the uniform belt and unmaps.
     pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
         self.uniform_belt.write_and_unmap(data);
     }
     #[cfg(test)]
+    /// Records a belt copy.
     pub(crate) fn uniform_belt_record_copy(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::Buffer,
-        offset: wgpu::BufferAddress,
+        encoder: &mut etalon::CommandEncoder,
+        target: &etalon::Buffer,
+        offset: etalon::BufferAddress,
     ) {
         self.uniform_belt.record_copy(encoder, target, offset);
     }
     #[cfg(test)]
+    /// Advances the belt write head.
     pub(crate) fn uniform_belt_advance(&mut self) {
         self.uniform_belt.advance(&self.device);
     }
     #[cfg(test)]
-    pub(crate) fn uniform_buf_test(&self) -> wgpu::Buffer {
+    /// Uniform buffer for tests.
+    pub(crate) fn uniform_buf_test(&self) -> etalon::Buffer {
         self.uniform_buf.clone()
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
+    /// Resizes to `width`×`height`.
+    pub fn resize(&mut self, width: u32, height: u32) -> Result<(u32, u32), String> {
+        self.pick_readback.invalidate(false);
+        self.pick_semantic_result = None;
         if width == 0 || height == 0 {
-            return;
+            return Ok((self.width, self.height));
         }
-        self.width = width;
-        self.height = height;
+        let offscreen = self.surface.is_none();
+        let (width, height, frame_target_reservation, readback_staging_reservation) =
+            reserve_view_resources(width, height, offscreen)?;
+        let mut next_offscreen_texture = None;
+        let mut next_offscreen_view = None;
+        let mut next_readback_buf = None;
+        let mut next_readback_bytes_per_row = self.readback_bytes_per_row;
+        if offscreen {
+            let texture = create_offscreen_texture(&self.device, self.color_format, width, height);
+            next_offscreen_view =
+                Some(texture.create_view(&etalon::TextureViewDescriptor::default()));
+            next_offscreen_texture = Some(texture);
+            next_readback_bytes_per_row = checked_padded_bytes_per_row(width)
+                .ok_or_else(|| format!("readback row pitch overflow for width {width}"))?;
+            next_readback_buf = Some(create_readback_buffer(
+                &self.device,
+                next_readback_bytes_per_row,
+                height,
+            ));
+        }
+        let temporal_was_enabled = self.temporal_resolve.take().is_some();
+        self.temporal_producers.take();
+        self.scene_depth.replace(&self.device, width, height);
+        if temporal_was_enabled {
+            self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
+                &self.device,
+                width,
+                height,
+                self.color_format,
+                self.color_format,
+            );
+            self.temporal_producers = self.temporal_resolve.as_ref().and_then(|_| {
+                temporal_producers_gpu::TemporalProducersGpu::try_new(
+                    &self.device,
+                    self.scene_depth.view(),
+                    width,
+                    height,
+                )
+            });
+        }
+        let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
         if let (Some(surface), Some(config)) = (self.surface.as_ref(), self.config.as_mut()) {
             config.width = width;
             config.height = height;
             surface.configure(&self.device, config);
-        } else {
-            self.offscreen_texture = Some(create_offscreen_texture(
-                &self.device,
-                self.color_format,
-                width,
-                height,
-            ));
-            // Invalidate cached view — it belongs to the old texture.
-            self.offscreen_view = self
-                .offscreen_texture
-                .as_ref()
-                .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
-            self.readback_bytes_per_row = padded_bytes_per_row(width);
-            self.readback_buf = Some(create_readback_buffer(
-                &self.device,
-                self.readback_bytes_per_row,
-                height,
-            ));
         }
-        let (depth_texture, depth_view) = create_depth_texture(&self.device, width, height);
-        let (picking_texture, picking_view) = create_picking_texture(&self.device, width, height);
-        self.depth_texture = depth_texture;
-        self.depth_view = depth_view;
+        self.width = width;
+        self.height = height;
+        if offscreen {
+            self.offscreen_texture = next_offscreen_texture;
+            self.offscreen_view = next_offscreen_view;
+            self.readback_bytes_per_row = next_readback_bytes_per_row;
+            self.readback_buf = next_readback_buf;
+            self._readback_staging_reservation = readback_staging_reservation;
+        }
         self.picking_texture = picking_texture;
         self.picking_view = picking_view;
+        self._frame_target_reservation = frame_target_reservation;
+        self.temporal_reset_pending = true;
+        self.previous_camera_view_projection = None;
+        self.rebuild_ao_resources();
         self.sync_bloom_targets();
+        Ok((width, height))
     }
 
-    /// Reconcile HDR bloom textures with current `VramLedger` operational mode.
+    /// Reconcile the HDR bloom or portable SDR output chain with current budgets and policy.
     pub fn sync_bloom_targets(&mut self) {
-        if portal_bloom_enabled() && probe_hdr_format(&self.device) {
-            let bloom =
-                create_bloom_chain(&self.device, self.width, self.height, self.color_format);
+        let bloom_wanted = portal_bloom_enabled() && probe_hdr_format(&self.device);
+        if bloom_wanted {
+            if let Some(ref bloom) = self.bloom {
+                if bloom.hdr_extent() == (self.width, self.height) {
+                    self.output_chain = None;
+                    self.bloom_policy_snapshot = portal_bloom_enabled();
+                    return;
+                }
+            }
+        } else if let Some(ref output) = self.output_chain {
+            if output.extent() == (self.width, self.height) {
+                self.bloom = None;
+                self.bloom_policy_snapshot = portal_bloom_enabled();
+                return;
+            }
+        }
+
+        // Release the alternate path before admitting the replacement. If the
+        // preferred path does not fit, construct the SDR output path below.
+        self.output_chain = None;
+        if bloom_wanted {
+            let mut bloom = create_bloom_chain(
+                &self.device,
+                self.width,
+                self.height,
+                self.color_format,
+                self.hdr_exposure_ev,
+            );
+            if let Some(chain) = bloom.as_mut() {
+                chain.white_balance_gains = self.white_balance_gains;
+            }
             if let Some(ref chain) = bloom {
                 let (hw, hh) = chain.hdr_extent();
                 let (bw, bh) = chain.blur_extent();
@@ -1262,485 +639,33 @@ impl PortalGpu {
                 debug_assert_eq!(bh, (self.height / 2).max(1));
                 let _ = chain.texture_handles();
             }
-            let bloom_bytes = bloom.as_ref().map(|b| b.vram_bytes).unwrap_or(0);
-            let particle_bytes =
-                (self.particle_count as usize * std::mem::size_of::<ParticleInstance>()) as u64;
-            global_vram_ledger().record_render(particle_bytes + bloom_bytes);
-            self.bloom = bloom;
-        } else {
-            let particle_bytes =
-                (self.particle_count as usize * std::mem::size_of::<ParticleInstance>()) as u64;
-            global_vram_ledger().record_render(particle_bytes);
-            self.bloom = None;
-        }
-    }
-
-    fn write_camera_uniform(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
-        let aspect = self.width as f32 / self.height.max(1) as f32;
-        let mut uniform = self
-            .camera
-            .to_uniform(aspect, self.tensor_raw_buf.is_some());
-        uniform._padding[0] = time;
-        // VC3: Use UniformBelt for zero-alloc buffer writes.
-        let bytes = bytemuck::bytes_of(&uniform);
-        self.uniform_belt.write_and_unmap(bytes);
-        self.uniform_belt.record_copy(encoder, &self.camera_buf, 0);
-        self.uniform_belt.advance(&self.device);
-    }
-
-    fn write_observer_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
-        // VC3: Use UniformBelt for zero-alloc buffer writes.
-        let bytes = bytemuck::bytes_of(&self.observer);
-        self.uniform_belt.write_and_unmap(bytes);
-        self.uniform_belt
-            .record_copy(encoder, &self.observer_buf, 0);
-        self.uniform_belt.advance(&self.device);
-    }
-
-    pub fn queue_pick(&mut self, x: f32, y: f32) {
-        let px = x.round().max(0.0) as u32;
-        let py = y.round().max(0.0) as u32;
-        self.pending_pick = Some((
-            px.min(self.width.saturating_sub(1)),
-            py.min(self.height.saturating_sub(1)),
-        ));
-        self.pick_copy_submitted = false;
-        self.pick_result = None;
-    }
-
-    pub fn poll_pick_readback(&mut self) -> Option<u32> {
-        if let Some(idx) = self.pick_result.take() {
-            return Some(idx);
-        }
-        if !self.pick_copy_submitted {
-            return None;
-        }
-        let slice = self.pick_staging_buf.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-        if !matches!(rx.try_recv(), Ok(Ok(()))) {
-            return None;
-        }
-        let mapped = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
-        let raw = if mapped.len() >= 4 {
-            Some(u32::from_le_bytes(mapped[0..4].try_into().unwrap()))
-        } else {
-            None
-        };
-        drop(mapped);
-        self.pick_staging_buf.unmap();
-        self.pick_copy_submitted = false;
-        raw.filter(|&id| id != PICK_SENTINEL)
-    }
-
-    fn record_picking_pass(&self, encoder: &mut wgpu::CommandEncoder) {
-        let Some(tensor_bind) = self.projector_tensor_bind.as_ref() else {
-            return;
-        };
-        let count = self.tensor_node_count;
-        if count == 0 {
-            return;
-        }
-
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("portal-picking-pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &self.picking_view,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: PICK_SENTINEL as f64,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
-                    }),
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &self.depth_view,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Store,
-                }),
-                stencil_ops: None,
-            }),
-            occlusion_query_set: None,
-            multiview_mask: None,
-            timestamp_writes: None,
-        });
-        pass.set_pipeline(&self.picking_pipeline);
-        pass.set_bind_group(0, &self.projector_camera_bind, &[]);
-        pass.set_bind_group(1, tensor_bind, &[]);
-        pass.draw(0..6, 0..count);
-    }
-
-    fn record_pick_copy(&mut self, encoder: &mut wgpu::CommandEncoder) {
-        let Some((px, py)) = self.pending_pick.take() else {
-            return;
-        };
-        let py = self.height.saturating_sub(1) - py;
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture: &self.picking_texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d { x: px, y: py, z: 0 },
-                aspect: wgpu::TextureAspect::All,
-            },
-            wgpu::TexelCopyBufferInfo {
-                buffer: &self.pick_staging_buf,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(padded_bytes_per_row(1)),
-                    rows_per_image: Some(1),
-                },
-            },
-            wgpu::Extent3d {
-                width: 1,
-                height: 1,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.pick_copy_submitted = true;
-    }
-
-    pub fn render(&mut self, time: f32, telemetry: &SystemTelemetry) -> Result<(), String> {
-        // Create the command encoder first — the uniform belt records copy
-        // commands into it, so it must exist before any uniform writes.
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("portal-viewport-encoder"),
-            });
-
-        // VC3: Write all per-frame uniforms through the pre-allocated
-        // uniform belt (zero-alloc after warmup). Each write:
-        // 1. Get mapped view from belt
-        // 2. Copy uniform data into it
-        // 3. Drop view (unmaps buffer)
-        // 4. Record copy command into encoder
-        // 5. Advance belt to next slot (re-maps oldest slot)
-        let uniforms = AmbientUniforms {
-            time,
-            view_width: self.width as f32,
-            view_height: self.height as f32,
-            _padding: 0.0,
-        };
-        {
-            let bytes = bytemuck::bytes_of(&uniforms);
-            self.uniform_belt.write_and_unmap(bytes);
-        }
-        self.uniform_belt
-            .record_copy(&mut encoder, &self.uniform_buf, 0);
-        self.uniform_belt.advance(&self.device);
-
-        {
-            let bytes = bytemuck::bytes_of(telemetry);
-            self.uniform_belt.write_and_unmap(bytes);
-        }
-        self.uniform_belt
-            .record_copy(&mut encoder, &self.telemetry_buf, 0);
-        self.uniform_belt.advance(&self.device);
-
-        self.write_camera_uniform(&mut encoder, time);
-        self.write_observer_uniform(&mut encoder);
-        self.update_model(&mut encoder, time);
-
-        // A browser target acquires a swapchain frame; a native/headless target keeps a reusable
-        // COPY_SRC texture. The draw graph below is identical for both.
-        let surface_frame = if let Some(surface) = self.surface.as_ref() {
-            match surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(t)
-                | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Some(t),
-                other => return Err(format!("surface frame unavailable: {other:?}")),
-            }
-        } else {
-            None
-        };
-
-        // On the web backend the swapchain texture tracks the canvas backing store, which can
-        // diverge from the size our depth/picking/bloom targets were built at (device-pixel ratio,
-        // layout settle, a ResizeObserver resizing in CSS pixels without a matching `resize()`).
-        // A depth attachment whose dimensions don't match the colour attachment fails render-pass
-        // validation, the whole frame is dropped, and the viewport stays black. Reconcile every
-        // attachment to the *actual* acquired texture before recording any pass.
-        if let Some(frame) = surface_frame.as_ref() {
-            let fw = frame.texture.width();
-            let fh = frame.texture.height();
-            if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
-                self.width = fw;
-                self.height = fh;
-                if let Some(config) = self.config.as_mut() {
-                    config.width = fw;
-                    config.height = fh;
-                }
-                let (depth_texture, depth_view) = create_depth_texture(&self.device, fw, fh);
-                let (picking_texture, picking_view) = create_picking_texture(&self.device, fw, fh);
-                self.depth_texture = depth_texture;
-                self.depth_view = depth_view;
-                self.picking_texture = picking_texture;
-                self.picking_view = picking_view;
-                self.sync_bloom_targets();
-                self.write_camera_uniform(&mut encoder, time);
+            if bloom.is_some() {
+                self.bloom = bloom;
+                self.bloom_policy_snapshot = portal_bloom_enabled();
+                return;
             }
         }
 
-        let view = if let Some(frame) = surface_frame.as_ref() {
-            // Surface textures are acquired per-frame; we must create a view.
-            // (Offscreen views are cached — see below.)
-            frame
-                .texture
-                .create_view(&wgpu::TextureViewDescriptor::default())
-        } else {
-            // VC3: Use cached offscreen view instead of create_view per frame.
-            self.offscreen_view
-                .clone()
-                .or_else(|| {
-                    // Lazily create the view if it was invalidated (e.g. resize).
-                    let v = self
-                        .offscreen_texture
-                        .as_ref()?
-                        .create_view(&wgpu::TextureViewDescriptor::default());
-                    self.offscreen_view = Some(v.clone());
-                    Some(v)
-                })
-                .ok_or_else(|| "renderer has no output target".to_string())?
-        };
-
-        self.record_picking_pass(&mut encoder);
-
-        let use_bloom = self.bloom.is_some()
-            && self.ambient_pipeline_hdr.is_some()
+        self.bloom = None;
+        let hdr_scene = self.ambient_pipeline_hdr.is_some()
             && self.projector_pipeline_hdr.is_some()
-            && portal_bloom_enabled();
-
-        if use_bloom {
-            let bloom = self.bloom.as_ref().expect("bloom chain");
-            let ambient_hdr = self.ambient_pipeline_hdr.as_ref().expect("ambient hdr");
-            let projector_hdr = self.projector_pipeline_hdr.as_ref().expect("projector hdr");
-            let mesh_hdr = self.mesh_pipeline_hdr.as_ref();
-
-            {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("portal-hdr-scene"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &bloom.hdr_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                        view: &self.depth_view,
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: wgpu::StoreOp::Store,
-                        }),
-                        stencil_ops: None,
-                    }),
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                    timestamp_writes: None,
-                });
-
-                if let (Some(mesh), Some(mesh_pipe)) = (self.mesh.as_ref(), mesh_hdr) {
-                    pass.set_pipeline(mesh_pipe);
-                    pass.set_bind_group(0, &self.projector_camera_bind, &[]);
-                    pass.set_bind_group(1, &self.mesh_model_bind, &[]);
-                    pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
-                    pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
-                    pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
-                    pass.draw_indexed(0..mesh.index_count, 0, 0..1);
-                }
-
-                if let (Some(tensor_bind), count) =
-                    (self.projector_tensor_bind.as_ref(), self.tensor_node_count)
-                {
-                    if count > 0 {
-                        pass.set_pipeline(projector_hdr);
-                        pass.set_bind_group(0, &self.projector_camera_bind, &[]);
-                        pass.set_bind_group(1, tensor_bind, &[]);
-                        pass.draw(0..6, 0..count);
-                    }
-                }
-
-                pass.set_pipeline(ambient_hdr);
-                pass.set_bind_group(0, &self.ambient_bind_group, &[]);
-                let ambient_draw = ambient_draw_instances(self.particle_count);
-                if self.ambient_enabled && ambient_draw > 0 {
-                    pass.draw(0..6, 0..ambient_draw);
-                }
-            }
-
-            run_bloom_passes(&mut encoder, bloom, &self.queue, &self.device, &view);
-        } else {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("portal-phenomenal-pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.03,
-                            g: 0.05,
-                            b: 0.08,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                occlusion_query_set: None,
-                multiview_mask: None,
-                timestamp_writes: None,
-            });
-
-            if let Some(mesh) = self.mesh.as_ref() {
-                pass.set_pipeline(&self.mesh_pipeline);
-                pass.set_bind_group(0, &self.projector_camera_bind, &[]);
-                pass.set_bind_group(1, &self.mesh_model_bind, &[]);
-                pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
-                pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
-                pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
-                pass.draw_indexed(0..mesh.index_count, 0, 0..1);
-            }
-
-            if let (Some(tensor_bind), count) =
-                (self.projector_tensor_bind.as_ref(), self.tensor_node_count)
-            {
-                if count > 0 {
-                    pass.set_pipeline(&self.projector_pipeline);
-                    pass.set_bind_group(0, &self.projector_camera_bind, &[]);
-                    pass.set_bind_group(1, tensor_bind, &[]);
-                    pass.draw(0..6, 0..count);
-                }
-            }
-
-            pass.set_pipeline(&self.ambient_pipeline);
-            pass.set_bind_group(0, &self.ambient_bind_group, &[]);
-            let ambient_draw = ambient_draw_instances(self.particle_count);
-            if self.ambient_enabled && ambient_draw > 0 {
-                pass.draw(0..6, 0..ambient_draw);
-            }
-        }
-
-        self.record_pick_copy(&mut encoder);
-
-        // VC3: Submit the command buffer. The uniform belt's copy commands
-        // are already recorded in the encoder. The belt's advance() calls
-        // have already re-mapped the oldest slots for the next frame.
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        if let Some(frame) = surface_frame {
-            // wgpu 30: SurfaceTexture::present() removed → Queue::present(frame).
-            self.queue.present(frame);
-        }
-        Ok(())
-    }
-
-    /// Number of bytes required by [`Self::read_rgba8_into`].
-    pub fn required_rgba8_bytes(&self) -> usize {
-        self.width as usize * self.height as usize * 4
-    }
-
-    /// Read the most recently rendered native offscreen frame into tightly packed RGBA8 bytes.
-    ///
-    /// This is deliberately caller-buffered: no `Vec` is created in the renderer. Browser surface
-    /// instances return an error because their swapchain images are presented, not retained.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn read_rgba8_into(&self, out: &mut [u8]) -> Result<usize, String> {
-        let need = self.required_rgba8_bytes();
-        if out.len() < need {
-            return Err(format!(
-                "RGBA8 output buffer too small: need {need}, got {}",
-                out.len()
-            ));
-        }
-        let texture = self
-            .offscreen_texture
-            .as_ref()
-            .ok_or_else(|| "RGBA8 readback requires an offscreen renderer".to_string())?;
-        let staging = self
-            .readback_buf
-            .as_ref()
-            .ok_or_else(|| "offscreen readback buffer is unavailable".to_string())?;
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("qualia-render-readback-encoder"),
-            });
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
+            && self.sky_pipeline_hdr.is_some()
+            && self.mesh_pipeline_hdr.is_some();
+        self.output_chain = output_pass::OutputChain::try_new(
+            &self.device,
+            self.width,
+            self.height,
+            if hdr_scene {
+                HDR_FORMAT
+            } else {
+                self.color_format
             },
-            wgpu::TexelCopyBufferInfo {
-                buffer: staging,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(self.readback_bytes_per_row),
-                    rows_per_image: Some(self.height),
-                },
-            },
-            wgpu::Extent3d {
-                width: self.width,
-                height: self.height,
-                depth_or_array_layers: 1,
-            },
+            self.color_format,
+            self.hdr_exposure_ev,
+            hdr_scene,
+            self.white_balance_gains,
         );
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        let slice = staging.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-        rx.recv()
-            .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
-            .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;
-
-        let mapped = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
-        let tight_row = self.width as usize * 4;
-        let padded_row = self.readback_bytes_per_row as usize;
-        for row in 0..self.height as usize {
-            let src = &mapped[row * padded_row..row * padded_row + tight_row];
-            let dst = &mut out[row * tight_row..(row + 1) * tight_row];
-            dst.copy_from_slice(src);
-        }
-        drop(mapped);
-        staging.unmap();
-        Ok(need)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn read_rgba8_into(&self, _out: &mut [u8]) -> Result<usize, String> {
-        Err("Synchronous RGBA8 readback is not supported on wasm32 targets".to_string())
-    }
-
-    pub fn particle_count(&self) -> u32 {
-        self.particle_count
+        self.bloom_policy_snapshot = portal_bloom_enabled();
     }
 }
 
@@ -1748,73 +673,50 @@ impl PortalGpu {
 mod bloom;
 mod compute;
 mod emf_pipeline;
+#[cfg(target_arch = "wasm32")]
+mod emf_present;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_device;
 mod particles;
+mod portal_gpu;
 mod resources;
 mod uniform_belt;
 
+/// Maximum ordered material draws admitted for one resident mesh in the portable renderer.
+pub const MAX_GPU_MATERIAL_DRAWS: usize = 65_536;
+
 use bloom::*;
 pub use compute::{ComputeBinding, ComputeBufferKind};
-pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
+pub use emf_pipeline::{
+    checked_field_bytes, checked_grid_cell_count, emf_cells_from_loaded,
+    emf_field_cell_from_display, emf_field_cell_from_optical, emf_field_cell_from_record64,
+    evaluate_display_slice_rgba8, full_spectrum_sigma_to_linear_rgb, EmfFieldCell, EmfPipeline,
+    EmfPipelineDesc, EmfSliceUniform, EMF_VOLUMETRIC_WGSL,
+};
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
-    use super::*;
-    use crate::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
-    use crate::tensor::Tensor10D;
+#[path = "picking_tests.rs"]
+mod picking_tests;
 
-    #[test]
-    fn offscreen_size_contract_is_caller_buffered() {
-        assert_eq!(padded_bytes_per_row(1), wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
-        assert_eq!(padded_bytes_per_row(64), 256);
-        assert_eq!(padded_bytes_per_row(65), 512);
-    }
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "mesh_pixel_tests.rs"]
+mod mesh_pixel_tests;
 
-    #[test]
-    #[serial_test::serial(gpu)]
-    fn native_offscreen_renders_tensor_and_mesh_on_shared_gpu() {
-        if !crate::wgsl_forge::test_gpu_available() {
-            return;
-        }
-        let mut renderer =
-            PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "material_pixel_tests.rs"]
+mod material_pixel_tests;
 
-        let tensors = [
-            Tensor10D::ground_truth(0.0, 0.0, -0.35, 0.0, 0.0, 0.0, 1.0, 0.0, 0.2),
-            Tensor10D::ground_truth(0.0, 0.0, 0.35, 0.0, 0.1, 0.0, 1.0, 0.0, 0.8),
-        ];
-        let mut tensor_bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut tensor_bytes).expect("tensor export");
-        assert_eq!(
-            renderer
-                .upload_tensor_buffer(&tensor_bytes)
-                .expect("tensor upload"),
-            2
-        );
-        assert_eq!(
-            renderer.upload_mesh(
-                &[[-0.6, -0.5, 0.2], [0.6, -0.5, 0.2], [0.0, 0.6, 0.2]],
-                &[0, 1, 2],
-            ),
-            1
-        );
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "material_pixel_portal_tests.rs"]
+mod material_pixel_portal_tests;
 
-        renderer
-            .render(0.25, &SystemTelemetry::default())
-            .expect("offscreen draw");
-        let mut rgba = vec![0u8; renderer.required_rgba8_bytes()];
-        assert_eq!(
-            renderer
-                .read_rgba8_into(&mut rgba)
-                .expect("offscreen readback"),
-            rgba.len()
-        );
-        assert!(
-            rgba.chunks_exact(4)
-                .any(|px| px != [8, 13, 20, 255] && px[3] != 0),
-            "expected projected tensor, mesh, or ambient pixels over the clear colour"
-        );
-    }
-}
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "environment_probe_pixel_tests.rs"]
+mod environment_probe_pixel_tests;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "water_pixel_tests.rs"]
+mod water_pixel_tests;

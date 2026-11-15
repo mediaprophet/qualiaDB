@@ -132,6 +132,7 @@ pub fn load_model(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Loads `model`.
 pub fn load_model(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Inference.load_model"))
 }
@@ -148,6 +149,7 @@ pub fn unload_model(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// `?::unload_model`.
 pub fn unload_model(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Inference.unload_model"))
 }
@@ -187,6 +189,7 @@ pub fn run_transformer(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Runs `transformer`.
 pub fn run_transformer(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Inference.run_transformer"))
 }

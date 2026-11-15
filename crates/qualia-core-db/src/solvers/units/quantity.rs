@@ -14,6 +14,7 @@ pub struct Quantity {
 }
 
 impl Quantity {
+    /// Creates a default `Quantity`.
     pub const fn new(value: f64, dimension: Dimension) -> Self {
         Self { value, dimension }
     }

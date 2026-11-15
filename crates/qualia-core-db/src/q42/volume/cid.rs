@@ -24,6 +24,7 @@ impl CidSha256 {
     pub const RAW: u64 = 0x55;
     pub const DAG_PB: u64 = 0x70;
 
+    /// Parses a CID text form; `io` error on malformed input.
     pub fn parse(text: &str) -> io::Result<Self> {
         let text = text.trim();
         if text.is_empty() {
@@ -43,6 +44,7 @@ impl CidSha256 {
         ))
     }
 
+    /// Computes the CID for a raw block.
     pub fn for_raw_block(block: &[u8]) -> Self {
         Self {
             version: 1,
@@ -51,6 +53,7 @@ impl CidSha256 {
         }
     }
 
+    /// Verifies `block` matches this CID; error on mismatch.
     pub fn verify_block(&self, block: &[u8]) -> io::Result<()> {
         let actual = sha256(block);
         if actual != self.digest {
@@ -59,6 +62,7 @@ impl CidSha256 {
         Ok(())
     }
 
+    /// Base32 CID string.
     pub fn encode_base32(&self) -> String {
         let mut raw = Vec::new();
         raw.push(self.version);
@@ -104,6 +108,7 @@ fn parse_cidv1(bytes: &[u8]) -> io::Result<CidSha256> {
     })
 }
 
+/// Raw SHA-256 of `bytes`.
 pub fn sha256(bytes: &[u8]) -> [u8; 32] {
     Sha256::digest(bytes).into()
 }

@@ -23,6 +23,7 @@ pub struct DurableJob {
 }
 
 impl DurableJob {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             op_id: 0,
@@ -41,6 +42,7 @@ pub struct DurableQueue {
 }
 
 impl DurableQueue {
+    /// Creates a default `DurableQueue`.
     pub const fn new() -> Self {
         Self {
             jobs: [DurableJob::empty(); MAX_JOBS],
@@ -48,6 +50,7 @@ impl DurableQueue {
         }
     }
 
+    /// Enqueues `payload` for `op_id` expiring at `expiry_unix`; `Err(())` at capacity.
     pub fn enqueue(&mut self, op_id: u64, expiry_unix: u32, payload: &[u8]) -> Result<usize, ()> {
         if payload.len() > MAX_BLOB || self.len >= MAX_JOBS {
             return Err(());
@@ -76,6 +79,7 @@ impl DurableQueue {
         Delivery::QueuedLocally
     }
 
+    /// `DurableQueue::advance`.
     pub fn advance(&mut self, op_id: u64, to: Delivery, now_unix: u32) -> Result<(), ()> {
         let i = self.find(op_id).ok_or(())?;
         if now_unix >= self.jobs[i].expiry_unix {
@@ -89,6 +93,7 @@ impl DurableQueue {
         Ok(())
     }
 
+    /// Drops jobs expiring at or before `now_unix`; returns count expired.
     pub fn expire_due(&mut self, now_unix: u32) -> usize {
         let mut n = 0;
         let mut i = 0;
@@ -105,14 +110,17 @@ impl DurableQueue {
         n
     }
 
+    /// Delivery state for `op_id`.
     pub fn state_of(&self, op_id: u64) -> Option<Delivery> {
         self.find(op_id).map(|i| self.jobs[i].state)
     }
 
+    /// Queued job count.
     pub(crate) fn len(&self) -> usize {
         self.len
     }
 
+    /// Job at index `i`.
     pub(crate) fn job_at(&self, i: usize) -> Option<DurableJob> {
         if i < self.len {
             Some(self.jobs[i])
@@ -121,6 +129,7 @@ impl DurableQueue {
         }
     }
 
+    /// Restores a persisted `job` into the queue.
     pub(crate) fn restore(&mut self, job: DurableJob) -> Result<(), ()> {
         if self.len >= MAX_JOBS {
             return Err(());

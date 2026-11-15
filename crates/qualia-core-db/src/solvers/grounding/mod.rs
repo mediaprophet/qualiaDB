@@ -67,6 +67,7 @@ pub enum GroundingVerdict {
 }
 
 impl GroundingVerdict {
+    /// `GroundingVerdict::score`.
     pub fn score(&self) -> f64 {
         match *self {
             GroundingVerdict::Grounded { score }

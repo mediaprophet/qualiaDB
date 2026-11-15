@@ -20,6 +20,7 @@ fn known(tag: u8) -> bool {
     )
 }
 
+/// Encodes `connect_request` into the caller buffer.
 pub fn encode_connect_request(
     intent: &ConnectionIntent,
     out: &mut [u8],
@@ -54,6 +55,7 @@ pub fn encode_connect_request(
     finish(out, MSG_CONNECT_REQUEST, &body[..n])
 }
 
+/// Decodes `connect_request`; fails closed on malformed input.
 pub fn decode_connect_request(bytes: &[u8], now_ms: u64) -> Result<ConnectionIntent, CscpError> {
     let body = super::parse_header(bytes, MSG_CONNECT_REQUEST)?;
     let mut peer = [0u8; 32];
@@ -157,6 +159,7 @@ pub fn decode_connect_request(bytes: &[u8], now_ms: u64) -> Result<ConnectionInt
     Ok(intent)
 }
 
+/// Decodes a connect message from wire bytes.
 pub fn connect_from_wire(
     fabric: &mut Fabric,
     bytes: &[u8],

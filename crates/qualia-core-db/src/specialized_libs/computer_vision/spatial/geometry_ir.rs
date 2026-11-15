@@ -18,6 +18,7 @@ impl Aabb {
         max: [f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY],
     };
 
+    /// Grows the box to include `p`.
     pub fn expand_point(&mut self, p: [f32; 3]) {
         for i in 0..3 {
             self.min[i] = self.min[i].min(p[i]);
@@ -25,6 +26,7 @@ impl Aabb {
         }
     }
 
+    /// `true` when all bounds are finite.
     pub fn is_finite(&self) -> bool {
         self.min
             .iter()
@@ -47,6 +49,7 @@ pub struct MeshIR {
 }
 
 impl MeshIR {
+    /// Empty value.
     pub fn empty() -> Self {
         Self {
             positions: Vec::new(),
@@ -58,14 +61,17 @@ impl MeshIR {
         }
     }
 
+    /// Vertex count.
     pub fn vertex_count(&self) -> usize {
         self.positions.len()
     }
 
+    /// Triangle count.
     pub fn triangle_count(&self) -> usize {
         self.indices.len() / 3
     }
 
+    /// Recomputes the AABB and content hash.
     pub fn recompute_bounds_and_hash(&mut self) {
         self.bounds = Aabb::EMPTY;
         for p in &self.positions {

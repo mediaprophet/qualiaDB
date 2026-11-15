@@ -8,6 +8,7 @@ use crate::components::qapp_engine::tauri_invoke;
 use js_sys;
 
 #[cfg(target_arch = "wasm32")]
+/// Adds clinical-report.
 pub async fn add_clinical_report(
     title: &str,
     report_type: &str,
@@ -58,6 +59,7 @@ pub async fn add_clinical_report(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds clinical-report.
 pub async fn add_clinical_report(
     _title: &str,
     _report_type: &str,
@@ -68,6 +70,7 @@ pub async fn add_clinical_report(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds clinical-attachment-from-path.
 pub async fn add_clinical_attachment_from_path(
     path: &str,
     media_type: Option<&str>,
@@ -97,6 +100,7 @@ pub async fn add_clinical_attachment_from_path(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds clinical-attachment-from-path.
 pub async fn add_clinical_attachment_from_path(
     _path: &str,
     _media_type: Option<&str>,
@@ -128,6 +132,7 @@ pub async fn export_attachment(record_id: &str, dest_path: &str) -> Result<Strin
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Exports attachment.
 pub async fn export_attachment(_record_id: &str, _dest_path: &str) -> Result<String, String> {
     Err("Attachment export requires the Tauri desktop host".into())
 }
@@ -160,6 +165,7 @@ pub async fn pick_file_path() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Picks file-path.
 pub async fn pick_file_path() -> Result<Option<String>, String> {
     Ok(None)
 }
@@ -182,6 +188,7 @@ pub async fn pick_save_path(default_name: &str) -> Result<Option<String>, String
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Picks save-path.
 pub async fn pick_save_path(_default_name: &str) -> Result<Option<String>, String> {
     Ok(None)
 }
@@ -196,6 +203,7 @@ pub async fn pick_directory() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Picks directory.
 pub async fn pick_directory() -> Result<Option<String>, String> {
     Ok(None)
 }

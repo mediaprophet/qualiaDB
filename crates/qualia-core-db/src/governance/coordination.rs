@@ -17,7 +17,7 @@
 //! Wiring an operand-stack execution path into `webizen_bytecode` (today a per-quin
 //! matcher) + the substrate above is the next increment; the semantics are fixed here.
 
-use crate::modalities::value_flow::{check_usury, UsuryError, USURY_OVERAGE_PERCENT_DEFAULT};
+use crate::modalities::socioeconomics::{check_usury, UsuryError, USURY_OVERAGE_PERCENT_DEFAULT};
 
 /// `0x70` — verify cryptographic delegation Human-Root → ephemeral agent.
 pub const OP_AUTHORIZATION_GRANT: u8 = 0x70;

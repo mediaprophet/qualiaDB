@@ -38,6 +38,7 @@ pub struct ChronikClient {
 }
 
 impl ChronikClient {
+    /// Creates a new instance.
     pub fn new(base_url: &str) -> Self {
         Self {
             base_url: base_url.to_string(),
@@ -45,6 +46,7 @@ impl ChronikClient {
         }
     }
 
+    /// Fetches utxos-p2pkh.
     pub fn fetch_utxos_p2pkh(&self, hash160_hex: &str) -> Result<Vec<ChronikUtxo>, String> {
         let url = format!("{}/script/p2pkh/{}/utxos", self.base_url, hash160_hex);
         let resp = self.client.get(&url).send().map_err(|e| e.to_string())?;
@@ -67,6 +69,7 @@ impl ChronikClient {
         Ok(all_utxos)
     }
 
+    /// Broadcasts a transaction.
     pub fn broadcast_tx(&self, raw_tx_hex: &str) -> Result<String, String> {
         let url = format!("{}/broadcast-tx", self.base_url);
 

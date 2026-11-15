@@ -183,6 +183,8 @@ pub enum ManifoldDimension {
 }
 
 impl ManifoldDimension {
+    /// Decode a dimension index (0–9) to its variant; `None` for values
+    /// ≥ 10.
     pub fn from_u8(value: u8) -> Option<Self> {
         Some(match value {
             0 => Self::Scale,
@@ -199,6 +201,7 @@ impl ManifoldDimension {
         })
     }
 
+    /// Read this dimension's component out of a 10D coordinate.
     pub fn value(self, coordinate: &ManifoldCoordinate10D) -> f32 {
         coordinate.as_f32_array()[self as usize]
     }
@@ -207,17 +210,23 @@ impl ManifoldDimension {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ManifoldState10D {
-    /// Unique state identifier (for example `tensor_hash ^ logical_clock`).
+    /// Stable reference for this encoded state. This is an identity handle,
+    /// not the state itself: the 10D coordinate and its typed domain/profile
+    /// provide the structured identity. A digest may index or verify that
+    /// identity, but must not replace the coordinate, shape, or behavior data.
     pub state_id: u64,
     pub timestamp: u64,
     pub coordinate: ManifoldCoordinate10D,
 }
 
+/// Pack two `f32` bit patterns into one `u64` (low half first) — the
+/// two-quin 10D state encoding's payload unit.
 #[inline]
 fn pack_f32_pair(low: f32, high: f32) -> u64 {
     low.to_bits() as u64 | ((high.to_bits() as u64) << 32)
 }
 
+/// Inverse of [`pack_f32_pair`]: `(low-half, high-half)` as `f32`s.
 #[inline]
 fn unpack_f32_pair(value: u64) -> (f32, f32) {
     (
@@ -226,6 +235,8 @@ fn unpack_f32_pair(value: u64) -> (f32, f32) {
     )
 }
 
+/// Build an `NQuin` with the XOR-fold parity computed — the canonical
+/// constructor for the manifold head/tail records.
 #[inline]
 fn quin_with_parity(
     subject: u64,
@@ -269,6 +280,10 @@ pub fn encode_manifold_state(state: &ManifoldState10D, out: &mut [NQuin; 2]) {
     );
 }
 
+/// Inverse of [`encode_manifold_state`]: validates that `head`/`tail`
+/// share `state_id`, carry the head/tail predicates, and pass the
+/// parity check — `None` on any mismatch (a corrupt or foreign pair is
+/// not a manifold state).
 pub fn decode_manifold_state(head: &NQuin, tail: &NQuin) -> Option<ManifoldState10D> {
     if head.subject != tail.subject
         || head.predicate != MANIFOLD_HEAD_PREDICATE

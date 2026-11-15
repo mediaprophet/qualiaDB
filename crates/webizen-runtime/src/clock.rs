@@ -7,6 +7,7 @@ pub struct FixedStepClock {
 }
 
 impl FixedStepClock {
+    /// Creates a new instance.
     pub fn new(timestep: Duration) -> Self {
         Self {
             timestep,
@@ -14,14 +15,17 @@ impl FixedStepClock {
         }
     }
 
+    /// Timestep.
     pub fn timestep(&self) -> Duration {
         self.timestep
     }
 
+    /// Accumulator.
     pub fn accumulator(&self) -> Duration {
         self.accumulator
     }
 
+    /// Pushes elapsed.
     pub fn push_elapsed(&mut self, elapsed: Duration) -> usize {
         self.accumulator += elapsed;
         let mut ticks = 0usize;

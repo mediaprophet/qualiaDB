@@ -1,4 +1,7 @@
 use super::*;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{Arc, Mutex};
+
 
 /// Physics data manager
 pub struct PhysicsDataManager {
@@ -13,8 +16,13 @@ pub struct PhysicsDataStorage {
     pub(super) storage_backends: HashMap<String, StorageBackend>,
     data_layout: DataLayout,
     access_patterns: AccessPatterns,
-    /// In-memory fallback store used when ZNS/CSD hardware backends are unavailable.
+    /// In-memory store used directly or as a caching tier when hardware backends are active.
     stored_data: HashMap<String, Vec<f64>>,
+    /// Optional hardware-backed Zoned Namespace manager for physical zone persistence.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub zns_manager: Option<Arc<Mutex<crate::zns_storage::ZnsZoneManager>>>,
+    #[cfg(target_arch = "wasm32")]
+    pub zns_manager: Option<()>,
 }
 
 /// Storage backends
@@ -29,6 +37,8 @@ pub struct StorageBackend {
 /// Storage backend types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StorageBackendType {
+    /// In-memory storage
+    Memory,
     /// Local storage
     Local,
     /// Network storage
@@ -234,6 +244,7 @@ pub struct CachePerformance {
 }
 
 impl PhysicsDataManager {
+    /// Creates a manager with empty data storage, compression, and cache state.
     pub fn new() -> Self {
         Self {
             data_storage: PhysicsDataStorage::new(),
@@ -243,6 +254,7 @@ impl PhysicsDataManager {
         }
     }
 
+    /// Initializes compression and cache subsystems; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.data_storage.initialize()?;
         self.data_compression.initialize()?;
@@ -251,6 +263,7 @@ impl PhysicsDataManager {
         Ok(())
     }
 
+    /// Stores field data through the configured storage path.
     pub fn store_field_data(
         &mut self,
         _simulation: &Simulation,
@@ -265,6 +278,7 @@ impl PhysicsDataManager {
 }
 
 impl StorageBackend {
+    /// Registers a storage backend descriptor (`backend_id`, type, capacity).
     pub fn new(backend_id: &str, backend_type: StorageBackendType, capacity: u64) -> Self {
         Self {
             backend_id: backend_id.to_string(),
@@ -306,12 +320,21 @@ impl StorageBackend {
 }
 
 impl PhysicsDataStorage {
+    /// Creates storage with default layout and access-pattern state.
     pub fn new() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_physics_zone")
+            .ok()
+            .map(|mgr| Arc::new(Mutex::new(mgr)));
+        #[cfg(target_arch = "wasm32")]
+        let zns_manager = None;
+
         Self {
             storage_backends: HashMap::new(),
             data_layout: DataLayout::new(),
             access_patterns: AccessPatterns::new(),
             stored_data: HashMap::new(),
+            zns_manager,
         }
     }
 
@@ -320,12 +343,24 @@ impl PhysicsDataStorage {
         self.storage_backends.insert(name.to_string(), backend);
     }
 
-    /// Initialize default ZNS and CSD backends.
+    /// Attach a hardware-backed Zoned Namespace manager for physical zone persistence.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn attach_zns_manager(&mut self, manager: Arc<Mutex<crate::zns_storage::ZnsZoneManager>>) {
+        self.zns_manager = Some(manager);
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub fn attach_zns_manager(&mut self, _manager: ()) {}
+
+
+    /// Initialize default storage backends.
     ///
-    /// In environments where `ZnsZoneManager` and `CsdManager` hardware is not
-    /// accessible, the backends are still registered as metadata entries and the
-    /// in-memory `stored_data` map serves as the persistence fallback.
+    /// Registers the genuine in-memory fallback tier (256 MiB) along with ZNS and CSD descriptors.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
+        self.register_backend(
+            "memory",
+            StorageBackend::new("memory", StorageBackendType::Memory, 256 * 1024 * 1024), // 256 MB
+        );
+
         // Register a ZNS (Zoned Namespace SSD) backend.
         self.register_backend(
             "zns",
@@ -341,10 +376,9 @@ impl PhysicsDataStorage {
         Ok(())
     }
 
-    /// Serialize the field data and store it via the registered backends.
+    /// Serialize the field data and store it via registered backends and active hardware ZNS zones.
     ///
-    /// The data is written to the in-memory fallback store keyed by `field.field_id`.
-    /// If no backends are registered, an error is returned.
+    /// Checks backend registration and enforces capacity bounds across registered storage backends.
     pub fn store_field_data(&mut self, field: &PhysicsField) -> Result<(), PhysicsError> {
         if self.storage_backends.is_empty() {
             return Err(PhysicsError::DataError(
@@ -352,9 +386,52 @@ impl PhysicsDataStorage {
             ));
         }
 
-        // Write through every registered backend (in-memory fallback for all).
+        let field_bytes = (field.data.len() * std::mem::size_of::<f64>()) as u64;
+        let total_capacity: u64 = self.storage_backends.values().map(|b| b.capacity).sum();
+        let existing_bytes: u64 = self
+            .stored_data
+            .values()
+            .map(|d| (d.len() * std::mem::size_of::<f64>()) as u64)
+            .sum();
+        let old_field_bytes: u64 = self
+            .stored_data
+            .get(&field.field_id)
+            .map(|d| (d.len() * std::mem::size_of::<f64>()) as u64)
+            .unwrap_or(0);
+
+        let needed_bytes = field_bytes.saturating_sub(old_field_bytes);
+        if existing_bytes + needed_bytes > total_capacity {
+            return Err(PhysicsError::DataError(format!(
+                "Storage capacity exceeded: {} bytes required, {} bytes available across registered backends",
+                needed_bytes,
+                total_capacity.saturating_sub(existing_bytes)
+            )));
+        }
+
+        // Write to in-memory store
         self.stored_data
             .insert(field.field_id.clone(), field.data.clone());
+
+        // Write through to physical ZNS zone when available
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(ref zns) = self.zns_manager {
+            if let Ok(mut zns_guard) = zns.lock() {
+                let mut payload = Vec::with_capacity(32 + field.data.len() * 8);
+                let id_bytes = field.field_id.as_bytes();
+                payload.extend_from_slice(&(id_bytes.len() as u32).to_le_bytes());
+                payload.extend_from_slice(id_bytes);
+                payload.extend_from_slice(&(field.data.len() as u64).to_le_bytes());
+                for &val in &field.data {
+                    payload.extend_from_slice(&val.to_le_bytes());
+                }
+                if let Ok(handle) = zns_guard.allocate_zone(
+                    crate::zns_storage::ZoneType::Sequential,
+                    payload.len() as u64,
+                ) {
+                    let _ = zns_guard.write_zone(&handle, &payload);
+                }
+            }
+        }
 
         Ok(())
     }
@@ -386,6 +463,7 @@ impl PhysicsDataStorage {
 }
 
 impl DataLayout {
+    /// Creates a default data-layout descriptor.
     pub fn new() -> Self {
         Self {
             layout_type: DataLayoutType::RowMajor,
@@ -437,6 +515,7 @@ impl DataLayout {
 }
 
 impl AccessPatterns {
+    /// Creates default access-pattern state.
     pub fn new() -> Self {
         Self {
             read_patterns: HashMap::new(),
@@ -477,6 +556,7 @@ impl AccessPatterns {
 }
 
 impl TemporalPattern {
+    /// Creates a default temporal access pattern.
     pub fn new() -> Self {
         Self {
             pattern_id: "default".to_string(),
@@ -523,6 +603,7 @@ impl TemporalPattern {
 }
 
 impl DataCompression {
+    /// Creates compression state with default ratio/performance records.
     pub fn new() -> Self {
         Self {
             compression_algorithms: HashMap::new(),
@@ -531,6 +612,7 @@ impl DataCompression {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory compression state needs no setup.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -572,6 +654,7 @@ impl DataCompression {
 }
 
 impl CompressionRatio {
+    /// Creates a zeroed `CompressionRatio`.
     pub fn new() -> Self {
         Self {
             original_size: 0,
@@ -582,6 +665,7 @@ impl CompressionRatio {
 }
 
 impl CompressionPerformance {
+    /// Creates a zeroed `CompressionPerformance`.
     pub fn new() -> Self {
         Self {
             compression_speed: 0.0,
@@ -592,6 +676,7 @@ impl CompressionPerformance {
 }
 
 impl CompressionAlgorithm {
+    /// Creates a default `CompressionAlgorithm`.
     pub fn new() -> Self {
         Self {
             algorithm_id: "default".to_string(),
@@ -627,6 +712,7 @@ impl CompressionAlgorithm {
 }
 
 impl CompressionParameters {
+    /// Creates default `CompressionParameters`.
     pub fn new() -> Self {
         Self {
             compression_level: 6,
@@ -638,6 +724,7 @@ impl CompressionParameters {
 }
 
 impl DataCache {
+    /// Creates a cache with default policy and performance state.
     pub fn new() -> Self {
         Self {
             cache_policy: CachePolicy::new(),
@@ -646,6 +733,7 @@ impl DataCache {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -682,6 +770,7 @@ impl DataCache {
 }
 
 impl CachePolicy {
+    /// Creates a default `CachePolicy`.
     pub fn new() -> Self {
         Self {
             eviction_policy: EvictionPolicy::LRU,
@@ -722,6 +811,7 @@ impl CachePolicy {
 }
 
 impl CachePerformance {
+    /// Creates a zeroed `CachePerformance`.
     pub fn new() -> Self {
         Self {
             hit_rate: 0.0,

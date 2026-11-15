@@ -13,6 +13,7 @@ pub struct Record {
 }
 
 impl Record {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             cap: [0; 16],
@@ -30,6 +31,7 @@ pub struct RendezvousStore {
 }
 
 impl RendezvousStore {
+    /// Creates a default `RendezvousStore`.
     pub const fn new() -> Self {
         Self {
             recs: [Record::empty(); MAX_RECORDS],
@@ -37,6 +39,7 @@ impl RendezvousStore {
         }
     }
 
+    /// Publishes a rendezvous body under `cap`.
     pub fn put(&mut self, cap: [u8; 16], expiry_unix: u32, body: &[u8]) -> Result<(), ()> {
         if body.len() > MAX_BODY || cap == [0u8; 16] {
             return Err(());
@@ -64,6 +67,7 @@ impl RendezvousStore {
         Ok(())
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, cap: &[u8; 16], now_unix: u32) -> Option<&[u8]> {
         let mut i = 0;
         while i < self.len {

@@ -39,6 +39,7 @@ pub enum PrivacyError {
 }
 
 impl PrivacyError {
+    /// Static human-readable message for this variant.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::InvalidEpsilon => "epsilon must be finite and greater than zero",
@@ -57,6 +58,7 @@ impl PrivacyError {
 }
 
 impl core::fmt::Display for PrivacyError {
+    /// Writes [`PrivacyError::as_str`].
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter.write_str(self.as_str())
     }
@@ -66,6 +68,8 @@ impl std::error::Error for PrivacyError {}
 
 /// Source of cryptographic noise bytes.
 pub trait NoiseSource {
+    /// Fill `destination` with fresh entropy; `EntropyUnavailable` on
+    /// OS-RNG failure.
     fn fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), PrivacyError>;
 }
 
@@ -74,6 +78,7 @@ pub trait NoiseSource {
 pub struct OsNoise;
 
 impl NoiseSource for OsNoise {
+    /// Fill via `getrandom`; maps OS failure to `EntropyUnavailable`.
     fn fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), PrivacyError> {
         getrandom::fill(destination).map_err(|_| PrivacyError::EntropyUnavailable)
     }
@@ -89,12 +94,15 @@ pub struct PrivacyBudget {
 }
 
 impl PrivacyBudget {
+    /// Create a validated `(ε,δ)` budget with the full amount remaining.
     pub fn try_new(epsilon: f64, delta: f64) -> Result<Self, PrivacyError> {
         let budget = Self::new_unchecked(epsilon, delta);
         budget.validate()?;
         Ok(budget)
     }
 
+    /// Create without validation — remaining spend starts at the full
+    /// budget. Callers must ensure `ε > 0`, `0 ≤ δ < 1`.
     pub const fn new_unchecked(epsilon: f64, delta: f64) -> Self {
         Self {
             epsilon,
@@ -104,6 +112,7 @@ impl PrivacyBudget {
         }
     }
 
+    /// Check `ε` finite-positive and `δ` in `[0, 1)`.
     pub fn validate(&self) -> Result<(), PrivacyError> {
         validate_epsilon(self.epsilon)?;
         if !self.delta.is_finite() || self.delta < 0.0 || self.delta >= 1.0 {
@@ -112,6 +121,9 @@ impl PrivacyBudget {
         Ok(())
     }
 
+    /// Recompute remaining budget after a composed spend;
+    /// `BudgetExceeded` when the spend exceeds the total (with 1e-12
+    /// float-rounding tolerance).
     fn apply_composed_cost(&mut self, epsilon: f64, delta: f64) -> Result<(), PrivacyError> {
         const ROUNDING_TOLERANCE: f64 = 1e-12;
         if epsilon > self.epsilon + ROUNDING_TOLERANCE || delta > self.delta + ROUNDING_TOLERANCE {
@@ -137,6 +149,7 @@ pub struct PrivacyAccountant {
 }
 
 impl PrivacyAccountant {
+    /// Zeroed accountant using `composition_method` for spend rollup.
     pub const fn new(composition_method: CompositionMethod) -> Self {
         Self {
             total_epsilon_spent: 0.0,
@@ -150,10 +163,14 @@ impl PrivacyAccountant {
         }
     }
 
+    /// Number of releases recorded so far.
     pub const fn releases(&self) -> u64 {
         self.releases
     }
 
+    /// Fold one release into the running spend under the configured
+    /// composition method (basic: linear sum; advanced: √(Σε²) bound;
+    /// RDP: per-order Rényi accumulation).
     fn record(
         &mut self,
         mechanism: NoiseMechanism,
@@ -210,6 +227,8 @@ pub struct DifferentialPrivacy {
 }
 
 impl DifferentialPrivacy {
+    /// Default engine: Laplace + Gaussian mechanisms, basic
+    /// composition, `ε = 1.0`, `δ = 1e-6` budget.
     pub fn new() -> Self {
         Self {
             noise_mechanisms: [NoiseMechanism::Laplace, NoiseMechanism::Gaussian],
@@ -218,6 +237,9 @@ impl DifferentialPrivacy {
         }
     }
 
+    /// Engine with an explicit `(ε,δ)` budget and composition method —
+    /// both validated (e.g. advanced-composition `delta_slack` must sit
+    /// below the total `δ`).
     pub fn with_budget(
         epsilon: f64,
         delta: f64,
@@ -232,6 +254,8 @@ impl DifferentialPrivacy {
         Ok(result)
     }
 
+    /// Validate budget parameters plus the composition method's
+    /// specific invariants (slack/order/target ranges).
     pub fn validate(&self) -> Result<(), PrivacyError> {
         self.privacy_budget.validate()?;
         match self.privacy_accountant.composition_method {
@@ -388,6 +412,9 @@ impl DifferentialPrivacy {
         Ok(query_result.len())
     }
 
+    /// Record a release spend: run `record` on a prospective
+    /// accountant, re-derive remaining budget from the composed total,
+    /// commit only on success (failed charges leave state untouched).
     fn charge(
         &mut self,
         mechanism: NoiseMechanism,
@@ -407,11 +434,14 @@ impl DifferentialPrivacy {
 }
 
 impl Default for DifferentialPrivacy {
+    /// Same as [`DifferentialPrivacy::new`].
     fn default() -> Self {
         Self::new()
     }
 }
 
+/// Gaussian noise scale for `(ε,δ)`-DP: `σ = Δ·√(2 ln(1.25/δ)) / ε`
+/// (the classic Dwork–Roth calibration). Requires `ε ≤ 1`.
 pub fn gaussian_sigma(sensitivity: f64, epsilon: f64, delta: f64) -> Result<f64, PrivacyError> {
     validate_sensitivity(sensitivity)?;
     validate_epsilon(epsilon)?;
@@ -424,6 +454,8 @@ pub fn gaussian_sigma(sensitivity: f64, epsilon: f64, delta: f64) -> Result<f64,
     Ok(sensitivity * (2.0 * (1.25 / delta).ln()).sqrt() / epsilon)
 }
 
+/// Pre-release checks: output buffer capacity, finite sensitivity,
+/// and no non-finite values in the query result.
 fn validate_release(
     query_result: &[f64],
     out: &[f64],
@@ -439,6 +471,7 @@ fn validate_release(
     Ok(())
 }
 
+/// `ε` must be finite and strictly positive.
 fn validate_epsilon(epsilon: f64) -> Result<(), PrivacyError> {
     if !epsilon.is_finite() || epsilon <= 0.0 {
         Err(PrivacyError::InvalidEpsilon)
@@ -447,6 +480,7 @@ fn validate_epsilon(epsilon: f64) -> Result<(), PrivacyError> {
     }
 }
 
+/// Sensitivity must be finite and non-negative.
 fn validate_sensitivity(sensitivity: f64) -> Result<(), PrivacyError> {
     if !sensitivity.is_finite() || sensitivity < 0.0 {
         Err(PrivacyError::InvalidSensitivity)
@@ -455,6 +489,9 @@ fn validate_sensitivity(sensitivity: f64) -> Result<(), PrivacyError> {
     }
 }
 
+/// Draw a uniform sample from the open interval `(0,1)` via 53-bit
+/// mantissa extraction — never returns exactly 0 or 1 (safe for
+/// `ln`/inverse-CDF noise transforms).
 fn open_unit_interval<R: NoiseSource>(noise: &mut R) -> Result<f64, PrivacyError> {
     let mut bytes = [0_u8; 8];
     noise.fill_bytes(&mut bytes)?;

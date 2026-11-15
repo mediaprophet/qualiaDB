@@ -88,6 +88,7 @@ MODEL_CONFIGS = {
 
 class ModelDownloader:
     def __init__(self, models_dir: Path, quantization: str = "q4"):
+        """Initializes the instance."""
         self.models_dir = Path(models_dir)
         self.quantization = quantization
         self.models_dir.mkdir(exist_ok=True)
@@ -240,6 +241,7 @@ class ModelDownloader:
         return success_count == len(model_list)
 
 def main():
+    """CLI entry point."""
     parser = argparse.ArgumentParser(description="Setup LLM models for Qualia-DB")
     parser.add_argument("--models", choices=["all", "phi", "llama"], default="all",
                         help="Which models to download")

@@ -145,12 +145,14 @@ impl RandomForest {
             .unwrap_or(0)
     }
 
+    /// Forest predictions.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
             .collect()
     }
 
+    /// Tree count.
     pub fn n_trees(&self) -> usize {
         self.trees.len()
     }

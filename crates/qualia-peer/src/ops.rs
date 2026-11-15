@@ -74,14 +74,17 @@ pub fn redacted_dashboard(
     }
 }
 
+/// `active-session` count.
 pub fn active_session_count(dashboard: RedactedDashboard) -> u32 {
     dashboard.active_sessions
 }
 
+/// `denied-op` count.
 pub fn denied_op_count(dashboard: RedactedDashboard) -> u32 {
     dashboard.denied_ops
 }
 
+/// `revoked-credential` count.
 pub fn revoked_credential_count(dashboard: RedactedDashboard) -> u32 {
     dashboard.revoked_creds
 }

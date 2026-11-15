@@ -10,6 +10,7 @@ pub const CITATION: &str = "Lip GY et al. Chest 2010; ESC 2020 atrial-fibrillati
 pub const APPLICABILITY: &str = "non-valvular atrial fibrillation in adults 18–120 years";
 pub const UNITS: &str = "age years; score points; annual_stroke_risk_percent percent per year";
 
+/// Scores the input.
 pub fn score(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     if !required::need_bool(args_v, span, "atrial_fibrillation")? {
         return Err(super::super::args::bad(

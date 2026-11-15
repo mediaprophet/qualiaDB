@@ -9,7 +9,7 @@ update_scope: Comprehensive
 ## Functionality Overview
 
 Provides typed WebAssembly-to-Tauri adapters for Wellfair domain operations. These clients
-translate Dioxus actions into desktop commands and decode host responses for domain panels.
+translate Aether actions into desktop commands and decode host responses for domain panels.
 
 ## File & Subdirectory Manifest
 

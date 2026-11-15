@@ -10,6 +10,7 @@ use crate::cli::{
 };
 use crate::sparql::run_sparql_query;
 
+/// Handles the  action.
 pub fn handle_extension(action: &ExtensionAction) {
     match action {
         ExtensionAction::Register { manifest_path } => {
@@ -24,6 +25,7 @@ pub fn handle_extension(action: &ExtensionAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_governance(action: &GovernanceAction) {
     match action {
         GovernanceAction::WalAppend { quin, sign } => {
@@ -35,14 +37,26 @@ pub fn handle_governance(action: &GovernanceAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_compile(action: &CompileAction) {
     match action {
         CompileAction::N3ToDeontic { file } => {
             println!("Compiling N3 logic to native norms from {:?}", file);
         }
+        CompileAction::EntityCompile(args) | CompileAction::TwinCompile(args) => {
+            if let Err(e) = super::entity_compile::handle(args) {
+                eprintln!("Error compiling entity: {e}");
+            }
+        }
+        CompileAction::EntityVerify(args) | CompileAction::TwinVerify(args) => {
+            if let Err(e) = super::entity_verify::handle(args) {
+                eprintln!("Error verifying entity: {e}");
+            }
+        }
     }
 }
 
+/// Handles the  action.
 pub fn handle_shacl(action: &ShaclAction) {
     match action {
         ShaclAction::List => {
@@ -67,6 +81,7 @@ pub fn handle_shacl(action: &ShaclAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_vault(init: bool) {
     if init {
         println!("Initializing Memory-Mapped Vault...");
@@ -77,6 +92,7 @@ pub fn handle_vault(init: bool) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_migrate(action: &MigrateAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         MigrateAction::Meta { path, dry_run } => {
@@ -105,12 +121,14 @@ pub fn handle_migrate(action: &MigrateAction) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_mem(inspect: bool) {
     if inspect {
         println!("Please use `qualia-cli inspect <superblock_path>` directly to inspect specific layouts.");
     }
 }
 
+/// Handles the  action.
 pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         Q42Action::Inspect { path } => {
@@ -223,10 +241,115 @@ pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> 
             println!("{}", magnet.magnet_uri);
             println!("seeded {} bytes as {}", record.file_size, record.info_hash);
         }
+        Q42Action::AuditSource {
+            path,
+            source_root,
+            top,
+            json_out,
+        } => {
+            if let Some(root) = source_root {
+                let matrix = qualia_core_db::query::source_audit::audit_source_root(root)?;
+                let json = serde_json::to_string_pretty(&matrix)?;
+                if let Some(out) = json_out {
+                    std::fs::write(out, &json)?;
+                    println!("wrote {}", out.display());
+                } else {
+                    println!("{json}");
+                }
+            } else {
+                let path = path
+                    .as_ref()
+                    .ok_or("q42 audit-source requires PATH or --source-root")?;
+                let report = qualia_core_db::query::source_audit::audit_rdf_source(path, *top)?;
+                let json = serde_json::to_string_pretty(&report)?;
+                if let Some(out) = json_out {
+                    std::fs::write(out, &json)?;
+                    println!("wrote {}", out.display());
+                } else {
+                    println!("{json}");
+                }
+            }
+        }
     }
     Ok(())
 }
 
+/// Handles the  action.
+pub fn handle_hmc(action: &crate::cli::HmcAction) -> Result<(), Box<dyn std::error::Error>> {
+    use qualia_core_db::bundle::BundleMmap;
+    match action {
+        crate::cli::HmcAction::Inspect { path } => {
+            let mmap = BundleMmap::open(path)?;
+            let reader = mmap.reader()?;
+            println!("HMC  {}", path.display());
+            println!("  entries {}", reader.entries().len());
+            println!("  flags   0x{:04x}", reader.flags());
+            for e in reader.entries() {
+                println!(
+                    "  {:<32} offset={} len={} kind={}",
+                    e.key, e.offset, e.length, e.kind
+                );
+            }
+        }
+        crate::cli::HmcAction::Verify {
+            path,
+            q42_entry,
+            rdf_source,
+        } => {
+            let mmap = BundleMmap::open(path)?;
+            let reader = mmap.reader()?;
+            println!("HMC verify {}", path.display());
+            println!("  CRC-32C + parse: OK");
+            let mut failed = false;
+            for e in reader.entries() {
+                let ok = reader.verify_entry(&e.key);
+                println!("  SHA-256 {} {}", e.key, if ok { "OK" } else { "FAIL" });
+                if !ok {
+                    failed = true;
+                }
+            }
+            if failed {
+                return Err("HMC entry SHA-256 mismatch".into());
+            }
+            if let Some(key) = q42_entry {
+                let Some(bytes) = reader.get(key) else {
+                    return Err(format!("missing HMC entry {key}").into());
+                };
+                let tmp_path = std::env::temp_dir()
+                    .join(format!("qualia-hmc-embed-{}.q42", std::process::id()));
+                std::fs::write(&tmp_path, bytes)?;
+                let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+                    if let Some(rdf) = rdf_source {
+                        let report = qualia_core_db::graph_proof::prove_import_rdf_q42_equivalence(
+                            rdf,
+                            &tmp_path,
+                            qualia_core_db::graph_proof::ImportProofOptions::default(),
+                        )?;
+                        println!(
+                            "  embedded q42 vs {}: sets_match={} iso={:?}",
+                            rdf.display(),
+                            report.encoded_sets_match(),
+                            report.rdf_isomorphism
+                        );
+                        if !report.encoded_sets_match() {
+                            return Err("embedded q42 graph proof failed".into());
+                        }
+                    } else {
+                        let inspect =
+                            qualia_core_db::q42_volume::Q42InspectReport::from_path(&tmp_path)?;
+                        print!("{}", inspect.to_text());
+                    }
+                    Ok(())
+                })();
+                let _ = std::fs::remove_file(&tmp_path);
+                result?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Handles the  action.
 pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     if qualia_core_db::q42_volume::is_unified_volume(file_path)? {
         let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(file_path)?;
@@ -269,6 +392,7 @@ pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_dump(out_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     println!("Dumping raw SuperBlock to: {:?}", out_path);
 
@@ -323,6 +447,7 @@ pub fn handle_dump(out_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
     println!("============================================================");
     println!("🌐 W3C Solid Exporter Bridge");
@@ -333,7 +458,7 @@ pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
 
     match qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&in_path, &out_path) {
         Ok(_) => {
-            println!("✅ Export Complete! Your data is now fully portable to any Solid Pod.");
+            println!("Leave/migrate complete: RDF bundle written for Solid LDP import.");
         }
         Err(e) => {
             eprintln!("❌ Export Failed: {}", e);
@@ -341,6 +466,7 @@ pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
     println!("============================================================");
     println!("🔒 QualiaDB Zero-Allocation Integrity Verification");
@@ -371,6 +497,10 @@ pub fn handle_verify_graph(
     dataset: &PathBuf,
     memory_mib: u64,
     temp_gib: u64,
+    encoder: &str,
+    omit_predicates: Option<&str>,
+    omit_preset: Option<&str>,
+    require_isomorphism: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let memory_limit_bytes = memory_mib
         .checked_mul(1024 * 1024)
@@ -380,30 +510,89 @@ pub fn handle_verify_graph(
         .checked_mul(1024 * 1024 * 1024)
         .ok_or_else(|| std::io::Error::other("--temp-gib is too large"))?;
 
+    let encoder_l = encoder.trim().to_ascii_lowercase();
+    let iris: Vec<String> = omit_predicates
+        .unwrap_or("")
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let omit =
+        qualia_core_db::query::integrity_omit::resolve_omit_predicate_hashes(&iris, omit_preset)?;
+
     println!("============================================================");
     println!("QualiaDB bounded encoded-graph proof");
     println!("  Input       : {}", input.display());
     println!("  Q42         : {}", dataset.display());
+    println!("  Encoder     : {encoder_l}");
     println!("  RAM budget  : {memory_mib} MiB");
     println!("  Temp budget : {temp_gib} GiB");
+    if !omit.is_empty() {
+        println!("  Omit preds  : {} hash(es)", omit.len());
+    }
     println!("============================================================");
 
-    let report = qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
-        input,
-        dataset,
-        qualia_core_db::graph_proof::GraphProofOptions {
-            memory_limit_bytes,
-            temporary_byte_budget,
-        },
-    )?;
+    let report = match encoder_l.as_str() {
+        "legacy-semantic" | "legacy" | "semantic" => {
+            if !omit.is_empty() {
+                return Err(
+                    "--omit-predicates requires --encoder=import (legacy path has no omit filter)"
+                        .into(),
+                );
+            }
+            qualia_core_db::graph_proof::prove_cli_ntriples_q42_equivalence(
+                input,
+                dataset,
+                qualia_core_db::graph_proof::GraphProofOptions {
+                    memory_limit_bytes,
+                    temporary_byte_budget,
+                },
+            )?
+        }
+        "import" | "complete" | "" => {
+            let mut opts = qualia_core_db::graph_proof::ImportProofOptions {
+                memory_limit_bytes,
+                temporary_byte_budget,
+                omit_predicate_hashes: omit,
+                encoder_profile: qualia_core_db::graph_proof::EncoderProfile::ImportComplete,
+            };
+            if omit_preset.is_some() || !iris.is_empty() {
+                // profile label stays ImportComplete; omit is reflected in skipped_or_filtered
+                let _ = &mut opts;
+            }
+            qualia_core_db::graph_proof::prove_import_rdf_q42_equivalence(input, dataset, opts)?
+        }
+        other => {
+            return Err(
+                format!("unknown --encoder '{other}' (use import | legacy-semantic)").into(),
+            );
+        }
+    };
 
+    println!("Encoder profile     : {:?}", report.encoder_profile);
     println!("Source records      : {}", report.source_records);
+    println!("Source triple count : {}", report.source_triple_count);
+    println!("Skipped/filtered    : {}", report.skipped_or_filtered);
     println!("Q42 records         : {}", report.q42_records);
     println!("Unique source quads : {}", report.source_unique_records);
     println!("Unique Q42 quads    : {}", report.q42_unique_records);
     println!("Missing from Q42    : {}", report.missing_from_q42);
     println!("Unexpected in Q42   : {}", report.unexpected_in_q42);
     println!("Skipped source lines : {}", report.source_skipped_lines);
+    println!("Oversize terms      : {}", report.oversize_literal_count);
+    println!(
+        "Lexicon             : {} bytes, {:?} entries{}",
+        report.lexicon_length_bytes,
+        report.lexicon_entry_count,
+        if report.lexicon_has_no_terms {
+            " [empty/no terms]"
+        } else {
+            ""
+        }
+    );
+    if let Some(preview) = &report.first_oversize_preview {
+        println!("First oversize      : {preview}");
+    }
 
     if !report.encoded_sets_match() {
         if let Some(record) = report.first_missing {
@@ -421,10 +610,21 @@ pub fn handle_verify_graph(
             Ok(())
         }
         qualia_core_db::graph_proof::RdfIsomorphismStatus::BlankNodeCanonicalizationRequired => {
-            Err(std::io::Error::other(
-                "encoded sets match only under blank-node label identity; RDF isomorphism requires canonical lexical blank-node support",
-            )
-            .into())
+            // Encode-fidelity (label-faithful hashed-set match) already succeeded above.
+            // RDF isomorphism under blank relabeling is a stronger claim (RDFC-1.0 / Skolem).
+            println!("PASS: label-faithful encoded-set equivalence (import encoder).");
+            eprintln!(
+                "NOTICE: source contains blank nodes (often Turtle [] expanded by the parser to _: ids). \
+Structural RDF isomorphism / RDFC-1.0 is NOT proven — only that this serialization's labels hashed identically into Q42. \
+Use --require-isomorphism to fail closed until a canonicalization path exists."
+            );
+            if require_isomorphism {
+                return Err(std::io::Error::other(
+                    "encoded sets match only under blank-node label identity; --require-isomorphism demands GroundGraphProven or RDFC (not yet implemented)",
+                )
+                .into());
+            }
+            Ok(())
         }
         qualia_core_db::graph_proof::RdfIsomorphismStatus::Different => {
             Err(std::io::Error::other("encoded graph sets differ").into())
@@ -432,9 +632,10 @@ pub fn handle_verify_graph(
     }
 }
 
+/// Handles the  action.
 pub fn handle_import(
     input: Option<&PathBuf>,
-    output: &PathBuf,
+    output: Option<&PathBuf>,
     strip_literals: bool,
     segment_mib: Option<u64>,
     progress: crate::cli::ImportProgressFormat,
@@ -442,12 +643,37 @@ pub fn handle_import(
     url: Option<&str>,
     job_dir: Option<&PathBuf>,
     resume: bool,
+    omit_predicates: Option<&str>,
+    omit_preset: Option<&str>,
 ) {
     use crate::cli::ImportProgressFormat;
     use qualia_core_db::ingest::{
-        streaming_import_rdf_with_job, streaming_import_rdf_with_report, IngestMode, IngestReport,
+        streaming_import_rdf_with_job, streaming_import_rdf_with_report,
+        streaming_import_rdf_with_report_filtered, IngestMode, IngestReport,
     };
     use qualia_core_db::ingest_job::{infer_rdf_format, IngestJob, IngestSourceKind};
+
+    let Some(output) = output else {
+        eprintln!("import requires an OUTPUT .q42 path");
+        return;
+    };
+
+    let iris: Vec<String> = omit_predicates
+        .unwrap_or("")
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let omit = match qualia_core_db::query::integrity_omit::resolve_omit_predicate_hashes(
+        &iris,
+        omit_preset,
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}");
+            return;
+        }
+    };
 
     if progress != ImportProgressFormat::Json {
         eprintln!("============================================================");
@@ -495,6 +721,10 @@ pub fn handle_import(
     };
 
     if let Some(dir) = job_dir {
+        if !omit.is_empty() {
+            eprintln!("omit-predicates with --job-dir is not wired yet; use a direct file import");
+            return;
+        }
         let locator = source.locator().to_string();
         let encoding = qualia_core_db::ingest_job::detect_encoding(&locator, None, &[]);
         let format = infer_rdf_format(&locator);
@@ -535,13 +765,24 @@ pub fn handle_import(
         None => None,
     };
 
-    match streaming_import_rdf_with_report(
-        &path,
-        &output.to_string_lossy(),
-        mode,
-        segment_bytes,
-        report,
-    ) {
+    match if omit.is_empty() {
+        streaming_import_rdf_with_report(
+            &path,
+            &output.to_string_lossy(),
+            mode,
+            segment_bytes,
+            report,
+        )
+    } else {
+        streaming_import_rdf_with_report_filtered(
+            &path,
+            &output.to_string_lossy(),
+            mode,
+            segment_bytes,
+            report,
+            &omit,
+        )
+    } {
         Ok(quin_count) => {
             if progress != ImportProgressFormat::Json {
                 eprintln!(
@@ -554,6 +795,7 @@ pub fn handle_import(
     }
 }
 
+/// Handles the  action.
 pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::error::Error>> {
     use qualia_core_db::ingest::{streaming_import_rdf_with_job, IngestMode, IngestReport};
     use qualia_core_db::ingest_job::{
@@ -689,17 +931,45 @@ pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_ingest(format: &IngestFormat) {
     match format {
-        IngestFormat::Semantic { file } => {
+        IngestFormat::Semantic {
+            file,
+            access_policy,
+            mapping_version,
+            context_digest,
+            compiler_build_digest,
+        } => {
             let out_path = file.with_extension("q42");
+            let policy = match qualia_core_db::q42_volume::IngestAccessPolicy::parse(access_policy)
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("Ingest error: {e}");
+                    return;
+                }
+            };
             println!("Detecting format for: {}", file.display());
-            match crate::ingest::ingest_auto(&file, &out_path) {
+            match crate::ingest::ingest_auto_with_policy(
+                file,
+                &out_path,
+                policy,
+                mapping_version.as_deref(),
+                context_digest.as_deref(),
+                compiler_build_digest.as_deref(),
+            ) {
                 Ok((stats, fmt)) => {
                     println!("Format : {}", fmt.label());
+                    println!("Policy : {}", policy.as_str());
                     println!("Triples: {}", stats.triples_ingested);
+                    println!("Lex    : {}", stats.lex_entries);
                     println!("Blocks : {}", stats.blocks_written);
                     println!("Output : {}", out_path.display());
+                    println!(
+                        "Provenance: {}",
+                        qualia_core_db::q42_volume::provenance_path_for(&out_path).display()
+                    );
                     println!("Done.");
                 }
                 Err(e) => eprintln!("Ingest error: {e}"),
@@ -786,6 +1056,7 @@ fn spawn_detached_publish(dir: &std::path::Path) -> Result<u32, Box<dyn std::err
     Ok(child.id())
 }
 
+/// Handles the  action.
 pub fn handle_query(dialect: &QueryDialect) {
     match dialect {
         QueryDialect::Sparql {
@@ -819,6 +1090,7 @@ pub fn handle_query(dialect: &QueryDialect) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     let ext = input
         .extension()
@@ -865,6 +1137,7 @@ pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_profile(action: &ProfileAction) {
     match action {
         ProfileAction::Compile { input, out } => {
@@ -971,6 +1244,7 @@ pub fn handle_profile(action: &ProfileAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_capabilities(list: bool) {
     if list {
         println!("============================================================");

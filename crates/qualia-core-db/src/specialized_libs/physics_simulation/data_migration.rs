@@ -135,6 +135,7 @@ pub struct FailedMigration {
 }
 
 impl DataMigration {
+    /// Creates a migration coordinator.
     pub fn new() -> Self {
         Self {
             migration_policies: HashMap::new(),
@@ -143,6 +144,7 @@ impl DataMigration {
         }
     }
 
+    /// Initializes migration tools; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -184,6 +186,7 @@ impl DataMigration {
 }
 
 impl MigrationStatus {
+    /// Creates an empty migration status.
     pub fn new() -> Self {
         Self {
             active_migrations: Vec::new(),
@@ -224,6 +227,7 @@ impl MigrationStatus {
 }
 
 impl MigrationTool {
+    /// Creates a migration tool descriptor.
     pub fn new() -> Self {
         Self {
             tool_id: "default".to_string(),
@@ -259,6 +263,7 @@ impl MigrationTool {
 }
 
 impl ToolCapabilities {
+    /// Creates default tool capabilities.
     pub fn new() -> Self {
         Self {
             supported_formats: vec!["HDF5".to_string(), "NetCDF".to_string()],

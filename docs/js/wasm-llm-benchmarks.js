@@ -634,6 +634,8 @@ class QualiaAdapter {
                 source = r.source;
             }
             hooks.progress('initializing WebGPU engine');
+            hooks.progress('developer mode: Sentinel token acceptance disabled');
+            mod.configureBrowserExecutionMode('developer', true);
             await mod.initialize_webgpu_engine(bytes);
             if (!mod.isWebgpuEngineReady()) {
                 throw new Error('Qualia engine failed to initialise after load');
@@ -675,7 +677,8 @@ class QualiaAdapter {
             approxTokens,
             tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
             heapDeltaMb: heapStart !== null && heapEnd !== null ? heapEnd - heapStart : null,
-            summary: `Native GGUF→WebGPU via ${fmt}; greedy decode (temperature/max-tokens not applied).`,
+            executionReceipt: prepared.mod.getBrowserExecutionReceipt(),
+            summary: `Browser developer GGUF→WebGPU via ${fmt}; Sentinel token acceptance disabled; greedy decode (temperature/max-tokens not applied).`,
             modelLabel: `${prepared.url.split('/').pop()} · ${prepared.format}`,
         };
     }

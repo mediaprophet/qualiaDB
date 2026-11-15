@@ -1,19 +1,22 @@
 [package]
 name = "webizen-render"
-version = "0.0.39"
+version = "0.0.41"
 edition = "2021"
 publish = false
 
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
-wgpu = "30"
-bytemuck = { version = "1.14", features = ["derive"] }
-log = "0.4"
-serde = { version = "1.0", features = ["derive"] }
+etalon = { workspace = true, default-features = false, features = ["std", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
+etalon-render = { workspace = true, features = ["gpu"] }
+bytemuck = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dependencies.qualia-core-db]
 path = "../qualia-core-db"
 optional = true
+default-features = false
+features = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "privacy-he"]
 
 [dependencies.vibe]
 path = "../vibe"
@@ -23,13 +26,23 @@ optional = true
 # via WebGPU/WebGL instead of reading pixels back. png codec only, to keep the
 # dependency lean (image@0.25 is already in the workspace lock).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-image = { version = "0.25", default-features = false, features = ["png"] }
-base64 = "0.22"
-pollster = "1"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+base64 = "0.23.1"
+pollster = "1.0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 wasm-bindgen = "0.2"
+web-sys = { workspace = true, features = ["HtmlCanvasElement"] }
+
+# The engine's browser bridge modules are feature-gated for WASM and are not
+# part of the native SDK profile. Resolver v2 keeps this target-only feature
+# set out of native builds.
+[target.'cfg(target_arch = "wasm32")'.dependencies.qualia-core-db]
+path = "../qualia-core-db"
+optional = true
+default-features = false
+features = ["portal"]
 
 [features]
 default = ["qualia"]
@@ -39,4 +52,4 @@ qualia = ["qualia-core-db", "vibe"]
 cfg_aliases = "0.2"
 
 [dev-dependencies]
-serde_json = "1"
+serde_json = { workspace = true }

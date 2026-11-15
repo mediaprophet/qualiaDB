@@ -8,7 +8,7 @@ use super::host_client::{
     fetch_health_records, pick_file_path, pick_save_path,
 };
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug)]
 struct ClinicalUi {
@@ -42,6 +42,7 @@ impl Default for ClinicalUi {
 }
 
 #[component]
+/// Aether `WellfairClinicalPanel` component.
 pub fn WellfairClinicalPanel() -> Element {
     let mut ui = use_signal(ClinicalUi::default);
 

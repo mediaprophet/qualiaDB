@@ -65,3 +65,15 @@ the privacy guarantee.
 DP and the fixed-capacity key metadata registry compile without `privacy-he`. The
 large BFV dependency is feature-gated so slim/no-default WASM profiles can omit it.
 Key generation is explicit and is never performed by `PrivacyEngine::new()`.
+
+## Browser policy (UE-045 — settled 2026-09-25)
+
+**BFV homomorphic encryption is native-only.** Browser / WASM profiles must not
+advertise `privacy-he-bfv`. Reasons: (1) upstream `fhe` is not independently
+audited; (2) key/ciphertext material is large relative to the 42 MiB Sentinel and
+wasm size gates; (3) local-first fiduciary crypto prefers OS-backed key vaults
+on desktop/edge, not in-page JS heaps.
+
+Calibrated DP releases may be revisited for a future wasm-scientific opt-in;
+until then they stay on the native-only register alongside BFV so Civics never
+treats a missing export as a successful no-op.

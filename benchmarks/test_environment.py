@@ -3,6 +3,7 @@ from environment import merge_execution_environment, read_workspace_engine_versi
 
 
 def test_merge_replaces_stale_engine_version():
+    """Test: merge replaces stale engine version."""
     workspace = read_workspace_engine_version()
     assert workspace == "0.0.30"
     merged = merge_execution_environment(

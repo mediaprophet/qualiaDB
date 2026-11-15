@@ -1,0 +1,56 @@
+   Compiling typenum v1.20.1
+   Compiling getrandom v0.4.3
+   Compiling once_cell v1.21.4
+   Compiling windows-sys v0.61.2
+   Compiling generic-array v0.14.7
+   Compiling tempfile v3.27.0
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling etalon-model-io v0.0.2 (C:\github\etalon\crates\etalon-model-io)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.04s
+     Running unittests src\lib.rs (target\debug\deps\etalon_model_io-c69120ddd1e2bc34.exe)
+
+running 26 tests
+test lease::platform::tests::queried_abi_and_classifier_refuse_unqualified_backing ... ok
+test lease::tests::allocation_counter::measurement_clears_on_check ... ok
+test lease::tests::allocation_counter::positive_control_observes_freed_allocation ... ok
+test lease::tests::allocation_counter::measurement_clears_on_unwind ... ok
+test lease::tests::allocation_counter::unmeasured_allocations_do_not_count ... ok
+test lease::tests::allocation_counter::zero_allocation_operation_passes ... ok
+test lease::tests::concurrent_growth_and_truncation_cannot_change_leased_bytes ... ok
+test lease::tests::error_cancellation_and_unwind_release_every_owned_handle ... ok
+test lease::tests::hot_borrow_identity_bundle_and_arc_clone_have_zero_allocation ... ok
+test lease::tests::exact_length_total_budget_full_content_and_checked_arithmetic ... ok
+test lease::tests::independent_readers_share_bytes_but_cannot_create_mutable_source_views ... ok
+test lease::tests::preexisting_write_delete_and_closed_file_writable_mapping_refuse ... ok
+test lease::tests::resource_bundle_binds_role_version_order_length_and_complete_content ... ok
+test lease::tests::writer_exclusion_persists_through_last_arc_and_all_aliases ... FAILED
+test snapshot::tests::actual_write_loop_counts_interrupted_and_partial_attempts ... ok
+test snapshot::tests::actual_open_reader_can_delay_cleanup_and_retry_keeps_ownership ... ok
+test snapshot::tests::cancellation_observed_after_reader_returns_prevents_copy_success ... ok
+test snapshot::tests::dishonest_reader_and_panic_are_bounded_and_clean ... ok
+test snapshot::tests::explicit_close_and_constructor_errors_retain_failed_cleanup_for_retry ... ok
+test snapshot::tests::exact_multichunk_snapshot_lives_until_last_arc_then_cleans ... ok
+test snapshot::tests::identity_all_budgets_and_cancellation_refuse_before_any_read_or_directory ... ok
+test snapshot::tests::final_local_lease_rechecks_actual_bytes_length_cancellation_and_unwind ... ok
+test snapshot::tests::interrupted_calls_short_reads_and_extra_byte_probe_are_counted ... ok
+test snapshot::tests::short_long_wrong_digest_and_io_failures_clean ... ok
+test snapshot::tests::successful_and_already_removed_cleanup_never_delete_a_later_replacement ... ok
+test snapshot::tests::unsupported_parent_never_reads_source_or_creates_output ... ok
+
+failures:
+
+---- lease::tests::writer_exclusion_persists_through_last_arc_and_all_aliases stdout ----
+
+thread 'lease::tests::writer_exclusion_persists_through_last_arc_and_all_aliases' (48236) panicked at crates\etalon-model-io\src\lease\tests.rs:51:34:
+called `Result::unwrap()` on an `Err` value: Os { code: 5, kind: PermissionDenied, message: "Access is denied." }
+
+
+failures:
+    lease::tests::writer_exclusion_persists_through_last_arc_and_all_aliases
+
+test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+
+error: test failed, to rerun pass `-p etalon-model-io --lib`

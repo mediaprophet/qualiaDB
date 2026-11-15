@@ -64,16 +64,43 @@ pub fn translate_graph_to_quins(graph: &UiLogicGraph, out: &mut [NQuin]) -> usiz
 /// Evaluates a translated logic graph and returns a report to update the UI.
 pub fn evaluate_ui_graph(graph: &UiLogicGraph) -> EvaluationReport {
     let mut out_quins = [NQuin::default(); 128];
-    let _quin_count = translate_graph_to_quins(graph, &mut out_quins);
+    let quin_count = translate_graph_to_quins(graph, &mut out_quins);
 
-    // Mock evaluation for now (Paraconsistent Logic / SHACL checking would hook here)
-    // We just return dummy contradiction detection for demonstration.
     let mut contradictions = Vec::new();
     let mut validations = Vec::new();
 
+    let mut consistent = [NQuin::default(); 128];
+    let mut isolated = [NQuin::default(); 128];
+
+    let (_, isolated_count) = crate::modalities::paraconsistent::route_paraconsistent(
+        &out_quins[..quin_count],
+        &mut consistent,
+        &mut isolated,
+    )
+    .unwrap_or((0, 0));
+
+    let isolated_subjects: Vec<u64> = isolated[..isolated_count]
+        .iter()
+        .map(|q| q.subject)
+        .collect();
+
     for edge in &graph.edges {
-        if edge.label == "object" {
-            contradictions.push(edge.from); // dummy logic
+        let is_status_contradiction = edge.status.eq_ignore_ascii_case("contradiction")
+            || edge.label.eq_ignore_ascii_case("contradicts")
+            || edge.label.eq_ignore_ascii_case("conflicts_with")
+            || edge.label.eq_ignore_ascii_case("not");
+
+        let from_title_hash = graph
+            .nodes
+            .iter()
+            .find(|n| n.id == edge.from)
+            .map(|n| q_hash(&n.title))
+            .unwrap_or(0);
+
+        let is_paraconsistent_isolated = isolated_subjects.contains(&from_title_hash);
+
+        if is_status_contradiction || is_paraconsistent_isolated {
+            contradictions.push(edge.from);
         } else {
             validations.push(edge.from);
         }

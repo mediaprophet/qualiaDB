@@ -305,6 +305,7 @@ pub const COMPUTATIONAL_ECONOMICS_CAPABILITIES: &[CapabilityRecord] = &[
     },
 ];
 
+/// Capabilities in `domain`.
 pub fn capabilities_by_domain(domain: CapabilityDomain, out: &mut [CapabilityRecord]) -> usize {
     let mut written = 0usize;
     for record in COMPUTATIONAL_ECONOMICS_CAPABILITIES {

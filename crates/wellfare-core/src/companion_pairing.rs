@@ -17,6 +17,7 @@ pub struct CompanionChallenge {
 }
 
 impl CompanionChallenge {
+    /// Creates a new instance.
     pub fn new(nonce_hex: impl Into<String>) -> Self {
         Self {
             msg_type: MSG_CHALLENGE.into(),
@@ -36,6 +37,7 @@ pub struct CompanionPairingResponse {
 }
 
 impl CompanionPairingResponse {
+    /// Creates a new instance.
     pub fn new(
         device_id: impl Into<String>,
         public_key_hex: impl Into<String>,
@@ -59,6 +61,7 @@ pub struct CompanionAuthResult {
 }
 
 impl CompanionAuthResult {
+    /// Success result.
     pub fn success() -> Self {
         Self {
             msg_type: MSG_AUTH_SUCCESS.into(),
@@ -66,6 +69,7 @@ impl CompanionAuthResult {
         }
     }
 
+    /// Denied result.
     pub fn denied(reason: impl Into<String>) -> Self {
         Self {
             msg_type: MSG_AUTH_DENIED.into(),

@@ -19,18 +19,23 @@ pub fn scene_create(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Scene.add_node` — add a node to a scene graph. Returns the node record.
+/// Extra fields from the vibe (`kind`, `name`, `scale`, endpoints) pass through
+/// so a script can construct a scene without a per-scene Rust file.
 pub fn scene_add_node(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_u64(args, "id").ok_or_else(|| args::bad(span, "Scene.add_node needs id"))?;
-    let x = args::rec_f64(args, "x").unwrap_or(0.0);
-    let y = args::rec_f64(args, "y").unwrap_or(0.0);
-    let z = args::rec_f64(args, "z").unwrap_or(0.0);
-    Ok(args::record([
-        ("id", Value::U64(id)),
-        ("x", Value::F64(x)),
-        ("y", Value::F64(y)),
-        ("z", Value::F64(z)),
-        ("status", Value::String("added".into())),
-    ]))
+    let mut rec = match args {
+        Value::Record(m) => m.clone(),
+        _ => std::collections::BTreeMap::new(),
+    };
+    rec.insert("id".into(), Value::U64(id));
+    rec.entry("x".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "x").unwrap_or(0.0)));
+    rec.entry("y".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "y").unwrap_or(0.0)));
+    rec.entry("z".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "z").unwrap_or(0.0)));
+    rec.insert("status".into(), Value::String("added".into()));
+    Ok(Value::Record(rec))
 }
 
 /// `Scene.set_transform` — set a node's transform (position, rotation, scale).
@@ -76,18 +81,28 @@ pub fn scene_set_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 /// `Scene.add_camera` — add a camera to a scene.
+/// Orbit fields (`yaw`, `pitch`, `zoom`) pass through for holographic theatres.
 pub fn scene_add_camera(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let x = args::rec_f64(args, "x").unwrap_or(0.0);
-    let y = args::rec_f64(args, "y").unwrap_or(0.0);
-    let z = args::rec_f64(args, "z").unwrap_or(5.0);
-    let fov = args::rec_f64(args, "fov").unwrap_or(60.0);
-    Ok(args::record([
-        ("x", Value::F64(x)),
-        ("y", Value::F64(y)),
-        ("z", Value::F64(z)),
-        ("fov", Value::F64(fov)),
-        ("status", Value::String("camera_added".into())),
-    ]))
+    let mut rec = match args {
+        Value::Record(m) => m.clone(),
+        _ => std::collections::BTreeMap::new(),
+    };
+    rec.entry("x".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "x").unwrap_or(0.0)));
+    rec.entry("y".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "y").unwrap_or(0.0)));
+    rec.entry("z".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "z").unwrap_or(5.0)));
+    rec.entry("fov".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "fov").unwrap_or(60.0)));
+    rec.entry("yaw".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "yaw").unwrap_or(0.0)));
+    rec.entry("pitch".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "pitch").unwrap_or(0.0)));
+    rec.entry("zoom".into())
+        .or_insert_with(|| Value::F64(args::rec_f64(args, "zoom").unwrap_or(0.0)));
+    rec.insert("status".into(), Value::String("camera_added".into()));
+    Ok(Value::Record(rec))
 }
 
 /// `Scene.render` — high-level render request. Wraps `Render.gpu_render_frame`.

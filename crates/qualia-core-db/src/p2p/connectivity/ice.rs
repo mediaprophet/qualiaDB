@@ -26,6 +26,7 @@ pub struct IceAgent {
 }
 
 impl IceAgent {
+    /// Creates a default `IceAgent`.
     pub fn new(role: IceRole, policy: PathPolicy, has_v6: bool, has_v4: bool) -> Self {
         let mut tables = gather_permitted(policy, has_v6, has_v4);
         let mut i = 0;
@@ -45,6 +46,7 @@ impl IceAgent {
         }
     }
 
+    /// Next ICE candidate.
     pub fn next(&mut self, now_ms: u64) -> Scheduled {
         tick(
             &mut self.slot,
@@ -115,6 +117,7 @@ impl IceAgent {
         None
     }
 
+    /// `true` when `succeeded` present.
     pub fn has_succeeded(&self) -> bool {
         let mut i = 0;
         while i < self.tables.pair_len {

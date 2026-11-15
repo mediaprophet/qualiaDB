@@ -79,6 +79,8 @@ pub enum KeyAlgorithm {
     SHA256,
     SHA512,
     BLAKE3,
+    /// Explicit DH key; never accepted by signing dispatch.
+    X25519,
 }
 
 /// Security levels

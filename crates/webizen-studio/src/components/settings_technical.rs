@@ -1,5 +1,5 @@
 use crate::theme_engine::{self, ResolvedTheme, ThemeDefinition};
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
@@ -292,6 +292,7 @@ fn SelectControl(
 }
 
 #[component]
+/// Aether `TechnicalSettingsPage` component.
 pub fn TechnicalSettingsPage() -> Element {
     let mut theme_state = consume_context::<Signal<ResolvedTheme>>();
     let custom_themes = use_signal(read_custom_themes);

@@ -8,23 +8,9 @@
 //! 2. **Stage 2 — RLB high-pass** (a 2nd-order high-pass, ~38 Hz corner)
 //!    removing sub-audible / rumble energy.
 //!
-//! The coefficients are derived analytically for the given sample rate via the
-//! bilinear transform (`K = tan(pi*f0/fs)`) using the canonical BS.1770
-//! parametrisation, so they reproduce the published 48 kHz reference tables
-//! exactly and re-scale correctly for any rate (44.1 / 48 / 96 kHz, …).
+//! The coefficients are derived analytically via [`etalon_signal::filter`].
 
 use crate::features::filters::biquad::BiquadCoeffs;
-use core::f64::consts::PI;
-
-// --- Stage 1 (high shelf) design constants (BS.1770 canonical) ------------
-const SHELF_F0: f64 = 1_681.974_450_955_533;
-const SHELF_Q: f64 = 0.707_175_236_955_419_6;
-const SHELF_GAIN_DB: f64 = 3.999_843_853_973_347;
-const SHELF_VB_EXP: f64 = 0.499_666_774_154_541_6;
-
-// --- Stage 2 (high pass) design constants ---------------------------------
-const HP_F0: f64 = 38.135_470_876_024_44;
-const HP_Q: f64 = 0.500_327_037_323_877_3;
 
 /// Build the two BS.1770 K-weighting biquads for `sample_rate` Hz.
 ///
@@ -33,40 +19,12 @@ const HP_Q: f64 = 0.500_327_037_323_877_3;
 /// finite for degenerate inputs.
 pub fn k_weighting_coeffs(sample_rate: f32) -> (BiquadCoeffs, BiquadCoeffs) {
     let fs = if sample_rate > 1.0 {
-        sample_rate as f64
+        f64::from(sample_rate)
     } else {
         1.0
     };
-
-    // Stage 1: high-frequency shelving filter.
-    let k = (PI * SHELF_F0 / fs).tan();
-    let vh = 10f64.powf(SHELF_GAIN_DB / 20.0);
-    let vb = vh.powf(SHELF_VB_EXP);
-    let kk = k * k;
-    let kq = k / SHELF_Q;
-    let a0 = 1.0 + kq + kk;
-    let shelf = BiquadCoeffs {
-        b0: ((vh + vb * kq + kk) / a0) as f32,
-        b1: ((2.0 * (kk - vh)) / a0) as f32,
-        b2: ((vh - vb * kq + kk) / a0) as f32,
-        a1: ((2.0 * (kk - 1.0)) / a0) as f32,
-        a2: ((1.0 - kq + kk) / a0) as f32,
-    };
-
-    // Stage 2: 2nd-order high-pass. Numerator is exactly [1, -2, 1]; only the
-    // poles depend on the sample rate.
-    let kb = (PI * HP_F0 / fs).tan();
-    let kkb = kb * kb;
-    let kqb = kb / HP_Q;
-    let a0b = 1.0 + kqb + kkb;
-    let hp = BiquadCoeffs {
-        b0: 1.0,
-        b1: -2.0,
-        b2: 1.0,
-        a1: ((2.0 * (kkb - 1.0)) / a0b) as f32,
-        a2: ((1.0 - kqb + kkb) / a0b) as f32,
-    };
-
+    let shelf = BiquadCoeffs::from_etalon(etalon_signal::filter::design_k_weighting_stage1(fs));
+    let hp = BiquadCoeffs::from_etalon(etalon_signal::filter::design_k_weighting_stage2(fs));
     (shelf, hp)
 }
 

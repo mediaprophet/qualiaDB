@@ -27,6 +27,7 @@ pub enum AssetSensitivity {
 }
 
 impl AssetSensitivity {
+    /// Builds `AssetSensitivity` from `u8`.
     pub fn from_u8(value: u8) -> Result<Self, AssetEnvelopeError> {
         match value {
             0 => Ok(Self::Public),
@@ -49,6 +50,7 @@ pub enum AssetRoutingLane {
 }
 
 impl AssetRoutingLane {
+    /// Builds `AssetRoutingLane` from `u8`.
     pub fn from_u8(value: u8) -> Result<Self, AssetEnvelopeError> {
         match value {
             0 => Ok(Self::Passthrough),

@@ -43,6 +43,7 @@ pub struct FederatedQueryHandler<'a> {
 }
 
 impl<'a> FederatedQueryHandler<'a> {
+    /// Creates `FederatedQueryHandler` with the given state.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             local_quins: quins,

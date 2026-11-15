@@ -3,8 +3,8 @@
 - Parent: **CSCP-08**. Child IDs: none until a human-supplied inbound URL exists.
 - Outcome: an Internet MASQUE (RFC 9298 CONNECT-UDP / HTTP/3) bound-UDP path that a second host actually dials. Not a docs-only claim.
 - Explicit non-goals: do not invent a public URL; do not tick CSCP-08 / parent CSCP-09 / CSCP-12; do not set Internet honesty flags true without two-host evidence; do not admit quinn/noq/iroh (CSCP-07 deferred); do not treat loopback H2 or local rustls WSS as MASQUE; do not conflate CSCP-12 (datatracker) with this task.
-- Agent/owner: grok-bot or Timothy on `C:\Projects\qualia-27062026`, branch `0.0.38`. Cloud agents cannot be the public relay.
-- Source: live `0.0.38`. Canonical I-D: `docs/standards/ietf/draft-webcivics-cscp-00.md`. Operator directions: `docs/standards/ietf/CSCP-08-LOCAL-CHORES.md`.
+- Agent/owner: grok-bot or Timothy on `C:\Projects\qualia-27062026`, branch `0.0.40`. Cloud agents cannot be the public relay.
+- Source: live `0.0.40`. Canonical I-D: `docs/standards/ietf/draft-webcivics-cscp-00.md`. Operator directions: `docs/standards/ietf/CSCP-08-LOCAL-CHORES.md`.
 
 ## Gate
 

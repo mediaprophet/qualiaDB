@@ -426,6 +426,7 @@ fn save_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), String> {
     fs::write(path, text).map_err(|e| e.to_string())
 }
 
+/// Lists domains.
 pub fn list_domains() -> Vec<Domain> {
     load_json(domains_path())
 }
@@ -438,6 +439,7 @@ pub fn upsert_domain(domain: Domain) -> Result<(), String> {
     save_json(domains_path(), &all)
 }
 
+/// Lists addresses.
 pub fn list_addresses(domain: Option<&str>) -> Vec<MailAddress> {
     let all: Vec<MailAddress> = load_json(addresses_path());
     match domain {

@@ -8,15 +8,55 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 pub static APP_STATE: OnceLock<Arc<AppState>> = OnceLock::new();
 
+/// Initializes app state.
 pub fn init_app_state() -> Arc<AppState> {
     let config = load_config_from_disk();
     init_data_directories(&config.storage_path);
     let meta = app_meta_dir();
     let _ = std::fs::create_dir_all(&meta);
     let meta_str = meta.to_string_lossy().into_owned();
-    let state = Arc::new(AppState {
+    let tax_suite = load_suite_from_disk(&config.storage_path);
+    let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&meta_str)
+        .unwrap_or_else(|e| panic!("KeyVault init failed ({meta_str}): {e}"));
+    let state = build_app_state(config, vault, tax_suite);
+    APP_STATE.set(state.clone()).ok();
+    // Person ≠ machine: ensure person principal + local apparatus exist early.
+    // Failures are non-fatal at boot (e.g. read-only meta dir); setup/finish retries.
+    let _ = crate::identity_plane::ensure_local_apparatus(None);
+    state
+}
+
+/// Attach an explicitly opened native vault without creating identity, keys,
+/// directories, fleet records or services. Existing application state is never
+/// replaced. The native operator selects and opens the vault before this call.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn init_inference_host_state(
+    vault: qualia_core_db::key_vault::KeyVault,
+) -> Result<Arc<AppState>, String> {
+    if vault.is_locked() {
+        return Err("An explicitly opened unlocked vault is required".into());
+    }
+    if APP_STATE.get().is_some() {
+        return Err("Application state is already initialized; use its existing host".into());
+    }
+    let state = build_app_state(
+        AgentConfig::default(),
+        vault,
+        TaxRecipientSuite::default_cooperative(),
+    );
+    APP_STATE
+        .set(Arc::clone(&state))
+        .map_err(|_| "Application state was initialized concurrently")?;
+    Ok(state)
+}
+fn build_app_state(
+    config: AgentConfig,
+    vault: qualia_core_db::key_vault::KeyVault,
+    tax_suite: TaxRecipientSuite,
+) -> Arc<AppState> {
+    Arc::new(AppState {
         config: Mutex::new(config.clone()),
-        tax_suite: Mutex::new(load_suite_from_disk(&config.storage_path)),
+        tax_suite: Mutex::new(tax_suite),
         daemon_running: Arc::new(Mutex::new(false)),
         nym_relay_active: Arc::new(AtomicBool::new(false)),
         stark_prover_active: Arc::new(AtomicBool::new(false)),
@@ -29,17 +69,9 @@ pub fn init_app_state() -> Arc<AppState> {
         delegation_rules: Arc::new(Mutex::new(Vec::new())),
         front_doors: Arc::new(Mutex::new(Vec::new())),
         installed_qapps: Arc::new(Mutex::new(Vec::new())),
-        key_vault: Arc::new(Mutex::new(
-            qualia_core_db::key_vault::KeyVault::load_or_generate(&meta_str)
-                .unwrap_or_else(|e| panic!("KeyVault init failed ({meta_str}): {e}")),
-        )),
+        key_vault: Arc::new(Mutex::new(vault)),
         download_events: tokio::sync::broadcast::channel(100).0,
-    });
-    APP_STATE.set(state.clone()).ok();
-    // Person ≠ machine: ensure person principal + local apparatus exist early.
-    // Failures are non-fatal at boot (e.g. read-only meta dir); setup/finish retries.
-    let _ = crate::identity_plane::ensure_local_apparatus(None);
-    state
+    })
 }
 
 #[derive(Clone, Serialize)]
@@ -72,6 +104,9 @@ pub struct AgentConfig {
     /// Studio WASM + companion gateway). Default: 8080. If 0, auto-finds
     /// an open port starting from 8080.
     pub settings_port: u16,
+    /// User-configurable external model directories scanned recursively for `.p64` / `.gguf` packages.
+    #[serde(default = "default_model_search_paths")]
+    pub model_search_paths: Vec<String>,
 }
 
 impl Default for AgentConfig {
@@ -84,8 +119,32 @@ impl Default for AgentConfig {
             daemon_port: 4242,
             inference_backend: "local".to_string(),
             settings_port: 8080,
+            model_search_paths: default_model_search_paths(),
         }
     }
+}
+
+/// Default dirs path.
+pub fn default_model_search_paths() -> Vec<String> {
+    let mut paths = Vec::new();
+    for env_key in ["QUALIA_LLM_VAULT", "QUALIA_MODEL_PATHS"] {
+        if let Some(val) = std::env::var_os(env_key) {
+            for p in std::env::split_paths(&val) {
+                if !p.as_os_str().is_empty() {
+                    paths.push(p.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        for candidate in [r"C:\LLM_files", r"C:\LLM_Models"] {
+            if !paths.iter().any(|p| p.eq_ignore_ascii_case(candidate)) {
+                paths.push(candidate.to_string());
+            }
+        }
+    }
+    paths
 }
 
 pub fn dirs_default_path() -> String {
@@ -109,6 +168,7 @@ pub fn dirs_default_path() -> String {
     }
 }
 
+/// App metadata dir.
 pub fn app_meta_dir() -> PathBuf {
     // Tests and multi-profile installs may override the meta root without changing code.
     if let Ok(p) = std::env::var("QUALIA_APP_META_DIR") {
@@ -136,13 +196,16 @@ pub fn app_meta_dir() -> PathBuf {
     }
 }
 
+/// Config file path.
 pub fn config_file_path() -> PathBuf {
     app_meta_dir().join("config.json")
 }
+/// Identity file path.
 pub fn identity_file_path() -> PathBuf {
     app_meta_dir().join("identity.json")
 }
 
+/// Loads config-from-disk.
 pub fn load_config_from_disk() -> AgentConfig {
     std::fs::read_to_string(config_file_path())
         .ok()
@@ -150,6 +213,7 @@ pub fn load_config_from_disk() -> AgentConfig {
         .unwrap_or_else(AgentConfig::default)
 }
 
+/// Initializes data directories.
 pub fn init_data_directories(storage_path: &str) {
     let base = PathBuf::from(storage_path);
     for sub in &[
@@ -233,10 +297,12 @@ pub struct DelegationRule {
     pub is_active: bool,
 }
 
+/// Suite file path.
 pub fn suite_file_path(data_dir: &str) -> PathBuf {
     PathBuf::from(data_dir).join("tax_suite.json")
 }
 
+/// Loads suite-from-disk.
 pub fn load_suite_from_disk(data_dir: &str) -> TaxRecipientSuite {
     let path = suite_file_path(data_dir);
     std::fs::read_to_string(&path)

@@ -29,18 +29,22 @@ _IRI_OBJECT_RE = re.compile(r"^<([^>]+)>$")
 
 
 def _workspace_root() -> str:
+    """Internal helper."""
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def _schemaorg_source_path(root: str) -> str:
+    """Internal helper."""
     return os.path.join(root, "data", "schemaorg", SCHEMAORG_RELEASE, SCHEMAORG_SOURCE_FILE)
 
 
 def _schemaorg_q42_base_path(root: str) -> str:
+    """Internal helper."""
     return os.path.join(root, "data", "schemaorg", SCHEMAORG_RELEASE, f"schemaorg-{SCHEMAORG_VARIANT}")
 
 
 def _synthetic_profile(n: int) -> dict[str, Any]:
+    """Internal helper."""
     nt_bytes = generate_ntriples(n)
     nt_mb = round(len(nt_bytes) / (1024 * 1024), 3)
     return {
@@ -85,6 +89,7 @@ def _synthetic_profile(n: int) -> dict[str, Any]:
 
 
 def _scan_external_nt(nt_bytes: bytes) -> tuple[dict[str, str], int]:
+    """Internal helper."""
     text = nt_bytes.decode("utf-8")
     first_subject = None
     subjects: set[str] = set()
@@ -134,6 +139,7 @@ def _scan_external_nt(nt_bytes: bytes) -> tuple[dict[str, str], int]:
 
 
 def _schemaorg_profile(root: str) -> dict[str, Any]:
+    """Internal helper."""
     source_path = _schemaorg_source_path(root)
     q42_base = _schemaorg_q42_base_path(root)
     q42_path = f"{q42_base}.q42"
@@ -193,14 +199,79 @@ def _schemaorg_profile(root: str) -> dict[str, Any]:
     return profile
 
 
+def _wordnet_profile(root: str) -> dict[str, Any]:
+    """Internal helper."""
+    q42_path = os.path.join(root, "docs", "data", "wordnet", "princeton.q42")
+    if not os.path.exists(q42_path):
+        q42_path = os.path.join(root, "docs", "playground", "wordnet.q42")
+
+    available = os.path.exists(q42_path)
+    file_bytes = os.path.getsize(q42_path) if available else 0
+    file_mb = round(file_bytes / (1024 * 1024), 2) if available else 0.0
+
+    queries = {
+        "point_subject": "http://wordnet-rdf.princeton.edu/id/100001740-n",
+        "twohop_start": "http://wordnet-rdf.princeton.edu/id/102084071-n",
+        "filter_predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+        "point": "SELECT * WHERE { <http://wordnet-rdf.princeton.edu/id/100001740-n> ?p ?o } LIMIT 100",
+        "twohop": (
+            "SELECT * WHERE {\n"
+            "    <http://wordnet-rdf.princeton.edu/id/102084071-n> ?p1 ?b .\n"
+            "    ?b ?p2 ?o .\n"
+            "} LIMIT 1"
+        ),
+        "filter": "SELECT * WHERE { ?s <http://www.w3.org/2000/01/rdf-schema#label> ?o } LIMIT 100",
+        "lemma": "SELECT * WHERE { ?s ?p \"dog\" } LIMIT 100",
+    }
+
+    dataset_info = {
+        "label": "Princeton WordNet 3.1",
+        "release": "3.1",
+        "variant": "rdf",
+        "source_format": "rdf-xml",
+        "source_url": "https://wordnet.princeton.edu",
+        "native_format": "q42",
+        "native_q42_path": q42_path,
+        "native_q42_available": available,
+        "compressed_q42_path": None,
+        "compressed_q42_available": False,
+        "n_triples": 5558748,
+        "source_file_mb": file_mb,
+        "source_file_bytes": file_bytes,
+        "native_q42_file_mb": file_mb,
+        "native_q42_file_bytes": file_bytes,
+        "block_count": 6540,
+        "bidx_available": True,
+    }
+
+    return {
+        "id": "wordnet-31",
+        "label": "Princeton WordNet 3.1",
+        "dataset": "wordnet-31",
+        "kind": "external-q42",
+        "source_format": "q42",
+        "source_path": q42_path,
+        "source_url": "https://wordnet.princeton.edu",
+        "nt_bytes": None,
+        "queries": queries,
+        "n_triples": 5558748,
+        "dataset_info": dataset_info,
+    }
+
+
 def load_dataset_profile(name: str, n: int = 10_000, root: Optional[str] = None) -> dict[str, Any]:
+    """Loads dataset profile."""
     root = os.path.abspath(root or _workspace_root())
     if name == "synthetic-10k":
         return _synthetic_profile(n)
     if name == "schemaorg-30-current-https":
         return _schemaorg_profile(root)
+    if name in ("wordnet-31", "wordnet"):
+        return _wordnet_profile(root)
     raise ValueError(f"unknown dataset profile: {name}")
 
 
 def list_dataset_profiles() -> list[str]:
-    return ["synthetic-10k", "schemaorg-30-current-https"]
+    """Lists dataset profiles."""
+    return ["synthetic-10k", "schemaorg-30-current-https", "wordnet-31"]
+

@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `OceanographyQapp` component.
 pub fn OceanographyQapp() -> Element {
     rsx! {
         QAppEngine {

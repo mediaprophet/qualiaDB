@@ -39,7 +39,7 @@
 //!                       bits [8..15]: hierarchy level (L_-2..L_12)
 //!                       bits [16..31]: nesting depth + reserved
 //!
-//! parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context
+//! parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context ^ metadata
 //! ```
 //!
 //! Reference: OCS Specification v2.2.0 §14.2.
@@ -258,7 +258,7 @@ impl CosmicNQuin {
         let metadata = lane_bits | clock_bits | lower32;
 
         // Parity: XOR fold
-        let parity = subject ^ predicate ^ object ^ context;
+        let parity = subject ^ predicate ^ object ^ context ^ metadata;
 
         Self {
             subject,
@@ -322,7 +322,7 @@ impl CosmicNQuin {
 
     /// Verify the parity field (XOR fold check).
     pub fn verify_parity(&self) -> bool {
-        self.parity == (self.subject ^ self.predicate ^ self.object ^ self.context)
+        self.parity == (self.subject ^ self.predicate ^ self.object ^ self.context ^ self.metadata)
     }
 
     /// Encode to 48 bytes.
@@ -387,7 +387,7 @@ pub fn from_cb_usri(
         | ((level.as_u8() as u64) << 8)
         | ((nesting_depth as u64) << 16);
 
-    let parity = subject ^ predicate ^ object ^ context;
+    let parity = subject ^ predicate ^ object ^ context ^ metadata;
 
     CosmicNQuin {
         subject,
@@ -520,6 +520,10 @@ mod tests {
             SENSITIVITY_PUBLIC,
             1,
         );
+        assert_eq!(q.parity, q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata);
+        q.metadata ^= 1; // Corrupt one bit in metadata (5-field parity check)
+        assert!(!q.verify_parity());
+        q.metadata ^= 1;
         q.subject ^= 1; // Corrupt one bit
         assert!(!q.verify_parity());
     }

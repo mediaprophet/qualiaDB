@@ -37,6 +37,7 @@ pub struct CacheTable {
 }
 
 impl CacheTable {
+    /// Creates a default `CacheTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {

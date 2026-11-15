@@ -31,6 +31,7 @@ impl Default for CanvasNavigationState {
     }
 }
 
+/// Loads.
 pub fn load(storage_root: impl AsRef<Path>) -> CanvasNavigationState {
     let path = storage_root.as_ref().join(STATE_FILE);
     match fs::read(&path) {
@@ -39,6 +40,7 @@ pub fn load(storage_root: impl AsRef<Path>) -> CanvasNavigationState {
     }
 }
 
+/// Saves.
 pub fn save(storage_root: impl AsRef<Path>, state: &CanvasNavigationState) -> std::io::Result<()> {
     let path: PathBuf = storage_root.as_ref().join(STATE_FILE);
     if let Some(parent) = path.parent() {

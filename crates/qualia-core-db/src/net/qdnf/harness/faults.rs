@@ -26,6 +26,7 @@ pub struct FaultSchedule {
 }
 
 impl FaultSchedule {
+    /// `FaultSchedule::never`.
     pub const fn never() -> Self {
         Self {
             pattern: [Fault::None; PIPE_SLOTS],
@@ -33,10 +34,12 @@ impl FaultSchedule {
         }
     }
 
+    /// Builder: sets `pattern`.
     pub const fn with_pattern(pattern: [Fault; PIPE_SLOTS]) -> Self {
         Self { pattern, index: 0 }
     }
 
+    /// Next scheduled fault (drop/delay/partition).
     pub fn next(&mut self) -> Fault {
         let f = self.pattern[self.index % self.pattern.len()];
         self.index = self.index.wrapping_add(1);
@@ -91,10 +94,12 @@ pub struct FaultPipe {
 }
 
 impl FaultPipe {
+    /// Creates a default `FaultPipe`.
     pub const fn new() -> Self {
         Self::with_schedule(FaultSchedule::never())
     }
 
+    /// Builder: `schedule`.
     pub const fn with_schedule(schedule: FaultSchedule) -> Self {
         Self {
             schedule,
@@ -104,18 +109,22 @@ impl FaultPipe {
         }
     }
 
+    /// `FaultPipe::queued`.
     pub const fn queued(&self) -> usize {
         self.len
     }
 
+    /// `true` when `partitioned`.
     pub const fn is_partitioned(&self) -> bool {
         self.gate.is_partitioned()
     }
 
+    /// Cuts the pipe — pushes fail until `heal`.
     pub fn partition(&mut self) {
         self.gate.partition();
     }
 
+    /// Restores the pipe.
     pub fn heal(&mut self) {
         self.gate.heal();
     }
@@ -138,6 +147,7 @@ impl FaultPipe {
         }
     }
 
+    /// Pushes `frame` through the fault-injecting pipe; may drop/queue per schedule.
     pub fn push(&mut self, frame: &[u8]) -> Result<(), QdnfError> {
         self.gate.admit()?;
         if frame.len() > FRAME_CAP {
@@ -178,6 +188,7 @@ impl FaultPipe {
         }
     }
 
+    /// Pops a frame into `out`; returns bytes read.
     pub fn pop(&mut self, out: &mut [u8]) -> Result<usize, QdnfError> {
         self.gate.admit()?;
         let mut i = 0;

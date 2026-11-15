@@ -2,13 +2,14 @@
 
 use super::host_client::{fetch_graph_coverage, fetch_receipts};
 use super::host_dto::{GraphCoverageDto, ReceiptDto};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn cp_prefix(hash: &str) -> String {
     hash.chars().take(12).collect()
 }
 
 #[component]
+/// Aether `WellfairAuditPanel` component.
 pub fn WellfairAuditPanel() -> Element {
     let mut receipts = use_signal(Vec::<ReceiptDto>::new);
     let mut coverage = use_signal(Vec::<GraphCoverageDto>::new);

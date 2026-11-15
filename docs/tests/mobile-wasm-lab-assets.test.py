@@ -13,6 +13,7 @@ SPEC.loader.exec_module(LAB)
 
 class AnatomyAssetStagingTests(unittest.TestCase):
     def make_docs(self, root: Path) -> Path:
+        """Builds the docs fixture."""
         docs = root / "docs"
         playground = docs / "playground"
         playground.mkdir(parents=True)
@@ -21,6 +22,7 @@ class AnatomyAssetStagingTests(unittest.TestCase):
         return docs
 
     def test_stages_valid_legacy_bundles_under_canonical_names(self) -> None:
+        """Test: legacy bundles stage under canonical names."""
         with tempfile.TemporaryDirectory() as temp:
             docs = self.make_docs(Path(temp))
             receipts = LAB.stage_anatomy_assets(docs)
@@ -30,6 +32,7 @@ class AnatomyAssetStagingTests(unittest.TestCase):
             self.assertTrue(all((docs / "playground" / f"{stem}.qualia").is_file() for stem in LAB.ANATOMY_ASSETS))
 
     def test_rejects_invalid_magic_before_staging(self) -> None:
+        """Test: invalid magic is rejected before staging."""
         with tempfile.TemporaryDirectory() as temp:
             docs = self.make_docs(Path(temp))
             (docs / "playground" / "anatomy-female.qualia").write_bytes(b"NOPE" + bytes(2048))
@@ -38,6 +41,7 @@ class AnatomyAssetStagingTests(unittest.TestCase):
             self.assertFalse((docs / "playground" / "anatomy-female.hmc").exists())
 
     def test_rejects_invalid_existing_canonical_asset(self) -> None:
+        """Test: invalid existing canonical asset is rejected."""
         with tempfile.TemporaryDirectory() as temp:
             docs = self.make_docs(Path(temp))
             (docs / "playground" / "anatomy-male.hmc").write_bytes(b"BAD!" + bytes(2048))

@@ -387,6 +387,13 @@ pub struct SparqlQueryContext {
 /// distinct RDF terms). The parser and the [`StringSink`] both use this so a produced
 /// `STRLANG`/`STRDT` term round-trips its tag.
 pub fn literal_term_hash(text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+    // Share the complete RDF-ingest term for finite typed binary64 constants.
+    // This concerns RDF term identity, not coercion of hash tokens to numbers.
+    if lang.is_none() && datatype == Some(crate::resolver::typed_double::DATATYPE) {
+        if let Some(term) = crate::resolver::typed_double::from_lexical(text) {
+            return crate::resolver::typed_double::token(&term);
+        }
+    }
     match (lang, datatype) {
         (None, None) => crate::lexicon::generate_60bit_token(text.as_bytes()),
         (Some(l), _) => crate::lexicon::generate_60bit_token(format!("{text}@{l}").as_bytes()),
@@ -405,6 +412,7 @@ pub struct LiteralTable {
 }
 
 impl LiteralTable {
+    /// Creates an empty literal interning table.
     pub fn new() -> Self {
         Self::default()
     }
@@ -430,6 +438,7 @@ impl LiteralTable {
             datatype.map(str::to_string),
         ));
     }
+    /// Resolves a hash to its literal string, or `None`.
     pub fn resolve(&self, hash: u64) -> Option<&str> {
         self.entries
             .iter()
@@ -454,9 +463,11 @@ impl LiteralTable {
     pub fn contains(&self, hash: u64) -> bool {
         self.entries.iter().any(|(h, ..)| *h == hash)
     }
+    /// `LiteralTable::len`.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+    /// `true` when no literals are interned.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -479,6 +490,7 @@ pub struct StringSink {
 }
 
 impl StringSink {
+    /// Creates an empty string accumulation sink.
     pub fn new() -> Self {
         Self::default()
     }
@@ -552,6 +564,7 @@ pub struct TextResolver<'a> {
 }
 
 impl<'a> TextResolver<'a> {
+    /// Creates a resolver over `literals` with no extra lexicon.
     pub fn new(literals: &'a LiteralTable) -> Self {
         Self {
             literals,
@@ -561,6 +574,7 @@ impl<'a> TextResolver<'a> {
             seed: 0,
         }
     }
+    /// Resolver with an additional lexicon consulted after the literal table.
     pub fn with_lexicon(
         literals: &'a LiteralTable,
         lexicon: &'a dyn Fn(u64) -> Option<String>,
@@ -597,6 +611,9 @@ impl<'a> TextResolver<'a> {
         }
         if let Some(f) = self.lexicon {
             if let Some(s) = f(hash) {
+                if let Some((lexical, _)) = crate::resolver::typed_double::decode(&s) {
+                    return Some(lexical.to_owned());
+                }
                 return Some(s);
             }
         }
@@ -613,6 +630,11 @@ impl<'a> TextResolver<'a> {
         if let Some(sink) = self.sink {
             if let Some(l) = sink.lang(hash) {
                 return Some(l);
+            }
+        }
+        if let Some(term) = self.lexicon.and_then(|lookup| lookup(hash)) {
+            if crate::resolver::typed_double::has_declared_datatype(&term) {
+                return Some(String::new());
             }
         }
         // A known/resolvable literal with no lang tag → "".
@@ -649,6 +671,11 @@ impl<'a> TextResolver<'a> {
         if self.literals.lang(hash).is_some() {
             return Some(RDF_LANGSTRING.to_string());
         }
+        if let Some(term) = self.lexicon.and_then(|lookup| lookup(hash)) {
+            if crate::resolver::typed_double::has_declared_datatype(&term) {
+                return Some(crate::resolver::typed_double::DATATYPE.to_owned());
+            }
+        }
         if let Some(lit) = crate::resolver::classify_inline_literal(hash) {
             return Some(lit.datatype_iri().to_string());
         }
@@ -665,6 +692,7 @@ impl<'a> TextResolver<'a> {
 }
 
 impl SparqlQueryContext {
+    /// Creates an empty query context.
     pub fn new() -> Self {
         Self {
             patterns: [Pattern::Triple {
@@ -795,18 +823,21 @@ pub struct BindingRow {
 }
 
 impl BindingRow {
+    /// Creates an empty binding row.
     pub fn new() -> Self {
         Self {
             slots: [None; MAX_BINDINGS],
         }
     }
 
+    /// Binds `var_id` to `value`.
     pub fn set(&mut self, var_id: VariableId, value: u64) {
         if (var_id as usize) < MAX_BINDINGS {
             self.slots[var_id as usize] = Some(value);
         }
     }
 
+    /// Current binding for `var_id`, or `None`.
     pub fn get(&self, var_id: VariableId) -> Option<u64> {
         if (var_id as usize) < MAX_BINDINGS {
             self.slots[var_id as usize]
@@ -815,6 +846,7 @@ impl BindingRow {
         }
     }
 
+    /// Clears all bindings.
     pub fn clear(&mut self) {
         self.slots = [None; MAX_BINDINGS];
     }

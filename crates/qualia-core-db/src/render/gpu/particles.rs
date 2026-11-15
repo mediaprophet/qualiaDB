@@ -1,5 +1,6 @@
 //! Ambient particle instances derived from the resident 10D tensor (CPU side of the field).
 use super::*;
+/// `particles_from_tensor`.
 pub(super) fn particles_from_tensor(
     bytes: &[u8],
     cap: usize,
@@ -23,6 +24,7 @@ pub(super) fn particles_from_tensor(
     Ok(out)
 }
 
+/// Generates `particles`.
 pub(super) fn generate_particles(count: usize) -> Vec<ParticleInstance> {
     let mut out = Vec::with_capacity(count);
     let mut seed: u32 = 0xC0FFEE_u32;
@@ -42,11 +44,13 @@ pub(super) fn generate_particles(count: usize) -> Vec<ParticleInstance> {
 }
 
 #[inline]
+/// `lcg`.
 pub(super) fn lcg(seed: u32) -> u32 {
     seed.wrapping_mul(1_103_515_245).wrapping_add(12_345)
 }
 
 #[inline]
+/// `?::particle_cap_for_mode`.
 pub fn particle_cap_for_mode(mode: OperationalMode, tier: u8) -> usize {
     if tier < 2 {
         return 0;

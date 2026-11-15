@@ -96,7 +96,11 @@ fn demo_unit_convert_hmc_opens_as_demo() {
     assert_eq!(opened.manifest.content_category, ContentCategory::Demo);
     assert_eq!(opened.manifest.release_id, UNIT_CONVERT);
     assert_eq!(opened.manifest.entry_point, "assess");
-    assert!(opened.manifest.honesty_notice.to_ascii_lowercase().contains("demo"));
+    assert!(opened
+        .manifest
+        .honesty_notice
+        .to_ascii_lowercase()
+        .contains("demo"));
 }
 
 #[test]
@@ -241,11 +245,7 @@ fn demo_catalog_every_seed_accessible_text_non_empty() {
     assert!(!demo_catalog().is_empty());
     for seed in demo_catalog() {
         let opened = open_collectable(&build_demo(seed.slug).unwrap()).unwrap();
-        assert!(
-            !opened.manifest.accessible_text.is_empty(),
-            "{}",
-            seed.slug
-        );
+        assert!(!opened.manifest.accessible_text.is_empty(), "{}", seed.slug);
     }
 }
 

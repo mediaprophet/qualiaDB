@@ -397,11 +397,13 @@ pub struct Aabb {
 
 impl Aabb {
     #[inline]
+    /// Creates `Aabb` with the given state.
     pub fn new(min: Point3, max: Point3) -> Self {
         Self { min, max }
     }
 
     #[inline]
+    /// `Aabb::overlaps`.
     pub fn overlaps(&self, other: &Aabb) -> bool {
         self.min.x <= other.max.x
             && self.max.x >= other.min.x
@@ -412,6 +414,7 @@ impl Aabb {
     }
 
     #[inline]
+    /// `Aabb::contains_point`.
     pub fn contains_point(&self, p: Point3) -> bool {
         p.x >= self.min.x
             && p.x <= self.max.x

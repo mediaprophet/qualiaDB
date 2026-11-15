@@ -91,6 +91,9 @@ pub fn ingest_ntriples(
         let ph = hash_token(p);
         let oh = hash_token(o);
 
+        sorter.push_lex(sh, s);
+        sorter.push_lex(ph, p);
+        sorter.push_lex(oh, o);
         sorter.push(NQuin {
             subject: sh,
             predicate: ph,
@@ -102,12 +105,21 @@ pub fn ingest_ntriples(
         triples += 1;
     }
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge_with_access_policy(
+        output,
+        qualia_core_db::q42_volume::IngestAccessPolicy::Restricted,
+        None,
+    )?;
+
+    let lex_entries = qualia_core_db::q42_volume::Q42Volume::open(output)
+        .ok()
+        .and_then(|v| v.lex_view().ok().map(|l| l.entry_count() as u64))
+        .unwrap_or(0);
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
-        lex_entries: 0,
+        blocks_written: stats.blocks,
+        lex_entries,
         lines_skipped: skipped,
         bidx_written: true,
     })
@@ -205,11 +217,11 @@ pub fn ingest_rdf_xml(
         return Err(Box::new(e));
     }
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -228,6 +240,7 @@ fn parse_nt_line(line: &str) -> Option<(&str, &str, &str)> {
     Some((s, p, o))
 }
 
+/// Ingests a checkpoint.
 pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = File::open(input)?;
     let temp_dir = std::env::temp_dir().join("qualia_sort_chk");
@@ -236,17 +249,18 @@ pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     // .chk format does not use a lexicon currently
     let triples = qualia_core_db::parsers::chk_parser::parse_chk_stream(reader, 0, &mut sorter)?;
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
     })
 }
 
+/// Ingests CBOR.
 pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let file = File::open(input)?;
     let file_size = file.metadata()?.len();
@@ -267,11 +281,11 @@ pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn s
     let triples =
         qualia_core_db::parsers::cbor_parser::parse_cbor_ld_stream(&buffer, 0, &mut sorter)?;
 
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
 
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -449,11 +463,20 @@ macro_rules! stream_ingest {
             let temp_dir = std::env::temp_dir().join($temp_suffix);
             let mut sorter = ExternalSorter::new(temp_dir);
             let triples = $parse_fn(reader, 0, &mut sorter)?;
-            let block_seq = sorter.merge(output)?;
+            // QW-10: default Restricted — never mint permissive-commons here.
+            let stats = sorter.merge_with_access_policy(
+                output,
+                qualia_core_db::q42_volume::IngestAccessPolicy::Restricted,
+                None,
+            )?;
+            let lex_entries = qualia_core_db::q42_volume::Q42Volume::open(output)
+                .ok()
+                .and_then(|v| v.lex_view().ok().map(|l| l.entry_count() as u64))
+                .unwrap_or(0);
             Ok(IngestStats {
                 triples_ingested: triples,
-                blocks_written: block_seq,
-                lex_entries: 0,
+                blocks_written: stats.blocks,
+                lex_entries,
                 lines_skipped: 0,
                 bidx_written: true,
             })
@@ -509,6 +532,7 @@ stream_ingest!(
     "qualia_sort_jsonld"
 );
 
+/// Ingests JSON-LD*.
 pub fn ingest_json_ld_star(
     input: &Path,
     output: &Path,
@@ -522,10 +546,10 @@ pub fn ingest_json_ld_star(
         &mut sorter,
         true,
     )?;
-    let block_seq = sorter.merge(output)?;
+    let stats = sorter.merge(output)?;
     Ok(IngestStats {
         triples_ingested: triples,
-        blocks_written: block_seq,
+        blocks_written: stats.blocks,
         lex_entries: 0,
         lines_skipped: 0,
         bidx_written: true,
@@ -533,10 +557,37 @@ pub fn ingest_json_ld_star(
 }
 
 /// Dispatch to the correct ingest function based on auto-detected format.
+/// Defaults to Restricted access policy (QW-10). Prefer [`ingest_auto_with_policy`].
 pub fn ingest_auto(
     input: &Path,
     output: &Path,
 ) -> Result<(IngestStats, detect::SemanticFormat), Box<dyn std::error::Error>> {
+    ingest_auto_with_policy(
+        input,
+        output,
+        qualia_core_db::q42_volume::IngestAccessPolicy::Restricted,
+        None,
+        None,
+        None,
+    )
+}
+
+/// Auto-detect format, ingest, write provenance companion (QW-10).
+/// `public-redistributable` is refused here — use the catalog/Pages publish path.
+pub fn ingest_auto_with_policy(
+    input: &Path,
+    output: &Path,
+    access_policy: qualia_core_db::q42_volume::IngestAccessPolicy,
+    mapping_version: Option<&str>,
+    context_digest: Option<&str>,
+    compiler_build_digest: Option<&str>,
+) -> Result<(IngestStats, detect::SemanticFormat), Box<dyn std::error::Error>> {
+    if access_policy.may_declare_permissive_commons() {
+        return Err(
+            "public-redistributable semantic ingest requires the catalog publish path; use restricted | project-internal | public-not-for-redistribution for review-gated Civics releases"
+                .into(),
+        );
+    }
     let fmt = detect::detect_format(input).ok_or_else(|| {
         format!(
             "Cannot auto-detect format for '{}'. Use --format to specify.",
@@ -569,5 +620,18 @@ pub fn ingest_auto(
         }
     };
 
+    let source_sha = {
+        use sha2::{Digest, Sha256};
+        let bytes = std::fs::read(input)?;
+        hex::encode(Sha256::digest(&bytes))
+    };
+    let prov = qualia_core_db::q42_volume::IngestProvenanceRecord::new(
+        access_policy,
+        source_sha,
+        mapping_version.unwrap_or("unspecified"),
+        context_digest.unwrap_or("unspecified"),
+        compiler_build_digest.unwrap_or(env!("CARGO_PKG_VERSION")),
+    );
+    prov.write_beside_volume(output)?;
     Ok((stats, fmt))
 }

@@ -40,12 +40,23 @@ enum Outgoing {
 
 struct Drive {
     rt: Option<tokio::runtime::Runtime>,
+    // Keep the local port reserved until both endpoints and their I/O are gone.
+    _listener: TcpListener,
 }
 
 impl Drop for Drive {
     fn drop(&mut self) {
         if let Some(rt) = self.rt.take() {
-            rt.shutdown_background();
+            // Runtime drop joins workers and destroys their socket-owning tasks.
+            // A synchronous endpoint may itself be dropped from an async caller;
+            // move that blocking teardown off the caller's runtime in that case.
+            if tokio::runtime::Handle::try_current().is_ok() {
+                std::thread::spawn(move || drop(rt))
+                    .join()
+                    .expect("capsule runtime shutdown worker panicked");
+            } else {
+                drop(rt);
+            }
         }
     }
 }
@@ -113,8 +124,15 @@ pub fn loopback_tls_h2_connect(
         .enable_all()
         .build()
         .map_err(|e| format!("rt: {e}"))?;
-    let halves = rt.block_on(establish(ca, protocol))?;
-    let drive = Arc::new(Drive { rt: Some(rt) });
+    let (halves, listener) = rt.block_on(async {
+        tokio::time::timeout(Duration::from_secs(10), establish(ca, protocol))
+            .await
+            .map_err(|_| "TLS HTTP/2 CONNECT setup deadline exceeded".to_string())?
+    })?;
+    let drive = Arc::new(Drive {
+        rt: Some(rt),
+        _listener: listener,
+    });
     Ok((
         CapsuleEndpoint {
             tx: halves.0.tx,
@@ -129,15 +147,24 @@ pub fn loopback_tls_h2_connect(
     ))
 }
 
-async fn establish(ca: &LocalCa, protocol: &'static str) -> Result<(Half, Half), String> {
+async fn establish(
+    ca: &LocalCa,
+    protocol: &'static str,
+) -> Result<((Half, Half), TcpListener), String> {
     let (srv_cfg, cli_cfg) = h2_tls_cfgs(ca)?;
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
-        .map_err(|e| e.to_string())?;
-    let addr = listener.local_addr().map_err(|e| e.to_string())?;
+        .map_err(|e| format!("tcp listener bind: {e}"))?;
+    let addr = listener
+        .local_addr()
+        .map_err(|e| format!("tcp listener address: {e}"))?;
 
+    let listener_ref = &listener;
     let server_fut = async move {
-        let (tcp, _) = listener.accept().await.map_err(|e| e.to_string())?;
+        let (tcp, _) = listener_ref
+            .accept()
+            .await
+            .map_err(|e| format!("tcp accept: {e}"))?;
         let tls = TlsAcceptor::from(srv_cfg)
             .accept(tcp)
             .await
@@ -180,7 +207,9 @@ async fn establish(ca: &LocalCa, protocol: &'static str) -> Result<(Half, Half),
     };
 
     let client_fut = async move {
-        let tcp = TcpStream::connect(addr).await.map_err(|e| e.to_string())?;
+        let tcp = TcpStream::connect(addr)
+            .await
+            .map_err(|e| format!("tcp connect to {addr}: {e}"))?;
         let name = ServerName::try_from("localhost").map_err(|e| e.to_string())?;
         let tls = TlsConnector::from(cli_cfg)
             .connect(name, tcp)
@@ -219,7 +248,8 @@ async fn establish(ca: &LocalCa, protocol: &'static str) -> Result<(Half, Half),
         Ok(pump(send, resp.into_body()))
     };
 
-    tokio::try_join!(client_fut, server_fut)
+    let halves = tokio::try_join!(client_fut, server_fut)?;
+    Ok((halves, listener))
 }
 
 fn pump(mut send: h2::SendStream<Bytes>, mut recv: h2::RecvStream) -> Half {
@@ -426,3 +456,7 @@ fn decode_varint(src: &[u8]) -> Result<(u64, usize), CapsuleError> {
     }
     Ok((value, len))
 }
+
+#[cfg(test)]
+#[path = "h2_capsule_tests.rs"]
+mod tests;

@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `BiblicalStudiesQapp` component.
 pub fn BiblicalStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

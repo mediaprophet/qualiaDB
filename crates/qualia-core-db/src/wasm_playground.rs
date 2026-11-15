@@ -96,6 +96,7 @@ fn mv_exp_rotor(
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: geometric-algebra op.
 pub fn geometric_algebra_operation(input_json: &str) -> Result<String, JsValue> {
     use crate::geometric_algebra::simd_kernel::{geometric_product, outer_product, Multivector};
 
@@ -143,6 +144,7 @@ struct AlignPlaygroundInput {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: sequence alignment.
 pub fn sequence_alignment(input_json: &str) -> Result<String, JsValue> {
     let input: AlignPlaygroundInput = parse_json(input_json)?;
     let result = if input.mode == "protein" {
@@ -192,6 +194,7 @@ struct ClinicalRiskInput {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: clinical risk.
 pub fn clinical_risk(input_json: &str) -> Result<String, JsValue> {
     let input: ClinicalRiskInput = parse_json(input_json)?;
     let out =
@@ -210,6 +213,7 @@ struct ChemPlaygroundInput {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: organic chemistry.
 pub fn organic_chemistry(input_json: &str) -> Result<String, JsValue> {
     let input: ChemPlaygroundInput = parse_json(input_json)?;
     let mol = crate::domains::chemical::organic_chemistry::parse_smiles(&input.smiles);
@@ -335,6 +339,7 @@ fn rk4_step_2d(y: &mut [f64; 2], t: f64, h: f64, f: &dyn Fn(f64, &[f64; 2], &mut
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: ODE solver.
 pub fn ode_solver(input_json: &str) -> Result<String, JsValue> {
     let input: OdePlaygroundInput = parse_json(input_json)?;
     if input.h <= 0.0 {
@@ -471,6 +476,7 @@ fn energy_for_state(system: &str, state: i32, temp: f64) -> f64 {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM playground: thermodynamics MCMC.
 pub fn thermodynamics_mcmc(input_json: &str) -> Result<String, JsValue> {
     use crate::domains::physical::thermodynamics::ThermodynamicSampler;
 

@@ -119,6 +119,7 @@ pub struct MannWhitneyResult {
     pub n2: usize,
 }
 
+/// Mann-Whitney U test.
 pub fn mann_whitney_u(x: &[f64], y: &[f64]) -> Option<MannWhitneyResult> {
     let n1 = x.len();
     let n2 = y.len();
@@ -172,6 +173,7 @@ pub struct KolmogorovSmirnovResult {
     pub p_value: f64,
 }
 
+/// One-sample Kolmogorov-Smirnov test.
 pub fn ks_1sample(data: &[f64]) -> Option<KolmogorovSmirnovResult> {
     if data.is_empty() {
         return None;

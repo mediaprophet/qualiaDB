@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 mod boundary_initial;
+pub mod cartoon_deformation;
 mod cfd;
 mod data_migration;
 mod data_storage;
@@ -28,6 +29,10 @@ mod emf;
 mod engine;
 mod errors;
 mod fields;
+pub mod homogenization_acoust;
+pub mod homogenization_hydro;
+pub mod homogenization_mech;
+pub mod homogenization_optic;
 mod library_core;
 mod mechanics;
 mod metrics;
@@ -41,6 +46,12 @@ mod solvers;
 mod solvers_eigen_opt;
 mod time_integration;
 mod types;
+
+pub use cartoon_deformation::*;
+pub use homogenization_acoust::*;
+pub use homogenization_hydro::*;
+pub use homogenization_mech::*;
+pub use homogenization_optic::*;
 
 pub use boundary_initial::*;
 pub use data_migration::*;
@@ -60,6 +71,7 @@ pub use types::*;
 // molecular_dynamics/quantum/population) contribute `impl PhysicsSimulationLibrary`
 // blocks and tree-internal helpers only — no free items to re-export.
 pub use emf::EmfSource;
+pub use population::{step_flocking_simulation, BoidAgent, FlockingParameters};
 
 #[cfg(test)]
 mod tests;

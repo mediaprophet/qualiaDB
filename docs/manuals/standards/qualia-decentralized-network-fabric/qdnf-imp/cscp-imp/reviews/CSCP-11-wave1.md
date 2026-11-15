@@ -2,7 +2,7 @@
 
 **Reviewer:** CSCP-11 (did not author Wave 1). Not approved from the author summary in `cscp-imp/progress-log.md`.  
 **Date:** 2026-09-10  
-**Branch:** `0.0.38`  
+**Branch:** `0.0.40`  
 **HEAD read:** `4cb9f9b1aeb8c733785324550126164ac7fececf`  
 **Normative spec:** `docs/standards/ietf/draft-webcivics-cscp-00.md`  
 **Scope:** CSCP-01–06 local completeness only. Wave 2 (QUIC ALPN, MASQUE Internet, HTTP/2 capsule, browser, datatracker) is out of scope for accept.  

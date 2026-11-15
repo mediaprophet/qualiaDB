@@ -1,7 +1,8 @@
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `RelationshipTechnicalInspector` component.
 pub fn RelationshipTechnicalInspector() -> Element {
     let mut mesh = use_signal(|| serde_json::json!({}));
     let mut dialability = use_signal(|| serde_json::json!([]));

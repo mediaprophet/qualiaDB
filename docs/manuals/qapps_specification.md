@@ -1,7 +1,7 @@
 # QApps: Qualia App Specification
 _Version: 1.0.0-draft | Target: Webizen Platform_
 
-A **QApp** (Qualia App) is a stateless, declarative user interface shell that binds to the sovereign `qualia-db` engine. Unlike traditional applications that bundle their own backend logic and capabilities, a QApp is fundamentally just a declarative view layout mapped to semantic schemas.
+A **QApp** (Qualia App) is a stateless, declarative user interface shell that binds to the human-centric `qualia-db` engine. Unlike traditional applications that bundle their own backend logic and capabilities, a QApp is fundamentally just a declarative view layout mapped to semantic schemas.
 
 ## 1. What is a QApp?
 
@@ -39,7 +39,7 @@ pages:
 
 ## 3. Data Binding & Semantic Linking
 
-Components instantiated by a QApp specify `data_bindings` which act as RDF-Star / LTL pointers. When the Dioxus UI renders a `<qualia-sensor-data>` widget, the Webizen server streams the relevant `NQuin` records matching that binding over the DID-locked WebSocket (`/mobile/stream` or local RPC).
+Components instantiated by a QApp specify `data_bindings` which act as RDF-Star / LTL pointers. When the Aether UI renders a `<qualia-sensor-data>` widget, the Webizen server streams the relevant `NQuin` records matching that binding over the DID-locked WebSocket (`/mobile/stream` or local RPC).
 
 The data binding string is converted to a `q_hash()` inside the engine. The frontend never manages complex local state—it simply reflects the state of the graph.
 

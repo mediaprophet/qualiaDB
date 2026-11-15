@@ -6,7 +6,7 @@
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::qapp_engine::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 #[derive(Clone, PartialEq)]
@@ -33,6 +33,7 @@ enum McPhase {
 }
 
 #[component]
+/// Aether `PortfolioAnalyzer` component.
 pub fn PortfolioAnalyzer() -> Element {
     let mut assets = use_signal(|| {
         vec![

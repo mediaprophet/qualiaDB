@@ -35,7 +35,7 @@ use super::welfare_panel::WellfairWelfarePanel;
 use super::wellbeing_panel::WellfairWellbeingPanel;
 use super::work_board_panel::WellfairWorkBoardPanel;
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Grouped Care-domain nav: (group label, areas: name + short note).
 const AREA_GROUPS: &[(&str, &[(&str, &str)])] = &[
@@ -87,6 +87,7 @@ const AREA_GROUPS: &[(&str, &[(&str, &str)])] = &[
 ];
 
 #[component]
+/// Aether `WellfairShell` component.
 pub fn WellfairShell() -> Element {
     let snapshot = use_host_snapshot();
     let snap = snapshot();

@@ -1,0 +1,30 @@
+
+running 25 tests
+test inference::gguf_sharder::tests::decode_maps_bpe_space_marker_to_ascii_space ... ok
+test inference::gguf_sharder::tests::chat_template_family_detection_and_rendering ... ok
+test inference::gguf_sharder::tests::decode_recovers_exact_gpt2_utf8_bytes ... ok
+test inference::gguf_sharder::tests::encode_prompt_prepends_bos_when_enabled ... ok
+test inference::gguf_sharder::tests::encode_prompt_skips_duplicate_bos ... ok
+test inference::gguf_sharder::tests::gemma4_generic_decode_refuses_architecture_owned_graph ... ok
+test inference::gguf_sharder::tests::endoftext_literal_is_always_a_stop_token ... ok
+test inference::gguf_sharder::tests::gemma_hf_fused_expert_name_normalizes_for_live_moe ... ok
+test inference::gguf_sharder::tests::granite_hybrid_architecture_decode_supported_after_ssm_implemented ... ok
+test inference::gguf_sharder::tests::hyperparams_default_rope_freq_base_is_100k ... ok
+test inference::gguf_sharder::tests::model_specific_qkv_names_resolve_for_live_prefill ... ok
+test inference::gguf_sharder::tests::merge_stop_token_ids_from_helper ... ok
+test inference::gguf_sharder::tests::ordinary_attention_requires_separate_qkv_projections ... ok
+test inference::gguf_sharder::tests::probe_gguf_layer_names_if_exists ... ok
+test inference::gguf_sharder::tests::qwen35moe_decode_supported_fails_closed ... ok
+test inference::gguf_sharder::tests::qwen_hf_fused_qkv_name_normalizes_for_prefill ... ok
+test inference::gguf_sharder::tests::qwen_hybrid_hyperparameters_are_retained ... ok
+test inference::gguf_sharder::tests::qwen_hybrid_layer_tensors_and_fused_qkv_rows_are_addressable ... ok
+test inference::gguf_sharder::tests::smollm_gguf_output_weight_tie_probe ... ok
+test inference::gguf_sharder::tests::smollm_gguf_parses_rope_freq_base_when_present ... ok
+test inference::gguf_sharder::tests::smollm_tokenizer_audit_vs_hf_reference ... ok
+test inference::gguf_sharder::tests::test_gguf_bidx_pointer_generation ... ok
+test inference::gguf_sharder::tests::stop_tokens_include_chat_end_specials ... ok
+test inference::gguf_sharder::tests::test_gguf_ontology_extraction ... ok
+test inference::gguf_sharder::tests::test_wordnet_lexicon_mapping ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 10414 filtered out; finished in 0.02s
+

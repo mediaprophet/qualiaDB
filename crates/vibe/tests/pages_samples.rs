@@ -10,7 +10,9 @@ fn eval_pages_src(src: &str) -> Result<Value, String> {
     let mut env = Env::default();
     {
         let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
-        engine.eval_program(&prog, &mut env).map_err(|e| e.message)?;
+        engine
+            .eval_program(&prog, &mut env)
+            .map_err(|e| e.message)?;
     }
     eval_function(&prog, "main", Vec::new(), &mut host, &mut env).map_err(|e| e.message)
 }
@@ -129,7 +131,10 @@ effect fn main() -> Record {
 "#;
     match eval_pages_src(src).expect("cosmic") {
         Value::Record(map) => {
-            assert!(map.contains_key("x") || map.contains_key("x_m"), "ecef keys: {map:?}");
+            assert!(
+                map.contains_key("x") || map.contains_key("x_m"),
+                "ecef keys: {map:?}"
+            );
         }
         other => panic!("expected ECEF record, got {other}"),
     }

@@ -4,7 +4,7 @@
 
 **Status:** Proposed implementation contracts and acceptance tests; no deployment certification.
 
-**Parent:** [QDNF/QPR enhancement plan](0.0.37-enhancement-plan.md), especially E01–E03 and E12–E21.
+**Parent:** [QDNF/QPR enhancement plan](0.0.40-enhancement-plan.md), especially E01–E03 and E12–E21.
 
 This blueprint targets humanitarian and intergovernmental deployments, including confidential care and biometric processing for PEPs, VIPs, their children and other vulnerable people in hostile environments. Protection is selected from the information, purpose, capabilities and assessed threat; nationality, wealth or status alone does not establish trust or entitlement.
 

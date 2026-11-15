@@ -33,6 +33,7 @@ pub struct PacketSpace {
 }
 
 impl PacketSpace {
+    /// Creates a default `PacketSpace`.
     pub const fn new() -> Self {
         Self {
             next_send: 0,

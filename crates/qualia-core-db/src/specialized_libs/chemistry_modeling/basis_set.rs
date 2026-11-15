@@ -96,12 +96,14 @@ impl AngularMomentum {
 }
 
 impl std::fmt::Display for AngularMomentum {
+    /// Formats as the spectroscopic letter (s, p, d, f, …).
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.letter())
     }
 }
 
 impl From<u8> for AngularMomentum {
+    /// Wraps a raw angular-momentum quantum number without validation.
     fn from(v: u8) -> Self {
         Self(v)
     }
@@ -125,6 +127,8 @@ impl Vec3 {
         z: 0.0,
     };
 
+    /// Creates a point/vector from Cartesian components. Units are the
+    /// caller's responsibility (Bohr vs Angstrom).
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -145,6 +149,7 @@ impl Vec3 {
 
 impl std::ops::Sub for Vec3 {
     type Output = Self;
+    /// Component-wise subtraction.
     fn sub(self, rhs: Self) -> Self::Output {
         Self::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
@@ -152,6 +157,7 @@ impl std::ops::Sub for Vec3 {
 
 impl std::ops::Add for Vec3 {
     type Output = Self;
+    /// Component-wise addition.
     fn add(self, rhs: Self) -> Self::Output {
         Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
@@ -159,6 +165,7 @@ impl std::ops::Add for Vec3 {
 
 impl std::ops::Mul<f64> for Vec3 {
     type Output = Self;
+    /// Scales every component by `s`.
     fn mul(self, s: f64) -> Self::Output {
         Self::new(self.x * s, self.y * s, self.z * s)
     }
@@ -223,6 +230,8 @@ impl PrimitiveGaussian {
         prefactor.powi(3) * nx * ny * nz
     }
 
+    /// Per-axis normalization factor `(4α)^l / (2l−1)!!` for a Cartesian
+    /// Gaussian of exponent `alpha` and angular momentum `l`.
     fn norm_component(alpha: f64, l: u8) -> f64 {
         // (4α)^l / (2l−1)!!
         let numerator = (4.0 * alpha).powi(l as i32);
@@ -230,6 +239,7 @@ impl PrimitiveGaussian {
         numerator / denom
     }
 
+    /// Double factorial `n!!`; defined as 1 for `n <= 0` (covers `(-1)!!`).
     fn double_factorial(n: i64) -> f64 {
         // (−1)!! = 1, 0!! = 1, 1!! = 1
         if n <= 0 {
@@ -436,13 +446,28 @@ impl ContractedShell {
         result
     }
 
-    /// Real spherical harmonic normalization prefactor (simplified).
-    /// The full transform uses associated Legendre polynomials; this gives
-    /// the correct normalization constant for the radial × angular product.
-    fn real_spherical_prefactor(_am: AngularMomentum, _m: i32) -> f64 {
-        // Placeholder: returns 1.0. The integral engine (Task I) will
-        // implement the full real-spherical harmonic transform.
-        1.0
+    /// Real spherical harmonic normalization prefactor.
+    /// Computes N(l, m) = sqrt((2l + 1)/(4*pi) * (l - |m|)! / (l + |m|)!) * (if m == 0 { 1.0 } else { sqrt(2.0) }).
+    fn real_spherical_prefactor(am: AngularMomentum, m: i32) -> f64 {
+        let l = am.0 as i32;
+        let abs_m = m.abs();
+        if abs_m > l {
+            return 0.0;
+        }
+
+        // Compute (l - |m|)! / (l + |m|)!
+        let mut ratio = 1.0f64;
+        for k in (l - abs_m + 1)..=(l + abs_m) {
+            ratio /= k as f64;
+        }
+
+        let factor = ((2 * l + 1) as f64 / (4.0 * std::f64::consts::PI)) * ratio;
+        let norm = factor.sqrt();
+        if m == 0 {
+            norm
+        } else {
+            norm * std::f64::consts::SQRT_2
+        }
     }
 }
 
@@ -645,6 +670,7 @@ pub struct BasisObjectProperties {
 impl Object for ContractedShell {
     type Properties = BasisObjectProperties;
 
+    /// Reports max angular momentum, shell type, function count, and center.
     fn properties(&self) -> Self::Properties {
         BasisObjectProperties {
             angular_momentum: self.max_am,
@@ -658,6 +684,9 @@ impl Object for ContractedShell {
 impl Object for ElementBasis {
     type Properties = BasisObjectProperties;
 
+    /// Reports aggregate properties: highest `l` across shells, total function
+    /// count. `shell_type`/`center` are collapsed (Cartesian, origin) since a
+    /// multi-shell basis has no single value.
     fn properties(&self) -> Self::Properties {
         BasisObjectProperties {
             angular_momentum: self.max_angular_momentum(),
@@ -728,6 +757,8 @@ pub fn parse_bse_json(
     impl<'de, 'a> DeserializeSeed<'de> for BseBasisSeed<'a> {
         type Value = BseBasis;
 
+        /// Entry point for seed-driven deserialization: walks the top-level
+        /// BSE JSON object and returns the parsed `BseBasis`.
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
@@ -739,10 +770,13 @@ pub fn parse_bse_json(
             impl<'de, 'a> Visitor<'de> for BseBasisVisitor<'a> {
                 type Value = BseBasis;
 
+                /// Describes the expected JSON shape for error messages.
                 fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     formatter.write_str("struct BseBasis")
                 }
 
+                /// Reads `name`/`family`/`description` plus the `elements` map
+                /// (filtered to `target_zs`); unknown keys are skipped.
                 fn visit_map<V>(self, mut map: V) -> Result<BseBasis, V::Error>
                 where
                     V: MapAccess<'de>,
@@ -790,6 +824,7 @@ pub fn parse_bse_json(
     impl<'de, 'a> DeserializeSeed<'de> for ElementsSeed<'a> {
         type Value = HashMap<String, BseElement>;
 
+        /// Deserializes the `"elements"` object into a `Z -> BseElement` map.
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
@@ -801,10 +836,13 @@ pub fn parse_bse_json(
             impl<'de, 'a> Visitor<'de> for ElementsVisitor<'a> {
                 type Value = HashMap<String, BseElement>;
 
+                /// Describes the expected JSON shape for error messages.
                 fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                     formatter.write_str("map of elements")
                 }
 
+                /// Keeps only elements whose atomic-number key is in
+                /// `target_zs`; others are parsed and discarded.
                 fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
                 where
                     V: MapAccess<'de>,
@@ -1060,6 +1098,8 @@ pub enum BasisSetError {
 }
 
 impl std::fmt::Display for BasisSetError {
+    /// Formats the error with its context (element Z, basis name, offending
+    /// value, or parse failure).
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::JsonParse(e) => write!(f, "JSON parse error: {}", e),
@@ -1094,6 +1134,8 @@ impl std::fmt::Display for BasisSetError {
 }
 
 impl std::error::Error for BasisSetError {
+    /// Returns the underlying `serde_json`/`ParseFloatError` for
+    /// `JsonParse`/`FloatParse` variants; `None` for the rest.
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::JsonParse(e) => Some(e),
@@ -1104,6 +1146,7 @@ impl std::error::Error for BasisSetError {
 }
 
 impl From<serde_json::Error> for BasisSetError {
+    /// Wraps a `serde_json` failure as `BasisSetError::JsonParse`.
     fn from(err: serde_json::Error) -> Self {
         Self::JsonParse(err)
     }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">A reviewable AI request journey</title>
+  <desc id="desc">Purpose and human authority lead to selected evidence, a bounded AI request, human review and a reviewable record.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0f1d2b"/><stop offset="1" stop-color="#111827"/></linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0l10 5-10 5z" fill="#67e8f9"/></marker>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+  <text x="52" y="58" fill="#e2e8f0" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700">A request stays understandable from purpose to review</text>
+  <text x="52" y="88" fill="#94a3b8" font-family="Inter,Arial,sans-serif" font-size="17">The model assists within stated boundaries; people retain responsibility for decisions and actions.</text>
+  <g font-family="Inter,Arial,sans-serif">
+    <g transform="translate(52 145)"><rect width="194" height="135" rx="18" fill="#172554" stroke="#60a5fa"/><circle cx="32" cy="33" r="17" fill="#60a5fa"/><text x="32" y="39" text-anchor="middle" fill="#07111f" font-size="18" font-weight="700">1</text><text x="24" y="78" fill="#dbeafe" font-size="20" font-weight="700">Purpose &amp; authority</text><text x="24" y="105" fill="#bfdbfe" font-size="15">What help is wanted?</text><text x="24" y="126" fill="#bfdbfe" font-size="15">Who remains accountable?</text></g>
+    <path d="M258 212h55" stroke="#67e8f9" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(330 145)"><rect width="194" height="135" rx="18" fill="#12303a" stroke="#2dd4bf"/><circle cx="32" cy="33" r="17" fill="#2dd4bf"/><text x="32" y="39" text-anchor="middle" fill="#07111f" font-size="18" font-weight="700">2</text><text x="24" y="78" fill="#ccfbf1" font-size="20" font-weight="700">Evidence &amp; limits</text><text x="24" y="105" fill="#99f6e4" font-size="15">What may be used?</text><text x="24" y="126" fill="#99f6e4" font-size="15">What must stay protected?</text></g>
+    <path d="M536 212h55" stroke="#67e8f9" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(608 145)"><rect width="194" height="135" rx="18" fill="#312e5f" stroke="#a78bfa"/><circle cx="32" cy="33" r="17" fill="#a78bfa"/><text x="32" y="39" text-anchor="middle" fill="#07111f" font-size="18" font-weight="700">3</text><text x="24" y="78" fill="#ede9fe" font-size="20" font-weight="700">AI assistance</text><text x="24" y="105" fill="#ddd6fe" font-size="15">Prepare, compare or explain</text><text x="24" y="126" fill="#ddd6fe" font-size="15">within a stated budget</text></g>
+    <path d="M814 212h55" stroke="#67e8f9" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(886 145)"><rect width="250" height="135" rx="18" fill="#3a2716" stroke="#fbbf24"/><circle cx="32" cy="33" r="17" fill="#fbbf24"/><text x="32" y="39" text-anchor="middle" fill="#07111f" font-size="18" font-weight="700">4</text><text x="24" y="78" fill="#fef3c7" font-size="20" font-weight="700">Human review &amp; record</text><text x="24" y="105" fill="#fde68a" font-size="15">Check, correct, decide or decline</text><text x="24" y="126" fill="#fde68a" font-size="15">Leave a reviewable receipt</text></g>
+  </g>
+</svg>

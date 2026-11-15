@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::statistics::correlation::pearson;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: Pearson r.
 pub fn pearson_r(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec(args_v, "x")
         .and_then(args::f64s)

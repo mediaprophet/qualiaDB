@@ -82,10 +82,12 @@ fn policy_lock() -> &'static RwLock<SeederBandwidthPolicy> {
     GLOBAL_POLICY.get_or_init(|| RwLock::new(SeederBandwidthPolicy::default()))
 }
 
+/// Trims and lowercases a btih info-hash string.
 pub fn normalize_info_hash(raw: &str) -> String {
     raw.trim().to_ascii_lowercase()
 }
 
+/// Builds a `magnet:?xt=urn:btih:` URI with display name and a `ws=` webseed pointing at the local daemon.
 pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str, daemon_port: u16) -> String {
     let hash = normalize_info_hash(info_hash_sha1);
     let dn = urlencoding::encode(display_name);
@@ -94,6 +96,7 @@ pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str, daemon_port: u
     format!("magnet:?xt=urn:btih:{hash}&dn={dn}&ws={ws}")
 }
 
+/// Returns `magnet` unchanged when it already carries a `ws=` webseed; otherwise builds one via `build_magnet_uri`.
 pub fn ensure_magnet_webseed(
     magnet: &str,
     info_hash: &str,
@@ -106,6 +109,7 @@ pub fn ensure_magnet_webseed(
     build_magnet_uri(info_hash, display_name, port)
 }
 
+/// Streams `path` through SHA-1 (8 KiB blocks) and returns lowercase hex.
 pub fn sha1_file(path: &Path) -> Result<String, String> {
     use sha1::{Digest, Sha1};
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
@@ -125,14 +129,17 @@ pub fn sha1_file(path: &Path) -> Result<String, String> {
         .collect())
 }
 
+/// Replaces the global seeder bandwidth policy.
 pub fn set_bandwidth_policy(policy: SeederBandwidthPolicy) {
     *policy_lock().write().unwrap() = policy;
 }
 
+/// Current bandwidth policy.
 pub fn get_bandwidth_policy() -> SeederBandwidthPolicy {
     policy_lock().read().unwrap().clone()
 }
 
+/// Validates the file exists, classifies unified `.q42` volumes as Commons/Sanctuary by `commons_asserted`, and records the seed.
 pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
     let hash = normalize_info_hash(&req.info_hash);
     let path = PathBuf::from(&req.file_path);
@@ -178,11 +185,13 @@ pub fn register_seed(req: RegisterSeedRequest) -> Result<SeedRecord, String> {
     Ok(record)
 }
 
+/// Removes the seed for `info_hash`; `true` when it existed.
 pub fn unregister_seed(info_hash: &str) -> bool {
     let hash = normalize_info_hash(info_hash);
     registry().write().unwrap().remove(&hash).is_some()
 }
 
+/// Marks the seed deprecated; `true` when it existed.
 pub fn deprecate_seed(info_hash: &str) -> bool {
     let hash = normalize_info_hash(info_hash);
     if let Some(rec) = registry().write().unwrap().get_mut(&hash) {
@@ -194,10 +203,12 @@ pub fn deprecate_seed(info_hash: &str) -> bool {
     false
 }
 
+/// All currently active (non-deprecated) seed records.
 pub fn list_active_seeds() -> Vec<SeedRecord> {
     registry().read().unwrap().values().cloned().collect()
 }
 
+/// `SeedRecord` for `info_hash`, or `None`.
 pub fn lookup_seed(info_hash: &str) -> Option<SeedRecord> {
     registry()
         .read()
@@ -206,6 +217,7 @@ pub fn lookup_seed(info_hash: &str) -> Option<SeedRecord> {
         .cloned()
 }
 
+/// Accumulates served bytes for `info_hash` in telemetry.
 pub fn record_bytes_served(info_hash: &str, bytes: u64) {
     let hash = normalize_info_hash(info_hash);
     BYTES_SERVED_SESSION.fetch_add(bytes, Ordering::Relaxed);
@@ -215,6 +227,7 @@ pub fn record_bytes_served(info_hash: &str, bytes: u64) {
     }
 }
 
+/// Increments the full-download counter for `info_hash`.
 pub fn record_full_download(info_hash: &str) {
     let hash = normalize_info_hash(info_hash);
     if let Some(rec) = registry().write().unwrap().get_mut(&hash) {
@@ -236,6 +249,7 @@ pub struct SeederTelemetry {
     pub seeder: String,
 }
 
+/// Snapshot of global seeder telemetry.
 pub fn telemetry() -> SeederTelemetry {
     let seeds = list_active_seeds();
     let policy = get_bandwidth_policy();

@@ -69,6 +69,7 @@ pub struct TmSegment {
 }
 
 impl TmSegment {
+    /// Creates a default `TmSegment`.
     pub fn new(a: Point2, b: Point2) -> Self {
         if a.x <= b.x {
             Self { left: a, right: b }
@@ -77,6 +78,7 @@ impl TmSegment {
         }
     }
 
+    /// `true` when `degenerate`.
     pub fn is_degenerate(&self) -> bool {
         (self.left.x - self.right.x).abs() < 1e-15 && (self.left.y - self.right.y).abs() < 1e-15
     }

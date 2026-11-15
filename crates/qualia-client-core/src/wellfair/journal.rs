@@ -32,6 +32,7 @@ pub struct JournalEntry {
 }
 
 impl JournalEntry {
+    /// Constructs from envelope.
     pub fn from_envelope(
         envelope: &RecordEnvelope,
         source: &str,
@@ -64,6 +65,7 @@ pub struct WellfairJournal {
 }
 
 impl WellfairJournal {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(JOURNAL_FILE);
         if let Some(parent) = path.parent() {
@@ -75,6 +77,7 @@ impl WellfairJournal {
         Ok(Self { path })
     }
 
+    /// Appends.
     pub fn append(&self, entry: &JournalEntry) -> std::io::Result<()> {
         let line =
             serde_json::to_string(entry).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -84,6 +87,7 @@ impl WellfairJournal {
         Ok(())
     }
 
+    /// Lists recent entries.
     pub fn list_recent(&self, limit: usize) -> std::io::Result<Vec<JournalEntry>> {
         let file = fs::File::open(&self.path)?;
         let reader = BufReader::new(file);
@@ -105,6 +109,7 @@ impl WellfairJournal {
         Ok(entries)
     }
 
+    /// Count.
     pub fn count(&self) -> std::io::Result<usize> {
         let file = fs::File::open(&self.path)?;
         Ok(BufReader::new(file)

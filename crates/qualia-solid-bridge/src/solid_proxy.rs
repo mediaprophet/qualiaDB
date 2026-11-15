@@ -107,6 +107,7 @@ pub fn start_proxy_daemon() {
     start_proxy_daemon_with(BridgeConfig::default());
 }
 
+/// Starts the proxy daemon with config.
 pub fn start_proxy_daemon_with(cfg: BridgeConfig) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()

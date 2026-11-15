@@ -1,6 +1,7 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `ExtensionBus` component.
 pub fn ExtensionBus() -> Element {
     let mut extensions = use_signal(|| {
         vec![

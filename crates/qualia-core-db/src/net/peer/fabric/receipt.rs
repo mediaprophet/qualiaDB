@@ -24,6 +24,7 @@ pub struct OpReceipt {
 }
 
 impl OpReceipt {
+    /// `OpReceipt::queued`.
     pub const fn queued(
         op_id: u64,
         content_digest: [u8; 32],
@@ -41,6 +42,7 @@ impl OpReceipt {
         }
     }
 
+    /// Replays an op receipt.
     pub fn replay(
         &self,
         op_id: u64,

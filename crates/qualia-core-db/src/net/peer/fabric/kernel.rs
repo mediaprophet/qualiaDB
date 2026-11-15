@@ -72,6 +72,7 @@ pub struct Kernel {
 }
 
 impl Kernel {
+    /// Creates a default `Kernel`.
     pub const fn new() -> Self {
         Self {
             state: FabricState::Idle,
@@ -86,10 +87,12 @@ impl Kernel {
         }
     }
 
+    /// `Kernel::intent`.
     pub const fn intent(&self) -> Option<ConnectionIntent> {
         self.intent
     }
 
+    /// Admits a connection intent; `FabricError` on policy/capacity failure.
     pub fn admit(&mut self, intent: ConnectionIntent, now_ms: u64) -> Result<(), FabricError> {
         if self.state != FabricState::Idle && self.state != FabricState::Closed {
             return Err(FabricError::Illegal);
@@ -103,12 +106,14 @@ impl Kernel {
         Ok(())
     }
 
+    /// Records a learned contact descriptor.
     pub fn note_contact(&mut self, d: &ContactDescriptor) {
         if d.generation > self.last_contact_generation {
             self.last_contact_generation = d.generation;
         }
     }
 
+    /// Advances the state machine on `event`, returning its effect.
     pub fn step(&mut self, event: KernelEvent, now_ms: u64) -> KernelEffect {
         let Some(intent) = self.intent else {
             return KernelEffect::Deny;
@@ -221,6 +226,7 @@ impl Kernel {
         }
     }
 
+    /// `true` when `lease` is within its window at `now_ms`.
     pub fn lease_still_usable(&self, lease: &RelayLease, now_ms: u64) -> bool {
         self.lease_live && lease.live(now_ms)
     }

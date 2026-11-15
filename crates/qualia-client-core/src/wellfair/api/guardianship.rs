@@ -196,6 +196,7 @@ impl WebizenHostApi {
         ))
     }
 
+    /// Finds proposal.
     pub(crate) fn find_proposal(
         &self,
         proposal_id: &str,
@@ -281,6 +282,7 @@ impl WebizenHostApi {
         Ok(entry)
     }
 
+    /// Gets live-share-record.
     pub fn get_live_share_record(
         &self,
         request_id: &str,
@@ -291,6 +293,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
+    /// Lists pending live shares.
     pub fn list_pending_live_shares(
         &self,
         limit: usize,
@@ -301,6 +304,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
+    /// Registers a usage agreement.
     pub fn register_usage_agreement(&self, agreement: &UsageAgreement) -> Result<(), String> {
         LiveShareStore::open(&self.storage_root)
             .map_err(|e| e.to_string())?

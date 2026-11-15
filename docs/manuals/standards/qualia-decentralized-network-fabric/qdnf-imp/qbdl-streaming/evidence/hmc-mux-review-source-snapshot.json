@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-13",
+  "timezone": "Australia/Sydney",
+  "scope": "Selected reviewed source captured at document finalization; live working tree, not a commit or test-run fingerprint.",
+  "files": [
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/service/mod.rs",
+      "sha256": "a5c27af8b8df52add3e23dbd148d68cf7fe9b2d3c1d6a51f9f32be1084bf71ca"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/service/session.rs",
+      "sha256": "2001f128a42f7d2bd9c79c7791023b6f2f07d5cc802fb2ef95e3beedf9d9074c"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/service/provider.rs",
+      "sha256": "451b46f3ba153c032e098e8baa93ab56fb6c4fe3ff04e6ab8ab74cf5ee1dc87a"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/service/client.rs",
+      "sha256": "66c822e4a884ea963b168f2733747e42eb4c0c96de999d0739596e0997792626"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/service/two_process.rs",
+      "sha256": "2e2dde748a8b249f7670905e944ec96f5103c9c61cf9eaf9ed89ea44cfb49b87"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/peer/replication/qbdl/carrier/receive.rs",
+      "sha256": "a0a9d85651f19ac59ffeef29e9344b4e4115917c20a19c16717fc4e47986c026"
+    },
+    {
+      "path": "crates/qualia-core-db/src/net/qdnf/authority/current_guard.rs",
+      "sha256": "94ee049377c06a4443accf63ff07b0983937c238ed0df8647987963e388fbe4e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/native/write.rs",
+      "sha256": "30153d0d799b62ebaa2a4723000b23672a35e6637ba52d4975488387c02e2748"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/storage/native/job.rs",
+      "sha256": "65661f9d3d0402a520c1e3ba57eb13c2917ecc0a3216ff5dc51ade82add5b299"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/protection/wrap.rs",
+      "sha256": "efb828cff0d8534f14c626ceaa73375f069a60aab186d00e91149fd46600c1c0"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/policy/remote/recognition.rs",
+      "sha256": "789b7ba4c8da00748fa78e49cbb04475a4e451945aa457969f6708969a0db8a0"
+    },
+    {
+      "path": "crates/qualia-core-db/src/bundle/stream/formats/mod.rs",
+      "sha256": "82d35d0fa251a2c9be3798201e72372f91e199c058895848c33473dc277f85eb"
+    }
+  ]
+}

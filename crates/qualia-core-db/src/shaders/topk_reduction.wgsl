@@ -14,7 +14,8 @@
 
 const WG: u32 = 64u;
 const MAX_BLOCK: u32 = 1024u;
-const NEG_INF: f32 = -3.4028235e38;
+// Exact finite f32 minimum; the rounded decimal exceeds WGSL's f32 range.
+const NEG_INF: f32 = -0x1.fffffep+127f;
 
 struct Params {
     n: u32,           // total number of logits

@@ -43,7 +43,7 @@ pub fn coverage_report() -> CoverageReport {
         items: expect_count("Item", ITEM_KINDS.len(), 11),
         stmts: expect_count("Stmt", STMT_KINDS.len(), 13),
         patterns: expect_count("Pattern", PATTERN_KINDS.len(), 11),
-        exprs: expect_count("ExprKind", EXPR_KINDS.len(), 23),
+        exprs: expect_count("ExprKind", EXPR_KINDS.len(), 24),
         modals: expect_count("ModalKind", MODAL_KINDS.len(), 11),
         effects: expect_count("EffectClass", EFFECT_KINDS.len(), 5),
         types: expect_count("Type", TYPE_KINDS.len(), 41),
@@ -52,6 +52,7 @@ pub fn coverage_report() -> CoverageReport {
 }
 
 impl CoverageReport {
+    ///  when all nodes are complete.
     pub fn all_complete(&self) -> bool {
         matches!(self.items, CoverageStatus::Complete)
             && matches!(self.stmts, CoverageStatus::Complete)

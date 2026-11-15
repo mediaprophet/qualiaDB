@@ -165,6 +165,7 @@ pub(crate) fn uniform(params: &WebGpuJobParams, key: &str, default: f32) -> f32 
 }
 
 impl WebGpuExtension {
+    /// Creates a new instance.
     pub fn new() -> Self {
         let mut shader_manager = WebGpuShaderManager {
             loaded_shaders: HashMap::new(),

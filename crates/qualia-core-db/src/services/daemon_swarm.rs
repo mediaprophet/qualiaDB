@@ -30,6 +30,7 @@ pub mod swarm {
     }
 
     impl AgentComputeCandidate {
+        /// Creates a default `?`.
         pub const fn new(agent_did_hash: u64, windowed_faults: u32, usury_event: bool) -> Self {
             Self {
                 agent_did_hash,
@@ -248,9 +249,12 @@ pub mod swarm {
         pub peer_capabilities: HashMap<String, u64>,
         /// Per-peer semantic context keyed by peer id string
         pub semantic_contexts: HashMap<String, u64>,
+        /// Local permission policy for peer routing constraints
+        pub local_permission: crate::webizen_server::CompiledPermission,
     }
 
     impl WorkerCell {
+        /// Creates `?` with the given state.
         pub fn new(cell_id: usize) -> Self {
             Self {
                 cell_id,
@@ -265,6 +269,11 @@ pub mod swarm {
                 dnssec_cache: HashMap::new(),
                 peer_capabilities: HashMap::new(),
                 semantic_contexts: HashMap::new(),
+                local_permission: crate::webizen_server::CompiledPermission {
+                    routing_mask: 0x01 << 61, // EnforcePermissiveCommons
+                    semantic_handshake: "qualia:handshake:v1".to_string(),
+                    is_permissive_commons: true,
+                },
             }
         }
 
@@ -660,7 +669,24 @@ pub mod swarm {
                     }
                     3 => {
                         // routing_mask
-                        payload.routing_mask = value[0] as u64; // Stub legacy parser conversion
+                        payload.routing_mask = match value.len() {
+                            1 => value[0] as u64,
+                            2 => u16::from_be_bytes([value[0], value[1]]) as u64,
+                            4 => {
+                                u32::from_be_bytes([value[0], value[1], value[2], value[3]]) as u64
+                            }
+                            8 => u64::from_be_bytes([
+                                value[0], value[1], value[2], value[3], value[4], value[5],
+                                value[6], value[7],
+                            ]),
+                            _ if !value.is_empty() => {
+                                let mut buf = [0u8; 8];
+                                let len = value.len().min(8);
+                                buf[8 - len..].copy_from_slice(&value[..len]);
+                                u64::from_be_bytes(buf)
+                            }
+                            _ => 0,
+                        };
                     }
                     4 => {
                         // peer_capabilities
@@ -820,12 +846,7 @@ pub mod swarm {
             let peer_payload = self.resolve_peer_dnssec_payload(domain)?;
 
             // Step 2: Verify routing constraints against local policy
-            let local_permission = crate::webizen_server::CompiledPermission {
-                routing_mask: 0, // In production, fetch from node configuration
-                semantic_handshake: "".to_string(),
-                is_permissive_commons: true,
-            };
-            if !self.verify_routing_constraints(&peer_payload, &local_permission)? {
+            if !self.verify_routing_constraints(&peer_payload, &self.local_permission)? {
                 return Err("Routing constraints not authorized");
             }
 
@@ -849,7 +870,9 @@ pub mod swarm {
             local_compiled_permission: &crate::webizen_server::CompiledPermission,
         ) -> Result<bool, &'static str> {
             // Evaluate the 64-bit Fifth Vector hardware mask.
-            // If the peer's requested access does not mathematically satisfy the ro:RightsOntology bitmask, the tunnel is silently dropped.
+            if local_compiled_permission.routing_mask == 0 {
+                return Err("Local routing mask is unconfigured (vacuous mask disallowed)");
+            }
             if (payload.routing_mask & local_compiled_permission.routing_mask)
                 != local_compiled_permission.routing_mask
             {
@@ -887,6 +910,7 @@ pub mod swarm {
             Err("Unsupported SAN URI format")
         }
 
+        /// Dense `A·B` contraction into `result` — AVX2+FMA kernel when detected, scalar fallback otherwise.
         pub fn execute_tensor_contraction(
             &self,
             matrix_a: &[f32],
@@ -922,6 +946,7 @@ pub mod swarm {
             }
         }
 
+        /// Parses `smiles`, runs ground-state DFT, returns the energy as a packed-float quin.
         pub fn execute_quantum_chemistry(&self, smiles: &str) -> Option<crate::NQuin> {
             let mol = crate::domains::chemical::organic_chemistry::parse_smiles(smiles);
             let mut dft = crate::quantum_dft::ElectronDensity::new(mol.atoms.len().max(1));
@@ -953,9 +978,13 @@ pub mod swarm {
         pub dnssec_trusted_anchors: HashMap<String, [u8; 32]>,
         pub wireguard_interface_name: String,
         pub wireguard_local_port: u16,
+        pub local_permission: crate::webizen_server::CompiledPermission,
+        pub principal_did: u64,
+        pub guardian_did: Option<u64>,
     }
 
     impl DaemonOrchestrator {
+        /// Creates a daemon orchestrator with no isolates.
         pub fn new() -> Self {
             Self {
                 active_cells: Arc::new(Mutex::new(Vec::new())),
@@ -964,7 +993,26 @@ pub mod swarm {
                 dnssec_trusted_anchors: HashMap::new(),
                 wireguard_interface_name: "qualia-wg0".to_string(),
                 wireguard_local_port: 51820,
+                local_permission: crate::webizen_server::CompiledPermission {
+                    routing_mask: 0x01 << 61, // EnforcePermissiveCommons
+                    semantic_handshake: "qualia:handshake:v1".to_string(),
+                    is_permissive_commons: true,
+                },
+                principal_did: crate::q_hash("did:q42:local"),
+                guardian_did: None,
             }
+        }
+
+        /// Configure local permissions, principal DID, and guardian DID.
+        pub fn configure_permissions(
+            &mut self,
+            permission: crate::webizen_server::CompiledPermission,
+            principal_did: u64,
+            guardian_did: Option<u64>,
+        ) {
+            self.local_permission = permission;
+            self.principal_did = principal_did;
+            self.guardian_did = guardian_did;
         }
 
         /// Configure DNSSEC trusted anchors
@@ -1004,19 +1052,15 @@ pub mod swarm {
             // Step 1: Resolve peer via DNSSEC
             let payload = self.resolve_peer_dnssec(domain)?;
 
-            // Step 2: Verify routing constraints
-            let local_permission = crate::webizen_server::CompiledPermission {
-                routing_mask: 0, // Mock: Fetch from config
-                semantic_handshake: "".to_string(),
-                is_permissive_commons: true,
-            };
-            if !self.verify_routing_constraints(&payload, &local_permission)? {
+            // Step 2: Verify routing constraints against configured local policy
+            if !self.verify_routing_constraints(&payload, &self.local_permission)? {
                 return Err("Routing constraints not authorized");
             }
 
             // Step 2b: Sentinel VM Fiduciary Gatekeeper
+            let guardian_did = self.guardian_did.ok_or("Guardian DID not configured for peer authorization")?;
             let mut intent = crate::NQuin::default();
-            intent.subject = crate::q_hash("did:q42:local");
+            intent.subject = self.principal_did;
             intent.predicate = crate::q_hash("q42:TrustGroup");
             intent.object = payload.did_q42;
 
@@ -1027,8 +1071,8 @@ pub mod swarm {
 
             let mut out = [crate::NQuin::default(); 1];
             let context = crate::webizen_bytecode::GuardianshipContext {
-                principal_did: crate::q_hash("did:q42:local"),
-                guardian_did: Some(crate::q_hash("did:q42:guardian_mock")),
+                principal_did: self.principal_did,
+                guardian_did: Some(guardian_did),
             };
 
             let is_authorized =
@@ -1087,11 +1131,13 @@ pub mod swarm {
             Ok(peer_id)
         }
 
+        /// Registers a `WorkerCell` for `cell_id`.
         pub fn spawn_fractal_shard(&self, cell_id: usize) {
             let mut cells = self.active_cells.lock().unwrap();
             cells.push(WorkerCell::new(cell_id));
         }
 
+        /// **Scaffold**: spawns a real thread but runs a hardcoded 2×2 identity contraction and discards the result — plumbing demo, not real delegation.
         pub fn delegate_dense_algebra(&self, cell_id: usize) {
             // Mock spawning a thread for the swarm worker
             let cells = self.active_cells.clone();
@@ -1120,12 +1166,7 @@ pub mod swarm {
             let peer_payload = self.resolve_peer_dnssec(domain)?;
 
             // Step 2: Verify routing constraints against local policy
-            let local_permission = crate::webizen_server::CompiledPermission {
-                routing_mask: 0,
-                semantic_handshake: "".to_string(),
-                is_permissive_commons: true,
-            };
-            if !self.verify_routing_constraints(&peer_payload, &local_permission)? {
+            if !self.verify_routing_constraints(&peer_payload, &self.local_permission)? {
                 return Err("Routing constraints not authorized");
             }
 
@@ -1149,7 +1190,9 @@ pub mod swarm {
             local_compiled_permission: &crate::webizen_server::CompiledPermission,
         ) -> Result<bool, &'static str> {
             // Evaluate the 64-bit Fifth Vector hardware mask.
-            // If the peer's requested access does not mathematically satisfy the ro:RightsOntology bitmask, the tunnel is silently dropped.
+            if local_compiled_permission.routing_mask == 0 {
+                return Err("Local routing mask is unconfigured (vacuous mask disallowed)");
+            }
             if (payload.routing_mask & local_compiled_permission.routing_mask)
                 != local_compiled_permission.routing_mask
             {
@@ -1272,56 +1315,111 @@ pub mod swarm {
                 }
             }
 
-            // Perform live DNSSEC-validated TXT lookup via trust-dns-resolver
-            use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
-            use trust_dns_resolver::Resolver;
+            // Perform live DNS TXT lookup via native Qualia zero-heap DNS stack
+            let qname = format!("_q42peer._tcp.{}", domain.trim_end_matches('.'));
+            let resolver =
+                crate::net::dns::QualiaDnsResolver::new(crate::net::dns::ResolverConfig::default());
+            let socket =
+                std::net::UdpSocket::bind("0.0.0.0:0").map_err(|_| "socket bind failed")?;
+            socket
+                .set_read_timeout(Some(std::time::Duration::from_millis(
+                    resolver.config.timeout_ms,
+                )))
+                .map_err(|_| "timeout failed")?;
 
-            let mut opts = ResolverOpts::default();
-            opts.validate = true; // require DNSSEC validation
-            opts.use_hosts_file = false;
+            let mut tx_buf = [0u8; 512];
+            let tx_len = crate::net::dns::wire::build_query_packet(
+                0x4250,
+                &qname,
+                crate::net::dns::wire::DnsType::TXT,
+                true,
+                &mut tx_buf,
+            )
+            .map_err(|_| "failed to build query")?;
 
-            let resolver = Resolver::new(ResolverConfig::default(), opts)
-                .map_err(|_| "DNS resolver init failed")?;
+            socket
+                .send_to(&tx_buf[..tx_len], resolver.config.nameserver)
+                .map_err(|_| "DNS send failed")?;
 
-            // Canonical record name for Qualia peer discovery
-            let qname = format!("_q42peer._tcp.{}.", domain);
-            let lookup = resolver
-                .txt_lookup(qname.as_str())
-                .map_err(|_| "DNS TXT lookup failed")?;
+            let mut rx_buf = [0u8; 4096];
+            let (rx_len, _) = socket
+                .recv_from(&mut rx_buf)
+                .map_err(|_| "DNS recv failed")?;
 
-            for txt in lookup.iter() {
-                for part in txt.txt_data() {
-                    if part.len() >= 51 {
-                        let mut wg_pubkey = [0u8; 32];
-                        wg_pubkey.copy_from_slice(&part[..32]);
+            let mut found_payload = None;
+            let header = crate::net::dns::wire::DnsHeader::decode(&rx_buf[..rx_len])
+                .map_err(|_| "invalid DNS header")?;
 
-                        // Safety: lengths checked above
-                        let did_q42 = u64::from_le_bytes(part[32..40].try_into().unwrap());
-                        let routing_mask = part[40] as u64;
-                        let peer_capabilities =
-                            u16::from_le_bytes(part[41..43].try_into().unwrap());
-                        let semantic_context = u64::from_le_bytes(part[43..51].try_into().unwrap());
+            if header.rcode() == 0 {
+                let mut offset = crate::net::dns::wire::DnsHeader::SIZE;
+                let mut dummy = [0u8; 256];
+                for _ in 0..header.qdcount {
+                    let (new_off, _) = crate::net::dns::wire::decode_domain_name(
+                        &rx_buf[..rx_len],
+                        offset,
+                        &mut dummy,
+                    )
+                    .map_err(|_| "invalid qname")?;
+                    offset = new_off + 4;
+                }
 
-                        let payload = DnssecSemanticPayload {
-                            wireguard_pubkey: wg_pubkey,
-                            did_q42,
-                            routing_mask,
-                            semantic_handshake: "Legacy Proof".to_string(),
-                            peer_capabilities,
-                            semantic_context,
-                        };
-
-                        // Populate cell-local cache
-                        if let Ok(mut cells) = self.active_cells.lock() {
-                            for cell in cells.iter_mut() {
-                                if let Some(ref mut r) = cell.dnssec_resolver {
-                                    r.cache.insert(domain.to_string(), payload.clone());
+                let _ = crate::net::dns::wire::parse_records(
+                    &rx_buf[..rx_len],
+                    offset,
+                    header.ancount as usize,
+                    |_name, rec| {
+                        if rec.rtype == crate::net::dns::wire::DnsType::TXT
+                            && found_payload.is_none()
+                        {
+                            let mut cursor = 0;
+                            while cursor < rec.rdata.len() {
+                                let seg_len = rec.rdata[cursor] as usize;
+                                cursor += 1;
+                                if cursor + seg_len > rec.rdata.len() {
                                     break;
                                 }
+                                let part = &rec.rdata[cursor..cursor + seg_len];
+                                if part.len() >= 51 {
+                                    let mut wg_pubkey = [0u8; 32];
+                                    wg_pubkey.copy_from_slice(&part[..32]);
+
+                                    let did_q42 =
+                                        u64::from_le_bytes(part[32..40].try_into().unwrap());
+                                    let routing_mask = part[40] as u64;
+                                    let peer_capabilities =
+                                        u16::from_le_bytes(part[41..43].try_into().unwrap());
+                                    let semantic_context =
+                                        u64::from_le_bytes(part[43..51].try_into().unwrap());
+
+                                    found_payload = Some(DnssecSemanticPayload {
+                                        wireguard_pubkey: wg_pubkey,
+                                        did_q42,
+                                        routing_mask,
+                                        semantic_handshake: "Legacy Proof".to_string(),
+                                        peer_capabilities,
+                                        semantic_context,
+                                    });
+                                    break;
+                                }
+                                cursor += seg_len;
                             }
+                        }
+                        Ok(())
+                    },
+                );
+            }
+
+            if let Some(payload) = found_payload {
+                // Populate cell-local cache
+                if let Ok(mut cells) = self.active_cells.lock() {
+                    for cell in cells.iter_mut() {
+                        if let Some(ref mut r) = cell.dnssec_resolver {
+                            r.cache.insert(domain.to_string(), payload.clone());
+                            break;
                         }
                     }
                 }
+                return Ok(payload);
             }
 
             Err("No valid Qualia semantic payload in DNS TXT records")

@@ -5,7 +5,7 @@
 - Status: recorded profile; **not implemented**; **not Gate E qualified**
 - Owner: swarm-cscp-10 (this note). Integrator owns `.rs` flags, `mod.rs`, and registry ticks.
 - Affected tasks: CSCP-10 (parent); depends on CSCP-05 local TLS WSS. Does not unblock CSCP-08 (MASQUE Internet) or CSCP-12 (datatracker).
-- Source baseline: branch `0.0.38`, HEAD `b96304919f68d408cf067fab814fd4f01fc54255`. Read-only inspection of `cscp_wss.rs`, `wss_tls.rs`, `browser.rs`, `evidence.rs`, `carrier.rs`, `draft-webcivics-cscp-00.md`, `capability-scoped-connection-fabric.md` Gate E.
+- Source baseline: branch `0.0.40`, HEAD `b96304919f68d408cf067fab814fd4f01fc54255`. Read-only inspection of `cscp_wss.rs`, `wss_tls.rs`, `browser.rs`, `evidence.rs`, `carrier.rs`, `draft-webcivics-cscp-00.md`, `capability-scoped-connection-fabric.md` Gate E.
 
 ## Semantic requirement
 

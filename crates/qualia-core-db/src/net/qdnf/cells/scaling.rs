@@ -57,6 +57,7 @@ pub struct ScaleHost {
 }
 
 impl ScaleHost {
+    /// Creates a default `ScaleHost`.
     pub fn new(host_bytes: u64) -> Result<Self, QdnfError> {
         Ok(Self {
             host: HostAdmission::new(host_bytes)?,
@@ -64,16 +65,19 @@ impl ScaleHost {
     }
 
     #[inline]
+    /// Occupied count.
     pub fn occupied(&self) -> usize {
         self.host.occupied_cells()
     }
 
     #[inline]
+    /// `ScaleHost::remaining_bytes`.
     pub fn remaining_bytes(&self) -> u64 {
         self.host.remaining_host_bytes()
     }
 
     #[inline]
+    /// `ScaleHost::remaining_slots`.
     pub fn remaining_slots(&self) -> usize {
         MAX_SCALE_CELLS.saturating_sub(self.occupied())
     }
@@ -114,6 +118,7 @@ impl ScaleHost {
         Ok(n)
     }
 
+    /// Releases the resource.
     pub fn release(&mut self, slot: CellSlot) -> Result<(), QdnfError> {
         self.host.release_cell(slot)
     }

@@ -1,11 +1,7 @@
 //! Schroeder allpass filter (Freeverb variant).
 //!
-//! `y[n] = -x[n] + buf[n]`, `buf'[n] = x[n] + feedback · buf[n]`. Diffuses the
-//! signal (flat magnitude, dispersed phase) — used in series after the combs to
-//! thicken the reverb tail without adding coloration.
-//!
-//! Delay buffer allocated **once** in [`Allpass::new`]; `process_sample` /
-//! `process` never allocate, lock, or touch the FS.
+//! `y[n] = -x[n] + buf[n]`, `buf'[n] = x[n] + feedback · buf[n]`. Delegated to
+//! [`etalon_signal::reverb::allpass_step`].
 
 use crate::types::AudioError;
 
@@ -47,14 +43,7 @@ impl Allpass {
     /// Process one sample. **Zero-alloc, no locks.**
     #[inline]
     pub fn process_sample(&mut self, input: f32) -> f32 {
-        let bufout = self.buffer[self.index];
-        let output = -input + bufout;
-        self.buffer[self.index] = input + bufout * self.feedback;
-        self.index += 1;
-        if self.index >= self.buffer.len() {
-            self.index = 0;
-        }
-        output
+        etalon_signal::reverb::allpass_step(&mut self.buffer, &mut self.index, self.feedback, input)
     }
 
     /// Block process. **Zero-alloc.** Errors if `output` is shorter than `input`.
@@ -83,13 +72,11 @@ mod tests {
         let mut out = vec![0.0f32; n];
         a.process(&input, &mut out).unwrap();
 
-        // Immediate inverted feedthrough: y[0] = -x[0] + 0 = -1.
         assert!(
             (out[0] + 1.0).abs() < 1e-6,
             "y[0] should be -1, got {}",
             out[0]
         );
-        // First recirculation appears at the delay tap and is non-zero.
         assert!(
             out[d].abs() > 1e-6,
             "expected energy at delay tap, got {}",
@@ -100,8 +87,6 @@ mod tests {
 
     #[test]
     fn energy_preserving_ish_and_decays() {
-        // A stable allpass conserves total energy for a passive impulse but the
-        // recirculating taps decay geometrically with feedback.
         let mut a = Allpass::new(13, 0.5).unwrap();
         let n = 2000;
         let mut input = vec![0.0f32; n];

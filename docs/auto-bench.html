@@ -2,6 +2,7 @@
 <html lang="en">
 <head><meta charset="UTF-8"><title>Auto Benchmark</title></head>
 <body>
+<p role="note" style="padding:0.75rem;border:1px solid #b7791f">Developer inference mode: browser CPU/WebGPU compute bypasses Sentinel token acceptance. Output is ungoverned. Graph checks on this page do not authorize generated tokens.</p>
 <pre id="result">Running…</pre>
 <script type="module">
   const WLLAMA_ESM = 'https://cdn.jsdelivr.net/npm/@wllama/wllama@3.5.1/esm/index.js';
@@ -41,6 +42,7 @@
     const r = await cache.loadGgufCached(MODEL_URL, name, undefined, (loaded, total, phase) => {
       report('qualia_loading', { phase, progress: total ? Math.round(100 * loaded / total) : null });
     });
+    mod.configureBrowserExecutionMode('developer', true);
     await mod.initialize_webgpu_engine(r.bytes);
     console.log('[bench] initialize_webgpu_engine returned OK');
     if (!mod.isWebgpuEngineReady()) throw new Error('Qualia engine failed to initialise');
@@ -70,6 +72,7 @@
       decodeMs > 0 ? (decodeTokens * 1000) / decodeMs : 0;
     return {
       engine: 'qualia', loadMs, ttftMs, generationMs, decodeMs, outputText, approxTokens,
+      executionReceipt: mod.getBrowserExecutionReceipt(),
       generatedTokens, tokenCountSource: 'engine', configuredMaxTokens: MAX_TOKENS,
       endToEndTokensPerSecond, tokensPerSecond,
     };

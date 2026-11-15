@@ -77,6 +77,7 @@ impl<'a> SocialQdnfLink<'a> {
         })
     }
 
+    /// QDNF locator.
     pub fn locator(&self) -> ObservedLocator {
         self.local
     }

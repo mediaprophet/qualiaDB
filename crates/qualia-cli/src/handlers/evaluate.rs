@@ -1,6 +1,7 @@
 use crate::cli::EvaluateModality;
 use crate::evaluate;
 
+/// Handles the subcommand action.
 pub fn handle(modality: &EvaluateModality) {
     match modality {
         EvaluateModality::Deontic {

@@ -9,22 +9,27 @@ pub struct PartitionGate {
 }
 
 impl PartitionGate {
+    /// Opens the resource.
     pub const fn open() -> Self {
         Self { partitioned: false }
     }
 
+    /// `true` when `partitioned`.
     pub const fn is_partitioned(self) -> bool {
         self.partitioned
     }
 
+    /// `PartitionGate::partition`.
     pub fn partition(&mut self) {
         self.partitioned = true;
     }
 
+    /// Heals the partition.
     pub fn heal(&mut self) {
         self.partitioned = false;
     }
 
+    /// Admits under the partition.
     pub fn admit(self) -> Result<(), QdnfError> {
         if self.partitioned {
             Err(QdnfError::WouldBlock)

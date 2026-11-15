@@ -22,6 +22,7 @@ pub struct QualiaStore {
 #[wasm_bindgen]
 impl QualiaStore {
     #[wasm_bindgen(constructor)]
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self { quins: Vec::new() }
     }

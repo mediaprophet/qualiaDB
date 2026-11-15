@@ -125,10 +125,12 @@ pub fn dynamic_honesty(id: &str, attached: bool) -> &'static str {
         .unwrap_or("unbound")
 }
 
+/// Resolves a catalog `id` to a descriptor `Value`.
 pub fn resolve_id(id: &str) -> Value {
     resolve_id_with(id, false)
 }
 
+/// Resolves `id` with `attached` flag.
 pub fn resolve_id_with(id: &str, attached: bool) -> Value {
     let binding = VIBE_0_1.iter().find(|b| b.id == id);
     let family = binding.map(|b| b.family);
@@ -175,6 +177,7 @@ pub fn resolve_id_with(id: &str, attached: bool) -> Value {
     Value::Record(rec)
 }
 
+/// Capability descriptors exposed only via MCP.
 pub fn engine_families_mcp_only() -> Vec<&'static CapabilityDescriptor> {
     CAPABILITY_DESCRIPTORS
         .iter()

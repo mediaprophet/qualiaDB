@@ -23,6 +23,7 @@ const KNOWN_UNITS: &[&str] = &[
     "rad", "deg", "m/s", "km/h", "mph",
 ];
 
+/// Normalizes dates and numbers.
 pub fn normalize_dates_and_numbers(source: &str) -> Vec<Normalized> {
     let mut out = Vec::new();
     let bytes = source.as_bytes();

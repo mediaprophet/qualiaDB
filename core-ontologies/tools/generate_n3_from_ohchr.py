@@ -26,22 +26,28 @@ SKIP_SLUGS = {
 }
 
 def slug_to_url(slug):
+    """Slug to URL."""
     return UDHR_URL if slug in ("english","udhr") else BASE_URL + slug
 def norm_slug(slug):
+    """Normalised slug."""
     return "udhr" if slug == "english" else slug
 
-def esc(s): return re.sub(r"\s+"," ", s.replace("\\","\\\\").replace('"','\\"')).strip()
+def esc(s):
+    """Escapes text for N3 output."""
+    return re.sub(r"\s+"," ", s.replace("\\","\\\\").replace('"','\\"')).strip()
 
 # Scraper/nav boilerplate that must never survive into values:originalText.
 _BOILERPLATE = ("Download: PDF", "Download:", "Table of Contents",
                 "Print this page", "Share via email", "Share via Twitter",
                 "Share via Facebook", "VIEW THIS PAGE IN")
 def strip_boilerplate(t):
+    """Strips boilerplate."""
     for b in _BOILERPLATE:
         t = t.replace(b, " ")
     return re.sub(r"\s+", " ", t).strip()
 
 def num(tok):
+    """Number helper."""
     if tok.isdigit(): return int(tok)
     rom = {'I':1,'V':5,'X':10,'L':50,'C':100,'D':500,'M':1000}
     t = tok.upper(); tot = 0
@@ -77,6 +83,7 @@ CATS = [
  ("Foundational declarations", ["vienna-declaration"]),
 ]
 def categorize(slug):
+    """Categorizes."""
     for cat, kws in CATS:
         if any(k in slug for k in kws): return cat
     return "Other / thematic"
@@ -103,6 +110,7 @@ META = re.compile(r"^(Human Rights Instruments|UNIVERSAL INSTRUMENT|INTERNATIONA
                   r"Entry into force.*|General Assembly resolution.*|.*resolution \d+.*)\s*$", re.I)
 
 def deontic(t):
+    """Deontic helper."""
     t = t.lower()
     if re.match(r"^\s*(no one|no party|no person|nothing)\b", t) or "shall be prohibited" in t \
        or "shall not" in t or re.search(r"\bmay not be\b", t):
@@ -115,6 +123,7 @@ def deontic(t):
     return ("values:Undertaking", None)
 
 def parse_instrument(text, slug):
+    """Parses instrument."""
     text = trim_content(text.replace("\r", ""))
     # title / date
     if slug in OVERRIDES:
@@ -165,6 +174,7 @@ def parse_instrument(text, slug):
     return title, date, "", segs
 
 def emit(slug, title, date, pre, segs):
+    """Emits."""
     ns = "https://ns.webcivics.net/values/" + norm_slug(slug) + "#"
     L = ['@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .',
          '@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .',
@@ -204,6 +214,7 @@ def emit(slug, title, date, pre, segs):
     return "\n".join(L)
 
 def main():
+    """CLI entry point."""
     os.makedirs(OUT, exist_ok=True)
     items = []  # (slug, text)
     allf = os.path.join(AUTH, "ohchr_corpus.txt")

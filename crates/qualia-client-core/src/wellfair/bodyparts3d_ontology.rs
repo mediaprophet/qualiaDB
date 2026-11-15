@@ -224,14 +224,14 @@ mod tests {
         let lex = vol.lex_view().unwrap();
         let objs: Vec<String> = quins
             .iter()
-            .filter_map(|q| lex.lookup_hash(q.object).map(str::to_string))
+            .filter_map(|q| lex.lookup_owned(q.object))
             .collect();
 
         // Canonical OBO IRI IDENTITY (the concept is addressable + joins to disease data).
         let iri = "http://purl.obolibrary.org/obo/FMA_13295";
         assert_eq!(
-            lex.lookup_hash(fnv60(iri.as_bytes())),
-            Some(iri),
+            lex.lookup_owned(fnv60(iri.as_bytes())),
+            Some(iri.to_string()),
             "concept keyed by OBO IRI"
         );
         // is-a parent + part-of parents as OBO IRIs (objects).

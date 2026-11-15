@@ -21,6 +21,7 @@ pub enum Modality {
 }
 
 impl Modality {
+    /// Builds `Modality` from `wire`.
     pub fn from_wire(value: u8) -> Result<Self, QdnfError> {
         match value {
             1 => Ok(Self::Face),
@@ -34,6 +35,7 @@ impl Modality {
     }
 
     #[inline]
+    /// Wire byte for the modality.
     pub const fn to_wire(self) -> u8 {
         self as u8
     }
@@ -51,6 +53,7 @@ pub struct RawCapture {
 }
 
 impl RawCapture {
+    /// Acquires the resource.
     pub fn acquire(
         modality: Modality,
         device: StrongDigest,
@@ -74,31 +77,37 @@ impl RawCapture {
     }
 
     #[inline]
+    /// Biometric object kind.
     pub const fn kind(self) -> BiometricObjectKind {
         BiometricObjectKind::RawCapture
     }
 
     #[inline]
+    /// Modality.
     pub const fn modality(self) -> Modality {
         self.modality
     }
 
     #[inline]
+    /// Device digest.
     pub const fn device(self) -> StrongDigest {
         self.device
     }
 
     #[inline]
+    /// Consent digest.
     pub const fn consent(self) -> StrongDigest {
         self.consent
     }
 
     #[inline]
+    /// Capture quality.
     pub const fn quality(self) -> u16 {
         self.quality
     }
 
     #[inline]
+    /// Timestamp uncertainty.
     pub const fn timestamp_uncertainty(self) -> u16 {
         self.timestamp_uncertainty
     }

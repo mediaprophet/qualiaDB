@@ -79,6 +79,7 @@ pub struct SparqlDidHandler<'a> {
 }
 
 impl<'a> SparqlDidHandler<'a> {
+    /// Creates a default `SparqlDidHandler`.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,

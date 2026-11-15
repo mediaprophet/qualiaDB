@@ -200,6 +200,7 @@ fn pick_candidate(
     Ok(best)
 }
 
+/// Negotiates a profile.
 pub fn negotiate(
     required: &ControlSet,
     peer_available: &ControlSet,

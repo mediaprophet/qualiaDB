@@ -56,10 +56,14 @@ pub fn evaluate_patient(model_id: u8, patient: u64, quins: &[NQuin]) -> NativeCl
     }
 }
 
+/// `q_hash` of a clinical predicate name (`q42:*` fact keys).
 fn pred(name: &str) -> u64 {
     q_hash(name)
 }
 
+/// First `object` of a quin whose `subject == patient` and
+/// `predicate` matches; `None` when `patient` is 0 or no fact exists —
+/// a missing fact must not be treated as a patient value.
 fn find_object(patient: u64, predicate: u64, quins: &[NQuin]) -> Option<u64> {
     if patient == 0 {
         return None;
@@ -70,6 +74,8 @@ fn find_object(patient: u64, predicate: u64, quins: &[NQuin]) -> Option<u64> {
         .map(|q| q.object)
 }
 
+/// Decode a `BOOLEAN`-tagged inline object; `None` for any other tag —
+/// a wrong-typed value is not a patient boolean.
 fn as_bool(object: u64) -> Option<bool> {
     if object_tag(object) != INLINE_TAG_BOOLEAN {
         return None;
@@ -77,6 +83,8 @@ fn as_bool(object: u64) -> Option<bool> {
     Some((object & 1) != 0)
 }
 
+/// Decode an `INTEGER`-tagged inline object into `u8`; `None` for other
+/// tags or values > 255.
 fn as_u8(object: u64) -> Option<u8> {
     if object_tag(object) != INLINE_TAG_INTEGER {
         return None;
@@ -84,6 +92,8 @@ fn as_u8(object: u64) -> Option<u8> {
     u8::try_from(object & INLINE_VALUE_MASK).ok()
 }
 
+/// Decode a numeric inline object: `FLOAT` (finite only), `DECIMAL`
+/// (60-bit sign-extended payload ÷ 10⁶), or `INTEGER`; `None` otherwise.
 fn as_f64(object: u64) -> Option<f64> {
     let tag = object_tag(object);
     if tag == INLINE_TAG_FLOAT {
@@ -102,19 +112,29 @@ fn as_f64(object: u64) -> Option<f64> {
     None
 }
 
+/// Required boolean fact `name` on `patient`; `None` when absent or
+/// mistyped (the calculation is then `HeldIncomplete`, never defaulted).
 fn need_bool(patient: u64, name: &str, quins: &[NQuin]) -> Option<bool> {
     as_bool(find_object(patient, pred(name), quins)?)
 }
 
+/// Required integer fact `name` on `patient`; `None` when absent,
+/// mistyped, or out of `u8` range.
 fn need_u8(patient: u64, name: &str, quins: &[NQuin]) -> Option<u8> {
     as_u8(find_object(patient, pred(name), quins)?)
 }
 
+/// Required numeric fact `name` on `patient`; `None` when absent,
+/// mistyped, or non-finite.
 fn need_f64(patient: u64, name: &str, quins: &[NQuin]) -> Option<f64> {
     let v = as_f64(find_object(patient, pred(name), quins)?)?;
     v.is_finite().then_some(v)
 }
 
+/// Assemble a `FraminghamInput` from `q42:*` facts on `patient`.
+/// `None` (→ `HeldIncomplete`) when any field is missing, mistyped, or
+/// outside the model's applicability: age 30–74, 0 &lt; HDL &lt; total
+/// ≤ 20 mmol/L (HDL ≤ 5), 0 &lt; SBP ≤ 260 mmHg.
 fn framingham_from_quins(patient: u64, quins: &[NQuin]) -> Option<FraminghamInput> {
     let age = need_u8(patient, "q42:age", quins)?;
     if !(30..=74).contains(&age) {
@@ -141,6 +161,10 @@ fn framingham_from_quins(patient: u64, quins: &[NQuin]) -> Option<FraminghamInpu
     })
 }
 
+/// Assemble a `Cha2ds2VascInput` from `q42:*` facts on `patient`.
+/// `None` unless `q42:atrialFibrillation` is explicitly true (the score
+/// applies only to non-valvular AF), age is 18–120, and every risk
+/// factor is present — missing factors are not assumed absent.
 fn cha2ds2_from_quins(patient: u64, quins: &[NQuin]) -> Option<Cha2ds2VascInput> {
     if need_bool(patient, "q42:atrialFibrillation", quins) != Some(true) {
         return None;
@@ -161,6 +185,10 @@ fn cha2ds2_from_quins(patient: u64, quins: &[NQuin]) -> Option<Cha2ds2VascInput>
     })
 }
 
+/// Assemble a `Score2Input` from `q42:*` facts on `patient`. `None`
+/// when age is outside 40–69, `q42:score2Region` is missing or not
+/// 0–3 (low/moderate/high/very_high), or the lipid/SBP bounds fail —
+/// the region is never defaulted because calibration changes the result.
 fn score2_from_quins(patient: u64, quins: &[NQuin]) -> Option<Score2Input> {
     let age = need_u8(patient, "q42:age", quins)?;
     if !(40..=69).contains(&age) {

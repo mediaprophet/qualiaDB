@@ -26,6 +26,7 @@ pub enum AgentBackendKind {
 }
 
 impl AgentBackendKind {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             AgentBackendKind::Local => "local",
@@ -35,6 +36,7 @@ impl AgentBackendKind {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "remote" => AgentBackendKind::Remote,
@@ -54,6 +56,7 @@ pub enum OutcomeVisibility {
 }
 
 impl OutcomeVisibility {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             OutcomeVisibility::OwnerOnly => "owner_only",
@@ -62,6 +65,7 @@ impl OutcomeVisibility {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
             "owner_only" => Ok(OutcomeVisibility::OwnerOnly),
@@ -151,11 +155,13 @@ pub fn compile_sub_agent_did(principal_did: &str, session_id: &str) -> String {
     format!("did:qualia:subagent:{p:016x}:{s:016x}")
 }
 
+/// Default outcome-sharing policy.
 pub fn default_outcome_sharing(kind: SessionKind) -> OutcomeSharingPolicy {
     let profile = crate::user_profile::load_profile();
     default_outcome_sharing_for_profile(kind, &profile)
 }
 
+/// Default outcome-sharing for a profile.
 pub fn default_outcome_sharing_for_profile(
     kind: SessionKind,
     profile: &crate::user_profile::UserProfile,
@@ -178,6 +184,7 @@ pub fn default_outcome_sharing_for_profile(
     }
 }
 
+/// Loads local-agent-config.
 pub fn load_local_agent_config(
     storage_root: &Path,
     session_id: &str,
@@ -201,6 +208,7 @@ pub fn load_local_agent_config(
     ))
 }
 
+/// Fresh local agent config.
 pub fn fresh_local_agent_config(
     principal_did: &str,
     session_id: &str,
@@ -244,6 +252,7 @@ pub fn bind_local_roster_agent(
     save_local_agent_config(storage_root, session_id, &config)
 }
 
+/// Ensures local-agent-config.
 pub fn ensure_local_agent_config(storage_root: &Path, session_id: &str) -> Result<(), String> {
     let path = agent_config_path(storage_root, session_id);
     if path.is_file() {
@@ -253,6 +262,7 @@ pub fn ensure_local_agent_config(storage_root: &Path, session_id: &str) -> Resul
     save_local_agent_config(storage_root, session_id, &cfg)
 }
 
+/// Saves local-agent-config.
 pub fn save_local_agent_config(
     storage_root: &Path,
     session_id: &str,
@@ -268,6 +278,7 @@ pub fn save_local_agent_config(
     fs::write(path, text).map_err(|e| e.to_string())
 }
 
+/// Updates outcome-sharing policy.
 pub fn update_outcome_sharing(
     storage_root: &Path,
     session_id: &str,
@@ -303,6 +314,7 @@ pub fn decorate_local_agent_message(
     Ok(())
 }
 
+/// Local agent-display-name.
 pub fn local_agent_display_name(cfg: &ParticipantAgentConfig) -> String {
     if let Some(name) = cfg.roster_agent_display_name.as_deref() {
         if let Some(model) = cfg.model_id.as_deref() {
@@ -473,10 +485,12 @@ pub fn resolve_prompt_dispatch(storage_root: &Path, prompt: &str) -> PromptDispa
     }
 }
 
+/// Participant DIDs.
 pub fn participant_dids(participants: &[chat_session::ChatParticipant]) -> Vec<String> {
     participants.iter().map(|p| p.did.clone()).collect()
 }
 
+/// `true` when participant.
 pub fn is_participant(did: &str, participants: &[chat_session::ChatParticipant]) -> bool {
     participants.iter().any(|p| p.did == did)
 }
@@ -591,6 +605,7 @@ pub fn collect_peer_agent_summaries(
     out
 }
 
+/// Builds cooperative-agents-block.
 pub fn build_cooperative_agents_block(
     storage_root: &Path,
     session_id: &str,
@@ -656,6 +671,7 @@ pub fn build_cooperative_agents_block(
     lines.join("\n")
 }
 
+/// Validates an ingested agent message.
 pub fn validate_ingested_agent_message(
     msg: &ChatMessage,
     participants: &[chat_session::ChatParticipant],

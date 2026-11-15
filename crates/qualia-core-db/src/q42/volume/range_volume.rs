@@ -4,8 +4,8 @@ use std::io;
 
 use super::super::{
     header_from_bytes, BlockDirectoryEntry, Q42VolumeHeader, BIDX_MAGIC, FIELD_RANGE_INDEX_MAGIC,
-    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, QUINS_PER_BLOCK,
-    QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
+    FLAG_BLOCKS_LZ4, HEADER_SIZE, MAX_COMPRESSED_SUPERBLOCK_SIZE, Q42_VERSION_V3, Q42_VERSION_V4,
+    QUINS_PER_BLOCK, QUIN_SIZE, SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
 };
 use super::index::{BidxBlockRange, BidxMatchPage};
 use super::range::{Q42ByteRange, Q42RangeSource};
@@ -16,6 +16,7 @@ const BIDX_ENTRY_BYTES: usize = 16;
 const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
 const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
 
+/// Build an `InvalidData` io::Error for malformed volume content.
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
@@ -91,6 +92,9 @@ pub struct Q42RangeQueryPlan {
 }
 
 impl Q42RangeQueryPlan {
+    /// Pick the scan strategy for `pattern`: object BIDX when an object
+    /// constraint is present, field-range index for s/p/c constraints,
+    /// sequential scan otherwise.
     pub fn for_pattern(pattern: Q42RangeQueryPattern) -> Self {
         Self {
             strategy: if pattern.object.is_some() {
@@ -122,6 +126,9 @@ pub struct Q42RangeQueryPage {
 }
 
 impl<S: Q42RangeSource> Q42RangeVolume<S> {
+    /// Open and validate a range source: header version/flags, section
+    /// bounds, directory-vs-block-count consistency, and BIDX +
+    /// field-index headers all checked before first use.
     pub fn open(source: S) -> io::Result<Self> {
         let source_length = source.length()?;
         if source_length < HEADER_SIZE as u64 {
@@ -140,7 +147,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         let flags = header.flags;
         let block_size = header.block_size;
         let quins_per_block = header.quins_per_block;
-        if version != Q42_VERSION_V3
+        if (version != Q42_VERSION_V3 && version != Q42_VERSION_V4)
             || flags & FLAG_BLOCKS_LZ4 == 0
             || block_size != SUPERBLOCK_SIZE as u32
             || quins_per_block != QUINS_PER_BLOCK as u32
@@ -190,12 +197,15 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(volume)
     }
 
+    /// The validated volume header.
     pub fn header(&self) -> &Q42VolumeHeader {
         &self.header
     }
+    /// Byte length of the underlying range source.
     pub fn source_length(&self) -> u64 {
         self.source_length
     }
+    /// Number of superblocks declared in the header.
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
@@ -317,10 +327,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             next_cursor: None,
         })
     }
+    /// Borrow the underlying range source.
     pub fn source(&self) -> &S {
         &self.source
     }
 
+    /// Read the lexicon section into `out` (must match its byte
+    /// length exactly).
     pub fn read_lexicon_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.lex_offset, self.header.lex_length, out)
     }
@@ -354,8 +367,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         out: &mut [u8],
     ) -> io::Result<Option<usize>> {
         use crate::q42_lex::{
-            LEX_HEADER_SIZE, LEX_MAGIC, LEX_VERSION_PAGED, PAGED_DIRECTORY_ENTRY_SIZE,
-            PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
+            LEX_HEADER_SIZE, LEX_MAGIC, LEX_TAG_NAMESPACED, LEX_VERSION_PAGED, LEX_VERSION_V4,
+            PAGED_DIRECTORY_ENTRY_SIZE, PAGED_DIRECTORY_HEADER_SIZE, PAGED_PAGE_HEADER_SIZE,
         };
         if self.header.lex_length < (LEX_HEADER_SIZE + PAGED_DIRECTORY_HEADER_SIZE) as u64 {
             return Err(invalid("Q42 lexicon is too short for paged lookup"));
@@ -368,12 +381,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             },
             &mut header,
         )?;
+        let lex_version = u64::from_le_bytes(header[24..32].try_into().unwrap());
         if header[0..8] != LEX_MAGIC
-            || u64::from_le_bytes(header[24..32].try_into().unwrap()) != LEX_VERSION_PAGED
+            || (lex_version != LEX_VERSION_PAGED && lex_version != LEX_VERSION_V4)
         {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
-                "Q42 range lexicon is not paged Q42LEX v2",
+                "Q42 range lexicon is not paged Q42LEX v2/v4",
             ));
         }
         let directory_offset = u64::from_le_bytes(header[16..24].try_into().unwrap());
@@ -478,30 +492,97 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             let start = blob_offset
                 .checked_add(relative)
                 .ok_or_else(|| invalid("Q42 lexicon string offset overflow"))?;
-            if start + 3 > page.len() || page[start] != 1 {
+            if start + 3 > page.len() {
                 return Err(invalid("Q42 lexicon string entry is malformed"));
             }
-            let length =
-                u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
-            let end = start
-                .checked_add(3 + length)
-                .ok_or_else(|| invalid("Q42 lexicon string length overflow"))?;
-            if end > page.len() {
-                return Err(invalid("Q42 lexicon string extends beyond page"));
+            let tag = page[start];
+            if tag == 1 {
+                let length =
+                    u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
+                let end = start
+                    .checked_add(3 + length)
+                    .ok_or_else(|| invalid("Q42 lexicon string length overflow"))?;
+                if end > page.len() {
+                    return Err(invalid("Q42 lexicon string extends beyond page"));
+                }
+                if length > out.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::WriteZero,
+                        "Q42 lexicon output buffer is too small",
+                    ));
+                }
+                std::str::from_utf8(&page[start + 3..end])
+                    .map_err(|_| invalid("Q42 lexicon string is not UTF-8"))?;
+                out[..length].copy_from_slice(&page[start + 3..end]);
+                return Ok(Some(length));
             }
-            if length > out.len() {
-                return Err(io::Error::new(
-                    io::ErrorKind::WriteZero,
-                    "Q42 lexicon output buffer is too small",
-                ));
+            if tag == LEX_TAG_NAMESPACED && lex_version == LEX_VERSION_V4 {
+                if start + 5 > page.len() {
+                    return Err(invalid("Q42 lexicon namespaced entry is malformed"));
+                }
+                let ns_id =
+                    u16::from_le_bytes(page[start + 1..start + 3].try_into().unwrap()) as usize;
+                let local_len =
+                    u16::from_le_bytes(page[start + 3..start + 5].try_into().unwrap()) as usize;
+                let local_start = start + 5;
+                let local_end = local_start
+                    .checked_add(local_len)
+                    .ok_or_else(|| invalid("Q42 lexicon local name length overflow"))?;
+                if local_end > page.len() {
+                    return Err(invalid("Q42 lexicon local name extends beyond page"));
+                }
+                // Resolve the namespace from this page's local table. The
+                // walk is bounds-checked at every entry so a corrupt ns_id
+                // fails closed instead of slicing past the page.
+                let ns_count = u32::from_le_bytes(page[4..8].try_into().unwrap()) as usize;
+                if ns_id >= ns_count {
+                    return Err(invalid("Q42 lexicon namespace id is out of range"));
+                }
+                // Namespace table entries are [u16 len][utf-8] — no tag byte.
+                let mut cursor = blob_offset;
+                for _ in 0..ns_id {
+                    if cursor + 2 > page.len() {
+                        return Err(invalid("Q42 lexicon namespace table is malformed"));
+                    }
+                    let len =
+                        u16::from_le_bytes(page[cursor..cursor + 2].try_into().unwrap()) as usize;
+                    cursor = cursor
+                        .checked_add(2 + len)
+                        .ok_or_else(|| invalid("Q42 lexicon namespace table overflow"))?;
+                }
+                if cursor + 2 > page.len() {
+                    return Err(invalid("Q42 lexicon namespace table is malformed"));
+                }
+                let ns_len =
+                    u16::from_le_bytes(page[cursor..cursor + 2].try_into().unwrap()) as usize;
+                let ns_start = cursor + 2;
+                let ns_end = ns_start
+                    .checked_add(ns_len)
+                    .ok_or_else(|| invalid("Q42 lexicon namespace length overflow"))?;
+                if ns_end > page.len() {
+                    return Err(invalid("Q42 lexicon namespace extends beyond page"));
+                }
+                let total = ns_len + local_len;
+                if total > out.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::WriteZero,
+                        "Q42 lexicon output buffer is too small",
+                    ));
+                }
+                std::str::from_utf8(&page[ns_start..ns_end])
+                    .map_err(|_| invalid("Q42 lexicon namespace is not UTF-8"))?;
+                std::str::from_utf8(&page[local_start..local_end])
+                    .map_err(|_| invalid("Q42 lexicon local name is not UTF-8"))?;
+                out[..ns_len].copy_from_slice(&page[ns_start..ns_end]);
+                out[ns_len..total].copy_from_slice(&page[local_start..local_end]);
+                return Ok(Some(total));
             }
-            std::str::from_utf8(&page[start + 3..end])
-                .map_err(|_| invalid("Q42 lexicon string is not UTF-8"))?;
-            out[..length].copy_from_slice(&page[start + 3..end]);
-            return Ok(Some(length));
+            return Err(invalid("Q42 lexicon string entry is malformed"));
         }
         Ok(None)
     }
+    /// Read the whole BIDX index section into `out` (must match its
+    /// byte length exactly).
     pub fn read_bidx_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.bidx_offset, self.header.bidx_length, out)
     }
@@ -524,6 +605,9 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(Some(length))
     }
 
+    /// Copy the front-embedded manifest into `out`; `false` when this
+    /// segment is not a root (no embedded manifest). Buffer length
+    /// must equal `volume_manifest_length()`.
     pub fn read_volume_manifest_into(&self, out: &mut [u8]) -> io::Result<bool> {
         let Some(length) = self.volume_manifest_length()? else {
             return Ok(false);
@@ -542,6 +626,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             .read_range_into(Q42ByteRange { offset, length }, out)?;
         Ok(true)
     }
+    /// Read exactly `length` bytes at `offset` — `out.len()` must
+    /// equal the section length (exact-fit contract).
     fn read_section(&self, offset: u64, length: u64, out: &mut [u8]) -> io::Result<()> {
         let length =
             usize::try_from(length).map_err(|_| invalid("Q42 section exceeds platform"))?;
@@ -555,6 +641,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             .read_range_into(Q42ByteRange { offset, length }, out)
     }
 
+    /// Fetch directory entry `index` — a single bounded range read,
+    /// bounds-checked against `block_count`.
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
         if index >= self.header.block_count as usize {
             return Err(io::Error::new(
@@ -785,10 +873,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(decoded)
     }
 
+    /// Consume the volume and return the underlying range source.
     pub fn into_source(self) -> S {
         self.source
     }
 
+    /// Validate the BIDX header (magic, version, count vs directory,
+    /// section-length arithmetic) and return its entry count.
     fn bidx_block_count(&self) -> io::Result<usize> {
         let bidx_length = self.header.bidx_length;
         if bidx_length < BIDX_HEADER_BYTES as u64 {
@@ -823,6 +914,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(count)
     }
 
+    /// Read BIDX entry `index` — the (min, max) object-hash range of
+    /// one block; rejects min > max.
     fn bidx_entry(&self, index: usize) -> io::Result<(u64, u64)> {
         let block_count = usize::try_from(self.header.block_count)
             .map_err(|_| invalid("Q42 block count exceeds platform"))?;
@@ -854,6 +947,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok((min, max))
     }
 
+    /// When present, check the field-range index header (magic,
+    /// version, count) and its section-length arithmetic.
     fn validate_field_range_index(&self) -> io::Result<()> {
         let Some((offset, length)) = self.header.field_range_index_range() else {
             return Ok(());
@@ -882,6 +977,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(())
     }
 
+    /// When present, check the field-postings header (magic, version,
+    /// per-block count).
     fn validate_field_postings(&self) -> io::Result<()> {
         let Some((offset, length)) = self.header.field_postings_range() else {
             return Ok(());
@@ -905,6 +1002,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(())
     }
 
+    /// Combined prune test: postings first (definitive), then the
+    /// coarser field-range index. `true` means "may match — must scan".
     fn field_membership_may_match(
         &self,
         block_index: usize,
@@ -916,6 +1015,10 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         self.field_range_may_match(block_index, pattern)
     }
 
+    /// Postings-table prune for `block_index`: reads the block's
+    /// payload interval and tests s/p/c pattern values against the
+    /// per-field membership filter. `None` when the volume has no
+    /// postings section.
     fn field_postings_may_match(
         &self,
         block_index: usize,
@@ -959,6 +1062,9 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         ))
     }
 
+    /// Min/max field-range prune for `block_index`: each present
+    /// pattern value must fall inside the block's recorded hash range.
+    /// `true` when the index section is absent (cannot prune).
     fn field_range_may_match(
         &self,
         block_index: usize,
@@ -994,7 +1100,7 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::super::super::{
         write_unified_volume, write_volume_root, Q42RangeVolumeSet, Q42VolumeManifest,

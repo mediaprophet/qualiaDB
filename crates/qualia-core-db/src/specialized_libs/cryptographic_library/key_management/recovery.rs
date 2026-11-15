@@ -57,6 +57,7 @@ pub struct LockoutPolicy {
 }
 
 impl KeyRecovery {
+    /// Creates a default `KeyRecovery`.
     pub fn new() -> Self {
         Self {
             recovery_methods: vec![
@@ -81,6 +82,7 @@ impl KeyRecovery {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -119,6 +121,7 @@ impl KeyRecovery {
 }
 
 impl RecoveryAttempts {
+    /// Creates a default `RecoveryAttempts`.
     pub fn new() -> Self {
         Self {
             attempts: Vec::new(),
@@ -132,6 +135,7 @@ impl RecoveryAttempts {
 }
 
 impl LockoutPolicy {
+    /// Creates a default `LockoutPolicy`.
     pub fn new() -> Self {
         Self {
             max_attempts: 3,

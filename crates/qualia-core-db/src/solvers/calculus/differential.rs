@@ -10,6 +10,7 @@ pub struct DerivativeEstimate {
     pub step: f64,
 }
 
+/// Central-difference derivative with adaptive step refinement until the error estimate converges; returns estimate + error bound.
 pub fn adaptive_central_difference<F>(
     function: F,
     x: f64,
@@ -42,6 +43,7 @@ where
     Ok((high - low) / (2.0 * h))
 }
 
+/// Complex-step derivative `Im(f(x+ih))/h` — machine-precision accuracy for real-analytic `function`.
 pub fn complex_step_derivative<F>(function: F, x: f64) -> Result<DerivativeEstimate, AnalysisError>
 where
     F: Fn(Complex64) -> Complex64,
@@ -61,6 +63,8 @@ where
     })
 }
 
+/// `M`×`N` Jacobian of `f` by central finite differences per input column,
+/// step `EPSILON^(1/3) · (1+|x_j|)`. `InvalidDomain` on non-finite values.
 pub fn jacobian<const M: usize, const N: usize, F>(
     function: F,
     point: Vector<N>,
@@ -87,6 +91,8 @@ where
     Ok(LinearMap::new(coefficients))
 }
 
+/// Jacobian-vector product `J · direction` — plain matrix apply on an
+/// already-computed `LinearMap`.
 pub fn jvp<const M: usize, const N: usize>(
     derivative: &LinearMap<M, N>,
     direction: Vector<N>,
@@ -94,6 +100,8 @@ pub fn jvp<const M: usize, const N: usize>(
     derivative.apply(direction)
 }
 
+/// Vector-Jacobian product `Jᵀ · cotangent` — transpose apply on an
+/// already-computed `LinearMap`.
 pub fn vjp<const M: usize, const N: usize>(
     derivative: &LinearMap<M, N>,
     cotangent: Vector<M>,
@@ -109,6 +117,7 @@ pub struct Dual<const N: usize> {
 }
 
 impl<const N: usize> Dual<N> {
+    /// `Dual::constant`.
     pub const fn constant(value: f64) -> Self {
         Self {
             value,
@@ -116,6 +125,7 @@ impl<const N: usize> Dual<N> {
         }
     }
 
+    /// Creates a dual number seeding derivative direction `index` (errors when `index` out of range).
     pub fn variable(value: f64, index: usize) -> Result<Self, AnalysisError> {
         if index >= N || !value.is_finite() {
             return Err(AnalysisError::InvalidDomain);
@@ -125,6 +135,7 @@ impl<const N: usize> Dual<N> {
         Ok(Self { value, derivative })
     }
 
+    /// Dual addition — value adds, derivatives add.
     pub fn add(self, other: Self) -> Self {
         let mut derivative = [0.0; N];
         for (index, value) in derivative.iter_mut().enumerate() {
@@ -136,6 +147,7 @@ impl<const N: usize> Dual<N> {
         }
     }
 
+    /// Dual multiplication — product rule on derivatives.
     pub fn mul(self, other: Self) -> Self {
         let mut derivative = [0.0; N];
         for (index, value) in derivative.iter_mut().enumerate() {
@@ -147,6 +159,7 @@ impl<const N: usize> Dual<N> {
         }
     }
 
+    /// Dual sin — derivative scales by cos(x).
     pub fn sin(self) -> Self {
         let scale = self.value.cos();
         let mut derivative = self.derivative;
@@ -159,6 +172,7 @@ impl<const N: usize> Dual<N> {
         }
     }
 
+    /// Dual exp — derivative scales by e^x.
     pub fn exp(self) -> Self {
         let value = self.value.exp();
         let mut derivative = self.derivative;
@@ -169,6 +183,10 @@ impl<const N: usize> Dual<N> {
     }
 }
 
+/// Finite-difference `N`×`N` Hessian of `f` at `point`: central difference on
+/// the diagonal, four-point mixed difference off-diagonal, step scaled by
+/// `EPSILON^0.25 · (1+|x_i|)` per dimension. `InvalidDomain` on non-finite
+/// base or any coefficient.
 pub fn hessian<const N: usize, F>(
     function: F,
     point: Vector<N>,
@@ -226,6 +244,11 @@ pub struct NewtonReport<const N: usize> {
     pub step_norm: f64,
 }
 
+/// Damped Newton root-finding: iterates `point ← point − step` solving
+/// `function(point) = 0` for `F: Vector<N> → Vector<N>` (e.g. a gradient),
+/// with a damped step, residual-norm convergence at `tolerance`, and a
+/// `max_iterations` bound. Returns a `NewtonReport` (solution, iterations,
+/// residual/step norms); `InvalidDomain` on non-finite input or zero tolerance.
 pub fn damped_newton<const N: usize, F>(
     function: F,
     initial: Vector<N>,

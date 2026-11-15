@@ -79,6 +79,7 @@ pub struct Transient {
     pub thermal_time_constant: f64,
 }
 impl ThermalAnalyzer {
+    /// Creates an analyzer with default heat-transfer, thermal-stress, and thermal-analysis state.
     pub fn new() -> Self {
         Self {
             heat_transfer: HeatTransfer::new(),
@@ -89,6 +90,7 @@ impl ThermalAnalyzer {
         }
     }
 
+    /// Attaches (or detaches with `None`) a physics-simulation library handle used by the conduction solver path.
     pub fn attach_physics_simulation(&mut self, lib: Option<Arc<Mutex<PhysicsSimulationLibrary>>>) {
         self.physics_simulation = lib;
     }
@@ -101,10 +103,12 @@ impl ThermalAnalyzer {
         self.statistical_computing = lib;
     }
 
+    /// No-op returning `Ok(())` — in-memory state needs no setup.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 
+    /// Fails closed (`ValidationError`) when the model has no dimensions.
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -114,6 +118,7 @@ impl ThermalAnalyzer {
         Ok(())
     }
 
+    /// Runs real 1-D steady-state conduction: Fourier's law on a finite-difference mesh via the Thomas algorithm, driven by model conductivity/length/BCs (`Temperature`→Dirichlet, `HeatFlux`→Neumann). Ill-posed input → `InsufficientData`, never a fabricated field. 2-D/3-D FE thermal is out of scope and flagged, not faked.
     pub fn analyze(
         &mut self,
         model: &EngineeringModel,
@@ -167,6 +172,7 @@ impl ThermalAnalyzer {
 }
 
 impl HeatTransfer {
+    /// Creates heat-transfer state with default conduction/convection/radiation descriptors.
     pub fn new() -> Self {
         Self {
             conduction: Conduction::new(),
@@ -207,6 +213,7 @@ impl HeatTransfer {
 }
 
 impl Conduction {
+    /// Creates a default `Conduction` descriptor.
     pub fn new() -> Self {
         Self {
             thermal_conductivity: 50.0,
@@ -217,6 +224,7 @@ impl Conduction {
 }
 
 impl Convection {
+    /// Creates a default `Convection` descriptor.
     pub fn new() -> Self {
         Self {
             convection_type: ConvectionType::Natural,
@@ -227,6 +235,7 @@ impl Convection {
 }
 
 impl Radiation {
+    /// Creates a default `Radiation` descriptor.
     pub fn new() -> Self {
         Self {
             emissivity: 0.8,
@@ -237,6 +246,7 @@ impl Radiation {
 }
 
 impl ThermalStress {
+    /// Creates a default `ThermalStress` descriptor.
     pub fn new() -> Self {
         Self {
             thermal_expansion: 12e-6,
@@ -247,6 +257,7 @@ impl ThermalStress {
 }
 
 impl ThermalAnalysis {
+    /// Creates analysis state with default steady-state/transient descriptors.
     pub fn new() -> Self {
         Self {
             steady_state: SteadyState::new(),
@@ -256,6 +267,7 @@ impl ThermalAnalysis {
 }
 
 impl SteadyState {
+    /// Creates a default `SteadyState` descriptor.
     pub fn new() -> Self {
         Self {
             temperature_distribution: Vec::new(),
@@ -265,6 +277,7 @@ impl SteadyState {
 }
 
 impl Transient {
+    /// Creates a default `Transient` descriptor.
     pub fn new() -> Self {
         Self {
             time_history: Vec::new(),

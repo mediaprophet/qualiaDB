@@ -36,10 +36,12 @@ impl ContextType {
         }
     }
 
+    /// Metadata bit encoding for the context type.
     pub fn to_metadata_bits(self) -> u8 {
         self as u8
     }
 
+    /// Adapter filename for the context.
     pub fn adapter_filename(self) -> &'static str {
         match self {
             ContextType::General => "general_v1.lora",
@@ -51,6 +53,7 @@ impl ContextType {
         }
     }
 
+    /// All context types.
     pub fn all() -> &'static [ContextType] {
         &[
             ContextType::General,
@@ -185,6 +188,7 @@ pub struct ContextDetector {
 }
 
 impl ContextDetector {
+    /// Creates `ContextDetector` with the given state.
     pub fn new() -> Self {
         let mut kw: HashMap<&'static str, Vec<(ContextType, f32)>> = HashMap::new();
 

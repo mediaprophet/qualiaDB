@@ -7,16 +7,22 @@
 #![cfg(target_arch = "wasm32")]
 
 mod qualia_portal;
+pub mod render_stub;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
 
+pub use qualia_core_db::wasm_bridge::{
+    list_hmc_bundle_entries_wasm, read_hmc_bundle_entry_wasm, WasmQ42Session, WasmSimulationWorld,
+};
 pub use qualia_core_db::{
     export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
-    parse_n3logic_wasm, parse_turtle_wasm, sample_browser_telemetry_wasm, spatial_encode_wasm,
+    parse_n3logic_wasm, parse_turtle_wasm, parse_yaml_ld_q42_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
 };
 pub use qualia_portal::QualiaPortal;
+pub use render_stub::SimpleCanvasRenderer;
 
 #[wasm_bindgen]
 extern "C" {
@@ -25,10 +31,8 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn init_panic_hook() {
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
+/// Initializes panic-hook.
+pub fn init_panic_hook() {}
 
 /// Legacy alias — prefer `QualiaPortal`.
 #[wasm_bindgen(js_name = WebEngine)]
@@ -39,6 +43,7 @@ pub struct WebEngine {
 #[wasm_bindgen]
 impl WebEngine {
     #[wasm_bindgen(constructor)]
+    /// Creates a new instance.
     pub fn new() -> Result<WebEngine, JsValue> {
         let canvas = create_canvas(800, 600)?;
         Ok(WebEngine {
@@ -46,28 +51,34 @@ impl WebEngine {
         })
     }
 
+    /// Loads q42.
     pub fn load_q42(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         self.inner.load_q42(bytes)
     }
 
+    /// Loads json-scene.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
         self.inner.load_json_scene(json)
     }
 
+    /// Renders to-canvas.
     pub fn render_to_canvas(&self, canvas: HtmlCanvasElement) -> Result<(), JsValue> {
         self.inner.paint_frame(&canvas)
     }
 
+    /// Last parsed value.
     pub fn last_parsed(&self) -> Option<JsValue> {
         self.inner.last_parsed()
     }
 
+    /// Mounts qapp.
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         self.inner.mount_qapp(root_id)
     }
 }
 
 #[wasm_bindgen]
+/// Creates canvas.
 pub fn create_canvas(width: u32, height: u32) -> Result<HtmlCanvasElement, JsValue> {
     let window = web_sys::window().ok_or("no window")?;
     let document = window.document().ok_or("no document")?;

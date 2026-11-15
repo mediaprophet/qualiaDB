@@ -1,8 +1,9 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `HealthVitalMonitor` component.
 pub fn HealthVitalMonitor() -> Element {
     rsx! {
         div { class: "health-monitor-pane flex flex-col h-full",

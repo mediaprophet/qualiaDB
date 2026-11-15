@@ -3,11 +3,14 @@
 /// Waveform view — computes peak/RMS envelope of a signal buffer.
 #[derive(Debug, Clone)]
 pub struct WaveformMeter {
+    /// Maximum absolute sample value seen by the last `analyse`.
     pub peak: f64,
+    /// Root-mean-square level of the last analysed buffer.
     pub rms: f64,
 }
 
 impl WaveformMeter {
+    /// Create a zeroed meter.
     pub fn new() -> Self {
         Self {
             peak: 0.0,
@@ -71,10 +74,13 @@ impl WaveformMeter {
 /// Phase correlation meter — measures stereo correlation.
 #[derive(Debug, Clone)]
 pub struct PhaseMeter {
-    pub correlation: f64, // [-1, 1], 1 = mono, 0 = uncorrelated, -1 = out of phase
+    /// Normalised correlation in `[-1, 1]`: 1 = mono/correlated, 0 =
+    /// uncorrelated, -1 = fully out of phase.
+    pub correlation: f64,
 }
 
 impl PhaseMeter {
+    /// Create a meter initialised to `correlation = 1.0` (mono).
     pub fn new() -> Self {
         Self { correlation: 1.0 }
     }
@@ -126,6 +132,8 @@ pub struct LoudnessMeter {
 }
 
 impl LoudnessMeter {
+    /// Create a meter with a 400 ms integration window sized for
+    /// `sample_rate`; starts at -70 LUFS.
     pub fn new(sample_rate: f64) -> Self {
         // 400ms window for momentary, 3s for short-term.
         let window_size = (0.4 * sample_rate) as usize;

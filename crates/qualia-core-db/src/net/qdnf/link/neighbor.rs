@@ -12,12 +12,14 @@ pub struct NeighborTable {
 }
 
 impl NeighborTable {
+    /// Creates a default `NeighborTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_NEIGHBORS],
         }
     }
 
+    /// Inserts an entry; error at capacity.
     pub fn insert(&mut self, adj: Adjacency) -> Result<usize, QdnfError> {
         for slot in self.slots.iter() {
             if let Some(existing) = slot {
@@ -44,6 +46,7 @@ impl NeighborTable {
         self.insert(adj)
     }
 
+    /// Forwarding descriptor for the neighbor.
     pub fn forwarding(&self, remote: LinkId) -> Option<&Adjacency> {
         self.slots
             .iter()
@@ -51,6 +54,7 @@ impl NeighborTable {
             .find(|a| a.remote.0 == remote.0 && a.state == AdjacencyState::Adjacent)
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         self.slots.iter().filter(|s| s.is_some()).count()
     }

@@ -1,6 +1,6 @@
 //! Desktop surface for the bounded N-Triples → Q42 graph proof.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;
@@ -63,6 +63,7 @@ fn witness(record: &Option<Vec<u64>>) -> String {
 }
 
 #[component]
+/// Aether `GraphProof` component.
 pub fn GraphProof() -> Element {
     let mut source = use_signal(String::new);
     let mut volume = use_signal(String::new);

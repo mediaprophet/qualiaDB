@@ -306,7 +306,7 @@ VibeScript hooks compile directly to W3C N3Logic implication rules:
 
 | Platform Target | Host Runtime | Poet Engine Mode | UI Rendering Pipeline | Wire Format & Sync |
 | :--- | :--- | :--- | :--- | :--- |
-| **Desktop / Daemon** | Native Rust AOT | Embedded Poet (Rust) | Webizen (`dioxus-desktop` / Wry) | Full Q42 DAG, Bao Stream, CBOR-LD |
+| **Desktop / Daemon** | Native Rust AOT | Embedded Poet (Rust) | Webizen (`aether-desktop` / Wry) | Full Q42 DAG, Bao Stream, CBOR-LD |
 | **Browser Client** | `wasm32-unknown-unknown` | Poet WASM interpreter | Vanilla DOM / Web Components | WebSockets / WebRTC, CBOR-LD |
-| **Mobile (iOS/Android)** | Compiled `.a` / `.so` FFI | Pure Rust AST (Zero JIT, App Store compliant) | `dioxus-mobile` / WKWebView | Mobile Network, Merkle Sync |
+| **Mobile (iOS/Android)** | Compiled `.a` / `.so` FFI | Pure Rust AST (Zero JIT, App Store compliant) | `aether-mobile` / WKWebView | Mobile Network, Merkle Sync |
 | **IoT / Edge Devices** | Stripped Native Rust (`no_std`) | Micro-Poet (<2MB RAM) | Headless / Custom Sensor Bus | LoRaWAN / CoAP / MQTT, CBOR-LD Deltas |

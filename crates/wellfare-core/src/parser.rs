@@ -2,6 +2,7 @@ use crate::models::{HeartRateRecord, SleepRecord, StepRecord, WeightRecord};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use serde::Deserialize;
 
+/// Cleans CSV content.
 pub fn clean_csv_content(content: &str) -> String {
     let mut lines = content.lines();
     if let Some(first_line) = lines.next() {
@@ -15,6 +16,7 @@ pub fn clean_csv_content(content: &str) -> String {
     content.to_string()
 }
 
+/// Parses a time offset in minutes.
 pub fn parse_time_offset_minutes(offset_str: &str) -> i32 {
     let s = offset_str.trim();
     if s.is_empty() {
@@ -50,6 +52,7 @@ pub fn parse_time_offset_minutes(offset_str: &str) -> i32 {
     0
 }
 
+/// Parses a Samsung datetime.
 pub fn parse_samsung_datetime(
     value: &str,
     offset_minutes: i32,
@@ -113,6 +116,7 @@ struct WeightCsvRow {
     bmi: f64,
 }
 
+/// Parses  CSV.
 pub fn parse_weight_csv(content: &str) -> Result<Vec<WeightRecord>, String> {
     let cleaned = clean_csv_content(content);
     let mut rdr = csv::ReaderBuilder::new()
@@ -155,6 +159,7 @@ struct SleepCsvRow {
     wake_up_count: Option<u32>,
 }
 
+/// Parses  CSV.
 pub fn parse_sleep_csv(content: &str) -> Result<Vec<SleepRecord>, String> {
     let cleaned = clean_csv_content(content);
     let mut rdr = csv::ReaderBuilder::new()
@@ -197,6 +202,7 @@ struct HeartRateCsvRow {
     binning_data: Option<String>,
 }
 
+/// Parses  CSV.
 pub fn parse_heart_rate_csv(content: &str) -> Result<Vec<HeartRateRecord>, String> {
     let cleaned = clean_csv_content(content);
     let mut rdr = csv::ReaderBuilder::new()
@@ -235,6 +241,7 @@ struct StepCsvRow {
     distance: f64,
 }
 
+/// Parses  CSV.
 pub fn parse_steps_csv(content: &str) -> Result<Vec<StepRecord>, String> {
     let cleaned = clean_csv_content(content);
     let mut rdr = csv::ReaderBuilder::new()

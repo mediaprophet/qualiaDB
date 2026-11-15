@@ -49,6 +49,7 @@ pub enum ScreenedPoissonError {
     OutputTooSmall { vertices: usize, triangles: usize },
 }
 
+/// 3D screened-Poisson reconstruction.
 pub fn screened_poisson_reconstruct_3d(
     points: &[Point3],
     normals: &[Point3],
@@ -181,6 +182,7 @@ pub fn screened_poisson_reconstruct_3d(
     })
 }
 
+/// Solver capacity for the mesh.
 pub fn required_screened_poisson_capacity(grid_x: usize, grid_y: usize) -> (usize, usize) {
     if grid_x < 2 || grid_y < 2 {
         (0, 0)

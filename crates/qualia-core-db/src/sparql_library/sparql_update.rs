@@ -35,6 +35,7 @@ pub struct UpdateExecutor<'a> {
 }
 
 impl<'a> UpdateExecutor<'a> {
+    /// Creates a default `UpdateExecutor`.
     pub fn new(quins: &'a mut Vec<NQuin>) -> Self {
         Self { quins }
     }

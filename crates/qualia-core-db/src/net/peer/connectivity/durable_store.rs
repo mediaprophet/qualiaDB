@@ -18,6 +18,7 @@ pub enum DurableIo {
 }
 
 impl DurableQueue {
+    /// Persists the queue to `path`.
     pub fn persist(&self, path: &Path) -> Result<(), DurableIo> {
         let mut body = Vec::new();
         body.extend_from_slice(MAGIC);
@@ -35,6 +36,7 @@ impl DurableQueue {
         fs::rename(&tmp, path).map_err(|_| DurableIo::Io)
     }
 
+    /// Reloads the queue from `path`.
     pub fn recover(path: &Path) -> Result<Self, DurableIo> {
         let mut bytes = Vec::new();
         File::open(path)
@@ -58,10 +60,12 @@ impl DurableQueue {
 }
 
 impl DurableQueue {
+    /// Persisted job count.
     pub fn stored_len(&self) -> usize {
         self.len()
     }
 
+    /// Persisted job at index `i`.
     pub fn stored_job(&self, i: usize) -> Option<DurableJob> {
         self.job_at(i)
     }

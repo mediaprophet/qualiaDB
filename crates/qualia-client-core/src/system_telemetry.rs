@@ -57,10 +57,12 @@ fn bus() -> &'static TelemetryBus {
 static ACTIVATION_TICKER: AtomicBool = AtomicBool::new(false);
 static TICKER_STOP: AtomicBool = AtomicBool::new(false);
 
+/// Subscribes to system telemetry.
 pub fn subscribe_system_telemetry(tx: SyncSender<SystemTelemetryEvent>) {
     bus().subscribe(tx);
 }
 
+/// Publishes system telemetry.
 pub fn publish_system_telemetry(event: SystemTelemetryEvent) {
     bus().publish(event);
 }
@@ -104,6 +106,7 @@ fn sample_event(status: &str, activation_in_progress: bool) -> SystemTelemetryEv
     }
 }
 
+/// Stops activation telemetry.
 pub fn stop_activation_telemetry() {
     TICKER_STOP.store(true, Ordering::Release);
 }
@@ -132,6 +135,7 @@ pub fn start_activation_telemetry(status: impl Into<String>) {
         .ok();
 }
 
+/// Publishes idle telemetry.
 pub fn publish_idle_telemetry() {
     bus().publish(sample_event("Idle", false));
 }

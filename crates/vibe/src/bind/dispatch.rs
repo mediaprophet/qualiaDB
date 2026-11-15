@@ -6,6 +6,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Dispatches a host call.
 pub fn dispatch<H: Host>(
     host: &mut H,
     path: &str,
@@ -22,8 +23,37 @@ pub fn dispatch<H: Host>(
     if let Some(v) = call_quin(host, path, named, span)? {
         return Ok(v);
     }
+    let merged_storage: Vec<Value>;
+    let effective_args: &[Value] = if named.is_empty() {
+        args
+    } else {
+        let mut rec = std::collections::BTreeMap::new();
+        for (k, v) in named {
+            rec.insert(k.clone(), v.clone());
+        }
+        let mut combined = Vec::with_capacity(args.len() + 1);
+        combined.extend_from_slice(args);
+        combined.push(Value::Record(rec));
+        merged_storage = combined;
+        &merged_storage
+    };
+    if let Some(v) = crate::web_runtime::call_web_or_ui(path, effective_args, span)? {
+        return Ok(v);
+    }
+    if let Some(v) = crate::stdlib_v2::call_stdlib_v2(path, effective_args, span)? {
+        return Ok(v);
+    }
     match path {
         "receipt_empty" => Ok(Value::Receipt),
+        "str.eq" => {
+            let a = args.first().and_then(|v| v.as_str()).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "str.eq requires two string arguments")
+            })?;
+            let b = args.get(1).and_then(|v| v.as_str()).ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, "str.eq requires two string arguments")
+            })?;
+            Ok(Value::Bool(a == b))
+        }
         "graph.query" => {
             let take = named
                 .iter()

@@ -1,0 +1,30 @@
+// Mirror of docs/vibe/cinema-graph.vibe for parse/check fixtures.
+// QualiaPortal theatre scene. Not a synth produce source (hypermedia.* → HMC).
+module cinema_graph;
+import "vibe:0.1/math" as math;
+using Scene, Animation;
+
+pure fn at_least_one(n: f64) -> f64 {
+    return if n > 1.0 { n } else { 1.0 };
+}
+
+pure fn ring_point(i: f64, n: f64, radius: f64, y: f64) -> List {
+    let count = at_least_one(n);
+    let ang = i * 6.28318530718 / count;
+    return [math.cos(ang) * radius, y, math.sin(ang) * radius];
+}
+
+effect fn construct_theatre(resources: List, triples: List) budget(steps: 200000) {
+    Scene.create({ name: "cinema-graph" });
+    let pt = ring_point(0.0, 1.0, 1.55, 0.08);
+    Scene.add_node({ id: 1, x: pt[0], y: pt[1], z: pt[2], kind: "instance", name: "probe" });
+    let camera = Scene.add_camera({ yaw: 0.55, pitch: 0.48, zoom: 0.0, fov: 45.0 });
+    let pose = Animation.orbit_spin(1.0);
+    return { nodes: resources, edges: triples, camera: camera, pose: pose };
+}
+
+cell pose := Animation.orbit_spin(1.0);
+present theatre {
+    color: oklch(0.72, 0.12, 230)
+    pose: pose
+}

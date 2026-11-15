@@ -17,6 +17,7 @@ pub enum KemCiphertext {
 
 #[cfg(feature = "pq-kem")]
 impl KemCiphertext {
+    /// The underlying ciphertext bytes (768/1088/1568 B by variant).
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemCiphertext::Kyber512(bytes) => bytes,
@@ -25,6 +26,8 @@ impl KemCiphertext {
         }
     }
 
+    /// Copy `bytes` into the variant's fixed-size ciphertext array;
+    /// `InvalidLength` when the length doesn't match the variant.
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -84,6 +87,7 @@ pub enum KemPublicKey {
 
 #[cfg(feature = "pq-kem")]
 impl KemPublicKey {
+    /// The underlying public-key bytes (800/1184/1568 B by variant).
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemPublicKey::Kyber512(bytes) => bytes,
@@ -92,6 +96,8 @@ impl KemPublicKey {
         }
     }
 
+    /// Copy `bytes` into the variant's fixed-size public-key array;
+    /// `InvalidLength` when the length doesn't match the variant.
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -142,6 +148,7 @@ pub enum KemSecretKey {
 
 #[cfg(feature = "pq-kem")]
 impl KemSecretKey {
+    /// The underlying secret-key bytes (1632/2400/3168 B by variant).
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             KemSecretKey::Kyber512(bytes) => bytes,
@@ -150,6 +157,8 @@ impl KemSecretKey {
         }
     }
 
+    /// Copy `bytes` into the variant's fixed-size secret-key array;
+    /// `InvalidLength` when the length doesn't match the variant.
     pub fn from_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         match variant {
             KemVariant::Kyber512 => {
@@ -211,7 +220,9 @@ pub enum KemError {
 /// Post-quantum serialization trait.
 #[cfg(feature = "pq-kem")]
 pub trait PostQuantumSerialize {
+    /// Fixed bytes.
     fn to_fixed_bytes(&self) -> &[u8];
+    /// From fixed bytes.
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError>
     where
         Self: Sized;
@@ -219,10 +230,12 @@ pub trait PostQuantumSerialize {
 
 #[cfg(feature = "pq-kem")]
 impl PostQuantumSerialize for KemCiphertext {
+    /// Fixed bytes.
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
 
+    /// From fixed bytes.
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
     }
@@ -230,10 +243,12 @@ impl PostQuantumSerialize for KemCiphertext {
 
 #[cfg(feature = "pq-kem")]
 impl PostQuantumSerialize for KemPublicKey {
+    /// Fixed bytes.
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
 
+    /// From fixed bytes.
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
     }
@@ -241,10 +256,12 @@ impl PostQuantumSerialize for KemPublicKey {
 
 #[cfg(feature = "pq-kem")]
 impl PostQuantumSerialize for KemSecretKey {
+    /// Fixed bytes.
     fn to_fixed_bytes(&self) -> &[u8] {
         self.as_bytes()
     }
 
+    /// From fixed bytes.
     fn from_fixed_bytes(variant: KemVariant, bytes: &[u8]) -> Result<Self, KemError> {
         Self::from_bytes(variant, bytes)
     }

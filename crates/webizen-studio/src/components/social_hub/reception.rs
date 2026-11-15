@@ -2,7 +2,7 @@
 
 #![allow(non_snake_case)]
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -22,6 +22,7 @@ pub struct ReceptionSignals {
     pub turtle: Signal<String>,
 }
 
+/// Renders reception.
 pub fn render_reception(sig: ReceptionSignals) -> Element {
     let ReceptionSignals {
         status,

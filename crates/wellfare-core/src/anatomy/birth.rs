@@ -248,6 +248,7 @@ impl DigitalBirthRecord {
     pub const fn forum_class(&self) -> ForumClass {
         ForumClass::Internum
     }
+    /// Sensitivity class.
     pub const fn sensitivity_class(&self) -> &'static str {
         "Sanctuary"
     }

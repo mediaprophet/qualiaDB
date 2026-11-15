@@ -180,6 +180,7 @@ pub struct DominoVibeDecoder {
 }
 
 impl DominoVibeDecoder {
+    /// Creates a default `DominoVibeDecoder`.
     pub const fn new() -> Self {
         Self {
             state: DominoGrammarState::new(),

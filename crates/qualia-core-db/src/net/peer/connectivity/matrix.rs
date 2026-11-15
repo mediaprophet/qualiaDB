@@ -23,6 +23,7 @@ pub struct MatrixRow {
     pub direct_probes: bool,
 }
 
+/// Evaluates and returns the result.
 pub fn evaluate(case: MatrixCase) -> MatrixRow {
     match case {
         MatrixCase::WorkingV6 => {

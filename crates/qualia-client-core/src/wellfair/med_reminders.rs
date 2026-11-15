@@ -37,6 +37,7 @@ pub struct DueMedReminder {
     pub minutes_until_due: i32,
 }
 
+/// Loads prefs.
 pub fn load_prefs(storage_root: impl AsRef<Path>) -> MedReminderPrefs {
     let path = storage_root.as_ref().join(PREFS_FILE);
     if !path.exists() {
@@ -48,6 +49,7 @@ pub fn load_prefs(storage_root: impl AsRef<Path>) -> MedReminderPrefs {
         .unwrap_or_default()
 }
 
+/// Saves prefs.
 pub fn save_prefs(storage_root: impl AsRef<Path>, prefs: &MedReminderPrefs) -> std::io::Result<()> {
     let path = storage_root.as_ref().join(PREFS_FILE);
     if let Some(parent) = path.parent() {

@@ -32,6 +32,21 @@
 //! `sort_indices_stack`). [`parse_section_table`] returns a zero-copy
 //! `&[SectionDescriptor]` view into the input bytes.
 
+#[path = "section/table_validation.rs"]
+mod table_validation;
+/// Shared allocation-free descriptor geometry for full and partial readers.
+pub mod metadata;
+
+// FND-04: new preservation behavior lives in a focused child; the oversized
+// strict parser/writer remains unchanged pending its separate decomposition.
+#[path = "section/opaque_preservation.rs"]
+mod opaque_preservation;
+pub use opaque_preservation::{
+    copy_opaque_container_into, inspect_opaque_container,
+    replace_known_section_bytes_preserving_layout, OpaqueContainerView,
+    OpaquePreservationBudget, OpaquePreservationError,
+};
+
 use bytemuck::{Pod, Zeroable};
 
 use crate::container_10d::crc32c::crc32c;
@@ -69,8 +84,12 @@ pub enum SectionType {
     /// bundled in-envelope so context is byte-inseparable (P1; see
     /// [`super::provenance_section`]). No longer spec-reserved.
     ProvenanceSidecar = 7,
-    SpecReservedFieldSidecar = 8,
-    SpecReservedCorrespondenceMap = 9,
+    /// Optional geometry/scientific field data. The payload is self-describing;
+    /// currently includes the versioned per-vertex normal field codec.
+    FieldSidecar = 8,
+    /// Volumetric-to-surface correspondence map (`FEMC`) binding surface vertices
+    /// to tetrahedral finite elements via quantized barycentric weights.
+    CorrespondenceMap = 9,
     /// Topology section — half-edge graph + CSR adjacency + connectivity
     /// summary (P2.8). Contains a TopologyMiniHeader followed by the
     /// half-edge array, vertex-adjacency CSR (offsets + neighbours), and
@@ -79,9 +98,46 @@ pub enum SectionType {
     /// Spatial-index section — BVH + kd-tree node arrays for scan-free
     /// spatial queries (P3.7).
     SpatialIndex = 11,
+    /// Per-vertex surface colour reading. Not a texture, not a normal, and
+    /// not an albedo for the whole part. One RGBA8 sample per mesh vertex,
+    /// same order as the quantized mesh. See `surface_reading`.
+    SurfaceReading = 12,
+    /// Versioned physically-based/stylized material records and contiguous submesh ranges.
+    Materials = 13,
+    /// Vertex-aligned glTF TEXCOORD_0 values used by material texture sampling.
+    TextureCoordinates = 14,
+    /// Version-2 stable manifold identity and typed references to scientific/presentation fields.
+    ManifoldIdentityV2 = 15,
+    /// SKL1 rig, vertex skin influences and named VibeScript motor clips.
+    SkeletalAnimation = 16,
+    /// Entity behavioral and affordance ontology table for AI triggering and scriptability.
+    EntityOntology = 17,
+    /// Principled procedural geometry/surface synthesis descriptors (Voronoi, SDF fillets, allometry, PGA).
+    ProceduralSynthesis = 18,
+    /// Directional octahedral impostor atlas for mid-to-far field rendering (8–64 px).
+    ImpostorAtlas = 19,
+    /// Hierarchical surfel / 3D Gaussian splat primitives for far-field rendering (1–8 px).
+    HierarchicalSurfels = 20,
+    /// Multi-band sensor reflectance & emittance data cube (400nm-1000nm band stacks).
+    HyperspectralCube = 21,
+    /// 3D Sparse Voxel Octree / DAG (VOX0) with 16B nodes and material LUT indices.
+    VoxelLattice = 22,
+    /// Nanite-style hierarchical meshlet cluster DAG (`CDAG`) for continuous GPU-driven LOD.
+    ClusterDag = 23,
 }
 
 impl SectionType {
+    /// Canonical upper-case constant for SectionType::EntityOntology (personal/entity ontology).
+    pub const PERSONAL_ONTOLOGY: Self = Self::EntityOntology;
+    /// Backwards compatibility alias for SectionType::PERSONAL_ONTOLOGY.
+    #[deprecated(note = "Use SectionType::PERSONAL_ONTOLOGY or SectionType::EntityOntology")]
+    #[allow(non_upper_case_globals)]
+    pub const PersonalOntology: Self = Self::EntityOntology;
+    /// Backwards compatibility alias for [`SectionType::CorrespondenceMap`].
+    #[allow(non_upper_case_globals)]
+    pub const SpecReservedCorrespondenceMap: Self = Self::CorrespondenceMap;
+
+    /// Decode a section-type tag (0–23); `None` for unknown values.
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<SectionType> {
         match raw {
@@ -93,10 +149,22 @@ impl SectionType {
             5 => Some(SectionType::SpecReservedTemporalIndex),
             6 => Some(SectionType::SpecReservedManifoldHeadTable),
             7 => Some(SectionType::ProvenanceSidecar),
-            8 => Some(SectionType::SpecReservedFieldSidecar),
-            9 => Some(SectionType::SpecReservedCorrespondenceMap),
+            8 => Some(SectionType::FieldSidecar),
+            9 => Some(SectionType::CorrespondenceMap),
             10 => Some(SectionType::Topology),
             11 => Some(SectionType::SpatialIndex),
+            12 => Some(SectionType::SurfaceReading),
+            13 => Some(SectionType::Materials),
+            14 => Some(SectionType::TextureCoordinates),
+            15 => Some(SectionType::ManifoldIdentityV2),
+            16 => Some(SectionType::SkeletalAnimation),
+            17 => Some(SectionType::EntityOntology),
+            18 => Some(SectionType::ProceduralSynthesis),
+            19 => Some(SectionType::ImpostorAtlas),
+            20 => Some(SectionType::HierarchicalSurfels),
+            21 => Some(SectionType::HyperspectralCube),
+            22 => Some(SectionType::VoxelLattice),
+            23 => Some(SectionType::ClusterDag),
             _ => None,
         }
     }
@@ -111,8 +179,22 @@ impl SectionType {
                 | SectionType::Tensor10DNodes
                 | SectionType::Reconstruction
                 | SectionType::ProvenanceSidecar
+                | SectionType::FieldSidecar
+                | SectionType::CorrespondenceMap
                 | SectionType::Topology
                 | SectionType::SpatialIndex
+                | SectionType::SurfaceReading
+                | SectionType::Materials
+                | SectionType::TextureCoordinates
+                | SectionType::ManifoldIdentityV2
+                | SectionType::SkeletalAnimation
+                | SectionType::EntityOntology
+                | SectionType::ProceduralSynthesis
+                | SectionType::ImpostorAtlas
+                | SectionType::HierarchicalSurfels
+                | SectionType::HyperspectralCube
+                | SectionType::VoxelLattice
+                | SectionType::ClusterDag
         )
     }
 }
@@ -144,6 +226,7 @@ impl AlignmentTier {
         }
     }
 
+    /// Decode an alignment tier (0–3); `None` for unknown values.
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<AlignmentTier> {
         match raw {
@@ -235,6 +318,12 @@ pub enum SectionTableError {
     /// A section type byte is not a defined variant, or is `Undefined`, or is
     /// a `SpecReserved*` type the v1 writer refuses to emit.
     UnsupportedSectionType { got: u8 },
+    /// The section kind requires a newer outer container version.
+    SectionRequiresVersion {
+        section_type: u8,
+        minimum_version: u16,
+        actual_version: u16,
+    },
     /// An alignment tier byte is not a defined variant.
     UnsupportedAlignmentTier { got: u8 },
     /// `stride * element_count != payload.len()`.
@@ -251,6 +340,10 @@ pub enum SectionTableError {
     /// The header's section-table pointer is inconsistent (offset/count
     /// mismatch, offset below header, or count over the max).
     BadSectionTablePointer { offset: u32, count: u32 },
+    /// Borrowed descriptor bytes are not aligned for the zero-copy table view.
+    UnalignedSectionTable,
+    /// A nonempty payload intersects the container header or section table.
+    SectionOverlapsMetadata { index: usize },
     /// A descriptor's `reserved16` is non-zero.
     NonZeroDescriptorReserved { index: usize },
     /// A descriptor's `byte_offset` is misaligned relative to its tier.
@@ -293,22 +386,95 @@ pub enum SectionTableError {
 impl std::fmt::Display for SectionTableError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::TooManySections { count } => write!(f, "10d too many sections: {count} > {MAX_SECTION_COUNT}"),
-            Self::DuplicateSectionType { section_type } => write!(f, "10d duplicate section type {section_type} (v1 requires unique types)"),
-            Self::UnsupportedSectionType { got } => write!(f, "10d unsupported section type byte {got}"),
-            Self::UnsupportedAlignmentTier { got } => write!(f, "10d unsupported alignment tier byte {got}"),
-            Self::StrideInconsistent { section_type, stride, element_count, payload_len } => write!(f, "10d stride inconsistent for type {section_type}: {stride} * {element_count} != {payload_len}"),
-            Self::OutputBufferTooSmall { needed, have } => write!(f, "10d output buffer too small: need {needed}, have {have}"),
-            Self::InputTooShort { got, need } => write!(f, "10d input too short: got {got}, need {need}"),
-            Self::BadSectionTablePointer { offset, count } => write!(f, "10d bad section-table pointer: offset={offset}, count={count}"),
-            Self::NonZeroDescriptorReserved { index } => write!(f, "10d non-zero reserved16 in descriptor {index}"),
-            Self::MisalignedSection { index, offset, tier } => write!(f, "10d section {index} offset {offset} misaligned for tier {tier:?}"),
-            Self::OutOfBounds { index, offset, length, file_len } => write!(f, "10d section {index} out of bounds: offset={offset} length={length} file_len={file_len}"),
-            Self::OverlappingSections { index_a, index_b } => write!(f, "10d sections {index_a} and {index_b} overlap"),
-            Self::StrideInconsistentDescriptor { index, stride, element_count, byte_length } => write!(f, "10d descriptor {index} stride inconsistent: {stride} * {element_count} != {byte_length}"),
-            Self::UndefinedSectionType { index, got } => write!(f, "10d descriptor {index} undefined section type {got}"),
-            Self::UndefinedAlignmentTier { index, got } => write!(f, "10d descriptor {index} undefined alignment tier {got}"),
-            Self::CrcMismatch { index, section_type, expected, got } => write!(f, "10d CRC mismatch in section {index} (type {section_type}): expected {expected:#010x}, got {got:#010x}"),
+            Self::TooManySections { count } => {
+                write!(f, "10d too many sections: {count} > {MAX_SECTION_COUNT}")
+            }
+            Self::DuplicateSectionType { section_type } => write!(
+                f,
+                "10d duplicate section type {section_type} (v1 requires unique types)"
+            ),
+            Self::UnsupportedSectionType { got } => {
+                write!(f, "10d unsupported section type byte {got}")
+            }
+            Self::SectionRequiresVersion {
+                section_type,
+                minimum_version,
+                actual_version,
+            } => write!(
+                f,
+                "10d section type {section_type} requires header version {minimum_version}, got {actual_version}"
+            ),
+            Self::UnsupportedAlignmentTier { got } => {
+                write!(f, "10d unsupported alignment tier byte {got}")
+            }
+            Self::StrideInconsistent {
+                section_type,
+                stride,
+                element_count,
+                payload_len,
+            } => write!(
+                f,
+                "10d stride inconsistent for type {section_type}: {stride} * {element_count} != {payload_len}"
+            ),
+            Self::OutputBufferTooSmall { needed, have } => {
+                write!(f, "10d output buffer too small: need {needed}, have {have}")
+            }
+            Self::InputTooShort { got, need } => {
+                write!(f, "10d input too short: got {got}, need {need}")
+            }
+            Self::BadSectionTablePointer { offset, count } => write!(
+                f,
+                "10d bad section-table pointer: offset={offset}, count={count}"
+            ),
+            Self::UnalignedSectionTable => write!(f, "10d section table is not aligned for borrowing"),
+            Self::SectionOverlapsMetadata { index } => write!(f, "10d section {index} overlaps header or section table"),
+            Self::NonZeroDescriptorReserved { index } => {
+                write!(f, "10d non-zero reserved16 in descriptor {index}")
+            }
+            Self::MisalignedSection {
+                index,
+                offset,
+                tier,
+            } => write!(
+                f,
+                "10d section {index} offset {offset} misaligned for tier {tier:?}"
+            ),
+            Self::OutOfBounds {
+                index,
+                offset,
+                length,
+                file_len,
+            } => write!(
+                f,
+                "10d section {index} out of bounds: offset={offset} length={length} file_len={file_len}"
+            ),
+            Self::OverlappingSections { index_a, index_b } => {
+                write!(f, "10d sections {index_a} and {index_b} overlap")
+            }
+            Self::StrideInconsistentDescriptor {
+                index,
+                stride,
+                element_count,
+                byte_length,
+            } => write!(
+                f,
+                "10d descriptor {index} stride inconsistent: {stride} * {element_count} != {byte_length}"
+            ),
+            Self::UndefinedSectionType { index, got } => {
+                write!(f, "10d descriptor {index} undefined section type {got}")
+            }
+            Self::UndefinedAlignmentTier { index, got } => {
+                write!(f, "10d descriptor {index} undefined alignment tier {got}")
+            }
+            Self::CrcMismatch {
+                index,
+                section_type,
+                expected,
+                got,
+            } => write!(
+                f,
+                "10d CRC mismatch in section {index} (type {section_type}): expected {expected:#010x}, got {got:#010x}"
+            ),
             Self::NonZeroPadding { at } => write!(f, "10d non-zero padding at byte {at}"),
         }
     }
@@ -419,6 +585,17 @@ pub fn encode_container(
     inputs: &[SectionInput<'_>],
     out: &mut [u8],
 ) -> Result<usize, SectionTableError> {
+    if inputs
+        .iter()
+        .any(|input| input.section_type == SectionType::ManifoldIdentityV2)
+        && header.version < super::header::HEADER_VERSION
+    {
+        return Err(SectionTableError::SectionRequiresVersion {
+            section_type: SectionType::ManifoldIdentityV2 as u8,
+            minimum_version: super::header::HEADER_VERSION,
+            actual_version: header.version,
+        });
+    }
     let mut order = [0usize; MAX_SECTIONS_ENCODE];
     let mut descs = [ZEROED_SECTION_DESCRIPTOR; MAX_SECTIONS_ENCODE];
     let total = plan_layout(inputs, &mut order, &mut descs)?;
@@ -526,72 +703,20 @@ pub fn parse_section_table<'a>(
             need: table_end,
         });
     }
-    // SAFETY: SectionDescriptor is repr(C) + Pod + size 24 with no padding;
-    // the table slice is byte-aligned and fully within `data`.
-    let descs: &[SectionDescriptor] = bytemuck::cast_slice(&data[table_start..table_end]);
+    // Return a clear error for unaligned borrowed bytes instead of panicking.
+    let descs = table_validation::borrow_table(&data[table_start..table_end])?;
 
     // Per-descriptor validation + cross-descriptor overlap/alignment scan.
     // We scan in table order (which is canonical = ascending section_type
     // order for files we wrote; for files we didn't write, we sort the
     // offset check by byte_offset to detect overlaps correctly).
     for (i, d) in descs.iter().enumerate() {
-        if d.reserved16 != 0 {
-            return Err(SectionTableError::NonZeroDescriptorReserved { index: i });
+        if descs[..i].iter().any(|old| old.section_type == d.section_type) {
+            return Err(SectionTableError::DuplicateSectionType { section_type: d.section_type });
         }
-        let st = SectionType::from_u8(d.section_type).ok_or(
-            SectionTableError::UndefinedSectionType {
-                index: i,
-                got: d.section_type,
-            },
-        )?;
-        if st == SectionType::Undefined {
-            return Err(SectionTableError::UndefinedSectionType {
-                index: i,
-                got: d.section_type,
-            });
-        }
-        let tier = AlignmentTier::from_u8(d.alignment_tier).ok_or(
-            SectionTableError::UndefinedAlignmentTier {
-                index: i,
-                got: d.alignment_tier,
-            },
-        )?;
-        let align = tier.to_bytes();
+        metadata::validate_descriptor_metadata(d, i, header.version, data.len() as u64, table_start as u64, table_end as u64)?;
         let o = d.byte_offset as usize;
-        let l = d.byte_length as usize;
-        if o % align != 0 {
-            return Err(SectionTableError::MisalignedSection {
-                index: i,
-                offset: d.byte_offset,
-                tier,
-            });
-        }
-        let end = o.checked_add(l).ok_or(SectionTableError::OutOfBounds {
-            index: i,
-            offset: d.byte_offset,
-            length: d.byte_length,
-            file_len: data.len(),
-        })?;
-        if end > data.len() {
-            return Err(SectionTableError::OutOfBounds {
-                index: i,
-                offset: d.byte_offset,
-                length: d.byte_length,
-                file_len: data.len(),
-            });
-        }
-        // Stride consistency.
-        if d.stride > 0 {
-            let expected = d.stride as usize * d.element_count as usize;
-            if expected != l {
-                return Err(SectionTableError::StrideInconsistentDescriptor {
-                    index: i,
-                    stride: d.stride,
-                    element_count: d.element_count,
-                    byte_length: d.byte_length,
-                });
-            }
-        }
+        let end = o + d.byte_length as usize;
         // Per-section CRC.
         let stored = d.crc32c;
         let actual = crc32c(&data[o..end]);
@@ -631,38 +756,8 @@ pub fn parse_section_table<'a>(
         }
     }
 
-    // Padding-between-sections is zero: scan the gaps. The gap before the
-    // first section (between table_end and the first section's offset) and
-    // between consecutive sections. Walk in offset order.
-    let mut order_by_off: [usize; MAX_SECTION_COUNT as usize] =
-        [0usize; MAX_SECTION_COUNT as usize];
-    for i in 0..descs.len() {
-        order_by_off[i] = i;
-    }
-    // Insertion sort by byte_offset.
-    for i in 1..descs.len() {
-        let mut j = i;
-        while j > 0 && descs[order_by_off[j - 1]].byte_offset > descs[order_by_off[j]].byte_offset {
-            order_by_off.swap(j - 1, j);
-            j -= 1;
-        }
-    }
-    let mut gap_start = table_end;
-    for k in 0..descs.len() {
-        let idx = order_by_off[k];
-        let o = descs[idx].byte_offset as usize;
-        for b in &data[gap_start..o] {
-            if *b != 0 {
-                return Err(SectionTableError::NonZeroPadding { at: gap_start });
-            }
-        }
-        gap_start = o + descs[idx].byte_length as usize;
-    }
-    // Tail padding (after the last section to the end of the encoded region)
-    // is not checked here — the caller may have a larger buffer. Only the
-    // encoded region's padding matters, and that is covered by `total` from
-    // the writer; a reader does not know `total` without the header CRC region
-    // (P0.3). For P0.2, inter-section padding is the gate.
+    // Focused canonical validation also supports payloads before a later table.
+    table_validation::padding(data, descs, table_start, table_end)?;
 
     Ok(descs)
 }
@@ -1029,5 +1124,32 @@ mod tests {
             matches!(err, SectionTableError::UnsupportedSectionType { .. }),
             "{err}"
         );
+    }
+
+    #[test]
+    fn manifold_identity_v2_requires_v2_outer_header() {
+        let mut header = Container10dHeader::proposed();
+        header.version = super::super::header::LEGACY_HEADER_VERSION;
+        let manifest = SectionInput {
+            section_type: SectionType::ManifoldIdentityV2,
+            alignment_tier: AlignmentTier::Page,
+            stride: 0,
+            element_count: 0,
+            payload: &[0; 112],
+        };
+        let mut out = [0u8; 512];
+        assert!(matches!(
+            encode_container(&header, std::slice::from_ref(&manifest), &mut out),
+            Err(SectionTableError::SectionRequiresVersion {
+                section_type: 15,
+                minimum_version: 2,
+                actual_version: 1,
+            })
+        ));
+        assert_eq!(
+            SectionType::from_u8(15),
+            Some(SectionType::ManifoldIdentityV2)
+        );
+        assert!(SectionType::ManifoldIdentityV2.is_implemented());
     }
 }

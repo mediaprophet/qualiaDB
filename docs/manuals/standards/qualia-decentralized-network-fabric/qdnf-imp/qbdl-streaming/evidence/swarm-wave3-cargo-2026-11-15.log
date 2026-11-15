@@ -1,0 +1,101 @@
+﻿[2026-11-15T12:29:32] WAVE3_CARGO_START pid=10248 cwd=C:\github\qualiaDB
+[2026-11-15T12:29:32] cmd=cargo test -p qualia-core-db --lib --locked --offline -j 1
+[2026-11-15T12:29:32] ===== PASS1 =====
+warning: this lint expectation is unfulfilled
+  --> C:\github\etalon\etalon-core\src\lock\ranked.rs:83:34
+   |
+83 |     #[cfg_attr(not(miri), expect(unused))] // but `Drop` has important side effects
+   |                                  ^^^^^^
+   |
+   = note: `#[warn(unfulfilled_lint_expectations)]` on by default
+System.Management.Automation.RemoteException
+warning: this lint expectation is unfulfilled
+   --> C:\github\etalon\etalon-core\src\lock\ranked.rs:293:34
+    |
+293 |     #[cfg_attr(not(miri), expect(unused))] // but `Drop` has important side effects
+    |                                  ^^^^^^
+System.Management.Automation.RemoteException
+warning: `etalon-core` (lib) generated 2 warnings
+   Compiling etalon-signal v0.0.2 (C:\github\etalon\crates\etalon-signal)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\etalon_model_io-37xcfedklx7jv\s-ho3bt8d7x5-0eumv0x-working`
+System.Management.Automation.RemoteException
+warning: `etalon-model-io` (lib) generated 1 warning
+   Compiling etalon-wgsl-forge v0.0.2 (C:\github\etalon\crates\etalon-wgsl-forge)
+warning: unused imports: `BindingUsage`, `QualiaCompute`, `WgpuComputeContext`, and `WgpuPipeline`
+  --> C:\github\etalon\crates\etalon-wgsl-forge\src\numerical\physics\acoustic_fdtd.rs:10:33
+   |
+10 | use crate::numerical::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
+   |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+System.Management.Automation.RemoteException
+warning: unused import: `Schedule`
+  --> C:\github\etalon\crates\etalon-wgsl-forge\src\numerical\physics\acoustic_fdtd.rs:11:36
+   |
+11 | use crate::numerical::{ForgeError, Schedule};
+   |                                    ^^^^^^^^
+System.Management.Automation.RemoteException
+warning: `etalon-wgsl-forge` (lib) generated 2 warnings (run `cargo fix --lib -p etalon-wgsl-forge` to apply 2 suggestions)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+   --> C:\github\etalon\crates\etalon-wasm\src\worker_steward.rs:109:14
+    |
+109 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+109 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+109 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+    |
+System.Management.Automation.RemoteException
+warning: `etalon-wasm` (lib) generated 1 warning (run `cargo fix --lib -p etalon-wasm` to apply 1 suggestion)
+   Compiling etalon-vibe v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+   Compiling etalon-render v0.0.2 (C:\github\etalon\crates\etalon-render)
+   Compiling vibe v0.0.41 (C:\github\qualiaDB\crates\vibe)
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+System.Management.Automation.RemoteException
+warning: `vibe` (lib) generated 1 warning (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling etalon-sim v0.0.2 (C:\github\etalon\crates\etalon-sim)
+   Compiling qualia-audio v0.0.41 (C:\github\qualiaDB\crates\qualia-audio)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+error[E0753]: expected outer doc comment
+ --> crates\qualia-core-db\src\audio\qac\profiles\tests.rs:1:1
+  |
+1 | //! Unit and physics tests for Q05 profiles (HOA, HRIR, Ray RIR).
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: inner doc comments like this (starting with `//!` or `/*!`) can only appear before items
+help: you might have meant to write a regular comment
+  |
+1 - //! Unit and physics tests for Q05 profiles (HOA, HRIR, Ray RIR).
+1 + // Unit and physics tests for Q05 profiles (HOA, HRIR, Ray RIR).
+  |
+System.Management.Automation.RemoteException
+error[E0753]: expected outer doc comment
+   --> crates\qualia-core-db\src\audio\qac\profiles\tests.rs:2:1
+    |
+  2 |   //! Included into `tests_q03_q05.rs` to satisfy the <= 500 lines per file requirement.
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+  5 | / fn test_q05_hoa_cardinal_normalization_fuma_rotation_and_domain_guard() {
+  6 | |     // Canonical order-3 ACN/SN3D values along +X, +Y, +Z.
+  7 | |     let y_px = evaluate_acn_sn3d_dir(3, [1.0, 0.0, 0.0]).expect("+X");
+  8 | |     let y_py = evaluate_acn_sn3d_dir(3, [0.0, 1.0, 0.0]).expect("+Y");
+...   |
+139 | |     ));
+140 | | }
+    | |_- the inner doc comment doesn't annotate this function
+    |
+help: to annotate the function, change the doc comment from inner to outer style
+    |
+  2 - //! Included into `tests_q03_q05.rs` to satisfy the <= 500 lines per file requirement.
+  2 + /// Included into `tests_q03_q05.rs` to satisfy the <= 500 lines per file requirement.
+    |
+System.Management.Automation.RemoteException

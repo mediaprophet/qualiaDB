@@ -20,7 +20,7 @@ use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub use astrometry_adapter::AstrometryAdapter;
 pub use ckan_adapter::CkanAdapter;
-pub use dem_adapter::DemAdapter;
+pub use dem_adapter::{DemAdapter, DemHeightfield, DemTerrainAsset};
 pub use gbif_adapter::GbifAdapter;
 pub use ivoa_tap_adapter::IvoaTapAdapter;
 pub use ogc_3d_tiles::Ogc3dTilesAdapter;
@@ -46,6 +46,8 @@ pub struct AdapterHttpRequest {
 }
 
 impl AdapterHttpRequest {
+    /// Build a GET request to `url` on behalf of `service_label`
+    /// (used in error messages).
     pub fn get(url: String, service_label: &'static str) -> Self {
         Self {
             method: AdapterHttpMethod::Get,
@@ -56,6 +58,8 @@ impl AdapterHttpRequest {
         }
     }
 
+    /// Build a POST with `body` sent as
+    /// `application/x-www-form-urlencoded`.
     pub fn post_form(url: String, body: String, service_label: &'static str) -> Self {
         Self {
             method: AdapterHttpMethod::Post,
@@ -67,8 +71,22 @@ impl AdapterHttpRequest {
     }
 }
 
+/// Format a timestamp range (seconds or milliseconds) into a standard ISO 8601 / RFC 3339 interval.
+pub fn format_iso8601_range(time_range: (u64, u64)) -> String {
+    let fmt_single = |ts: u64| -> String {
+        let ms = if ts < 10_000_000_000 { ts * 1000 } else { ts };
+        chrono::DateTime::from_timestamp_millis(ms as i64)
+            .map(|dt| dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+            .unwrap_or_else(|| format!("{ts}"))
+    };
+    format!("{}/{}", fmt_single(time_range.0), fmt_single(time_range.1))
+}
+
+/// Synchronous reqwest fetch returning the body as text (native only);
+/// errors name the `service_label` on non-2xx.
 #[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, String> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::blocking::Client::new();
     let mut builder = match request.method {
         AdapterHttpMethod::Get => client.get(&request.url),
@@ -92,11 +110,45 @@ fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, Str
     resp.text().map_err(|e| e.to_string())
 }
 
+/// Synchronous reqwest fetch returning the body as bytes (native only)
+/// — the DEM/binary path.
+#[cfg(not(target_arch = "wasm32"))]
+fn execute_http_request_bytes(request: &AdapterHttpRequest) -> Result<Vec<u8>, String> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let client = reqwest::blocking::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+    let response = builder.send().map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "{} API returned error: {}",
+            request.service_label,
+            response.status()
+        ));
+    }
+    response
+        .bytes()
+        .map(|bytes| bytes.to_vec())
+        .map_err(|error| error.to_string())
+}
+
+/// Status-only variant — discards the body, keeps the success/error
+/// check (native only).
 #[cfg(not(target_arch = "wasm32"))]
 fn execute_http_request_status(request: &AdapterHttpRequest) -> Result<(), String> {
     execute_http_request_text(request).map(|_| ())
 }
 
+/// Async reqwest fetch returning text (wasm32 only — the sync blocking
+/// client is unavailable there).
 #[cfg(target_arch = "wasm32")]
 async fn execute_http_request_text_async(request: &AdapterHttpRequest) -> Result<String, String> {
     let client = reqwest::Client::new();
@@ -122,6 +174,37 @@ async fn execute_http_request_text_async(request: &AdapterHttpRequest) -> Result
     resp.text().await.map_err(|e| e.to_string())
 }
 
+/// Async reqwest fetch returning bytes (wasm32 only).
+#[cfg(target_arch = "wasm32")]
+async fn execute_http_request_bytes_async(request: &AdapterHttpRequest) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+    let response = builder.send().await.map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "{} API returned error: {}",
+            request.service_label,
+            response.status()
+        ));
+    }
+    response
+        .bytes()
+        .await
+        .map(|bytes| bytes.to_vec())
+        .map_err(|error| error.to_string())
+}
+
+/// wasm32 fail-closed variant: no blocking client exists, so callers
+/// are directed to the async fetch path.
 #[cfg(target_arch = "wasm32")]
 fn execute_http_request_status(_request: &AdapterHttpRequest) -> Result<(), String> {
     Err(
@@ -130,6 +213,8 @@ fn execute_http_request_status(_request: &AdapterHttpRequest) -> Result<(), Stri
     )
 }
 
+/// wasm32 fail-closed variant: no blocking client exists, so callers
+/// are directed to the async fetch path.
 #[cfg(target_arch = "wasm32")]
 fn execute_http_request_text(_request: &AdapterHttpRequest) -> Result<String, String> {
     Err(
@@ -138,6 +223,9 @@ fn execute_http_request_text(_request: &AdapterHttpRequest) -> Result<String, St
     )
 }
 
+/// wasm32 fetch path: consent-check via `registry`, issue the
+/// adapter's request, then hand the body to `handle_fetch_body`.
+/// Adapters needing binary/multi-request data are rejected up front.
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_region_async(
     adapter: &dyn DataAdapter,
@@ -145,6 +233,12 @@ pub async fn fetch_region_async(
     time_range: (u64, u64),
     registry: &NetworkDisclosureRegistry,
 ) -> Result<(), String> {
+    if adapter.requires_specialized_fetch_path() {
+        return Err(
+            "this adapter consumes binary or multi-request data; use its typed async fetch API"
+                .into(),
+        );
+    }
     let request = adapter.build_fetch_request(bbox, time_range, registry)?;
     if adapter.needs_fetch_body() {
         let body = execute_http_request_text_async(&request).await?;
@@ -152,6 +246,27 @@ pub async fn fetch_region_async(
     } else {
         execute_http_request_text_async(&request).await.map(|_| ())
     }
+}
+
+/// Browser-safe fetch path that returns parsed graph features instead of
+/// dropping the response after validating it. Adapters which render typed
+/// geometry may additionally expose adapter-specific parsed outputs.
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_region_features_async(
+    adapter: &dyn DataAdapter,
+    bbox: (f64, f64, f64, f64),
+    time_range: (u64, u64),
+    registry: &NetworkDisclosureRegistry,
+) -> Result<Vec<crate::NQuin>, String> {
+    if adapter.requires_specialized_fetch_path() {
+        return Err(
+            "this adapter consumes binary or multi-request data; use its typed async fetch API"
+                .into(),
+        );
+    }
+    let request = adapter.build_fetch_request(bbox, time_range, registry)?;
+    let body = execute_http_request_text_async(&request).await?;
+    adapter.parse_response(&body)
 }
 
 pub trait DataAdapter {
@@ -188,6 +303,12 @@ pub trait DataAdapter {
     /// Whether the adapter consumes the response body instead of only checking
     /// that the endpoint accepted the request.
     fn needs_fetch_body(&self) -> bool {
+        false
+    }
+
+    /// Whether this adapter needs its typed fetch method for correct handling.
+    /// This prevents generic text transports from truncating tiled or binary data.
+    fn requires_specialized_fetch_path(&self) -> bool {
         false
     }
 
@@ -230,10 +351,12 @@ pub trait DataAdapter {
 }
 
 impl DataAdapter for DemAdapter {
+    /// Registered adapter identifier (`self.id`).
     fn adapter_id(&self) -> &'static str {
-        "dem_adapter"
+        self.id
     }
 
+    /// Build the Terrarium tile request via the inherent helper.
     fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -243,20 +366,87 @@ impl DataAdapter for DemAdapter {
         DemAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
-    fn primary_endpoint(&self) -> &str {
-        &self.endpoint
+    /// DEM responses are binary — the body must be consumed.
+    fn needs_fetch_body(&self) -> bool {
+        true
     }
 
+    /// Binary PNG terrain can't go through the text pipeline.
+    fn requires_specialized_fetch_path(&self) -> bool {
+        true
+    }
+
+    /// Fail-closed: Terrarium responses are binary PNG; the typed DEM
+    /// fetch methods decode them.
+    fn handle_fetch_body(&self, _body: &str) -> Result<(), String> {
+        Err(
+            "Terrarium responses are binary PNG; call fetch_region_dem or fetch_region_dem_async"
+                .into(),
+        )
+    }
+
+    /// Native: delegates to `fetch_region_dem` and discards the asset.
+    /// wasm32: fail-closed, directs callers to `fetch_region_dem_async`.
+    fn fetch_region(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        _time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<(), String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.fetch_region_dem(bbox, registry).map(|_| ())
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (bbox, registry);
+            Err("use fetch_region_dem_async on wasm32 to fetch and compile terrain".into())
+        }
+    }
+
+    /// Native: `fetch_region_dem` compiled to NQuins. wasm32:
+    /// fail-closed, directs callers to `fetch_region_dem_async`.
+    fn fetch_region_features(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        _time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<Vec<crate::NQuin>, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.fetch_region_dem(bbox, registry)
+                .map(|asset| asset.to_quins())
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (bbox, registry);
+            Err("use fetch_region_dem_async on wasm32 to receive the compiled terrain asset".into())
+        }
+    }
+
+    /// Fail-closed: binary PNG cannot be parsed as text.
+    fn parse_response(&self, _body: &str) -> Result<Vec<crate::NQuin>, String> {
+        Err("Terrarium responses are binary PNG; call the typed DEM fetch method".into())
+    }
+
+    /// Endpoint URL with the `{z}` tile template truncated.
+    fn primary_endpoint(&self) -> &str {
+        self.endpoint.split("{z}").next().unwrap_or(&self.endpoint)
+    }
+
+    /// Tile estimate via the inherent helper.
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
-        estimate_raster_tiles(bbox, 14)
+        DemAdapter::estimate_tile_count(self, bbox)
     }
 }
 
 impl DataAdapter for OsmAdapter {
+    /// `"osm_adapter"`.
     fn adapter_id(&self) -> &'static str {
         "osm_adapter"
     }
 
+    /// Build the Overpass/MVT request via the inherent helper.
     fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -266,10 +456,27 @@ impl DataAdapter for OsmAdapter {
         OsmAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
+    /// OSM vector data needs the response body.
+    fn needs_fetch_body(&self) -> bool {
+        true
+    }
+
+    /// Parse the response body as vector features (errors propagate).
+    fn handle_fetch_body(&self, body: &str) -> Result<(), String> {
+        self.parse_vector_features(body).map(|_| ())
+    }
+
+    /// Parse the body into feature NQuins via `parse_features`.
+    fn parse_response(&self, body: &str) -> Result<Vec<crate::NQuin>, String> {
+        self.parse_features(body)
+    }
+
+    /// The Overpass API endpoint.
     fn primary_endpoint(&self) -> &str {
         &self.overpass_endpoint
     }
 
+    /// 1 Overpass query + z15 MVT tiles.
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
         // Overpass = 1 query + MVT tiles at z15
         1 + estimate_raster_tiles(bbox, 15)
@@ -277,10 +484,12 @@ impl DataAdapter for OsmAdapter {
 }
 
 impl DataAdapter for WmsAdapter {
+    /// `"wms_adapter"`.
     fn adapter_id(&self) -> &'static str {
         "wms_adapter"
     }
 
+    /// Build the WMS GetMap request via the inherent helper.
     fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -290,10 +499,12 @@ impl DataAdapter for WmsAdapter {
         WmsAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
+    /// The WMS service endpoint.
     fn primary_endpoint(&self) -> &str {
         &self.endpoint
     }
 
+    /// One GetMap per 256px tile at z12 viewport scale.
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
         // WMS GetMap: one request per 256px tile at typical viewport scale
         estimate_raster_tiles(bbox, 12)
@@ -301,10 +512,12 @@ impl DataAdapter for WmsAdapter {
 }
 
 impl DataAdapter for GbifAdapter {
+    /// `"gbif_adapter"`.
     fn adapter_id(&self) -> &'static str {
         "gbif_adapter"
     }
 
+    /// Build the GBIF occurrence request via the inherent helper.
     fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -314,10 +527,12 @@ impl DataAdapter for GbifAdapter {
         GbifAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
+    /// The GBIF occurrence-search endpoint.
     fn primary_endpoint(&self) -> &str {
         &self.occurrence_endpoint
     }
 
+    /// Page estimate: ~10 records/deg² at 300/page, minimum 1.
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
         // GBIF paginates at 300 records/page; estimate pages from bbox area (deg²).
         let area = (bbox.2 - bbox.0).abs() * (bbox.3 - bbox.1).abs();
@@ -355,6 +570,8 @@ pub struct AdapterRegistry {
 }
 
 impl AdapterRegistry {
+    /// Empty registry with a fresh disclosure registry (no adapters —
+    /// use `Default` for the canvas built-ins).
     pub fn new() -> Self {
         Self {
             adapters: HashMap::new(),
@@ -362,14 +579,17 @@ impl AdapterRegistry {
         }
     }
 
+    /// The egress-consent registry (read).
     pub fn disclosure_registry(&self) -> &NetworkDisclosureRegistry {
         &self.disclosure
     }
 
+    /// The egress-consent registry (mutable — grant/revoke consent).
     pub fn disclosure_registry_mut(&mut self) -> &mut NetworkDisclosureRegistry {
         &mut self.disclosure
     }
 
+    /// Register `adapter` under its `adapter_id`.
     pub fn register_adapter(&mut self, adapter: Box<dyn DataAdapter>) {
         let id = adapter.adapter_id().to_string();
         self.adapters.insert(id, adapter);
@@ -409,6 +629,7 @@ impl AdapterRegistry {
 }
 
 impl Default for AdapterRegistry {
+    /// Registry pre-populated with the canvas default adapters.
     fn default() -> Self {
         let mut registry = Self::new();
         canvas_defaults::register_canvas_defaults(&mut registry);
@@ -454,7 +675,7 @@ mod tests {
             .expect("report");
 
         assert_eq!(report.status, LayerFetchStatus::ConsentDenied);
-        assert_eq!(report.endpoint, "https://elevation.example.com");
+        assert_eq!(report.endpoint, "https://elevation.example.com/terrarium/");
         assert!(report.estimated_tile_count >= 1);
     }
 

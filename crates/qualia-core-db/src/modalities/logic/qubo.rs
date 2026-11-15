@@ -71,6 +71,7 @@ impl QuboMatrix {
         Ok(idx)
     }
 
+    /// Emits a linear bias on `var`; `QuboCompileError` at capacity.
     pub fn emit_linear(&mut self, var: u8, bias: f32) -> Result<(), QuboCompileError> {
         if var as usize >= MAX_QUBO_VARS {
             return Err(QuboCompileError::VarBufferFull);
@@ -79,6 +80,7 @@ impl QuboMatrix {
         Ok(())
     }
 
+    /// Emits a coupler `(a,b)` with `weight`.
     pub fn emit_coupler(&mut self, a: u8, b: u8, weight: f32) -> Result<(), QuboCompileError> {
         if self.coupler_count >= MAX_COUPLERS {
             return Err(QuboCompileError::CouplerBufferFull);
@@ -92,6 +94,7 @@ impl QuboMatrix {
         Ok(())
     }
 
+    /// Clears the var→index map.
     pub fn wipe_index_map(&mut self) {
         for slot in &mut self.index_map {
             unsafe {

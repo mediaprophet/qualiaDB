@@ -318,6 +318,8 @@ pub struct IntervalArithmeticConfiguration {
 // ── Opcode Generation Functions ───────────────────────────────────────────────
 
 impl EpistemicConfiguration {
+    /// Lower epistemic bounds to `CheckMaxInclusive` opcodes (certainty,
+    /// nesting depth, agent contexts).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_certainty as f64),
@@ -328,6 +330,8 @@ impl EpistemicConfiguration {
 }
 
 impl ParaconsistentConfiguration {
+    /// Lower paraconsistent bounds to `CheckMaxInclusive` opcodes
+    /// (isolation severity, buffer size, merge threshold).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_isolation_severity as f64),
@@ -338,6 +342,8 @@ impl ParaconsistentConfiguration {
 }
 
 impl LTLConfiguration {
+    /// Lower LTL bounds to `CheckMaxInclusive` opcodes (trace length,
+    /// formula depth).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_trace_length as f64),
@@ -347,6 +353,8 @@ impl LTLConfiguration {
 }
 
 impl SpatioTemporalConfiguration {
+    /// Lower spatio-temporal bounds to `CheckMaxInclusive` opcodes
+    /// (regions, intervals, region complexity).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_spatial_regions as f64),
@@ -357,6 +365,8 @@ impl SpatioTemporalConfiguration {
 }
 
 impl GraphConfiguration {
+    /// Lower graph bounds to `CheckMaxInclusive` opcodes (nodes, edges,
+    /// max degree).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_nodes as f64),
@@ -367,6 +377,8 @@ impl GraphConfiguration {
 }
 
 impl CalculusConfiguration {
+    /// Lower calculus bounds to `CheckMaxInclusive` opcodes (grid points,
+    /// integration steps).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_grid_points as f64),
@@ -376,6 +388,8 @@ impl CalculusConfiguration {
 }
 
 impl ODEConfiguration {
+    /// Lower ODE bounds to opcodes: max on order/step size, min on
+    /// step size.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_ode_order as f64),
@@ -386,6 +400,8 @@ impl ODEConfiguration {
 }
 
 impl ArgumentationConfiguration {
+    /// Lower argumentation bounds to `CheckMaxInclusive` opcodes
+    /// (arguments, attack depth, defense depth).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_arguments as f64),
@@ -396,6 +412,8 @@ impl ArgumentationConfiguration {
 }
 
 impl DialecticalConfiguration {
+    /// Lower dialectical bounds to `CheckMaxInclusive` opcodes
+    /// (theses, antitheses, synthesis rounds).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_thesis_count as f64),
@@ -406,6 +424,8 @@ impl DialecticalConfiguration {
 }
 
 impl ASPConfiguration {
+    /// Lower ASP bounds to `CheckMaxInclusive` opcodes (variables,
+    /// answer sets).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_variables as f64),
@@ -416,6 +436,8 @@ impl ASPConfiguration {
 }
 
 impl ProbabilisticConfiguration {
+    /// Lower probabilistic bounds to `CheckMaxInclusive` opcodes (random
+    /// variables, probability precision).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_random_variables as f64),
@@ -425,6 +447,8 @@ impl ProbabilisticConfiguration {
 }
 
 impl DLConfiguration {
+    /// Lower description-logic bounds to `CheckMaxInclusive` opcodes
+    /// (predicates, clauses, Herbrand universe).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_predicates as f64),
@@ -435,6 +459,8 @@ impl DLConfiguration {
 }
 
 impl DiffusionConfiguration {
+    /// Lower diffusion bounds to `CheckMaxInclusive` opcodes (particles,
+    /// time steps).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_particles as f64),
@@ -447,6 +473,8 @@ impl DiffusionConfiguration {
 macro_rules! generate_simple_validation_opcodes {
     ($struct_name:ident, $field:ident) => {
         impl $struct_name {
+            /// Lower the config's single bound field to a
+            /// `CheckMaxInclusive` opcode.
             pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
                 vec![SlgOpcode::CheckMaxInclusive(self.$field as f64)]
             }
@@ -475,6 +503,8 @@ generate_simple_validation_opcodes!(IntervalArithmeticConfiguration, max_interva
 
 // Complex opcode generation for range validations
 impl TemporalTrace {
+    /// Lower the trace-length range to `CheckMinInclusive` +
+    /// `CheckMaxInclusive` opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMinInclusive(self.min_trace_length as f64),
@@ -484,6 +514,8 @@ impl TemporalTrace {
 }
 
 impl SpatialRegionConfiguration {
+    /// Lower the region-area range to `CheckMinInclusive` +
+    /// `CheckMaxInclusive` opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMinInclusive(self.min_region_area),
@@ -493,6 +525,8 @@ impl SpatialRegionConfiguration {
 }
 
 impl BayesianInferenceConfiguration {
+    /// Lower sampler bounds to `CheckMaxInclusive` opcodes (burn-in and
+    /// post-burn-in sample counts).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.burn_in_samples as f64),
@@ -502,6 +536,8 @@ impl BayesianInferenceConfiguration {
 }
 
 impl FeedbackGainConfiguration {
+    /// Lower gain bounds to `CheckMaxInclusive` opcodes (proportional,
+    /// integral).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_proportional_gain),

@@ -1,7 +1,7 @@
 # Qualia-DB Architecture
 
 > The 3-Core Triad, Webizen VM, Rights Ontology, and the Principal-Agent Ecosystem.
-> _Branch: `0.0.38` | Last updated: 2026-09-08_
+> _Branch: `0.0.40` | Last updated: 2026-09-08_
 
 Qualia-DB abandons traditional cloud-centric, string-heavy JVM architectures in favour of a specialised 3-Core Triad built with ruthless mechanical sympathy (512 MB RAM floor). Raw multi-modal data (audio, camera feeds) would immediately breach this floor, so the ecosystem forces an **Orchestration Sieve**: the Primary Agent must coordinate deterministic tools (OpenCV, Audio DSP) to strip noise, extract contours, and build optimised files *before* handing them to the local LLM or the database.
 
@@ -255,7 +255,7 @@ Qualia-DB explicitly rejects the infinite rent-seeking paradigm of the legacy we
 
 Qualia-DB ships with three tightly-bound human-facing interfaces:
 
-1. **Webizen Studio (`crates/webizen-studio/`) + Webizen Desktop (`crates/webizen-desktop/`)** — The Webizen environment (Windows, macOS, Linux). The UI is built in Rust with **Dioxus 0.8.0-alpha.0** (compiled to web assets and hosted inside the `webizen-desktop` **Tauri 2** shell), bypassing legacy Node.js/React overhead. It provides a flexible pane registry housing a Neuro-Symbolic Chat, an LLM Engine harness, a Vital Monitor, and an Ontology Builder designed to let people define personal ontological axioms via natural language, plus a large registry of domain "qapps". The desktop shell ships signed, self-updating release artifacts (minisign updater; desktop / CLI / WASM release CI). Webizen Studio replaces the older Node.js/React prototypes and the Flutter desktop application.
+1. **Webizen Studio (`crates/webizen-studio/`) + Webizen Desktop (`crates/webizen-desktop/`)** — The Webizen environment (Windows, macOS, Linux). The UI is built in Rust with **Aether 0.8.0-alpha.0** (compiled to web assets and hosted inside the `webizen-desktop` **Tauri 2** shell), bypassing legacy Node.js/React overhead. It provides a flexible pane registry housing a Neuro-Symbolic Chat, an LLM Engine harness, a Vital Monitor, and an Ontology Builder designed to let people define personal ontological axioms via natural language, plus a large registry of domain "qapps". The desktop shell ships signed, self-updating release artifacts (minisign updater; desktop / CLI / WASM release CI). Webizen Studio replaces the older Node.js/React prototypes and the Flutter desktop application.
 
 2. **Qualia CLI (`crates/qualia-cli`)** — The primary toolchain for data ingestion, benchmarking, daemon management, capability profile compilation, and resource catalog operations.
 

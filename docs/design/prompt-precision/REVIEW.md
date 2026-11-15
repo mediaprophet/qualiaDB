@@ -21,7 +21,7 @@ Delivered:
 
 ## Verification and limits
 
-- Source inspection completed against branch `0.0.38`, HEAD `994f417c8`, with pre-existing working-tree modifications.
+- Source inspection completed against branch `0.0.40`, HEAD `994f417c8`, with pre-existing working-tree modifications.
 - Local Markdown link targets, fence balance and trailing whitespace checked after all four documents were created; final check result recorded below.
 - Documentation-only work: no Rust implementation edits, builds, model executions, training, paid inference or runtime benchmarks were performed.
 - No token reduction, accuracy gain, latency improvement or production conformance is claimed.

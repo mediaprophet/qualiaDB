@@ -93,6 +93,7 @@ pub fn signing_payload(
 }
 
 impl FleetJobEnvelope {
+    /// Builds.
     pub fn build(
         person: &PersonPrincipal,
         source_device_id: &str,
@@ -120,6 +121,7 @@ impl FleetJobEnvelope {
         })
     }
 
+    /// Verifies.
     pub fn verify(&self) -> Result<(), String> {
         if self.format != FLEET_JOB_FORMAT {
             return Err(format!("unsupported fleet job format: {}", self.format));
@@ -268,6 +270,7 @@ pub fn accept_fleet_job_envelope(envelope: FleetJobEnvelope) -> Result<LocalJob,
     Ok(job)
 }
 
+/// Lists the remote outbox.
 pub fn list_remote_outbox() -> Result<Vec<RemoteOutboxEntry>, String> {
     Ok(load_outbox())
 }

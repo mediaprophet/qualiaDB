@@ -13,6 +13,8 @@ pub struct Lfo {
 }
 
 impl Lfo {
+    /// Create an LFO; `depth` clamped to `[0, 1]`, `frequency` in Hz
+    /// (typically sub-audio, 0.1–20 Hz).
     pub fn new(waveform: Waveform, frequency: f64, sample_rate: f64, depth: f64) -> Self {
         Self {
             osc: Oscillator::new(waveform, frequency, sample_rate),
@@ -32,14 +34,17 @@ impl Lfo {
         }
     }
 
+    /// Set the modulation frequency in Hz.
     pub fn set_frequency(&mut self, freq: f64) {
         self.osc.set_frequency(freq);
     }
 
+    /// Set the modulation depth, clamped to `[0, 1]`.
     pub fn set_depth(&mut self, depth: f64) {
         self.depth = depth.clamp(0.0, 1.0);
     }
 
+    /// Reset the oscillator phase to zero.
     pub fn reset(&mut self) {
         self.osc.reset();
     }

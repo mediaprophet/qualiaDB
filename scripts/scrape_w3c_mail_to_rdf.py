@@ -117,6 +117,7 @@ def parse_author(dd):
 
 
 def rfc822_to_xsd(d):
+    """RFC-822 to xsd:dateTime."""
     try:
         dt = email.utils.parsedate_to_datetime(d.strip())
         return dt.isoformat() if dt else None
@@ -163,11 +164,13 @@ def enrich_body(rec, cache_dir, delay):
 
 
 def person_uri(base, email, name):
+    """Person URI."""
     h = hashlib.sha1((email or name or "anon").lower().encode()).hexdigest()[:16]
     return URIRef(f"{base}person/{h}")
 
 
 def main():
+    """CLI entry point."""
     ap = argparse.ArgumentParser(description="Scrape W3C public mailing-list posts -> RDF/Turtle.")
     ap.add_argument("--email", default="timothy.holborn@gmail.com", help="author email to archive")
     ap.add_argument("--out", default=None, help="output .ttl (default w3c_<localpart>.ttl)")

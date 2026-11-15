@@ -56,6 +56,7 @@ impl Stardate {
 }
 
 impl StardateEra {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Tos => "TOS",

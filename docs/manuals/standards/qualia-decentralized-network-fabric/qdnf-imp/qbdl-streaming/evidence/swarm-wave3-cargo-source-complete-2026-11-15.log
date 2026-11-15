@@ -1,0 +1,68 @@
+﻿===== FILTER ===== cargo test -p qualia-core-db --lib --locked --offline -j 1
+cargo : warning: this lint expectation is unfulfilled
+At line:1 char:376
++ ...  utf8 $log; cargo test -p qualia-core-db --lib --locked --offline -j  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: this l... is unfulfilled:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  --> C:\github\etalon\etalon-core\src\lock\ranked.rs:83:34
+   |
+83 |     #[cfg_attr(not(miri), expect(unused))] // but `Drop` has important side effects
+   |                                  ^^^^^^
+   |
+   = note: `#[warn(unfulfilled_lint_expectations)]` on by default
+
+warning: this lint expectation is unfulfilled
+   --> C:\github\etalon\etalon-core\src\lock\ranked.rs:293:34
+    |
+293 |     #[cfg_attr(not(miri), expect(unused))] // but `Drop` has important side effects
+    |                                  ^^^^^^
+
+warning: `etalon-core` (lib) generated 2 warnings
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the 
+cache directory to a file system which supports hard linking in session dir 
+`\\?\C:\github\qualiaDB\target\debug\incremental\etalon_model_io-37xcfedklx7jv\s-ho3bt8d7x5-0eumv0x-working`
+
+warning: `etalon-model-io` (lib) generated 1 warning
+warning: unused imports: `BindingUsage`, `QualiaCompute`, `WgpuComputeContext`, and `WgpuPipeline`
+  --> C:\github\etalon\crates\etalon-wgsl-forge\src\numerical\physics\acoustic_fdtd.rs:10:33
+   |
+10 | use crate::numerical::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
+   |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Schedule`
+  --> C:\github\etalon\crates\etalon-wgsl-forge\src\numerical\physics\acoustic_fdtd.rs:11:36
+   |
+11 | use crate::numerical::{ForgeError, Schedule};
+   |                                    ^^^^^^^^
+
+warning: `etalon-wgsl-forge` (lib) generated 2 warnings (run `cargo fix --lib -p etalon-wgsl-forge` to apply 2 
+suggestions)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for 
+consistency
+   --> C:\github\etalon\crates\etalon-wasm\src\worker_steward.rs:109:14
+    |
+109 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+    |              ^^^^^^^^^^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+    |
+109 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+109 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+    |
+
+warning: `etalon-wasm` (lib) generated 1 warning (run `cargo fix --lib -p etalon-wasm` to apply 1 suggestion)
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 1 warning (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)

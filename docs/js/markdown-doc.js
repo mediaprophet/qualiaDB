@@ -1,5 +1,5 @@
 // Shared Pages markdown reader. Fetches local .md under docs/ and renders it
-// with the 0.0.38 reading chrome. Never treats a locator as a human.
+// with the 0.0.40 reading chrome. Never treats a locator as a human.
 
 (function () {
   const ALLOWED_PREFIXES = [
@@ -163,7 +163,7 @@
   }
 
   function sourceHref(docPath) {
-    return `https://github.com/mediaprophet/qualiaDB/blob/0.0.38/docs/${docPath}`;
+    return `https://github.com/mediaprophet/qualiaDB/blob/0.0.40/docs/${docPath}`;
   }
 
   async function renderReader() {

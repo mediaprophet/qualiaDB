@@ -1,6 +1,6 @@
 //! Future seam: `qualia-math` (`solvers/` + CAS today).
-//! Real solvers on native and every poet-bearing WASM profile (`wasm-scientific`,
-//! which portal and wasm-logic now pull). Ontology-only has no poet_host.
+//! Scientific operations run on native and `wasm-scientific` profiles.
+//! Lean WASM profiles return explicit capability diagnostics for these operations.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus;
@@ -23,6 +23,10 @@ mod cas_wave8;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod cas_wave9;
 pub mod closure_solvers;
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-scientific")))]
+mod scientific_unavailable;
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-scientific")))]
+pub use scientific_unavailable::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ga;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
@@ -180,35 +184,44 @@ pub use wave18_host::{
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Shared diagnostic for the non-scientific WASM profile — every stub
+/// below reports its capability `family` as unavailable via `need_scientific`.
 fn missing(span: vibe::Span, family: &str) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, family))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `NumberTheory` family as unavailable.
 pub fn gcd(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "NumberTheory")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub — delegates to `gcd` (same unavailable-family diagnostic).
 pub fn lcm(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     gcd(args, span)
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub — delegates to `gcd` (same unavailable-family diagnostic).
 pub fn is_prime(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     gcd(args, span)
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn matmul(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn eval_poly(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `NumericalCalculus` family as unavailable.
 pub fn simpson(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "NumericalCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `CalculusWorkbench` family as unavailable.
 pub fn calculus_compute(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -216,14 +229,17 @@ pub fn calculus_compute(
     missing(span, "CalculusWorkbench")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Optimization` family as unavailable.
 pub fn hill_climb(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "Optimization")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `GeometricAlgebra` family as unavailable.
 pub fn ga_dot(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "GeometricAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `GeometricAlgebra` family as unavailable.
 pub fn ga_cross_product(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -231,6 +247,7 @@ pub fn ga_cross_product(
     missing(span, "GeometricAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `GeometricAlgebra` family as unavailable.
 pub fn ga_normalize_vector(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -238,6 +255,7 @@ pub fn ga_normalize_vector(
     missing(span, "GeometricAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `GeometricAlgebra` family as unavailable.
 pub fn ga_angle_between_vectors(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -245,10 +263,12 @@ pub fn ga_angle_between_vectors(
     missing(span, "GeometricAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SpecialFunctionsAndTransforms` family as unavailable.
 pub fn bessel_jn(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SpecialFunctionsAndTransforms")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialRoots` family as unavailable.
 pub fn polynomial_roots(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -256,6 +276,7 @@ pub fn polynomial_roots(
     missing(span, "PolynomialRoots")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_transpose(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -263,6 +284,7 @@ pub fn la_transpose(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_determinant(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -270,10 +292,12 @@ pub fn la_determinant(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_solve(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_eigen_symmetric(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -281,6 +305,7 @@ pub fn la_eigen_symmetric(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_eigenvalues(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -288,10 +313,12 @@ pub fn la_eigenvalues(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_svd(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_qr_factor(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -299,6 +326,7 @@ pub fn la_qr_factor(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_qr_form_q(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -306,6 +334,7 @@ pub fn la_qr_form_q(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_qr_solve_least_squares(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -313,10 +342,12 @@ pub fn la_qr_solve_least_squares(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_add_into(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_cholesky_solve(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -324,10 +355,12 @@ pub fn la_cholesky_solve(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_axpy(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_hadamard_into(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -335,6 +368,7 @@ pub fn la_hadamard_into(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_add_assign(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -342,6 +376,7 @@ pub fn la_add_assign(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_hadamard_assign(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -349,14 +384,17 @@ pub fn la_hadamard_assign(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_scale(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_matvec(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_symmetric_eigen_3x3(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -364,30 +402,37 @@ pub fn la_symmetric_eigen_3x3(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_gemm(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_dot(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_norm(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_trace(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_identity(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_inverse(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_div_rem(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -395,6 +440,7 @@ pub fn poly_div_rem(
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_derivative(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -402,10 +448,12 @@ pub fn poly_derivative(
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_monic(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_resultant(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -413,22 +461,27 @@ pub fn poly_resultant(
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_add(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_sub(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_mul(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_degree(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_leading(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -437,6 +490,7 @@ pub fn poly_leading(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_is_zero(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -444,22 +498,27 @@ pub fn poly_is_zero(
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_gcd(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_scale(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_eval(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_zero(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PolynomialAlgebra` family as unavailable.
 pub fn poly_constant(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -467,10 +526,12 @@ pub fn poly_constant(
     missing(span, "PolynomialAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_parse(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_to_quins(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -478,6 +539,7 @@ pub fn cas_to_quins(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_from_quins(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -485,6 +547,7 @@ pub fn cas_from_quins(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicODE` family as unavailable.
 pub fn ode_solve_separable(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -492,6 +555,7 @@ pub fn ode_solve_separable(
     missing(span, "SymbolicODE")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicODE` family as unavailable.
 pub fn ode_solve_first_order_linear_pde(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -499,6 +563,7 @@ pub fn ode_solve_first_order_linear_pde(
     missing(span, "SymbolicODE")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_solve_polynomial_expr(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -506,6 +571,7 @@ pub fn cas_solve_polynomial_expr(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_simplify_with_assumptions(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -513,10 +579,12 @@ pub fn cas_simplify_with_assumptions(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_roots(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `LinearAlgebra` family as unavailable.
 pub fn la_solve_linear_system(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -524,6 +592,7 @@ pub fn la_solve_linear_system(
     missing(span, "LinearAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_expr_citation_hash(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -531,10 +600,12 @@ pub fn cas_expr_citation_hash(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_partial(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_jacobian(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -542,10 +613,12 @@ pub fn cas_jacobian(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_hessian(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_gradient_at(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -553,6 +626,7 @@ pub fn cas_gradient_at(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_hessian_at(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -560,6 +634,7 @@ pub fn cas_hessian_at(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_is_regular_polygon_constructible(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -567,6 +642,7 @@ pub fn constr_is_regular_polygon_constructible(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_is_fermat_prime(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -574,6 +650,7 @@ pub fn constr_is_fermat_prime(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_from_min_poly_degree(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -581,6 +658,7 @@ pub fn constr_from_min_poly_degree(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_is_power_of_two(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -588,6 +666,7 @@ pub fn constr_is_power_of_two(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_is_central_angle(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -595,6 +674,7 @@ pub fn constr_is_central_angle(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_doubling_the_cube(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -602,6 +682,7 @@ pub fn constr_doubling_the_cube(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_trisecting_general_angle(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -609,6 +690,7 @@ pub fn constr_trisecting_general_angle(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_squaring_the_circle(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -616,6 +698,7 @@ pub fn constr_squaring_the_circle(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `Constructibility` family as unavailable.
 pub fn constr_is_constructible_number(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -623,6 +706,7 @@ pub fn constr_is_constructible_number(
     missing(span, "Constructibility")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_solve_quadratic_symbolic(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -630,6 +714,7 @@ pub fn cas_solve_quadratic_symbolic(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_factor_quadratic(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -637,62 +722,77 @@ pub fn cas_factor_quadratic(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_pow(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_neg(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_sqrt(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_exp(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_ln(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_sin(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_cos(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_tan(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_c(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_var(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_add(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_sub(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_mul(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_div(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_differentiate(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -700,6 +800,7 @@ pub fn cas_differentiate(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_simplify(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -707,6 +808,7 @@ pub fn cas_simplify(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_simplify_trig(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -714,6 +816,7 @@ pub fn cas_simplify_trig(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_integrate(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -721,6 +824,7 @@ pub fn cas_integrate(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_taylor_coefficients(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -728,6 +832,7 @@ pub fn cas_taylor_coefficients(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_taylor_eval(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -735,10 +840,12 @@ pub fn cas_taylor_eval(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_limit(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_integrate_definite(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -746,6 +853,7 @@ pub fn cas_integrate_definite(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_limit_at_infinity(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -753,6 +861,7 @@ pub fn cas_limit_at_infinity(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_real_roots(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -760,6 +869,7 @@ pub fn cas_real_roots(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicODE` family as unavailable.
 pub fn ode_solve_linear_first_order(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -767,6 +877,7 @@ pub fn ode_solve_linear_first_order(
     missing(span, "SymbolicODE")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicODE` family as unavailable.
 pub fn ode_solve_linear_second_order(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -774,6 +885,7 @@ pub fn ode_solve_linear_second_order(
     missing(span, "SymbolicODE")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicODE` family as unavailable.
 pub fn ode_classify_second_order_pde(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -781,14 +893,17 @@ pub fn ode_classify_second_order_pde(
     missing(span, "SymbolicODE")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_expand(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_factor(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `SymbolicAlgebra` family as unavailable.
 pub fn cas_solve_quadratic(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -796,10 +911,12 @@ pub fn cas_solve_quadratic(
     missing(span, "SymbolicAlgebra")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `IntegralTransforms` family as unavailable.
 pub fn dft(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "IntegralTransforms")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `PhysicalUnits` family as unavailable.
 pub fn convert_unit(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -807,18 +924,22 @@ pub fn convert_unit(
     missing(span, "PhysicalUnits")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `VectorCalculus` family as unavailable.
 pub fn gradient(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `VectorCalculus` family as unavailable.
 pub fn divergence(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `VectorCalculus` family as unavailable.
 pub fn curl(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// Non-scientific-profile stub: reports the `VectorCalculus` family as unavailable.
 pub fn laplacian(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     missing(span, "VectorCalculus")
 }

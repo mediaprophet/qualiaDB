@@ -66,6 +66,7 @@ GROUP_CONFIG = {
 
 
 def build_entries(group: str) -> list:
+    """Builds entries."""
     cfg = GROUP_CONFIG[group]
     catalog = json.loads((cfg["src"] / "catalog.json").read_text(encoding="utf-8-sig"))
     built = []
@@ -111,6 +112,7 @@ def build_entries(group: str) -> list:
 
 
 def merge_group(group: str) -> int:
+    """Merges group."""
     built = build_entries(group)
     built_ids = {d["id"] for d in built}
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))

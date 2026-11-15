@@ -71,6 +71,7 @@ impl WebizenHostApi {
 
     // --- Clinical documents (Phase 3 / CLI-01..) ---
 
+    /// Adds clinical-report.
     pub fn add_clinical_report(
         &mut self,
         title: &str,
@@ -97,6 +98,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Lists clinical reports.
     pub fn list_clinical_reports(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("clinical_report", limit)
     }
@@ -121,6 +123,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Lists clinical attachments.
     pub fn list_clinical_attachments(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("clinical_attachment", limit)
     }

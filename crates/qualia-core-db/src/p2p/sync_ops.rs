@@ -58,6 +58,7 @@ pub struct SyncOpRelay {
 }
 
 impl SyncOpRelay {
+    /// Creates a default `SyncOpRelay`.
     pub fn new() -> Self {
         Self::default()
     }
@@ -87,6 +88,7 @@ impl SyncOpRelay {
         self.frames.lock().map(|v| v.len()).unwrap_or(0)
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

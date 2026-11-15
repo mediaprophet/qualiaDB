@@ -7,6 +7,7 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::link::cookies::CookieJar;
 use crate::net::qdnf::policy_labels::{join_one, Confidentiality, LabelFields, NO_TRAINING};
 
+/// Scenario S24: payment is not consent.
 pub fn s24_payment_not_consent() -> Result<(), QdnfError> {
     let consent = ConsentBudget {
         allowed_bytes: 64,
@@ -30,6 +31,7 @@ pub fn s24_payment_not_consent() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario S26: node independence.
 pub fn s26_independence() -> Result<(), QdnfError> {
     match refuse_alias_merge(
         ReferentKind::NaturalPerson,
@@ -56,6 +58,7 @@ pub fn s26_independence() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S27: public error propagation.
 pub fn s27_public_error() -> Result<(), QdnfError> {
     if CookieJar::grants_membership() || CookieJar::grants_application() {
         return Err(QdnfError::Denied);

@@ -334,6 +334,7 @@ pub struct VectorizedOperation {
 }
 
 impl ComputationEngine {
+    /// Creates a computation engine with default execution/SIMD/scheduler components.
     pub fn new() -> Self {
         Self {
             operation_queue: Vec::new(),
@@ -344,6 +345,7 @@ impl ComputationEngine {
         }
     }
 
+    /// Initializes execution engine and scheduler; `LinearAlgebraError` propagates.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.execution_engine.initialize()?;
         self.parallel_executor.initialize()?;
@@ -352,6 +354,7 @@ impl ComputationEngine {
         Ok(())
     }
 
+    /// Runs `alpha·A·B + beta·C` via the canonical dynamic GEMM — freshly allocated `result`, `beta` applies to `C` not the product.
     pub fn execute_multiplication(
         &mut self,
         operation: &OptimizedMultiplication,
@@ -393,6 +396,7 @@ impl ComputationEngine {
 }
 
 impl ExecutionEngine {
+    /// Creates a hybrid execution engine.
     pub fn new() -> Self {
         Self {
             engine_type: ExecutionEngineType::Hybrid,
@@ -401,6 +405,7 @@ impl ExecutionEngine {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Initialize computation units
         Ok(())
@@ -441,6 +446,7 @@ impl ParallelExecutor {
         self.thread_pool.len()
     }
 
+    /// `ParallelExecutor::initialize`.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
     }
@@ -575,6 +581,7 @@ impl LoadBalancer {
 }
 
 impl SIMDOptimizer {
+    /// Creates a SIMD optimizer.
     pub fn new() -> Self {
         Self {
             simd_capabilities: SIMDCapabilities::new(),
@@ -611,6 +618,7 @@ impl SIMDOptimizer {
 }
 
 impl SIMDCapabilities {
+    /// Creates default (detected) SIMD capabilities.
     pub fn new() -> Self {
         Self::detect()
     }
@@ -696,6 +704,7 @@ impl SIMDCapabilities {
 }
 
 impl OperationScheduler {
+    /// Creates an operation scheduler.
     pub fn new() -> Self {
         Self {}
     }

@@ -15,6 +15,7 @@ pub struct ThermodynamicSampler {
 }
 
 impl ThermodynamicSampler {
+    /// Creates a default `ThermodynamicSampler`.
     pub fn new(initial_temp: f64, particles: usize) -> Self {
         Self {
             current_state: EnsembleState {

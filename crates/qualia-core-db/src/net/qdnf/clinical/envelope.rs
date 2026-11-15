@@ -12,11 +12,13 @@ use crate::net::qdnf::profiles::ProtectionProfile;
 use crate::net::qdnf::types::StrongDigest;
 
 #[inline]
+/// `?::intermediary_decrypts`.
 pub const fn intermediary_decrypts() -> bool {
     false
 }
 
 #[inline]
+/// `?::generic_log_contains_medical_payload`.
 pub const fn generic_log_contains_medical_payload() -> bool {
     false
 }
@@ -38,10 +40,12 @@ pub struct PayloadEnvelope {
 }
 
 impl PayloadEnvelope {
+    /// Visible recipients on the envelope.
     pub fn recipient_count(&self) -> u8 {
         self.recipient_count
     }
 
+    /// Fixed array of visible recipient digests.
     pub fn recipients(&self) -> [StrongDigest; MAX_VISIBLE] {
         self.recipients
     }
@@ -184,6 +188,7 @@ pub struct IntermediaryRole {
 impl IntermediaryRole {
     pub const NETWORK: Self = Self { decrypts: false };
 
+    /// Forwards ciphertext `ct` under this role, logging the hop.
     pub fn forward(self, ct: &[u8], log: &mut GenericLog) -> Result<StrongDigest, QdnfError> {
         if self.decrypts {
             return Err(QdnfError::Denied);
@@ -200,6 +205,7 @@ pub struct ClinicalBoundary {
 }
 
 impl ClinicalBoundary {
+    /// Decrypts `ct` for `service`; fails closed across the clinical boundary.
     pub fn decrypt(&self, service: StrongDigest, ct: &[u8]) -> Result<(), QdnfError> {
         if ct.is_empty() {
             return Err(QdnfError::Malformed);
@@ -226,12 +232,14 @@ pub struct GenericLog {
 }
 
 impl GenericLog {
+    /// Creates a default `GenericLog`.
     pub const fn new() -> Self {
         Self {
             records: [None; MAX_SLOTS],
         }
     }
 
+    /// Most recent log record.
     pub fn last(&self) -> Option<GenericLogRecord> {
         let mut i = MAX_SLOTS;
         while i > 0 {
@@ -243,6 +251,7 @@ impl GenericLog {
         None
     }
 
+    /// Appends a ciphertext record to the generic log.
     pub fn append_ciphertext_bytes(&mut self, ct: &[u8]) -> Result<(), QdnfError> {
         let _ = ct;
         Err(QdnfError::Denied)

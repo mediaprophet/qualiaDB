@@ -23,6 +23,7 @@ mod birth;
 mod bridge;
 mod constitution;
 mod coverage;
+mod densitometry;
 mod dyad;
 mod factor;
 mod knowledge;
@@ -51,8 +52,13 @@ pub use bridge::{
     records_to_timeline,
 };
 pub use constitution::{
-    AbsenceReason, AbsentPart, BodyAttributes, BodyCharacteristics, BodyConstitution, BodyFit,
-    BodyMeasurements, DominantSide, ReferenceGirths, VH_FEMALE_STATURE_MM, VH_MALE_STATURE_MM,
+    AGE_MONTHS_RANGE, AbsenceReason, AbsentPart, AnatomicalCalibrationInput,
+    AnatomicalCalibrationResult, BodyAttributes, BodyCharacteristics, BodyConstitution, BodyFit,
+    BodyMeasurements, BoneAffineCorrection, BoneScaleLoading, BoneScaleTensor,
+    CalibrationObservation, DominantSide, OrganCavityTransfer, REF_INSEAM_RATIO,
+    REF_SITTING_RATIO, ReferenceGirths, SSDM_FEATURE_COUNT, SsdmBasis, SsdmDensityMode,
+    SsdmShapeMode, VH_FEMALE_STATURE_MM, VH_MALE_STATURE_MM, derive_anatomical_calibration,
+    harmonic_tps_organ_transfer,
 };
 pub use coverage::{SystemCoverage, seed_system_coverage, seed_system_coverage_markdown};
 pub use dyad::{
@@ -78,17 +84,26 @@ pub use model::{
     AnatomyModel, Karyotype, SystemRepresentation, body_system_for_organ, normalize_organ_key,
     overlay_host_systems, system_memberships_for_organ, system_representation,
 };
+pub use densitometry::{
+    CallusHealingPhase, FractureCallusState, MobilityAndFractureRiskReport, MobilityTaskInput,
+    MuscleQualityProfile, MyologicalQualityProfile, PhysealFusionStatus,
+    SkeletalDensitometryProfile, SkeletalDensityProfile, SpeciesDensitometryPreset,
+    WhoDensityCategory, evaluate_mobility_and_fracture_risk,
+};
 pub use observations::{
-    BodyObservation, InstrumentKind, KNOWN_OBSERVATION_CODES, KnownObservationCode,
-    RepresentationBind, bind_for_code, is_known_code,
+    AnatomicalObservationRecord, BodyObservation, InstrumentKind, KNOWN_OBSERVATION_CODES,
+    KnownObservationCode, RepresentationBind, bind_for_code, is_known_code,
 };
 pub use pathway::{
     Hypothesis, InvestigativePathway, InvestigativeStep, RankedStep, StepKind,
     hypotheses_from_implications, investigative_pathway, value_of_information,
 };
 pub use physiology::{
-    CyclePhase, EngagementLevel, PhysiologicalState, ReproductiveState, StateModulator,
-    SystemEngagement, Trimester, state_modulator, whole_body_profile,
+    AgeOntogenyProfile, CyclePhase, EndocrineOsteoState, EngagementLevel, Handedness,
+    LateralityProfile, LimbDominance, OntogeneticStage, PhysiologicalModifierSummary,
+    PhysiologicalState, ReproductiveEndocrinePhase, ReproductiveState, SitusClassification,
+    StateModulator, SystemEngagement, Trimester, apply_physiological_modifiers_to_density,
+    state_modulator, whole_body_profile,
 };
 pub use registry::{
     NEUTRAL_SYSTEM_RGBA, SystemDef, SystemProvenance, SystemRegistry, SystemRelation,

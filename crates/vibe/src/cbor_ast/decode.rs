@@ -5,6 +5,7 @@ use super::{DecodeError, TAG_VIBE_AST};
 use crate::ast::*;
 use crate::span::Span;
 
+/// Decodes CBOR.
 pub fn decode(bytes: &[u8]) -> Result<Program, DecodeError> {
     let mut dec = CborDecoder::new(bytes);
     let tag = dec.tag()?;
@@ -278,31 +279,38 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             }))
         }
         "Hook" => {
+            let mut span = Span::new(0, 0);
             let mut path = Vec::new();
             let mut params = Vec::new();
+            let mut budget = Vec::new();
+            let mut ret = None;
             let mut body = Block {
                 span: Span::new(0, 0),
                 stmts: Vec::new(),
             };
             for (k, v) in fields {
                 match (k.as_str(), v) {
+                    ("span", ItemField::Span(s)) => span = s,
                     ("path", ItemField::StrList(s)) => path = s,
                     ("params", ItemField::Params(p)) => params = p,
+                    ("budget", ItemField::NamedArgs(na)) => budget = na,
+                    ("ret", ItemField::TypeExpr(t)) => ret = t,
                     ("body", ItemField::Block(b)) => body = b,
                     _ => {}
                 }
             }
             Ok(Item::Hook(HookDecl {
-                span: Span::new(0, 0),
+                span,
                 path,
                 params,
-                budget: Vec::new(),
-                ret: None,
+                budget,
+                ret,
                 body,
             }))
         }
         "Const" => {
             let mut name = String::new();
+            let mut ty = None;
             let mut value = Expr {
                 span: Span::new(0, 0),
                 kind: ExprKind::Literal(Literal::Null),
@@ -311,6 +319,7 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             for (k, v) in fields {
                 match (k.as_str(), v) {
                     ("name", ItemField::Str(s)) => name = s,
+                    ("ty", ItemField::TypeExpr(t)) => ty = t,
                     ("value", ItemField::Expr(e)) => value = e,
                     ("span", ItemField::Span(s)) => span = s,
                     _ => {}
@@ -319,7 +328,7 @@ fn decode_item(dec: &mut CborDecoder) -> Result<Item, DecodeError> {
             Ok(Item::Const(ConstDecl {
                 span,
                 name,
-                ty: None,
+                ty,
                 value,
             }))
         }
@@ -675,7 +684,7 @@ fn decode_span(dec: &mut CborDecoder) -> Result<Span, DecodeError> {
     Ok(Span::new(start, end))
 }
 
-fn decode_expr(dec: &mut CborDecoder) -> Result<Expr, DecodeError> {
+pub(crate) fn decode_expr(dec: &mut CborDecoder) -> Result<Expr, DecodeError> {
     let map_len = dec.map()?;
     let mut span = Span::new(0, 0);
     let mut kind = ExprKind::Literal(Literal::Null);
@@ -972,6 +981,78 @@ fn decode_expr_kind(dec: &mut CborDecoder) -> Result<ExprKind, DecodeError> {
                 over: Box::new(over),
                 ease,
                 spring,
+            }
+        }
+        "IfElse" => {
+            let mut cond = None;
+            let mut then_value = None;
+            let mut else_value = None;
+            for _ in 0..remaining_pairs {
+                let k = dec.str()?;
+                match k.as_str() {
+                    "cond" => cond = Some(decode_expr(dec)?),
+                    "then" => then_value = Some(decode_expr(dec)?),
+                    "else" => else_value = Some(decode_expr(dec)?),
+                    _ => dec.skip()?,
+                }
+            }
+            ExprKind::IfElse {
+                cond: Box::new(cond.ok_or(DecodeError::MissingField("cond"))?),
+                then_value: Box::new(then_value.ok_or(DecodeError::MissingField("then"))?),
+                else_value: Box::new(else_value.ok_or(DecodeError::MissingField("else"))?),
+            }
+        }
+        "ModalLogic" => {
+            let n = dec.map()?;
+            let mut modality = ModalKind::DeonticObligate;
+            let mut args = Vec::new();
+            let mut body = None;
+            for _ in 0..n {
+                let k = dec.str()?;
+                match k.as_str() {
+                    "modality" => {
+                        let m = dec.str()?;
+                        modality = match m.as_str() {
+                            "obligate" => ModalKind::DeonticObligate,
+                            "permit" => ModalKind::DeonticPermit,
+                            "forbid" => ModalKind::DeonticForbid,
+                            "knows" => ModalKind::EpistemicKnows,
+                            "believes" => ModalKind::EpistemicBelieves,
+                            "paraconsistent" => ModalKind::Paraconsistent,
+                            "always" => ModalKind::LtlGlobally,
+                            "eventually" => ModalKind::LtlFinally,
+                            "until" => ModalKind::LtlUntil,
+                            "subsumes" => ModalKind::DlSubsumes,
+                            "defeasible_rule" => ModalKind::N3Defeasible,
+                            _ => {
+                                return Err(DecodeError::InvalidCbor(format!(
+                                    "unknown modality '{m}'"
+                                )))
+                            }
+                        };
+                    }
+                    "args" => {
+                        let count = dec.array()?;
+                        args = Vec::with_capacity(count as usize);
+                        for _ in 0..count {
+                            args.push(decode_expr(dec)?);
+                        }
+                    }
+                    "body" => {
+                        if dec.is_null()? {
+                            dec.null()?;
+                            body = None;
+                        } else {
+                            body = Some(Box::new(decode_expr(dec)?));
+                        }
+                    }
+                    _ => dec.skip()?,
+                }
+            }
+            ExprKind::ModalLogic {
+                modality,
+                args,
+                body,
             }
         }
         _ => {

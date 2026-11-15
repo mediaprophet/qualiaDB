@@ -12,6 +12,7 @@ pub enum SentimentDimension {
 }
 
 impl SentimentDimension {
+    /// Stable string form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Valence => "valence",
@@ -41,6 +42,7 @@ pub struct SentimentTrend {
 }
 
 impl SentimentTrend {
+    /// Creates an empty trend.
     pub fn new() -> Self {
         Self {
             timestamps: Vec::new(),
@@ -48,6 +50,7 @@ impl SentimentTrend {
         }
     }
 
+    /// Appends a `(timestamp, value)` point.
     pub fn add_point(&mut self, timestamp: &str, value: f64) {
         self.timestamps.push(timestamp.to_string());
         self.values.push(value);
@@ -109,6 +112,7 @@ impl Default for SentimentTrend {
 }
 
 impl SentimentAssessment {
+    /// Creates an assessment for `text_ref`.
     pub fn new(id: &str, text_ref: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -120,6 +124,7 @@ impl SentimentAssessment {
         }
     }
 
+    /// Sets one sentiment `dimension` value.
     pub fn set_dimension(&mut self, dimension: SentimentDimension, value: f64) {
         self.dimensions.insert(dimension, value.clamp(-1.0, 1.0));
     }

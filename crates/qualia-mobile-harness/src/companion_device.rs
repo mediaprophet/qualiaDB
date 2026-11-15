@@ -21,6 +21,7 @@ extern "C" {
     fn loadCompanionValue(key: &str) -> String;
 }
 
+/// `device` ID.
 pub fn device_id() -> String {
     let stored = loadCompanionValue(DEVICE_ID_KEY);
     if !stored.is_empty() {
@@ -49,6 +50,7 @@ fn signing_key() -> SigningKey {
     SigningKey::from_bytes(&seed)
 }
 
+/// Builds pairing-response.
 pub fn build_pairing_response(challenge_json: &str) -> Result<String, String> {
     let challenge: CompanionChallenge =
         serde_json::from_str(challenge_json).map_err(|e| format!("invalid challenge: {e}"))?;

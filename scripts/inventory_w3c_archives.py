@@ -65,6 +65,7 @@ VOCAB_DEFAULT_NS = {
 
 
 def load_existing_namespaces() -> tuple[set[str], set[str]]:
+    """Loads existing namespaces."""
     known: set[str] = set()
     bundled_stems: set[str] = set()
     for rel in (
@@ -85,6 +86,7 @@ def load_existing_namespaces() -> tuple[set[str], set[str]]:
 
 
 def normalize_ns(ns: str) -> str:
+    """Normalizes ns."""
     ns = ns.strip().strip("<>").strip('"').strip("'")
     if not ns:
         return ""
@@ -94,6 +96,7 @@ def normalize_ns(ns: str) -> str:
 
 
 def normalize_ns_key(ns: str) -> str:
+    """Normalizes ns key."""
     key = normalize_ns(ns).rstrip("#/").lower()
     key = key.replace("http://w3.org/", "http://www.w3.org/")
     key = key.replace("https://w3.org/", "https://www.w3.org/")
@@ -101,6 +104,7 @@ def normalize_ns_key(ns: str) -> str:
 
 
 def extract_namespace(path: Path, head: str) -> str:
+    """Extracts namespace."""
     stem = path.stem.lower()
     if stem in VOCAB_DEFAULT_NS:
         return normalize_ns(VOCAB_DEFAULT_NS[stem])
@@ -116,6 +120,7 @@ def extract_namespace(path: Path, head: str) -> str:
 
 
 def valid_namespace(ns: str) -> bool:
+    """Returns True for a valid namespace."""
     key = normalize_ns_key(ns)
     if not key.startswith("http"):
         return False
@@ -125,6 +130,7 @@ def valid_namespace(ns: str) -> bool:
 
 
 def file_score(path: Path) -> tuple:
+    """File score."""
     name = path.stem.lower()
     version_penalty = 2 if VERSION_RE.search(name) else 0
     if DATE_SUFFIX_RE.search(name):
@@ -146,11 +152,13 @@ def file_score(path: Path) -> tuple:
 
 
 def slugify(*parts: str) -> str:
+    """Slugifies."""
     raw = "-".join(p for p in parts if p)
     return re.sub(r"[^a-z0-9]+", "-", raw.lower()).strip("-")
 
 
 def label_from_slug(slug: str) -> str:
+    """Label from a slug."""
     special = {
         "ldp": "LDP",
         "oa": "Open Annotation",
@@ -165,12 +173,14 @@ def label_from_slug(slug: str) -> str:
 
 
 def prefix_from_ns(ns: str) -> str:
+    """Prefix from a namespace."""
     core = ns.rstrip("#/").split("/")[-1]
     core = re.sub(r"[^a-zA-Z0-9]", "", core) or "voc"
     return core[:12].lower()
 
 
 def default_search_from_file(path: Path, head: str) -> str:
+    """Default search from file."""
     m = re.search(r"owl:Class\s+(?:\w+:)?(\w+)", head, re.I)
     if m:
         return m.group(1)
@@ -178,6 +188,7 @@ def default_search_from_file(path: Path, head: str) -> str:
 
 
 def should_skip_path(path: Path, archives: Path) -> bool:
+    """Returns True when the path should be skipped."""
     rel = path.relative_to(archives)
     if any(part.lower() in SKIP_DIRS for part in rel.parts):
         return True
@@ -191,6 +202,7 @@ def should_skip_path(path: Path, archives: Path) -> bool:
 
 
 def stem_family(stem: str) -> str:
+    """Stem family."""
     base = DATE_SUFFIX_RE.sub("", stem)
     base = re.sub(r"[-_]20\d{6}$", "", base)
     base = re.sub(r"[-_]?\d{8}$", "", base)
@@ -198,6 +210,7 @@ def stem_family(stem: str) -> str:
 
 
 def collect_semantic_files(root: Path, archives: Path) -> list[Path]:
+    """Collects semantic files."""
     return [
         p
         for p in root.rglob("*")
@@ -209,6 +222,7 @@ def collect_semantic_files(root: Path, archives: Path) -> list[Path]:
 
 
 def vocab_units(archives: Path) -> list[tuple[str, list[Path]]]:
+    """Vocabulary units."""
     units: dict[str, list[Path]] = {}
     w3c_ns = archives / "ns-main" / "w3c-ns"
     if w3c_ns.is_dir():
@@ -241,6 +255,7 @@ def vocab_units(archives: Path) -> list[tuple[str, list[Path]]]:
 
 
 def pick_canonical(files: list[Path]) -> Path | None:
+    """Picks the canonical entry."""
     if not files:
         return None
     files = sorted(files, key=file_score)
@@ -248,6 +263,7 @@ def pick_canonical(files: list[Path]) -> Path | None:
 
 
 def build_catalog(archives: Path, known_ns: set[str], bundled_stems: set[str]) -> dict:
+    """Builds catalog."""
     entries = []
     used_ids: set[str] = set()
     seen_ns: set[str] = set()
@@ -301,6 +317,7 @@ def build_catalog(archives: Path, known_ns: set[str], bundled_stems: set[str]) -
 
 
 def sync_sources(catalog: dict, archives: Path, dest_dir: Path) -> int:
+    """Syncs sources."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     for old in dest_dir.iterdir():
         if old.name == "catalog.json":
@@ -320,6 +337,7 @@ def sync_sources(catalog: dict, archives: Path, dest_dir: Path) -> int:
 
 
 def main() -> int:
+    """CLI entry point."""
     archives = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_ARCHIVES
     if not archives.is_dir():
         print(f"Archives not found: {archives}", file=sys.stderr)

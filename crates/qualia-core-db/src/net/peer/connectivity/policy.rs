@@ -62,6 +62,7 @@ impl PathPolicy {
         self.allows_direct_probes()
     }
 
+    /// `PathPolicy::allows_relay`.
     pub const fn allows_relay(self) -> bool {
         !matches!(self.disclosure, Disclosure::Isolated)
     }

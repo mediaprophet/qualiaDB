@@ -9,6 +9,7 @@ pub struct GrayView<'a> {
 }
 
 impl<'a> GrayView<'a> {
+    /// Creates a default `GrayView`.
     pub fn new(width: u32, height: u32, stride: u32, bytes: &'a [u8]) -> Option<Self> {
         let need = stride.checked_mul(height)? as usize;
         if bytes.len() < need || width == 0 || height == 0 || stride < width {
@@ -23,6 +24,7 @@ impl<'a> GrayView<'a> {
     }
 
     #[inline]
+    /// `GrayView::pixel`.
     pub fn pixel(&self, x: u32, y: u32) -> u8 {
         self.bytes[(y * self.stride + x) as usize]
     }

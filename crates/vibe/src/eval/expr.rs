@@ -1,9 +1,17 @@
 use super::*;
-use crate::bind::dispatch;
+use crate::extension_registry::is_extension_namespace;
 use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
-    pub fn eval_expr(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
+    /// Evaluates an expression.
+    pub(super) fn eval_expr_inner(
+        &mut self,
+        expr: &Expr,
+        env: &mut Env,
+    ) -> Result<Value, Diagnostic> {
+        for (scope, id) in &self.active_tasks {
+            crate::task_scheduler::checkpoint(scope, *id, expr.span)?;
+        }
         self.budget.tick(expr.span)?;
         match &expr.kind {
             ExprKind::Literal(l) => {
@@ -44,6 +52,20 @@ impl<'a, H: Host> Engine<'a, H> {
             ExprKind::Iri(s) => Ok(Value::Iri(s.clone())),
             ExprKind::Prefixed(p, l) => Ok(Value::Prefixed(p.clone(), l.clone())),
             ExprKind::Blank(n) => Ok(Value::Blank(n.clone())),
+            ExprKind::IfElse {
+                cond,
+                then_value,
+                else_value,
+            } => {
+                // Condition evaluated exactly once; only the selected branch is
+                // evaluated (and charged against the budget). Truthiness matches
+                // statement-form `if` (`Value::is_truthy`).
+                if self.eval_expr(cond, env)?.is_truthy() {
+                    self.eval_expr(then_value, env)
+                } else {
+                    self.eval_expr(else_value, env)
+                }
+            }
             ExprKind::Unary { op, expr } => {
                 let v = self.eval_expr(expr, env)?;
                 match op {
@@ -108,7 +130,21 @@ impl<'a, H: Host> Engine<'a, H> {
                 }
                 let val = self.eval_expr(recv, env)?;
                 match val {
-                    Value::Record(m) => Ok(m.get(name).cloned().unwrap_or(Value::Null)),
+                    Value::Record(m) => {
+                        if let Some(v) = m.get(name) {
+                            Ok(v.clone())
+                        } else if name == "len" || name == "length" {
+                            Ok(Value::F64(m.len() as f64))
+                        } else {
+                            Ok(Value::Null)
+                        }
+                    }
+                    Value::List(xs) if name == "len" || name == "length" => {
+                        Ok(Value::F64(xs.len() as f64))
+                    }
+                    Value::String(s) if name == "len" || name == "length" => {
+                        Ok(Value::F64(s.len() as f64))
+                    }
                     other => Err(Diagnostic::new(
                         DiagCode::E600,
                         expr.span,
@@ -163,13 +199,41 @@ impl<'a, H: Host> Engine<'a, H> {
                 r: Box::new(self.eval_expr(reifier, env)?),
             }),
             ExprKind::Index { recv, index } => {
-                let list = self.eval_expr(recv, env)?;
-                let i = self.eval_expr(index, env)?.as_i64().unwrap_or(0) as usize;
-                match list {
-                    Value::List(xs) => xs.get(i).cloned().ok_or_else(|| {
-                        Diagnostic::new(DiagCode::E600, expr.span, "index out of range")
-                    }),
-                    _ => Err(Diagnostic::new(DiagCode::E600, expr.span, "not a list")),
+                let target = self.eval_expr(recv, env)?;
+                let raw_idx = self.eval_expr(index, env)?.as_i64().unwrap_or(0);
+                match target {
+                    Value::List(xs) => {
+                        let len = xs.len() as i64;
+                        let resolved = if raw_idx < 0 { len + raw_idx } else { raw_idx };
+                        if resolved >= 0 && resolved < len {
+                            Ok(xs[resolved as usize].clone())
+                        } else {
+                            Err(Diagnostic::new(
+                                DiagCode::E600,
+                                expr.span,
+                                "index out of range",
+                            ))
+                        }
+                    }
+                    Value::String(s) => {
+                        let graphemes = crate::stdlib_v2::split_graphemes(&s);
+                        let len = graphemes.len() as i64;
+                        let resolved = if raw_idx < 0 { len + raw_idx } else { raw_idx };
+                        if resolved >= 0 && resolved < len {
+                            Ok(Value::String(graphemes[resolved as usize].clone()))
+                        } else {
+                            Err(Diagnostic::new(
+                                DiagCode::E600,
+                                expr.span,
+                                "string grapheme index out of range",
+                            ))
+                        }
+                    }
+                    _ => Err(Diagnostic::new(
+                        DiagCode::E600,
+                        expr.span,
+                        "not a list or string",
+                    )),
                 }
             }
             ExprKind::Pipe { left, right } => {
@@ -194,8 +258,7 @@ impl<'a, H: Host> Engine<'a, H> {
                     Value::List(variables.iter().map(|v| Value::String(v.clone())).collect()),
                 );
                 let payload = Value::Record(rec);
-                crate::bind::dispatch(
-                    self.host,
+                self.route_host_or_extension(
                     "GraphDatabase.sparql",
                     &[payload.clone()],
                     &[("query".to_string(), Value::String(pattern.clone()))],
@@ -258,8 +321,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 if !crate::catalog::granted_covers(&granted, engine_id) {
                     return Ok(term);
                 }
-                match dispatch(
-                    self.host,
+                match self.route_host_or_extension(
                     engine_id,
                     std::slice::from_ref(&term),
                     &[],
@@ -302,7 +364,15 @@ impl<'a, H: Host> Engine<'a, H> {
                 self.budget.charge(buf.len() as u64, expr.span)?;
                 Ok(Value::String(buf))
             }
-            ExprKind::Await(e) => self.eval_expr(e, env),
+            ExprKind::Await(e) => {
+                let val = self.eval_expr(e, env)?;
+                if matches!(&val, Value::Record(record) if crate::task_scheduler::is_task_record(record))
+                    || matches!(&val, Value::Lambda { .. })
+                {
+                    self.check_phase_capability("task.await", expr.span)?;
+                }
+                crate::task_scheduler::await_scheduled_value(self, val, env, expr.span)
+            }
             ExprKind::Lambda { params, body } => {
                 check_non_capturing(body, params, env, expr.span)?;
                 Ok(Value::Lambda {
@@ -487,7 +557,7 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
                 "math", "rdf", "quin", "graph", "Ok", "Err", "vec2", "vec3", "vec4", "mat3",
                 "mat4", "oklch",
             ];
-            if ALLOWED.contains(&n.as_str()) {
+            if ALLOWED.contains(&n.as_str()) || is_extension_namespace(n) {
                 return;
             }
             if crate::catalog::family_of(n).is_some()
@@ -543,6 +613,15 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
             collect_free_idents(from, params, env, out);
             collect_free_idents(to, params, env, out);
             collect_free_idents(over, params, env, out);
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            collect_free_idents(cond, params, env, out);
+            collect_free_idents(then_value, params, env, out);
+            collect_free_idents(else_value, params, env, out);
         }
         _ => {}
     }

@@ -46,6 +46,7 @@ pub struct PropertyMetrics {
 }
 
 impl ChemistryPerformanceMonitor {
+    /// Creates a monitor with zeroed metrics.
     pub fn new() -> Self {
         Self {
             simulation_metrics: SimulationMetrics::new(),
@@ -55,6 +56,7 @@ impl ChemistryPerformanceMonitor {
         }
     }
 
+    /// Current aggregated metrics.
     pub fn get_metrics(&self) -> ChemistryPerformanceMetrics {
         ChemistryPerformanceMetrics {
             simulation_metrics: self.simulation_metrics.clone(),
@@ -70,6 +72,7 @@ impl ChemistryPerformanceMonitor {
 }
 
 impl SimulationMetrics {
+    /// Creates zeroed simulation metrics.
     pub fn new() -> Self {
         Self {
             total_simulations: 0,
@@ -82,6 +85,7 @@ impl SimulationMetrics {
 }
 
 impl QuantumMetrics {
+    /// Creates zeroed quantum metrics.
     pub fn new() -> Self {
         Self {
             total_calculations: 0,
@@ -94,6 +98,7 @@ impl QuantumMetrics {
 }
 
 impl ReactionMetrics {
+    /// Creates zeroed reaction metrics.
     pub fn new() -> Self {
         Self {
             total_reactions: 0,
@@ -105,6 +110,7 @@ impl ReactionMetrics {
 }
 
 impl PropertyMetrics {
+    /// Creates zeroed property metrics.
     pub fn new() -> Self {
         Self {
             total_predictions: 0,

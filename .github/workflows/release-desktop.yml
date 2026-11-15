@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.39"
+        description: "Existing release tag to upload assets to, for example v0.0.41"
         required: true
 
 permissions:
@@ -20,20 +20,22 @@ env:
 jobs:
   build-desktop-windows:
     name: Desktop (Windows Webizen)
+    if: false # Decoupled to standalone repository webizen-desktop
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.98.1"
           targets: wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
-      - name: Install Dioxus CLI
-        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+      - name: Install Aether CLI
+        run: cargo install aether-cli --version 0.8.0-alpha.1 --locked
 
       # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents mac/linux
       # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
@@ -231,7 +233,8 @@ jobs:
 
   build-desktop-macos-metal:
     name: Desktop (macOS Apple Silicon / Metal)
-    runs-on: macos-14
+    if: false # Decoupled to standalone repository webizen-desktop
+    runs-on: macos-15
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high
@@ -243,15 +246,16 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: "1.98.1"
           targets: aarch64-apple-darwin, wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
-      - name: Install Dioxus CLI
-        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
+      - name: Install Aether CLI
+        run: cargo install aether-cli --version 0.8.0-alpha.1 --locked
 
       # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents macOS
       # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
@@ -277,7 +281,7 @@ jobs:
         env:
           # Explicitly clear any host-cpu RUSTFLAGS for the wasm frontend.
           RUSTFLAGS: ""
-          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ""
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
           # `dx build --release` invokes Rust's target-specific `rust-objcopy`

@@ -18,6 +18,7 @@ pub struct WellbeingObservation {
 }
 
 impl WellbeingObservation {
+    /// Creates a new instance.
     pub fn new(mood_label: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -43,6 +44,7 @@ pub struct TherapyNote {
 }
 
 impl TherapyNote {
+    /// Creates a new instance.
     pub fn new(notes: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -63,10 +65,12 @@ impl TherapyNote {
     }
 }
 
+///  record ID.
 pub fn wellbeing_observation_record_id(uuid: &str) -> String {
     format!("urn:wellfair:wellbeing_observation:{uuid}")
 }
 
+///  record ID.
 pub fn therapy_note_record_id(uuid: &str) -> String {
     format!("urn:wellfair:therapy_note:{uuid}")
 }
@@ -99,6 +103,7 @@ fn wellbeing_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_wellbeing_observation_envelope(
     report: &WellbeingObservation,
     owner_did: &str,
@@ -116,6 +121,7 @@ pub fn build_wellbeing_observation_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_therapy_note_envelope(
     report: &TherapyNote,
     owner_did: &str,
@@ -133,6 +139,7 @@ pub fn build_therapy_note_envelope(
     )
 }
 
+///  summary.
 pub fn wellbeing_observation_summary(report: &WellbeingObservation) -> String {
     serde_json::json!({
         "mood": report.mood_label,
@@ -141,6 +148,7 @@ pub fn wellbeing_observation_summary(report: &WellbeingObservation) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn therapy_note_summary(report: &TherapyNote) -> String {
     serde_json::json!({
         "provider": report.provider_label,

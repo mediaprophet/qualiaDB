@@ -4,7 +4,8 @@ use std::path::Path;
 
 use axum::{
     body::Bytes,
-    http::StatusCode,
+    extract::State,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -12,6 +13,8 @@ use serde::Deserialize;
 
 use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict};
 use crate::modalities::logic::n3_compiler::N3OutputMode;
+
+use super::poet_llm_conditioning::prepare_prompt;
 
 pub const LLM_REQUEST_LIMIT_BYTES: usize = 128 * 1024;
 const MAX_PROMPT_BYTES: usize = 32 * 1024;
@@ -62,6 +65,7 @@ struct ModelLifecycleRequest {
     model_path: String,
 }
 
+/// HTTP `activate-model` handler.
 pub async fn activate_model_handler(body: Bytes) -> Response {
     if body.len() > 4096 {
         return failure(
@@ -119,6 +123,7 @@ pub async fn activate_model_handler(body: Bytes) -> Response {
     }
 }
 
+/// HTTP `evict-model` handler.
 pub async fn evict_model_handler() -> Response {
     if super::poet_llm_jobs::has_active_jobs() {
         return failure(
@@ -144,8 +149,8 @@ fn validate_model_file(path: &str) -> Result<(), String> {
         .and_then(|value| value.to_str())
         .unwrap_or_default()
         .to_ascii_lowercase();
-    if !matches!(extension.as_str(), "gguf" | "p64") {
-        return Err("Select a local .gguf or .p64 model".into());
+    if !matches!(extension.as_str(), "gguf" | "p64" | "safetensors") {
+        return Err("Select a local .gguf, .p64, or .safetensors model".into());
     }
     if !path.is_file() {
         return Err("The selected local model file does not exist".into());
@@ -167,14 +172,10 @@ fn discover_local_models() -> Vec<serde_json::Value> {
     if let Some(path) = resident.as_deref() {
         push_model_path(&mut candidates, Path::new(path), MAX_MODELS);
     }
-    if let Some(configured) = std::env::var_os("QUALIA_MODEL_PATHS") {
+    if let Some(configured) = std::env::var_os("QUALIA_MODEL_PATHS").or_else(|| std::env::var_os("QUALIA_LLM_VAULT")) {
         for path in std::env::split_paths(&configured).take(MAX_MODELS) {
             if path.is_dir() {
-                if let Ok(entries) = std::fs::read_dir(path) {
-                    for entry in entries.flatten().take(MAX_MODELS) {
-                        push_model_path(&mut candidates, &entry.path(), MAX_MODELS);
-                    }
-                }
+                scan_dir_for_models(&mut candidates, &path, 4, MAX_MODELS);
             } else {
                 push_model_path(&mut candidates, &path, MAX_MODELS);
             }
@@ -185,6 +186,44 @@ fn discover_local_models() -> Vec<serde_json::Value> {
     }
     for path in KNOWN_MODELS {
         push_model_path(&mut candidates, Path::new(path), MAX_MODELS);
+    }
+
+    // Common system model directories
+    let common_dirs = [
+        std::path::PathBuf::from(r"C:\LLM_files"),
+        std::path::PathBuf::from(r"C:\LLM_Models"),
+        std::path::PathBuf::from(r"C:\models"),
+        std::path::PathBuf::from("storage/Models"),
+        std::path::PathBuf::from("storage/models"),
+    ];
+    for dir in &common_dirs {
+        scan_dir_for_models(&mut candidates, dir, 4, MAX_MODELS);
+    }
+
+    // User home directory model locations
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        let home_path = std::path::PathBuf::from(home);
+        let user_dirs = [
+            home_path.join("models"),
+            home_path.join(".cache").join("lm-studio").join("models"),
+            home_path.join(".qualia").join("models"),
+            home_path
+                .join("AppData")
+                .join("Roaming")
+                .join("qualia")
+                .join("Models"),
+            home_path
+                .join("AppData")
+                .join("Local")
+                .join("qualia")
+                .join("Models"),
+            home_path.join("Downloads"),
+        ];
+        for dir in &user_dirs {
+            // Shallow scan for Downloads (depth 1) to avoid heavy traversal
+            let depth = if dir.ends_with("Downloads") { 1 } else { 2 };
+            scan_dir_for_models(&mut candidates, dir, depth, MAX_MODELS);
+        }
     }
 
     candidates.sort();
@@ -215,6 +254,25 @@ fn discover_local_models() -> Vec<serde_json::Value> {
         .collect()
 }
 
+fn scan_dir_for_models(out: &mut Vec<std::path::PathBuf>, dir: &Path, depth: usize, limit: usize) {
+    if depth == 0 || out.len() >= limit || !dir.is_dir() {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if out.len() >= limit {
+                break;
+            }
+            let p = entry.path();
+            if p.is_file() {
+                push_model_path(out, &p, limit);
+            } else if p.is_dir() && depth > 1 {
+                scan_dir_for_models(out, &p, depth - 1, limit);
+            }
+        }
+    }
+}
+
 fn push_model_path(out: &mut Vec<std::path::PathBuf>, path: &Path, limit: usize) {
     if out.len() >= limit || !path.is_file() {
         return;
@@ -242,6 +300,7 @@ fn failure(status: StatusCode, code: &'static str, message: impl Into<String>) -
         .into_response()
 }
 
+/// Decodes `request`; fails closed on malformed input.
 pub(crate) fn decode_request(body: &Bytes) -> Result<PoetLlmRequest, Response> {
     if body.len() > LLM_REQUEST_LIMIT_BYTES {
         return Err(failure(
@@ -316,12 +375,21 @@ pub(crate) fn decode_request(body: &Bytes) -> Result<PoetLlmRequest, Response> {
     Ok(request)
 }
 
-pub async fn generate_handler(body: Bytes) -> Response {
+/// Generates `handler`.
+pub async fn generate_handler(
+    State(state): State<std::sync::Arc<super::webizen_server::WebizenState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let session = match super::poet_llm_authority::authenticate(&state, &headers) {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
     let request = match decode_request(&body) {
         Ok(request) => request,
         Err(response) => return response,
     };
-    match tokio::task::spawn_blocking(move || run_local_turn(request)).await {
+    match tokio::task::spawn_blocking(move || run_local_turn(request, session)).await {
         Ok(Ok(value)) => Json(value).into_response(),
         Ok(Err(message)) => failure(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -336,8 +404,13 @@ pub async fn generate_handler(body: Bytes) -> Response {
     }
 }
 
-fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> {
+fn run_local_turn(
+    request: PoetLlmRequest,
+    session: std::sync::Arc<crate::llm_agent::native_request::NativeProductSession>,
+) -> Result<serde_json::Value, String> {
+    let prepared = prepare_prompt(&request)?;
     let agent = LocalLlmAgent::new(&request.agent_did, &request.model_path);
+    super::poet_llm_authority::bind(&agent, &session)?;
     let context_hash = crate::q_hash(&request.graph_context);
     let intent = AgentIntent {
         intent_predicate: crate::q_hash("llm:ReadGraph"),
@@ -362,14 +435,14 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
     }
 
     let output = agent
-        .infer(&request.prompt, &request.graph_context)
+        .infer(&prepared.text, &request.graph_context)
         .map_err(|error| format!("{error:?}"))?;
     match agent.validate_output(&output) {
         WebizenVerdict::Permit | WebizenVerdict::Sanitised { .. } => {}
         verdict => return Err(format!("Webizen rejected the model output: {verdict:?}")),
     }
     let verified =
-        crate::inference::post_turn_verify::maybe_verify_turn(&request.prompt, &output.text);
+        crate::inference::post_turn_verify::maybe_verify_turn(&prepared.text, &output.text);
     let checks = verified
         .checks
         .iter()
@@ -395,8 +468,113 @@ fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> 
         "provenance_hashes": output.provenance_quins,
         "context_hash": context_hash,
         "context_supplied": !request.graph_context.is_empty(),
+        "conditioning": {
+            "applied": prepared.plan_id.is_some(),
+            "plan_id": prepared.plan_id,
+            "profile_id": prepared.profile_id,
+            "selected_evidence": prepared.selected_evidence,
+            "token_budget": prepared.token_budget,
+        },
         "repaired": verified.repaired,
         "checks": checks,
         "semantic_quin": output.semantic_quin
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn request_with_conditioning(conditioning: serde_json::Value) -> PoetLlmRequest {
+        PoetLlmRequest {
+            model_path: "test.gguf".into(),
+            prompt: "Summarise the agreement.".into(),
+            conditioning: Some(conditioning),
+            graph_context: String::new(),
+            agent_did: "did:qualia:test-agent".into(),
+            principal_did: "did:qualia:test-principal".into(),
+            max_tokens: 128,
+            library_projects: Vec::new(),
+            library_context_supplied: false,
+        }
+    }
+
+    #[test]
+    fn conditioning_is_compiled_into_the_prompt_used_for_inference() {
+        let request = request_with_conditioning(serde_json::json!({
+            "profile_id": "urn:qualia:profile:agreement-summary",
+            "objective": "Summarise the agreement for its signatories.",
+            "requirements": [{
+                "id": "plain-language",
+                "class": "guidance",
+                "rule": "Use clear language and name any unresolved terms.",
+                "priority": 20
+            }],
+            "evidence": [{
+                "source_id": "agreement-v3",
+                "content": "The parties agreed to publish a quarterly report.",
+                "sensitivity": 0
+            }],
+            "budget": {"input_tokens": 512, "output_tokens": 48, "tool_rounds": 0}
+        }));
+
+        let prepared = prepare_prompt(&request).expect("profile compiles");
+        assert!(prepared.plan_id.is_some());
+        assert_eq!(
+            prepared.profile_id.as_deref(),
+            Some("urn:qualia:profile:agreement-summary")
+        );
+        assert_eq!(prepared.token_budget, 48);
+        assert_eq!(prepared.selected_evidence, 1);
+        assert!(prepared.text.contains("Objective: Summarise the agreement"));
+        assert!(prepared.text.contains("Use clear language"));
+        assert!(prepared.text.contains("publish a quarterly report"));
+    }
+
+    #[test]
+    fn conditioning_rejects_evidence_above_the_disclosure_ceiling() {
+        let request = request_with_conditioning(serde_json::json!({
+            "profile_id": "urn:qualia:profile:restricted",
+            "requirements": [{
+                "id": "source-needed",
+                "class": "evidence_obligation",
+                "rule": "Ground the answer in the authorised record.",
+                "required": true
+            }],
+            "evidence": [{
+                "source_id": "restricted-record",
+                "content": "Not disclosed.",
+                "sensitivity": 2
+            }],
+            "disclosure_ceiling": 0,
+            "budget": {"input_tokens": 512, "output_tokens": 48, "tool_rounds": 0}
+        }));
+
+        let prepared = prepare_prompt(&request).expect("plan records rejected evidence");
+        assert_eq!(prepared.selected_evidence, 0);
+        assert!(!prepared.text.contains("Not disclosed."));
+    }
+
+    #[test]
+    fn test_scan_dir_for_models_finds_gguf_and_p64() {
+        let temp_dir = tempfile::tempdir().expect("tempdir created");
+        let root = temp_dir.path();
+        let sub = root.join("nested");
+        std::fs::create_dir_all(&sub).expect("create nested");
+
+        let m1 = root.join("model_a.gguf");
+        let m2 = sub.join("model_b.p64");
+        let ignored = root.join("notes.txt");
+
+        std::fs::write(&m1, b"dummy gguf").expect("write m1");
+        std::fs::write(&m2, b"dummy p64").expect("write m2");
+        std::fs::write(&ignored, b"text").expect("write txt");
+
+        let mut results = Vec::new();
+        scan_dir_for_models(&mut results, root, 2, 10);
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().any(|p| p.ends_with("model_a.gguf")));
+        assert!(results.iter().any(|p| p.ends_with("model_b.p64")));
+    }
 }

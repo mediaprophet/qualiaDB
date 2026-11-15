@@ -10,8 +10,8 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use axum::{
     body::{Body, Bytes},
-    extract::Query,
-    http::{header, StatusCode},
+    extract::{Query, State},
+    http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -25,6 +25,7 @@ use crate::llm_agent::{AgentIntent, AgentRuntime, LocalLlmAgent, WebizenVerdict}
 use crate::modalities::logic::n3_compiler::N3OutputMode;
 
 use super::poet_llm_api::{decode_request, PoetLlmRequest};
+use super::poet_llm_conditioning::prepare_prompt;
 
 const MAX_JOBS: usize = 32;
 const MAX_EVENTS_PER_JOB: usize = 512;
@@ -38,6 +39,7 @@ struct JobEvent {
 }
 
 struct LlmJob {
+    authority: Arc<crate::llm_agent::native_request::NativeProductSession>,
     control: DecodeControl,
     events: Mutex<Vec<JobEvent>>,
     tx: broadcast::Sender<JobEvent>,
@@ -47,9 +49,10 @@ struct LlmJob {
 }
 
 impl LlmJob {
-    fn new() -> Self {
+    fn new(authority: Arc<crate::llm_agent::native_request::NativeProductSession>) -> Self {
         let (tx, _) = broadcast::channel(JOB_EVENT_CAPACITY);
         Self {
+            authority,
             control: DecodeControl::default(),
             events: Mutex::new(Vec::new()),
             tx,
@@ -81,6 +84,7 @@ fn jobs() -> &'static Mutex<BTreeMap<String, Arc<LlmJob>>> {
     JOBS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
+/// `true` when `active_jobs` present.
 pub fn has_active_jobs() -> bool {
     jobs()
         .lock()
@@ -90,6 +94,17 @@ pub fn has_active_jobs() -> bool {
                 .any(|job| !job.terminal.load(Ordering::Acquire))
         })
         .unwrap_or(true)
+}
+
+/// Host session replacement/logout cooperatively stops every old worker.
+pub(super) fn cancel_all() {
+    if let Ok(guard) = jobs().lock() {
+        for job in guard.values() {
+            if !job.terminal.load(Ordering::Acquire) {
+                job.control.cancel();
+            }
+        }
+    }
 }
 
 fn diagnostic(status: StatusCode, code: &'static str, message: impl Into<String>) -> Response {
@@ -105,7 +120,16 @@ fn diagnostic(status: StatusCode, code: &'static str, message: impl Into<String>
         .into_response()
 }
 
-pub async fn start_handler(body: Bytes) -> Response {
+/// HTTP `start` handler.
+pub async fn start_handler(
+    State(state): State<Arc<super::webizen_server::WebizenState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let authority = match super::poet_llm_authority::authenticate(&state, &headers) {
+        Ok(authority) => authority,
+        Err(response) => return response,
+    };
     let request = match decode_request(&body) {
         Ok(request) => request,
         Err(response) => return response,
@@ -120,7 +144,7 @@ pub async fn start_handler(body: Bytes) -> Response {
             unix_now()
         ))
     );
-    let job = Arc::new(LlmJob::new());
+    let job = Arc::new(LlmJob::new(authority));
     job.emit("started", serde_json::json!({"job_id": job_id}));
     {
         let mut guard = match jobs().lock() {
@@ -161,7 +185,16 @@ pub struct JobQuery {
     job_id: String,
 }
 
-pub async fn events_handler(Query(query): Query<JobQuery>) -> Response {
+/// HTTP `events` handler.
+pub async fn events_handler(
+    State(state): State<Arc<super::webizen_server::WebizenState>>,
+    headers: HeaderMap,
+    Query(query): Query<JobQuery>,
+) -> Response {
+    let authority = match super::poet_llm_authority::authenticate(&state, &headers) {
+        Ok(authority) => authority,
+        Err(response) => return response,
+    };
     let job = match jobs()
         .lock()
         .ok()
@@ -176,6 +209,13 @@ pub async fn events_handler(Query(query): Query<JobQuery>) -> Response {
             );
         }
     };
+    if !Arc::ptr_eq(&job.authority, &authority) {
+        return diagnostic(
+            StatusCode::FORBIDDEN,
+            "job_authority",
+            "Job belongs to a different native session",
+        );
+    }
     let mut subscriber = job.tx.subscribe();
     let backlog = job
         .events
@@ -220,7 +260,16 @@ pub struct CancelRequest {
     job_id: String,
 }
 
-pub async fn cancel_handler(body: Bytes) -> Response {
+/// HTTP `cancel` handler.
+pub async fn cancel_handler(
+    State(state): State<Arc<super::webizen_server::WebizenState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let authority = match super::poet_llm_authority::authenticate(&state, &headers) {
+        Ok(authority) => authority,
+        Err(response) => return response,
+    };
     let request: CancelRequest = match serde_json::from_slice(&body) {
         Ok(request) if body.len() <= 4096 => request,
         _ => {
@@ -241,6 +290,13 @@ pub async fn cancel_handler(body: Bytes) -> Response {
             return diagnostic(StatusCode::NOT_FOUND, "job_not_found", "Job was not found");
         }
     };
+    if !Arc::ptr_eq(&job.authority, &authority) {
+        return diagnostic(
+            StatusCode::FORBIDDEN,
+            "job_authority",
+            "Job belongs to a different native session",
+        );
+    }
     if job.terminal.load(Ordering::Acquire) {
         return diagnostic(
             StatusCode::CONFLICT,
@@ -259,8 +315,20 @@ pub async fn cancel_handler(body: Bytes) -> Response {
 }
 
 fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
-    job.control.set_token_budget(request.max_tokens);
+    let prepared = match prepare_prompt(&request) {
+        Ok(prepared) => prepared,
+        Err(message) => {
+            persist_run_receipt(&job_id, &request, "failed", 0, 0, &message);
+            finish_error(&job, &message);
+            return;
+        }
+    };
+    job.control.set_token_budget(prepared.token_budget);
     let agent = LocalLlmAgent::new(&request.agent_did, &request.model_path);
+    if let Err(message) = super::poet_llm_authority::bind(&agent, &job.authority) {
+        finish_error(&job, &message);
+        return;
+    }
     let context_hash = crate::q_hash(&request.graph_context);
     let intent = AgentIntent {
         intent_predicate: crate::q_hash("llm:ReadGraph"),
@@ -294,7 +362,7 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
     let started = Instant::now();
     let event_job = Arc::clone(&job);
     let (text, provenance, tokens, semantic_quin) = agent.infer_local_model_controlled(
-        &request.prompt,
+        &prepared.text,
         &request.graph_context,
         job.control.clone(),
         Some(move |delta| event_job.emit("token", serde_json::json!({"delta": delta}))),
@@ -339,7 +407,7 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
         return;
     }
     let verified =
-        crate::inference::post_turn_verify::maybe_verify_turn(&request.prompt, &output.text);
+        crate::inference::post_turn_verify::maybe_verify_turn(&prepared.text, &output.text);
     let checks = verified
         .checks
         .iter()
@@ -366,7 +434,13 @@ fn run_job(request: PoetLlmRequest, job: Arc<LlmJob>, job_id: String) {
             "provenance_hashes": output.provenance_quins,
             "context_hash": context_hash,
             "context_supplied": !request.graph_context.is_empty(),
-            "token_budget": request.max_tokens,
+            "token_budget": prepared.token_budget,
+            "conditioning": {
+                "applied": prepared.plan_id.is_some(),
+                "plan_id": prepared.plan_id,
+                "profile_id": prepared.profile_id,
+                "selected_evidence": prepared.selected_evidence,
+            },
             "repaired": verified.repaired,
             "checks": checks,
             "semantic_quin": output.semantic_quin

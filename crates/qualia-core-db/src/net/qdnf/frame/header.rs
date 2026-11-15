@@ -27,6 +27,7 @@ pub struct FrameHeader {
 }
 
 impl FrameHeader {
+    /// Creates a default `FrameHeader`.
     pub fn new(frame_type: FrameType, next_protocol: NextProtocol) -> Self {
         Self {
             version: VERSION,
@@ -45,11 +46,13 @@ impl FrameHeader {
     }
 
     #[inline]
+    /// `true` when critical.
     pub const fn is_critical(self) -> bool {
         self.flags & flags::CRITICAL != 0
     }
 
     #[inline]
+    /// `true` when fragment.
     pub const fn is_fragment(self) -> bool {
         self.flags & flags::FRAGMENT != 0
     }

@@ -7,7 +7,7 @@ use super::anatomy_measurement_fields::{
     fields_in, MeasureField, MeasureGroup, MeasureInput, MEASURE_FIELDS,
 };
 use super::host_client::{get_body_constitution, reset_body_constitution, set_body_constitution};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct FormState {
@@ -291,6 +291,7 @@ fn declared_count(form: &FormState) -> usize {
 }
 
 #[component]
+/// Aether `AnatomyConstitutionForm` component.
 pub fn AnatomyConstitutionForm(model: String) -> Element {
     let mut form = use_signal(FormState::default);
     let mut loaded = use_signal(|| false);

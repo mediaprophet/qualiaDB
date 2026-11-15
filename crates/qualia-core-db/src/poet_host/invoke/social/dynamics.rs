@@ -27,6 +27,7 @@ pub fn gini(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::gini`.
 pub fn gini(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Social.gini"))
 }
@@ -54,6 +55,7 @@ pub fn lorenz(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::lorenz`.
 pub fn lorenz(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Social.lorenz"))
 }
@@ -86,6 +88,7 @@ pub fn degree_centrality(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::degree_centrality`.
 pub fn degree_centrality(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Social.degree_centrality"))
 }
@@ -117,6 +120,7 @@ pub fn malfeasance_delta(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::malfeasance_delta`.
 pub fn malfeasance_delta(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Forensic.malfeasance_delta"))
 }
@@ -176,6 +180,7 @@ pub fn narrative_divergence(args: &Value, span: Span) -> Result<Value, Diagnosti
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::narrative_divergence`.
 pub fn narrative_divergence(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Forensic.narrative_divergence"))
 }

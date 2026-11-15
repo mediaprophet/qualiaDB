@@ -29,10 +29,12 @@ use std::collections::BTreeMap;
 pub struct ModuleId(pub String);
 
 impl ModuleId {
+    /// Creates a new `ModuleId`.
     pub fn new(iri: &str) -> Self {
         Self(iri.into())
     }
 
+    /// `str` form.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -67,6 +69,7 @@ pub enum ExportKind {
 }
 
 impl ExportKind {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Function => "function",
@@ -162,6 +165,7 @@ pub struct ModuleCatalog {
 }
 
 impl ModuleCatalog {
+    /// Creates a new `ModuleCatalog`.
     pub fn new() -> Self {
         Self::default()
     }
@@ -282,6 +286,7 @@ pub struct ModuleResolver<'a> {
 }
 
 impl<'a> ModuleResolver<'a> {
+    /// Creates a new `ModuleResolver`.
     pub fn new(catalog: &'a ModuleCatalog) -> Self {
         Self { catalog }
     }

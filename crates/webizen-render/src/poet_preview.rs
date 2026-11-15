@@ -94,6 +94,7 @@ fn response(
     }
 }
 
+/// `scene-from` value.
 pub fn scene_from_value(value: &Value) -> RenderScene {
     let mut scene = RenderScene::new();
     scene.set_background(rec_str(value, "background").unwrap_or_else(|| "#07090e".into()));

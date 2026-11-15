@@ -251,6 +251,11 @@ fn compute_conditional_probability(graph: &[NQuin], y_var: u64, x_var: u64) -> O
     Some(0.0)
 }
 
+/// Attempt dialectical synthesis of a thesis/antithesis pair. A
+/// contradiction is detected when subject and predicate match but
+/// objects differ; the synthesized quin then XOR-folds the two
+/// contexts and objects and sets `SYNTHESIZED_BIT`, with parity
+/// recomputed. `None` when the pair isn't a contradiction.
 pub fn synthesize_dialectical(thesis: &NQuin, antithesis: &NQuin) -> Option<NQuin> {
     // A contradiction requires the same subject and predicate but different object
     if thesis.subject == antithesis.subject

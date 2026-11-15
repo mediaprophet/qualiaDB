@@ -10,7 +10,7 @@ QualiaDB's phenomenal viewport (U2) projects the shared `[α, μ, σ]` truth lay
 Competing approaches considered:
 
 1. **LLM waveform generation** — U0 emits PCM buffers. Rejected: blows 42 MB Sentinel budget, adds non-deterministic latency, violates zero-heap hot paths.
-2. **`<audio>` tag + MP3 URLs** — Simple but lossy; psychoacoustic discard destroys sovereignty over dynamic range (`α`).
+2. **`<audio>` tag + MP3 URLs** — Simple but lossy; psychoacoustic discard destroys fidelity over dynamic range (`α`).
 3. **Web Audio API from JS** — Reintroduces V8 spectral math the migration plan retires.
 4. **Symbolic tokens + spectral sheets + parametric DSP** — Matches visual cold/hot split (bake → resident → render).
 

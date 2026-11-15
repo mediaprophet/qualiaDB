@@ -1,0 +1,242 @@
+{
+  "schema": "qbs07-r1-remote-recognition-v1-placeholder-fixtures",
+  "status": "provisional",
+  "construction": "Field-name transcription only. bundle/stream/policy/remote is not present in this working tree. No production reader/writer, no COSE, no Merkle, no network.",
+  "provenance": {
+    "contract": "docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/evidence/qbs07-remote-authority-integration.md Stage R1 field list",
+    "recipient_record": "crates/qualia-core-db/src/crypto/network/object_stream/recipient.rs RecipientFields/RecipientRecord; types.rs RECIPIENT_BYTES and RECIPIENT_PURPOSE",
+    "pin": "crates/qualia-core-db/src/crypto/network/authority/{mod,types}.rs PinHandle/PinConfig/MAX_PINS",
+    "authority_binding": "crates/qualia-core-db/src/net/qdnf/authority/digest_bind.rs AuthorityBinding; owner.rs MAX_RECORDS",
+    "identifiers": "crates/qualia-core-db/src/net/qdnf/types.rs StrongDigest/Generation/OperationId",
+    "scope": "Placeholder schema and deny skeletons. Not remote qualification, not paired-signature evidence, not a codec freeze."
+  },
+  "constants": {
+    "RECIPIENT_BYTES": 1856,
+    "RECIPIENT_PURPOSE": "qbdl-stream-protected-v1/recipient-authority",
+    "PROFILE": "qbdl-stream-protected-v1",
+    "magic": "QBDL-PRA-V1\\0",
+    "magic_bytes": 12,
+    "suite": 1,
+    "flags": 0,
+    "MAX_PINS": 8,
+    "MAX_RECORDS": 8,
+    "recognition_initial_capacity": 8,
+    "MAX_PRIVATE_PACKAGE": 8192,
+    "RECORD_HEADER_BYTES": 88,
+    "proposed_decision_purpose": "qbdl-stream-protected-v1/disclosure-decision",
+    "proposed_decision_purpose_status": "UNVERIFIED freeze; qbs07 states canonical codec and exact label/domain need a subsequent freeze before code",
+    "proposed_lease_ceiling_seconds": {
+      "text": "propose <=30 seconds, configurable only downward for this profile",
+      "status": "UNVERIFIED design text; not an implemented field"
+    }
+  },
+  "recognition_row_fields": {
+    "note": "Copied names from qbs07 R1 enrollment row plus existing PinHandle/RecipientFields/AuthorityBinding members. No new algorithm.",
+    "principal": {
+      "source_name": "principal",
+      "type": "StrongDigest",
+      "width_bytes": 48
+    },
+    "pin_handle": {
+      "source_name": "PinHandle",
+      "fields": {
+        "instance": { "width_bytes": 16 },
+        "slot": "u8",
+        "generation": "Generation"
+      }
+    },
+    "source": {
+      "source_name": "source",
+      "type": "StrongDigest",
+      "width_bytes": 48,
+      "constraint_from_design": "exact source SHA384+length; no source wildcard"
+    },
+    "source_length": {
+      "source_name": "source_length",
+      "type": "u64",
+      "recipient_validate": "source_length < 64 || source_length > MAX_OBJECT_BYTES is Malformed"
+    },
+    "policy": {
+      "source_name": "policy",
+      "design_name": "exact policy artifact digest",
+      "type": "StrongDigest",
+      "width_bytes": 48
+    },
+    "publisher": {
+      "source_name": "publisher",
+      "design_name": "allowed publisher principal",
+      "type": "StrongDigest",
+      "width_bytes": 48
+    },
+    "operation": {
+      "source_name": "operation",
+      "design_name": "allowed operation set",
+      "recipient_width_bytes": 16,
+      "authority_binding_type": "OperationId"
+    },
+    "expires": {
+      "source_name": "expires",
+      "design_name": "expiry",
+      "pin_config_name": "expires_unix",
+      "type": "u64"
+    },
+    "max_decision_lifetime": {
+      "design_name": "maximum decision lifetime",
+      "rust_field": null,
+      "status": "UNVERIFIED name pending remote/recognition.rs"
+    }
+  },
+  "decision_ticket_fields": {
+    "note": "Copied from qbs07 fresh remote decision ticket list. Codec not frozen; no ticket bytes.",
+    "recipient_record_id": {
+      "design_name": "A.id()",
+      "source_method": "RecipientRecord::id",
+      "type": "StrongDigest",
+      "width_bytes": 48,
+      "computation": "sha384(RecipientRecord encoded bytes)"
+    },
+    "endpoint_transcript": {
+      "design_name": "exact accepted endpoint transcript"
+    },
+    "request_id": {
+      "design_name": "request ID",
+      "delivery_width_bytes": 16
+    },
+    "challenge": {
+      "design_name": "fresh verifier challenge[32]",
+      "width_bytes": 32
+    },
+    "controller_generation": {
+      "design_name": "recognized controller generation",
+      "type": "Generation"
+    },
+    "policy": {
+      "design_name": "exact policy digest",
+      "type": "StrongDigest",
+      "width_bytes": 48
+    },
+    "action": {
+      "design_names": ["metadata release", "payload use"]
+    },
+    "not_before": {
+      "source_name": "not_before",
+      "design_name": "not-before/expiry"
+    },
+    "expires": {
+      "source_name": "expires",
+      "design_name": "not-before/expiry"
+    },
+    "decision_id": {
+      "design_name": "monotonically consumed decision ID"
+    },
+    "purpose": {
+      "proposed": "qbdl-stream-protected-v1/disclosure-decision",
+      "status": "UNVERIFIED freeze"
+    },
+    "ticket_plus_paired_envelope_bound_bytes": 8192
+  },
+  "recipient_record_fields": {
+    "type_name": "RecipientFields",
+    "record_name": "RecipientRecord",
+    "encoded_bytes": 1856,
+    "magic": "QBDL-PRA-V1\\0",
+    "fields": [
+      { "name": "descriptor", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "context", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "recipient", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "publisher", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "service", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "purpose", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "instrument", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "scope", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "operation", "type": "[u8; 16]", "width_bytes": 16 },
+      { "name": "closure", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "policy", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "consumer", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "source", "type": "StrongDigest", "width_bytes": 48 },
+      { "name": "source_length", "type": "u64", "width_bytes": 8 },
+      { "name": "key_epoch", "type": "u64", "width_bytes": 8 },
+      { "name": "not_before", "type": "u64", "width_bytes": 8 },
+      { "name": "expires", "type": "u64", "width_bytes": 8 },
+      { "name": "ml_public", "type": "&[u8; 1184]", "width_bytes": 1184 },
+      { "name": "dh_public", "type": "&[u8; 32]", "width_bytes": 32 }
+    ]
+  },
+  "skeleton_recognition_row": {
+    "status": "provisional",
+    "expected": "schema-only",
+    "principal_hex": "UNVERIFIED",
+    "pin_handle": {
+      "instance_hex": "UNVERIFIED",
+      "slot": "UNVERIFIED",
+      "generation": "UNVERIFIED"
+    },
+    "source_hex": "UNVERIFIED",
+    "source_length": "UNVERIFIED",
+    "policy_hex": "UNVERIFIED",
+    "publisher_hex": "UNVERIFIED",
+    "operation_hex": "UNVERIFIED",
+    "expires": "UNVERIFIED",
+    "max_decision_lifetime": "UNVERIFIED",
+    "recipient_record_hex": "UNVERIFIED",
+    "decision_ticket_hex": "UNVERIFIED",
+    "cose_hex": "UNVERIFIED",
+    "merkle_hex": "UNVERIFIED"
+  },
+  "cases": [
+    {
+      "id": "wildcard-source",
+      "expected": "deny",
+      "reason": "Default deny; no source wildcard and no transitive delegation.",
+      "recognition_row": {
+        "principal_hex": "UNVERIFIED",
+        "source": "wildcard",
+        "source_hex": "UNVERIFIED",
+        "source_length": "UNVERIFIED",
+        "policy_hex": "UNVERIFIED",
+        "publisher_hex": "UNVERIFIED",
+        "operation_hex": "UNVERIFIED",
+        "expires": "UNVERIFIED",
+        "max_decision_lifetime": "UNVERIFIED"
+      }
+    },
+    {
+      "id": "unknown-principal",
+      "expected": "deny",
+      "reason": "Reject unsupported delegation chains, unknown source controllers, unknown/mixed coverage, missing required co-consent, and unknown policy versions.",
+      "recognition_row": {
+        "principal": "unknown",
+        "principal_hex": "UNVERIFIED",
+        "source_hex": "UNVERIFIED",
+        "source_length": "UNVERIFIED",
+        "policy_hex": "UNVERIFIED",
+        "publisher_hex": "UNVERIFIED",
+        "operation_hex": "UNVERIFIED",
+        "expires": "UNVERIFIED",
+        "max_decision_lifetime": "UNVERIFIED"
+      }
+    },
+    {
+      "id": "capacity-9",
+      "expected": "deny",
+      "reason": "Initial capacity eight, no implicit eviction.",
+      "recognition_table": {
+        "initial_capacity": 8,
+        "install_count": 9,
+        "implicit_eviction": false
+      },
+      "source_error_name": "Capacity"
+    },
+    {
+      "id": "truncated-ticket",
+      "expected": "deny",
+      "reason": "if bytes.len() != RECIPIENT_BYTES { return Err(Error::Range); }",
+      "recipient_bytes": 1856,
+      "presented_length": 1855,
+      "source_error_name": "Range",
+      "decision_ticket_note": "Canonical fixed-width codec and exact label/domain need a small subsequent freeze before code",
+      "ticket_plus_paired_envelope_bound_bytes": 8192,
+      "bytes_hex": "UNVERIFIED"
+    }
+  ]
+}

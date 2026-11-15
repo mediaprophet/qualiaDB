@@ -1,5 +1,6 @@
 //! Homoiconic CBOR-LD AST Codec (Tag 4200).
 
+pub mod cbor_ld;
 mod codec;
 mod decode;
 mod encode;
@@ -29,6 +30,12 @@ impl std::fmt::Display for DecodeError {
 
 impl std::error::Error for DecodeError {}
 
+pub use cbor_ld::{
+    call_cbor_ld, compress_iri, decode_value_cbor_ld, derive_provider_namespace,
+    encode_value_cbor_ld, expand_term, ingest_json_with_provider_ns, DEFAULT_CONTEXT_IRI,
+    TAG_CBOR_LD_COMPRESSED, TAG_CBOR_LD_UNCOMPRESSED, TAG_VIBE_DISCLOSURE_DENIED,
+    TAG_VIBE_DURATION, TAG_VIBE_INSTANT, TAG_VIBE_IRI, TAG_VIBE_QUANTITY, TAG_VIBE_QUIN_REF,
+};
 pub use decode::decode;
 pub use encode::encode;
 

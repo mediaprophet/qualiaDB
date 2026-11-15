@@ -7,9 +7,23 @@
 //! 3. **Sentinel governance** — `DenyRollback` on the control ring before the next token matmul.
 //! 4. **VramLedger pins** — Full / Eco / Reserve per universe; U0 KV protected in Reserve.
 //!
-//! One physical `wgpu::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
+//! One physical `etalon::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
 
 use core::cell::UnsafeCell;
+// Request lifetime and result-envelope ownership are separated from fabric math.
+#[path = "compute_universe_epoch.rs"]
+mod epoch;
+pub use epoch::{begin_request_epoch, ComputeRequestEpoch};
+#[allow(unused_imports)]
+pub(crate) use epoch::{
+    rebuild_kv as rebuild_context_provenance, record_kv as record_context_provenance,
+};
+#[path = "compute_universe_context.rs"]
+mod context;
+#[allow(unused_imports)]
+pub(crate) use context::{
+    context_input_digest, context_live, context_node_count, context_tensor_at,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -43,6 +57,7 @@ pub enum QualiaPrimitive {
 impl ComputeUniverse {
     /// Native primitives this universe must use (documentation + static dispatch hooks).
     #[inline]
+    /// Qualia primitives resident in this compute universe.
     pub fn qualia_primitives(self) -> &'static [QualiaPrimitive] {
         match self {
             ComputeUniverse::LlmInference => &[
@@ -66,6 +81,7 @@ impl ComputeUniverse {
     }
 
     #[inline]
+    /// Phase-8 channels owned by this universe.
     pub fn phase8_channels(self) -> &'static [Phase8Channel] {
         match self {
             ComputeUniverse::LlmInference => &[
@@ -110,6 +126,7 @@ pub struct ContextInjectToken {
 }
 
 impl ContextInjectToken {
+    /// Zeroed token (no tensor, no subject).
     pub const fn empty() -> Self {
         Self {
             tensor_index: 0,
@@ -121,6 +138,7 @@ impl ContextInjectToken {
 }
 
 impl Default for ContextInjectToken {
+    /// Default is the zeroed `empty()` token.
     fn default() -> Self {
         Self::empty()
     }
@@ -128,6 +146,7 @@ impl Default for ContextInjectToken {
 
 /// Fixed-capacity SPSC context ring (producer U1, consumer U0).
 pub struct ContextInjectRing {
+    epochs: UnsafeCell<[u64; CONTEXT_INJECT_RING_CAP]>,
     slots: UnsafeCell<[ContextInjectToken; CONTEXT_INJECT_RING_CAP]>,
     write_seq: AtomicU32,
     read_seq: AtomicU32,
@@ -137,15 +156,18 @@ pub struct ContextInjectRing {
 unsafe impl Sync for ContextInjectRing {}
 
 impl ContextInjectRing {
+    /// Empty fixed-capacity ring (all slots zeroed).
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([ContextInjectToken::empty(); CONTEXT_INJECT_RING_CAP]),
+            epochs: UnsafeCell::new([0; CONTEXT_INJECT_RING_CAP]),
             write_seq: AtomicU32::new(0),
             read_seq: AtomicU32::new(0),
         }
     }
 
     #[inline]
+    /// Number of live ledger entries.
     pub fn len(&self) -> usize {
         let w = self.write_seq.load(Ordering::Acquire);
         let r = self.read_seq.load(Ordering::Acquire);
@@ -153,12 +175,20 @@ impl ContextInjectRing {
     }
 
     #[inline]
+    /// `true` when no entries are tracked.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Producer (U1 tensor search). Returns false when full.
     pub fn try_push(&self, token: ContextInjectToken) -> bool {
+        if !epoch::can_publish() {
+            return false;
+        }
+        let epoch = epoch::current();
+        if !epoch::accepts(epoch) {
+            return false;
+        }
         let w = self.write_seq.load(Ordering::Relaxed);
         let r = self.read_seq.load(Ordering::Acquire);
         if w.wrapping_sub(r) >= CONTEXT_INJECT_RING_CAP as u32 {
@@ -167,6 +197,7 @@ impl ContextInjectRing {
         let slot = (w % CONTEXT_INJECT_RING_CAP as u32) as usize;
         unsafe {
             (*self.slots.get())[slot] = token;
+            (*self.epochs.get())[slot] = epoch;
         }
         self.write_seq.store(w.wrapping_add(1), Ordering::Release);
         true
@@ -174,15 +205,20 @@ impl ContextInjectRing {
 
     /// Consumer (U0 decode loop). Returns None when empty.
     pub fn try_pop(&self) -> Option<ContextInjectToken> {
-        let r = self.read_seq.load(Ordering::Relaxed);
-        let w = self.write_seq.load(Ordering::Acquire);
-        if r == w {
-            return None;
+        loop {
+            let r = self.read_seq.load(Ordering::Relaxed);
+            let w = self.write_seq.load(Ordering::Acquire);
+            if r == w {
+                return None;
+            }
+            let slot = (r % CONTEXT_INJECT_RING_CAP as u32) as usize;
+            let token = unsafe { (*self.slots.get())[slot] };
+            let epoch = unsafe { (*self.epochs.get())[slot] };
+            self.read_seq.store(r.wrapping_add(1), Ordering::Release);
+            if epoch::accepts(epoch) {
+                return Some(token);
+            }
         }
-        let slot = (r % CONTEXT_INJECT_RING_CAP as u32) as usize;
-        let token = unsafe { (*self.slots.get())[slot] };
-        self.read_seq.store(r.wrapping_add(1), Ordering::Release);
-        Some(token)
     }
 }
 
@@ -197,6 +233,7 @@ pub struct GraphTensorSubstrate {
 
 impl GraphTensorSubstrate {
     #[inline]
+    /// Residency set with `resident_bytes` already occupied.
     pub fn from_tensor_bytes(resident_bytes: u64) -> Self {
         let header_bytes = std::mem::size_of::<TensorBufferHeader>() as u32;
         let stride = TENSOR_STRIDE as u32;
@@ -219,6 +256,7 @@ impl GraphTensorSubstrate {
     }
 
     #[inline]
+    /// `true` when any tensor bytes are resident.
     pub fn is_resident(&self) -> bool {
         self.node_count > 0
     }
@@ -232,6 +270,7 @@ pub struct AttentionRouteMask {
 }
 
 impl Default for AttentionRouteMask {
+    /// Empty mask — all words zero, `active_bits` 0.
     fn default() -> Self {
         Self {
             words: [0u64; ATTENTION_MASK_WORDS],
@@ -242,6 +281,7 @@ impl Default for AttentionRouteMask {
 
 impl AttentionRouteMask {
     #[inline]
+    /// Set residency bit `index` in the bitmap.
     pub fn set_index(&mut self, index: u32) {
         let bit = index as usize;
         let word = bit / 64;
@@ -253,6 +293,7 @@ impl AttentionRouteMask {
     }
 
     #[inline]
+    /// `true` when residency bit `index` is set.
     pub fn is_set(&self, index: u32) -> bool {
         let bit = index as usize;
         let word = bit / 64;
@@ -269,6 +310,7 @@ pub struct UniverseFabric {
 
 impl UniverseFabric {
     #[inline]
+    /// Snapshot of the ledger's current residency state.
     pub fn current(ledger: &VramLedger) -> Self {
         let tensor_bytes = ledger.used_in_slot(VramLedgerSlot::Tensor10D);
         Self {
@@ -279,6 +321,8 @@ impl UniverseFabric {
 
     /// Reserve mode: U2 capped, U0 KV stays Full (LLM wins scheduling).
     #[inline]
+    /// `true` when this reserve guarantees headroom for the LLM KV
+    /// cache under `global` mode.
     pub fn reserve_protects_llm_kv(&self, global: OperationalMode) -> bool {
         global == OperationalMode::Reserve
             && self
@@ -292,11 +336,14 @@ impl UniverseFabric {
     }
 
     #[inline]
+    /// Queue lane for `universe` under this policy.
     pub fn queue_for(&self, universe: ComputeUniverse) -> QueueLane {
         self.orchestrator.partition(universe).queue_lane
     }
 
     #[inline]
+    /// `true` when `extra_bytes` can be pinned without exceeding the
+    /// ledger's VRAM budget.
     pub fn can_pin_tensor(&self, ledger: &VramLedger, extra_bytes: u64) -> bool {
         ledger.can_allocate_in_universe(&self.orchestrator, ComputeUniverse::Tensor10D, extra_bytes)
     }
@@ -305,12 +352,14 @@ impl UniverseFabric {
 static CONTEXT_INJECT_RING: ContextInjectRing = ContextInjectRing::new();
 
 #[inline]
+/// Global context-injection ring.
 pub fn context_inject_ring() -> &'static ContextInjectRing {
     &CONTEXT_INJECT_RING
 }
 
 /// Record a tensor kNN hit for async U0 consumption (continuous RAG path).
 #[inline]
+/// Push a context token onto the inject ring; `false` when full.
 pub fn push_tensor_context(token: ContextInjectToken) -> bool {
     let ok = context_inject_ring().try_push(token);
     if ok {
@@ -321,6 +370,7 @@ pub fn push_tensor_context(token: ContextInjectToken) -> bool {
 
 /// U0 decode loop pulls injected graph context (non-blocking).
 #[inline]
+/// Pop the next pending context token.
 pub fn pop_tensor_context() -> Option<ContextInjectToken> {
     context_inject_ring().try_pop()
 }
@@ -331,8 +381,6 @@ static DECODE_TOKEN_ID: AtomicU32 = AtomicU32::new(0);
 static DECODE_STEP: AtomicU32 = AtomicU32::new(0);
 static QUERY_SUBJECT_HASH: AtomicU32 = AtomicU32::new(0); // lower 32 bits; upper in QUERY_SUBJECT_HI
 static QUERY_SUBJECT_HI: AtomicU32 = AtomicU32::new(0);
-struct SyncUnsafeCell<T>(UnsafeCell<T>);
-unsafe impl<T> Sync for SyncUnsafeCell<T> {}
 
 const ZERO_TENSOR10D: Tensor10D = Tensor10D {
     q: 0.0,
@@ -347,15 +395,14 @@ const ZERO_TENSOR10D: Tensor10D = Tensor10D {
     sigma: 0.0,
 };
 
-static QUERY_TENSOR_CELL: SyncUnsafeCell<Tensor10D> =
-    SyncUnsafeCell(UnsafeCell::new(ZERO_TENSOR10D));
+static QUERY_TENSOR_CELL: std::sync::Mutex<Tensor10D> = std::sync::Mutex::new(ZERO_TENSOR10D);
 static QUERY_SEQ: AtomicU32 = AtomicU32::new(0);
 
-static ATTENTION_MASK_CELL: SyncUnsafeCell<AttentionRouteMask> =
-    SyncUnsafeCell(UnsafeCell::new(AttentionRouteMask {
+static ATTENTION_MASK_CELL: std::sync::Mutex<AttentionRouteMask> =
+    std::sync::Mutex::new(AttentionRouteMask {
         words: [0u64; ATTENTION_MASK_WORDS],
         active_bits: 0,
-    }));
+    });
 static ATTENTION_MASK_SEQ: AtomicU32 = AtomicU32::new(0);
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -365,23 +412,32 @@ static PRODUCER_STOP: AtomicBool = AtomicBool::new(false);
 
 /// U0 publishes the active decode position for the U1 producer (non-blocking).
 #[inline]
+/// Publish a decode-step hint (token id + step) for the
+/// speculative-decode consumer.
 pub fn publish_decode_hint(token_id: u32, step: u32) {
+    if !epoch::can_publish() {
+        return;
+    }
     DECODE_TOKEN_ID.store(token_id, Ordering::Relaxed);
     DECODE_STEP.store(step, Ordering::Release);
 }
 
 /// U0 publishes the 10D query anchor U1 should search around.
 #[inline]
+/// Publish the active query tensor and its subject hash for
+/// cross-universe consumers.
 pub fn publish_query_tensor(tensor: Tensor10D, subject_hash: u64) {
-    unsafe {
-        *QUERY_TENSOR_CELL.0.get() = tensor;
+    if !epoch::can_publish() {
+        return;
     }
+    *QUERY_TENSOR_CELL.lock().unwrap_or_else(|e| e.into_inner()) = tensor;
     QUERY_SUBJECT_HASH.store(subject_hash as u32, Ordering::Relaxed);
     QUERY_SUBJECT_HI.store((subject_hash >> 32) as u32, Ordering::Relaxed);
     QUERY_SEQ.fetch_add(1, Ordering::Release);
 }
 
 #[inline]
+/// Subject hash of the last published query tensor.
 pub fn query_subject_hash() -> u64 {
     let lo = QUERY_SUBJECT_HASH.load(Ordering::Relaxed) as u64;
     let hi = QUERY_SUBJECT_HI.load(Ordering::Relaxed) as u64;
@@ -389,30 +445,41 @@ pub fn query_subject_hash() -> u64 {
 }
 
 #[inline]
+/// Load the last published query tensor.
 pub fn load_query_tensor() -> Tensor10D {
-    unsafe { *QUERY_TENSOR_CELL.0.get() }
+    *QUERY_TENSOR_CELL.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 #[inline]
+/// Current published attention route mask.
 pub fn attention_route_mask() -> AttentionRouteMask {
-    unsafe { *ATTENTION_MASK_CELL.0.get() }
+    *ATTENTION_MASK_CELL
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
 }
 
 #[inline]
+/// Sequence counter for the attention-mask publication channel.
 pub fn attention_mask_seq() -> u32 {
     ATTENTION_MASK_SEQ.load(Ordering::Acquire)
 }
 
 /// Publish U1 route mask snapshot (producer / tests).
 #[inline]
+/// Publish a new attention route mask and bump the sequence
+/// counter.
 pub fn publish_attention_route_mask(mask: AttentionRouteMask) {
-    unsafe {
-        *ATTENTION_MASK_CELL.0.get() = mask;
+    if !epoch::can_publish() {
+        return;
     }
+    *ATTENTION_MASK_CELL
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = mask;
     ATTENTION_MASK_SEQ.fetch_add(1, Ordering::Release);
 }
 
 #[inline]
+/// Set bit `slot` in the KV attention mask word array.
 fn set_kv_mask_bit(words: &mut [u32; KV_ATTENTION_MASK_WORDS], slot: u32) {
     let bit = slot as usize;
     let word = bit / 32;
@@ -424,6 +491,7 @@ fn set_kv_mask_bit(words: &mut [u32; KV_ATTENTION_MASK_WORDS], slot: u32) {
 
 /// Map U1 route mask (tensor indices) → KV slot mask for attention (B3.2b light).
 #[inline]
+/// Read KV attention-mask word `index` of the published mask.
 pub fn attention_kv_mask_u32(
     token_idx: u32,
     max_context: u32,
@@ -441,8 +509,8 @@ pub fn attention_kv_mask_u32(
                 continue;
             }
             let tensor_idx = (word_idx * 64 + bit) as u32;
-            let kv_slot = provenance
-                .kv_slot_for_tensor(tensor_idx)
+            let kv_slot = epoch::scoped_kv_slot(tensor_idx)
+                .unwrap_or_else(|| provenance.kv_slot_for_tensor(tensor_idx))
                 .unwrap_or(tensor_idx);
             if kv_slot < cap {
                 set_kv_mask_bit(&mut words, kv_slot);
@@ -461,6 +529,8 @@ pub fn attention_kv_mask_u32(
 
 /// B3.2a — kNN hits → sparse attention bitmask (zero-heap).
 #[inline]
+/// Build a route mask from tensor-search hits — sets one KV bit
+/// per hit slot.
 pub fn build_attention_route_mask(
     query: &Tensor10D,
     max_distance: f32,
@@ -477,6 +547,12 @@ pub fn build_attention_route_mask(
 
 /// One U1 producer cycle: search resident SOA, push ring, refresh mask, draft topology.
 pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> usize {
+    epoch::produce(|| run_tensor_search_producer_cycle_in_epoch(max_distance, vocab_len))
+}
+fn run_tensor_search_producer_cycle_in_epoch(max_distance: f32, vocab_len: u32) -> usize {
+    if let Some(source) = epoch::source() {
+        return context::produce_owned(&source, max_distance, vocab_len);
+    }
     let substrate = global_resident_substrate();
     if substrate.node_count() == 0 {
         return 0;
@@ -518,6 +594,8 @@ pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> us
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Background U1 producer loop — bounded producer cycles until
+/// `PRODUCER_STOP`, adaptive idle backoff.
 fn tensor_search_producer_loop() {
     crate::platform_scheduler::bind_background_thread();
     let mut idle_spins = 0u32;
@@ -554,21 +632,26 @@ pub fn start_tensor_search_producer() -> bool {
     true
 }
 
+/// Signal the producer loop to exit (native only).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn stop_tensor_search_producer() {
     PRODUCER_STOP.store(true, Ordering::Release);
 }
 
+/// WASM variant — no producer thread; always reports not started.
 #[cfg(target_arch = "wasm32")]
 pub fn start_tensor_search_producer() -> bool {
     false
 }
 
+/// WASM variant — no-op (no producer thread exists).
 #[cfg(target_arch = "wasm32")]
 pub fn stop_tensor_search_producer() {}
 
 /// B2.4 producer hook: push kNN indices from `visit_tensor_search` / `tensor_search_into`.
 #[inline]
+/// Push kNN hit indices into the search-hits channel (drains to
+/// the attention-mask ring).
 pub fn push_tensor_search_hits(
     indices: &[usize],
     subject_hash: u64,
@@ -604,6 +687,7 @@ pub struct TopologyDraftBatch {
 }
 
 impl TopologyDraftBatch {
+    /// Empty draft batch (`draft_len` 0).
     pub const fn empty() -> Self {
         Self {
             draft_len: 0,
@@ -615,6 +699,7 @@ impl TopologyDraftBatch {
 }
 
 pub struct TopologyDraftRing {
+    epochs: UnsafeCell<[u64; TOPOLOGY_DRAFT_RING_CAP]>,
     slots: UnsafeCell<[TopologyDraftBatch; TOPOLOGY_DRAFT_RING_CAP]>,
     write_seq: AtomicU32,
     read_seq: AtomicU32,
@@ -623,15 +708,25 @@ pub struct TopologyDraftRing {
 unsafe impl Sync for TopologyDraftRing {}
 
 impl TopologyDraftRing {
+    /// Empty fixed-capacity draft ring.
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([TopologyDraftBatch::empty(); TOPOLOGY_DRAFT_RING_CAP]),
+            epochs: UnsafeCell::new([0; TOPOLOGY_DRAFT_RING_CAP]),
             write_seq: AtomicU32::new(0),
             read_seq: AtomicU32::new(0),
         }
     }
 
+    /// Push a draft batch; `false` when the ring is full.
     pub fn try_push(&self, batch: TopologyDraftBatch) -> bool {
+        if !epoch::can_publish() {
+            return false;
+        }
+        let epoch = epoch::current();
+        if !epoch::accepts(epoch) {
+            return false;
+        }
         if batch.draft_len == 0 {
             return false;
         }
@@ -643,32 +738,41 @@ impl TopologyDraftRing {
         let slot = (w % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
         unsafe {
             (*self.slots.get())[slot] = batch;
+            (*self.epochs.get())[slot] = epoch;
         }
         self.write_seq.store(w.wrapping_add(1), Ordering::Release);
         true
     }
 
+    /// Pop the next pending draft batch.
     pub fn try_pop(&self) -> Option<TopologyDraftBatch> {
-        let r = self.read_seq.load(Ordering::Relaxed);
-        let w = self.write_seq.load(Ordering::Acquire);
-        if r == w {
-            return None;
+        loop {
+            let r = self.read_seq.load(Ordering::Relaxed);
+            let w = self.write_seq.load(Ordering::Acquire);
+            if r == w {
+                return None;
+            }
+            let slot = (r % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
+            let batch = unsafe { (*self.slots.get())[slot] };
+            let epoch = unsafe { (*self.epochs.get())[slot] };
+            self.read_seq.store(r.wrapping_add(1), Ordering::Release);
+            if epoch::accepts(epoch) {
+                return Some(batch);
+            }
         }
-        let slot = (r % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
-        let batch = unsafe { (*self.slots.get())[slot] };
-        self.read_seq.store(r.wrapping_add(1), Ordering::Release);
-        Some(batch)
     }
 }
 
 static TOPOLOGY_DRAFT_RING: TopologyDraftRing = TopologyDraftRing::new();
 
 #[inline]
+/// Global topology-draft ring.
 pub fn topology_draft_ring() -> &'static TopologyDraftRing {
     &TOPOLOGY_DRAFT_RING
 }
 
 #[inline]
+/// Pop the next topology draft batch from the global ring.
 pub fn pop_topology_draft() -> Option<TopologyDraftBatch> {
     topology_draft_ring().try_pop()
 }
@@ -679,8 +783,63 @@ pub fn pop_topology_draft() -> Option<TopologyDraftBatch> {
 /// concept hashes was a false positive (~1/256 legitimate tokens) and is removed.
 /// Real governance signals must use an explicit flag / quin rule, not a random byte.
 #[inline]
+/// Sentinel gate: admit the draft batch when it carries at least
+/// one concept.
 pub fn sentinel_allows_topology_draft(batch: &TopologyDraftBatch) -> bool {
     batch.draft_len > 0
+}
+
+/// Result of speculative verification of a `TopologyDraftBatch`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SpeculativeVerifyResult {
+    /// Number of draft tokens accepted in prefix sequence (0..=draft_len).
+    pub accepted_count: usize,
+    /// Next token to emit: either draft token accepted + 1 bonus token,
+    /// or the target model's correction token at the first rejected position.
+    pub emitted_token: u32,
+    /// Whether all draft tokens were accepted without rejection.
+    pub fully_accepted: bool,
+}
+
+/// Verify a speculative `TopologyDraftBatch` against target model greedy predictions
+/// or logit argmax tokens.
+///
+/// For each draft token $i \in [0, \text{draft\_len})$, target model predicts $t^*_i$.
+/// If $t_i == t^*_i$, draft token is accepted.
+/// Upon first divergence at index $j$, acceptance stops; $j$ tokens are accepted,
+/// and $t^*_j$ is emitted as the correction token.
+/// If all draft tokens are accepted, all $\text{draft\_len}$ tokens are accepted,
+/// and bonus token $t^*_{\text{draft\_len}}$ is emitted.
+pub fn verify_topology_draft(
+    draft: &TopologyDraftBatch,
+    target_predictions: &[u32],
+) -> SpeculativeVerifyResult {
+    let len = (draft.draft_len as usize)
+        .min(target_predictions.len())
+        .min(MAX_DRAFT_LEN);
+    let mut accepted = 0;
+    while accepted < len {
+        if draft.draft_ids[accepted] == target_predictions[accepted] {
+            accepted += 1;
+        } else {
+            break;
+        }
+    }
+
+    let fully_accepted = accepted == draft.draft_len as usize;
+    let emitted_token = if accepted < target_predictions.len() {
+        target_predictions[accepted]
+    } else if accepted > 0 {
+        draft.draft_ids[accepted - 1]
+    } else {
+        0
+    };
+
+    SpeculativeVerifyResult {
+        accepted_count: accepted,
+        emitted_token,
+        fully_accepted,
+    }
 }
 
 /// Extrapolate γ concept hashes from kNN trajectory (B3.1b); optional `TopologyDraftMapper` (B3.1c).
@@ -700,6 +859,11 @@ pub fn extrapolate_topology_draft(
     }
 }
 
+/// Core draft extrapolation: kNN search over the resident
+/// substrate (GPU path when `gpu-runtime`), XOR concept hashes with
+/// `subject_hash`, optional `TopologyDraftMapper` for token ids,
+/// then push onto the draft ring. `None` when the substrate is
+/// empty or no hits.
 pub fn extrapolate_topology_draft_mapped(
     query: &Tensor10D,
     subject_hash: u64,
@@ -769,130 +933,9 @@ pub fn extrapolate_topology_draft_mapped(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[path = "compute_universe_test_support.rs"]
+mod test_support;
 
-    #[test]
-    fn context_ring_push_pop() {
-        let ring = ContextInjectRing::new();
-        assert!(ring.try_push(ContextInjectToken {
-            tensor_index: 1,
-            subject_hash: 42,
-            distance: 0.5,
-            manifold_w: 0.0,
-        }));
-        let t = ring.try_pop().expect("token");
-        assert_eq!(t.tensor_index, 1);
-        assert!(ring.is_empty());
-    }
-
-    #[test]
-    fn substrate_node_count_from_bytes() {
-        let header = std::mem::size_of::<TensorBufferHeader>() as u64;
-        let sub = GraphTensorSubstrate::from_tensor_bytes(header + 40 * 10);
-        assert_eq!(sub.node_count, 10);
-    }
-
-    #[test]
-    fn u0_has_sentinel_primitive() {
-        let prims = ComputeUniverse::LlmInference.qualia_primitives();
-        assert!(prims.contains(&QualiaPrimitive::Phase8Sentinel));
-    }
-
-    #[test]
-    fn attention_mask_sets_bits() {
-        let mut mask = AttentionRouteMask::default();
-        mask.set_index(100);
-        assert!(mask.is_set(100));
-        assert!(!mask.is_set(101));
-    }
-
-    #[test]
-    fn push_tensor_search_hits_drains_to_ring() {
-        let pushed = push_tensor_search_hits(&[3, 7], 99, 0.5, 1.0);
-        assert_eq!(pushed, 2);
-        assert_eq!(pop_tensor_context().unwrap().tensor_index, 3);
-        assert_eq!(pop_tensor_context().unwrap().tensor_index, 7);
-    }
-
-    #[test]
-    fn build_attention_mask_from_hits() {
-        let query = Tensor10D::default();
-        let mask = build_attention_route_mask(&query, 1.0, &[2, 5, 9], 3);
-        assert!(mask.is_set(2));
-        assert!(mask.is_set(5));
-        assert_eq!(mask.active_bits, 3);
-    }
-
-    #[test]
-    fn attention_kv_mask_maps_tensor_bits() {
-        let mut route = AttentionRouteMask::default();
-        route.set_index(5);
-        route.set_index(12);
-        publish_attention_route_mask(route);
-        let (words, active) = attention_kv_mask_u32(20, 1024);
-        assert_eq!(active, 1);
-        assert_ne!(words[0] & (1u32 << 5), 0);
-        assert_ne!(words[0] & (1u32 << 12), 0);
-        assert_ne!(words[0] & (1u32 << 20), 0);
-    }
-
-    #[test]
-    fn topology_draft_ring_roundtrip() {
-        let ring = TopologyDraftRing::new();
-        let batch = TopologyDraftBatch {
-            draft_len: 2,
-            _pad: [0; 7],
-            draft_ids: [10, 20, 0, 0, 0, 0, 0, 0],
-            concept_hashes: [1, 2, 0, 0, 0, 0, 0, 0],
-        };
-        assert!(ring.try_push(batch));
-        let popped = ring.try_pop().unwrap();
-        assert_eq!(popped.draft_len, 2);
-        assert_eq!(popped.draft_ids[0], 10);
-    }
-
-    #[test]
-    fn sentinel_allows_nonempty_drafts_including_former_false_positives() {
-        let clean = TopologyDraftBatch {
-            draft_len: 1,
-            _pad: [0; 7],
-            draft_ids: [42, 0, 0, 0, 0, 0, 0, 0],
-            concept_hashes: [7, 0, 0, 0, 0, 0, 0, 0],
-        };
-        assert!(sentinel_allows_topology_draft(&clean));
-
-        // Token id / hash low byte 0x99 is legitimate (~1/256) — no longer rejected.
-        let former_false_positive = TopologyDraftBatch {
-            draft_len: 1,
-            _pad: [0; 7],
-            draft_ids: [0x99, 0, 0, 0, 0, 0, 0, 0],
-            concept_hashes: [0x99, 0, 0, 0, 0, 0, 0, 0],
-        };
-        assert!(sentinel_allows_topology_draft(&former_false_positive));
-
-        let empty = TopologyDraftBatch {
-            draft_len: 0,
-            _pad: [0; 7],
-            draft_ids: [0; 8],
-            concept_hashes: [0; 8],
-        };
-        assert!(!sentinel_allows_topology_draft(&empty));
-    }
-
-    #[test]
-    fn producer_cycle_with_global_substrate() {
-        let tensors = [
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-        ];
-        global_resident_substrate()
-            .load_from_tensors(&tensors, 77)
-            .unwrap();
-        publish_query_tensor(tensors[0], 77);
-        let pushed = run_tensor_search_producer_cycle(2.0, 32_000);
-        assert!(pushed >= 1);
-        assert!(attention_route_mask().active_bits >= 1);
-        while pop_tensor_context().is_some() {}
-    }
-}
+#[cfg(test)]
+#[path = "compute_universe_tests.rs"]
+mod tests;

@@ -70,16 +70,19 @@ pub enum PlanningError {
 }
 
 // Early helpers for visibility (fixes intermittent "cannot find" in some build states)
+/// Exact-equality point test (bitwise f64 compare).
 fn same_point(a: Point2, b: Point2) -> bool {
     (a.x - b.x).abs() <= 1e-12 && (a.y - b.y).abs() <= 1e-12
 }
 
+/// Euclidean distance between two `Point2`s.
 fn dist(a: Point2, b: Point2) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     (dx * dx + dy * dy).sqrt()
 }
 
+/// Wrap `pose.theta` to (−π, π].
 pub fn normalize_pose(mut pose: Pose2) -> Pose2 {
     while pose.theta > core::f64::consts::PI {
         pose.theta -= core::f64::consts::TAU;
@@ -90,6 +93,7 @@ pub fn normalize_pose(mut pose: Pose2) -> Pose2 {
     pose
 }
 
+/// Wrap `pose.theta` (yaw) to (−π, π] in the 3D pose.
 pub fn normalize_pose3(mut pose: Pose3) -> Pose3 {
     let n = (pose.orientation[0] * pose.orientation[0]
         + pose.orientation[1] * pose.orientation[1]
@@ -109,6 +113,8 @@ pub fn normalize_pose3(mut pose: Pose3) -> Pose3 {
     pose
 }
 
+/// Linear pose interpolation `a→b` at `t` — angle follows the
+/// shortest arc.
 pub fn interpolate_pose2(a: Pose2, b: Pose2, t: f64) -> Pose2 {
     let t = t.clamp(0.0, 1.0);
     normalize_pose(Pose2 {
@@ -118,6 +124,8 @@ pub fn interpolate_pose2(a: Pose2, b: Pose2, t: f64) -> Pose2 {
     })
 }
 
+/// Planar serial-chain forward kinematics — accumulate link angles/
+/// lengths to the end-effector pose (caller-buffered joint poses).
 pub fn forward_kinematics_2d(
     joints: &[Joint2],
     out_points: &mut [Point2],
@@ -142,6 +150,8 @@ pub fn forward_kinematics_2d(
     Ok(joints.len() + 1)
 }
 
+/// Planar manipulator Jacobian `J[i] = ∂(x,y)/∂θ_i` (caller-buffered
+/// 2-column rows).
 pub fn jacobian_2d(joints: &[Joint2], out: &mut [[f64; 2]]) -> Result<usize, PlanningError> {
     if out.len() < joints.len() {
         return Err(PlanningError::InvalidInput);
@@ -164,6 +174,8 @@ pub fn jacobian_2d(joints: &[Joint2], out: &mut [[f64; 2]]) -> Result<usize, Pla
     Ok(joints.len())
 }
 
+/// `true` when segment `a→b` intersects no obstacle polygon —
+/// edge-intersection plus endpoint-in-polygon tests.
 pub fn segment_collision_free(a: Point2, b: Point2, obstacles: &[PolygonObstacle]) -> bool {
     for obs in obstacles {
         let n = obs.vertices.len();
@@ -194,6 +206,9 @@ pub fn segment_collision_free(a: Point2, b: Point2, obstacles: &[PolygonObstacle
     true
 }
 
+/// Swept-segment collision check: sample `steps` interpolation
+/// points along the `a0→a1`/`b0→b1` sweep, report first collision
+/// time and minimum clearance.
 pub fn continuous_segment_collision(
     a0: Point2,
     a1: Point2,
@@ -228,6 +243,8 @@ pub fn continuous_segment_collision(
     }
 }
 
+/// Minkowski-sum C-obstacle for a translating polygonal robot —
+/// all robot×obstacle vertex sums (caller-buffered).
 pub fn configuration_obstacle_translate(
     robot: &[Point2],
     obstacle: &[Point2],
@@ -251,6 +268,9 @@ pub fn configuration_obstacle_translate(
     Ok(n)
 }
 
+/// Shortest path via visibility graph — obstacle vertices plus
+/// start/goal, edges where the segment is collision-free, Dijkstra
+/// over the graph.
 pub fn visibility_graph_path(
     start: Point2,
     goal: Point2,
@@ -292,6 +312,8 @@ pub fn visibility_graph_path(
     })
 }
 
+/// Probabilistic roadmap: `samples` seeded-random milestones +
+/// collision-free local edges into caller buffers.
 pub fn seeded_roadmap(
     bounds: (f64, f64, f64, f64),
     sample_count: usize,
@@ -318,6 +340,9 @@ pub fn seeded_roadmap(
     Ok(sample_count)
 }
 
+/// Single-query RRT — seeded sampling toward `goal` with `step`
+/// extension; returns the path when goal is reached within
+/// `max_iterations` (caller-buffered).
 pub fn rrt_plan(
     start: Point2,
     goal: Point2,
@@ -365,6 +390,8 @@ pub fn rrt_plan(
     Err(PlanningError::NoPath)
 }
 
+/// Assign arrival times along a path honouring `max_speed` —
+/// trapezoidal timing per segment (caller-buffered `TimedPose2`s).
 pub fn time_parameterize_path(
     path: &[Point2],
     speed: f64,
@@ -397,6 +424,8 @@ pub fn time_parameterize_path(
     Ok(path.len())
 }
 
+/// `true` when two timed trajectories never come within `clearance`
+/// — swept pairwise check across the union of timestamps.
 pub fn multi_robot_conflict_free(a: &[TimedPose2], b: &[TimedPose2], clearance: f64) -> bool {
     if !(clearance.is_finite() && clearance >= 0.0) {
         return false;
@@ -415,6 +444,8 @@ pub fn multi_robot_conflict_free(a: &[TimedPose2], b: &[TimedPose2], clearance: 
     true
 }
 
+/// Boustrophedon coverage path over a rectangle — alternating
+/// direction rows spaced `spacing` apart (caller-buffered waypoints).
 pub fn coverage_lawnmower(
     bounds: (f64, f64, f64, f64),
     spacing: f64,
@@ -442,10 +473,14 @@ pub fn coverage_lawnmower(
     Ok(n)
 }
 
+/// Pure-pursuit step: move `pursuer` toward `evader` by at most
+/// `max_step`.
 pub fn pursuit_step(pursuer: Point2, evader: Point2, max_step: f64) -> Point2 {
     steer(pursuer, evader, max_step.max(0.0))
 }
 
+/// Unicycle-model propagation: integrate `control` over `dt` with a
+/// mid-point heading (second-order accurate).
 pub fn kinodynamic_propagate(pose: Pose2, control: Control2, dt: f64) -> Pose2 {
     let dt = dt.max(0.0);
     let theta_mid = pose.theta + control.angular * dt * 0.5;
@@ -456,6 +491,8 @@ pub fn kinodynamic_propagate(pose: Pose2, control: Control2, dt: f64) -> Pose2 {
     })
 }
 
+/// Proportional pose feedback — linear gain on distance to `goal`,
+/// angular gain on the shortest-arc heading error.
 pub fn feedback_vector(
     current: Pose2,
     goal: Pose2,
@@ -471,6 +508,10 @@ pub fn feedback_vector(
     }
 }
 
+/// Simplified EKF update: propagate the mean by the unicycle model,
+/// inflate covariance by `process_noise`, blend in `observation`
+/// with `observation_weight` (complementary filter, not a full
+/// covariance update).
 pub fn belief_update_2d(
     prior: BeliefState2,
     control: Control2,
@@ -500,6 +541,8 @@ pub fn belief_update_2d(
     }
 }
 
+/// Dijkstra shortest path over an adjacency list — returns (node
+/// path, cost) when `goal` is reachable.
 fn dijkstra(edges: &[Vec<(usize, f64)>], start: usize, goal: usize) -> Option<(Vec<usize>, f64)> {
     let n = edges.len();
     let mut dist = vec![f64::INFINITY; n];
@@ -528,6 +571,7 @@ fn dijkstra(edges: &[Vec<(usize, f64)>], start: usize, goal: usize) -> Option<(V
     None
 }
 
+/// Ray-cast point-in-polygon test.
 fn point_in_polygon(p: Point2, poly: &[Point2]) -> bool {
     let mut inside = false;
     let mut j = poly.len() - 1;
@@ -544,6 +588,7 @@ fn point_in_polygon(p: Point2, poly: &[Point2]) -> bool {
     inside
 }
 
+/// Next splitmix64 stream value scaled to [0, 1).
 fn splitmix01(state: &mut u64) -> f64 {
     *state = state.wrapping_add(0x9E3779B97F4A7C15);
     let mut z = *state;
@@ -553,6 +598,7 @@ fn splitmix01(state: &mut u64) -> f64 {
     ((z >> 11) as f64) / ((1u64 << 53) as f64)
 }
 
+/// Signed shortest-arc difference `b − a` wrapped to (−π, π].
 fn shortest_angle_delta(a: f64, b: f64) -> f64 {
     let mut d = b - a;
     while d > core::f64::consts::PI {
@@ -564,10 +610,12 @@ fn shortest_angle_delta(a: f64, b: f64) -> f64 {
     d
 }
 
+/// Linear interpolation `a + t(b−a)` on `Point2`.
 fn lerp2(a: Point2, b: Point2, t: f64) -> Point2 {
     Point2::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
 }
 
+/// Distance from `p` to the closest point on segment `a→b`.
 fn point_segment_distance(p: Point2, a: Point2, b: Point2) -> f64 {
     let abx = b.x - a.x;
     let aby = b.y - a.y;
@@ -579,6 +627,7 @@ fn point_segment_distance(p: Point2, a: Point2, b: Point2) -> f64 {
     dist(p, Point2::new(a.x + abx * t, a.y + aby * t))
 }
 
+/// Index of the closest tree node to `sample` (linear scan).
 fn nearest_node(nodes: &[Point2], sample: Point2) -> usize {
     let mut best = 0usize;
     let mut best_d = dist(nodes[0], sample);
@@ -592,6 +641,7 @@ fn nearest_node(nodes: &[Point2], sample: Point2) -> usize {
     best
 }
 
+/// Advance from `from` toward `to` by at most `step`.
 fn steer(from: Point2, to: Point2, step: f64) -> Point2 {
     let d = dist(from, to);
     if d <= step || d == 0.0 {
@@ -602,6 +652,8 @@ fn steer(from: Point2, to: Point2, step: f64) -> Point2 {
     }
 }
 
+/// Back-chain the parent pointers into `out` (reversed to
+/// start→goal order).
 fn write_parent_path(
     nodes: &[Point2],
     parent: &[usize],

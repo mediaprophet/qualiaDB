@@ -178,9 +178,20 @@ fn bom_stripped_copy(src: &Path, dest: &Path) -> io::Result<()> {
 }
 
 fn already_reprocessed(dest: &Path) -> bool {
-    Q42InspectReport::from_path(dest)
-        .map(|report| !report.lexicon_has_no_terms && report.flags & FLAG_PERMISSIVE_COMMONS != 0)
-        .unwrap_or(false)
+    // v4 migration gate: "already reprocessed" now also requires the
+    // namespaced paged Q42LEX (format version 4). Pre-v4 volumes with
+    // populated lexicons re-ingest once through the current writer, which
+    // emits the v4 layout (see q42_lex_ns / ADR 0015).
+    let Ok(volume) = qualia_core_db::q42_volume::Q42Volume::open(dest) else {
+        return false;
+    };
+    if volume.header().flags & FLAG_PERMISSIVE_COMMONS == 0 {
+        return false;
+    }
+    let Ok(view) = volume.lex_view() else {
+        return false;
+    };
+    view.entry_count() > 0 && view.lex_format_version() == qualia_core_db::q42_lex::LEX_VERSION_V4
 }
 
 fn replace_dest(tmp: &Path, dest: &Path) -> io::Result<()> {

@@ -48,6 +48,7 @@ pub struct AcceleratorCapabilities {
 }
 
 impl StatisticalAccelerator {
+    /// Creates a default `StatisticalAccelerator`.
     pub fn new() -> Self {
         Self {
             acceleration_strategies: vec![
@@ -59,6 +60,7 @@ impl StatisticalAccelerator {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.optimization_engine.initialize()?;
         Ok(())
@@ -105,10 +107,12 @@ impl StatisticalAccelerator {
 }
 
 impl OptimizationEngine {
+    /// Creates a default `OptimizationEngine`.
     pub fn new() -> Self {
         Self {}
     }
 
+    /// `OptimizationEngine::initialize`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }

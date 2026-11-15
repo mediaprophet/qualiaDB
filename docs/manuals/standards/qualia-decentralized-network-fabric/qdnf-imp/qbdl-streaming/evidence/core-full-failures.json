@@ -1,0 +1,170 @@
+[
+  {
+    "test": "gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode",
+    "output": "\r\nthread 'gemma4-26b-a4b-test' (20312) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1217:33:\r\nload_gguf_checked(C:\\LLM_files\\gemma\\gemma-4-26B-A4B-it-GGUF\\gemma-4-26B-A4B-it-MXFP4_MOE.gguf) failed: architecture 'gemma4' is not supported by the native Llama-shaped decode path yet (missing: sliding-window + dual head_dim, QK-norm). Convert/activate to p64 still works; coherent inference needs the gemma4 graph. Set QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1 to force (will be garbage).\r\n\r\nthread 'gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode' (24812) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1390:23:\r\ncalled `Result::unwrap()` on an `Err` value: Any { .. }\r\n"
+  },
+  {
+    "test": "gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode",
+    "output": "\r\nthread 'gemma4-e4b-test' (44680) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1217:33:\r\nload_gguf_checked(C:\\LLM_files\\gemma\\gemma-4-E4B-it-GGUF\\gemma-4-E4B-it-Q4_K_M.gguf) failed: architecture 'gemma4' is not supported by the native Llama-shaped decode path yet (missing: per-layer embeddings (PLE), sliding-window + dual head_dim, shared KV layers, QK-norm). Convert/activate to p64 still works; coherent inference needs the gemma4 graph. Set QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1 to force (will be garbage).\r\n\r\nthread 'gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode' (35664) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1373:23:\r\ncalled `Result::unwrap()` on an `Err` value: Any { .. }\r\n"
+  },
+  {
+    "test": "gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode",
+    "output": "[gguf_bridge] KV arena 17039360 slots (65.0 MiB, int8+scale), context=1024\r\n[smoke] Loaded C:\\LLM_files\\qwen\\Qwen3.5-4B-GGUF\\Qwen3.5-4B-Q4_K_M.gguf in 6602.1 ms | layers=32 emb_dim=2560 arch=255 kv_mib=65.0 prompt_tokens=[760, 6511, 314, 9338, 369]\r\n\r\nthread 'qwen35-4b-test' (49532) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1260:13:\r\nassertion `left == right` failed: expected all 32 layers to execute at pos=0, got 31\r\n  left: 31\r\n right: 32\r\n\r\nthread 'gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode' (31368) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\gemma4_qwen35.rs:1356:23:\r\ncalled `Result::unwrap()` on an `Err` value: Any { .. }\r\n"
+  },
+  {
+    "test": "gguf_bridge::qwen35::tests::public_ftw_lease_budget_custody_mismatch_and_reset",
+    "output": "\r\nthread 'gguf_bridge::qwen35::tests::public_ftw_lease_budget_custody_mismatch_and_reset' (36720) panicked at crates\\qualia-core-db\\src\\gguf_bridge\\qwen35\\tests.rs:165:10:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::gguf_sharder::tests::gemma4_decode_supported_fails_closed",
+    "output": "\r\nthread 'inference::gguf_sharder::tests::gemma4_decode_supported_fails_closed' (14416) panicked at crates\\qualia-core-db\\src\\inference\\gguf_sharder\\tests.rs:374:10:\r\nGemma 4 decoder graph is now natively supported: \"architecture 'gemma4' is not supported by the native Llama-shaped decode path yet (missing: per-layer embeddings (PLE), sliding-window + dual head_dim, shared KV layers). Convert/activate to p64 still works; coherent inference needs the gemma4 graph. Set QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1 to force (will be garbage).\"\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_edges::denied_eos_and_empty_eos_restore_every_numerical_buffer",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_edges::denied_eos_and_empty_eos_restore_every_numerical_buffer' (33564) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_edges::empty_eos_requires_real_acceptance_and_exact_zero_byte_acknowledgment",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_edges::empty_eos_requires_real_acceptance_and_exact_zero_byte_acknowledgment' (41280) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_edges::failed_second_prefill_restores_that_step_but_discards_the_unpublished_job",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_edges::failed_second_prefill_restores_that_step_but_discards_the_unpublished_job' (49256) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_invalidations::actual_policy_or_actor_changes_after_allow_roll_back_all_thirteen_buffers",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_invalidations::actual_policy_or_actor_changes_after_allow_roll_back_all_thirteen_buffers' (32948) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_invalidations::real_policy_expiry_after_allow_restores_pending_numerics_and_publishes_nothing",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_invalidations::real_policy_expiry_after_allow_restores_pending_numerics_and_publishes_nothing' (37140) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::accepted_prefix_survives_controller_loss_but_no_later_token_commits",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::accepted_prefix_survives_controller_loss_but_no_later_token_commits' (21752) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::actual_policy_host_loss_during_prefill_refuses_before_any_proposal",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::actual_policy_host_loss_during_prefill_refuses_before_any_proposal' (41212) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::aggregate_minus_one_and_any_request_policy_do_not_start_execution",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::aggregate_minus_one_and_any_request_policy_do_not_start_execution' (25660) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::eos_and_last_context_position_are_accepted_before_stop_and_overflow_refuses",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::eos_and_last_context_position_are_accepted_before_stop_and_overflow_refuses' (24184) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers' (48424) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::partial_drain_and_unwind_terminally_discard_the_committed_job",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::partial_drain_and_unwind_terminally_discard_the_committed_job' (33440) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "inference::inference_agent::governed_cpu::runtime_tests::real_denial_restores_all_buffers_and_never_writes_output_or_lineage",
+    "output": "\r\nthread 'inference::inference_agent::governed_cpu::runtime_tests::real_denial_restores_all_buffers_and_never_writes_output_or_lineage' (49008) panicked at crates\\qualia-core-db\\src\\inference\\inference_agent\\governed_cpu\\runtime_fixture.rs:140:6:\r\ncalled `Result::unwrap()` on an `Err` value: UnsupportedBacking\r\n"
+  },
+  {
+    "test": "net::peer::fabric::connect::tests::local_bound_udp_delivers_and_admits_session",
+    "output": "\r\nthread 'net::peer::fabric::connect::tests::local_bound_udp_delivers_and_admits_session' (35344) panicked at crates\\qualia-core-db\\src\\net\\peer\\fabric\\connect.rs:338:18:\r\ncalled `Result::unwrap()` on an `Err` value: Capacity\r\n"
+  },
+  {
+    "test": "net::peer::fabric::lease_protocol::tests::two_local_peers_exchange_under_cscp_lease",
+    "output": "\r\nthread 'net::peer::fabric::lease_protocol::tests::two_local_peers_exchange_under_cscp_lease' (11524) panicked at crates\\qualia-core-db\\src\\net\\peer\\fabric\\lease_protocol.rs:100:9:\r\nassertion `left == right` failed\r\n  left: 0\r\n right: 4\r\n"
+  },
+  {
+    "test": "net::peer::fabric::relay::tests::lease_expiry_stops_forward",
+    "output": "\r\nthread 'net::peer::fabric::relay::tests::lease_expiry_stops_forward' (48472) panicked at crates\\qualia-core-db\\src\\net\\peer\\fabric\\relay.rs:153:9:\r\nassertion `left == right` failed\r\n  left: Ok(0)\r\n right: Err(LeaseDead)\r\n"
+  },
+  {
+    "test": "p2p::connectivity::cscp_h2::tests::unknown_critical_capsule_rejected",
+    "output": "\r\nthread 'p2p::connectivity::cscp_h2::tests::unknown_critical_capsule_rejected' (22784) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\cscp_h2.rs:254:51:\r\ncalled `Result::unwrap()` on an `Err` value: \"tcp connect to 127.0.0.1:57024: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::cscp_h2::tests::cscp_control_then_qsession_on_local_tls_h2",
+    "output": "\r\nthread 'p2p::connectivity::cscp_h2::tests::cscp_control_then_qsession_on_local_tls_h2' (23748) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\cscp_h2.rs:232:62:\r\ncalled `Result::unwrap()` on an `Err` value: \"tls-h2: tcp connect to 127.0.0.1:57023: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::cscp_wss::tests::cscp_control_then_qsession_on_local_tls_wss",
+    "output": "\r\nthread 'p2p::connectivity::cscp_wss::tests::cscp_control_then_qsession_on_local_tls_wss' (15384) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\cscp_wss.rs:165:63:\r\ncalled `Result::unwrap()` on an `Err` value: \"tls: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::cscp_h2::tests::wrong_connect_protocol_rejected",
+    "output": "\r\nthread 'p2p::connectivity::cscp_h2::tests::wrong_connect_protocol_rejected' (40680) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\cscp_h2.rs:245:9:\r\ntcp connect to 127.0.0.1:57027: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\r\n"
+  },
+  {
+    "test": "p2p::connectivity::h2_capsule::tests::endpoints_own_listener_and_join_socket_tasks_before_release",
+    "output": "\r\nthread 'p2p::connectivity::h2_capsule::tests::endpoints_own_listener_and_join_socket_tasks_before_release' (38264) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\h2_capsule_tests.rs:15:57:\r\ncalled `Result::unwrap()` on an `Err` value: \"tcp connect to 127.0.0.1:57031: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::h2_capsule::tests::last_endpoint_can_be_dropped_inside_another_runtime",
+    "output": "\r\nthread 'p2p::connectivity::h2_capsule::tests::last_endpoint_can_be_dropped_inside_another_runtime' (43352) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\h2_capsule_tests.rs:51:57:\r\ncalled `Result::unwrap()` on an `Err` value: \"tcp connect to 127.0.0.1:57033: An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::establish::tests::local_production_path_requires_qsession",
+    "output": "\r\nthread 'p2p::connectivity::establish::tests::local_production_path_requires_qsession' (2372) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\establish.rs:113:66:\r\ncalled `Result::unwrap()` on an `Err` value: \"ice: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (os error 10060)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::ice_udp::tests::binding_check_required_before_nominate",
+    "output": "\r\nthread 'p2p::connectivity::ice_udp::tests::binding_check_required_before_nominate' (48472) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\ice_udp.rs:59:44:\r\nlocal STUN Binding: \"A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (os error 10060)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::two_process::tests::two_process_authenticated_wss",
+    "output": "\r\nthread 'p2p::connectivity::two_process::tests::two_process_authenticated_wss' (20124) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\two_process.rs:93:23:\r\nwss parent: \"An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::wss::tests::loopback_ws_datagram",
+    "output": "\r\nthread 'p2p::connectivity::wss::tests::loopback_ws_datagram' (15184) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\wss.rs:375:46:\r\ncalled `Result::unwrap()` on an `Err` value: Os { code: 10013, kind: PermissionDenied, message: \"An attempt was made to access a socket in a way forbidden by its access permissions.\" }\r\n"
+  },
+  {
+    "test": "p2p::connectivity::wss_tls::tests::tls_wss_verifies_cert_and_carries_256",
+    "output": "\r\nthread 'p2p::connectivity::wss_tls::tests::tls_wss_verifies_cert_and_carries_256' (36084) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\wss_tls.rs:235:52:\r\ncalled `Result::unwrap()` on an `Err` value: \"An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\"\r\n"
+  },
+  {
+    "test": "p2p::connectivity::turn_local::tests::allocate_then_send_reaches_peer",
+    "output": "\r\nthread 'p2p::connectivity::turn_local::tests::allocate_then_send_reaches_peer' (33740) panicked at crates\\qualia-core-db\\src\\p2p\\connectivity\\turn_local.rs:224:58:\r\nlocal TURN: \"A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond. (os error 10060)\"\r\n"
+  },
+  {
+    "test": "p2p::mesh_service::tests::two_services_peer_and_deliver_over_channels",
+    "output": "\r\nthread 'p2p::mesh_service::tests::two_services_peer_and_deliver_over_channels' (30532) panicked at crates\\qualia-core-db\\src\\p2p\\mesh_service.rs:439:9:\r\nsession established via the service threads\r\n"
+  },
+  {
+    "test": "p2p::social_qdnf::tests::chat_and_qdnf_demux_on_the_same_tunnel",
+    "output": "\r\nthread 'p2p::social_qdnf::tests::chat_and_qdnf_demux_on_the_same_tunnel' (48592) panicked at crates\\qualia-core-db\\src\\p2p\\social_qdnf.rs:211:9:\r\nA WireGuard session\r\n"
+  },
+  {
+    "test": "p2p::social_qdnf::tests::fragmented_handshake_over_wireguard_overlay",
+    "output": "\r\nthread 'p2p::social_qdnf::tests::fragmented_handshake_over_wireguard_overlay' (16252) panicked at crates\\qualia-core-db\\src\\p2p\\social_qdnf.rs:211:9:\r\nA WireGuard session\r\n"
+  },
+  {
+    "test": "p2p::social_qdnf::tests::two_meshes_exchange_a_qframe_over_wireguard",
+    "output": "\r\nthread 'p2p::social_qdnf::tests::two_meshes_exchange_a_qframe_over_wireguard' (7160) panicked at crates\\qualia-core-db\\src\\p2p\\social_qdnf.rs:211:9:\r\nA WireGuard session\r\n"
+  },
+  {
+    "test": "p2p::social_webnet::tests::two_meshes_exchange_an_application_datagram",
+    "output": "\r\nthread 'p2p::social_webnet::tests::two_meshes_exchange_an_application_datagram' (31916) panicked at crates\\qualia-core-db\\src\\p2p\\social_webnet.rs:324:9:\r\nassertion failed: a.has_session(\"b\")\r\n"
+  },
+  {
+    "test": "p2p::social_webnet::tests::two_meshes_peer_and_exchange_by_id",
+    "output": "\r\nthread 'p2p::social_webnet::tests::two_meshes_peer_and_exchange_by_id' (3796) panicked at crates\\qualia-core-db\\src\\p2p\\social_webnet.rs:268:9:\r\nA established a session with B\r\n"
+  },
+  {
+    "test": "p2p::wireguard_runtime::tests::endpoint_is_learned_from_authenticated_source",
+    "output": "\r\nthread 'p2p::wireguard_runtime::tests::endpoint_is_learned_from_authenticated_source' (41280) panicked at crates\\qualia-core-db\\src\\p2p\\wireguard_runtime.rs:388:9:\r\nassertion `left == right` failed: A learned B's endpoint from the authenticated handshake (roaming)\r\n  left: None\r\n right: Some(127.0.0.1:62773)\r\n"
+  },
+  {
+    "test": "p2p::wireguard_runtime::tests::two_tunnels_handshake_and_carry_data_over_udp",
+    "output": "\r\nthread 'p2p::wireguard_runtime::tests::two_tunnels_handshake_and_carry_data_over_udp' (21668) panicked at crates\\qualia-core-db\\src\\p2p\\wireguard_runtime.rs:331:9:\r\nA established a session\r\n"
+  },
+  {
+    "test": "render::assets::tests::glb_rejects_zero_length_authored_normal",
+    "output": "\r\nthread 'render::assets::tests::glb_rejects_zero_length_authored_normal' (9136) panicked at crates\\qualia-core-db\\src\\render\\assets\\mod.rs:877:9:\r\nassertion failed: matches!(import_glb_with_normals(&glb), Err(AssetError::Parse(_)))\r\n"
+  },
+  {
+    "test": "render::vertebrate_anatomy::tests::test_epipubic_bones_and_achilles_tendon_submeshes",
+    "output": "\r\nthread 'render::vertebrate_anatomy::tests::test_epipubic_bones_and_achilles_tendon_submeshes' (49964) panicked at crates\\qualia-core-db\\src\\render\\vertebrate_anatomy.rs:3626:9:\r\nTendon should have smooth glistening collagen sheen\r\n\r\n"
+  }
+]

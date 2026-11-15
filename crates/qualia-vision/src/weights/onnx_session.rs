@@ -59,7 +59,17 @@ pub fn probe_onnx_asset(
 
 #[cfg(feature = "ort")]
 fn load_ort_session(path: &Path) -> Result<ort::session::Session, OnnxSessionError> {
-    ort::session::Session::builder()
+    let environment = qualia_core_db::inference::onnx_runtime::shared_environment()
+        .map_err(|_| OnnxSessionError::LoadFailed)?;
+    load_ort_session_with_environment(path, environment)
+}
+
+#[cfg(feature = "ort")]
+pub fn load_ort_session_with_environment(
+    path: &Path,
+    environment: &ort::environment::Environment,
+) -> Result<ort::session::Session, OnnxSessionError> {
+    ort::session::Session::builder(environment)
         .map_err(|_| OnnxSessionError::LoadFailed)?
         .commit_from_file(path)
         .map_err(|_| OnnxSessionError::LoadFailed)

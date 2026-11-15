@@ -1,5 +1,6 @@
 use crate::NQuin;
 
+/// `true` when `weight >= threshold`.
 pub fn evaluate_threshold(weight: f32, threshold: f32) -> bool {
     weight >= threshold
 }
@@ -33,6 +34,7 @@ pub struct BayesianNetwork {
 }
 
 impl BayesianNetwork {
+    /// Creates a default `BayesianNetwork`.
     pub fn new() -> Self {
         Self {
             nodes: [BayesianNode::default(); MAX_BAYESIAN_NODES],
@@ -40,6 +42,7 @@ impl BayesianNetwork {
         }
     }
 
+    /// Adds a node; error on duplicate.
     pub fn add_node(&mut self, node: BayesianNode) -> Result<(), &'static str> {
         if self.num_nodes >= MAX_BAYESIAN_NODES {
             return Err("Max nodes exceeded");

@@ -1,6 +1,7 @@
 //! `query` category (reorg).
 
 pub mod cbor_compiler;
+pub mod geometry_asset_shacl;
 pub mod graph_accel;
 pub mod graph_index;
 #[cfg(not(target_arch = "wasm32"))]
@@ -20,17 +21,21 @@ pub mod ingest_report;
 pub mod ingest_resume;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
 pub mod ingestion;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod integrity_omit;
 pub mod lexicon;
 pub mod mini_parser;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ontology_loader;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -40,15 +45,28 @@ pub mod query_engine;
 pub mod rdf_star;
 pub mod resolve;
 pub mod resolver;
+pub mod sdmx_cube;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-ontology",
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
 pub mod shacl_compiler;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod source_audit;
 pub mod spawn_decay;
 pub mod temporal_graph;
 pub mod temporal_scrub;
 pub mod visual_model_bridge;
+
+pub use geometry_asset_shacl::{
+    validate_holistic_twin_quins_zero_heap, GeometryShaclVerdict, GeometryShaclViolation,
+};
+pub use sdmx_cube::{
+    compile_observation_to_quins, ingest_sdmx_csv_to_quins, parse_conf_status, parse_sdmx_csv_into,
+    ConfidentialityMark, SdmxObservation, QB_CONF_STATUS, QB_DATASET, QB_OBSERVATION, QB_OBS_VALUE,
+    QB_REF_AREA, QB_TIME_PERIOD,
+};

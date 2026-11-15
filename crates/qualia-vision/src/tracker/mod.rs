@@ -122,6 +122,7 @@ impl Default for BoundedTracker {
 }
 
 impl BoundedTracker {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             slots: [TrackSlot::EMPTY; MAX_TRACKS],
@@ -136,10 +137,12 @@ impl BoundedTracker {
         }
     }
 
+    /// `active-track` count.
     pub fn active_track_count(&self) -> usize {
         self.slots.iter().filter(|s| s.active).count()
     }
 
+    /// `confirmed-track` count.
     pub fn confirmed_track_count(&self) -> usize {
         self.slots
             .iter()

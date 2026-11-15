@@ -28,6 +28,7 @@ pub struct ColourGrade {
 }
 
 impl VideoClip {
+    /// Creates a clip for `source` with `duration`, 1.0 speed, full-range trim.
     pub fn new(id: &str, source: &str, duration: f64) -> Self {
         Self {
             id: id.to_string(),
@@ -41,19 +42,23 @@ impl VideoClip {
         }
     }
 
+    /// Sets in/out points (seconds) bounding the clip.
     pub fn trim(&mut self, in_point: f64, out_point: f64) {
         self.in_point = in_point.max(0.0);
         self.out_point = out_point.min(self.duration);
     }
 
+    /// Sets the playback speed multiplier.
     pub fn set_speed(&mut self, speed: f64) {
         self.speed = speed.max(0.01);
     }
 
+    /// Trimmed duration divided by speed.
     pub fn effective_duration(&self) -> f64 {
         (self.out_point - self.in_point) / self.speed
     }
 
+    /// Applies a colour grade to the clip.
     pub fn apply_colour_grade(&mut self, grade: ColourGrade) {
         self.colour = grade;
     }
@@ -70,6 +75,7 @@ pub struct VideoTrack {
 }
 
 impl VideoTrack {
+    /// Creates an empty named track.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -80,11 +86,13 @@ impl VideoTrack {
         }
     }
 
+    /// Appends `clip` (`_timeline_position` currently ignored — sequential layout).
     pub fn add_clip(&mut self, clip: VideoClip, _timeline_position: f64) {
         // timeline_position is stored implicitly via clip start_time
         self.clips.push(clip);
     }
 
+    /// Removes the clip with `clip_id`; `true` when found.
     pub fn remove_clip(&mut self, clip_id: &str) -> bool {
         if let Some(pos) = self.clips.iter().position(|c| c.id == clip_id) {
             self.clips.remove(pos);
@@ -94,6 +102,7 @@ impl VideoTrack {
         }
     }
 
+    /// Sum of clip effective durations.
     pub fn total_duration(&self) -> f64 {
         self.clips.iter().map(|c| c.effective_duration()).sum()
     }
@@ -122,6 +131,7 @@ pub struct VideoTransition {
 }
 
 impl VideoTransition {
+    /// Creates a transition between two clips with a duration and kind.
     pub fn new(
         id: &str,
         transition_type: TransitionType,
@@ -154,6 +164,7 @@ pub struct VideoProject {
 }
 
 impl VideoProject {
+    /// Creates a project at `width`x`height`@`fps` with no tracks.
     pub fn new(id: &str, name: &str, width: u32, height: u32, fps: f64) -> Self {
         Self {
             id: id.to_string(),
@@ -168,14 +179,17 @@ impl VideoProject {
         }
     }
 
+    /// Appends a track.
     pub fn add_track(&mut self, track: VideoTrack) {
         self.tracks.push(track);
     }
 
+    /// Registers a transition.
     pub fn add_transition(&mut self, transition: VideoTransition) {
         self.transitions.insert(transition.id.clone(), transition);
     }
 
+    /// Longest track duration.
     pub fn total_duration(&self) -> f64 {
         self.tracks
             .iter()
@@ -183,14 +197,17 @@ impl VideoProject {
             .fold(0.0, f64::max)
     }
 
+    /// Sets the output container/codec label.
     pub fn set_render_format(&mut self, format: &str) {
         self.render_format = format.to_string();
     }
 
+    /// Sets the target output bitrate.
     pub fn set_render_bitrate(&mut self, bitrate: u64) {
         self.render_bitrate = bitrate;
     }
 
+    /// Number of tracks.
     pub fn track_count(&self) -> usize {
         self.tracks.len()
     }

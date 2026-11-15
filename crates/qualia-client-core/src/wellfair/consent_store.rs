@@ -25,6 +25,7 @@ pub struct ConsentGrantRecord {
 }
 
 impl ConsentGrantRecord {
+    /// Constructs from draft.
     pub fn from_draft(draft: &ConsentGrantDraft, scope: &str) -> Self {
         let granted_at_unix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -42,6 +43,7 @@ impl ConsentGrantRecord {
         }
     }
 
+    /// `true` when active.
     pub fn is_active(&self, now_unix: u64) -> bool {
         if self.revoked {
             return false;
@@ -60,6 +62,7 @@ pub struct ConsentStore {
 }
 
 impl ConsentStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(CONSENTS_FILE);
         if let Some(parent) = path.parent() {
@@ -71,6 +74,7 @@ impl ConsentStore {
         Ok(Self { path })
     }
 
+    /// Appends.
     pub fn append(&self, grant: &ConsentGrantRecord) -> std::io::Result<()> {
         let line =
             serde_json::to_string(grant).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -80,6 +84,7 @@ impl ConsentStore {
         Ok(())
     }
 
+    /// Lists all entries.
     pub fn list_all(&self) -> std::io::Result<Vec<ConsentGrantRecord>> {
         let file = fs::File::open(&self.path)?;
         let reader = BufReader::new(file);
@@ -96,6 +101,7 @@ impl ConsentStore {
         Ok(records)
     }
 
+    /// Lists active entries.
     pub fn list_active(&self, now_unix: u64) -> std::io::Result<Vec<ConsentGrantRecord>> {
         let all = self.list_all()?;
         let mut active: Vec<_> = all.into_iter().filter(|g| g.is_active(now_unix)).collect();
@@ -107,6 +113,7 @@ impl ConsentStore {
         Ok(active)
     }
 
+    /// Revokes.
     pub fn revoke(&self, grant_id: &str) -> std::io::Result<bool> {
         let all = self.list_all()?;
         let mut found = false;

@@ -602,6 +602,7 @@ pub fn dice_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
 // ─── SIMD fast-paths (feature-gated) ───────────────────────────────────
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
+/// `Default::simd_align_x86_64`.
 pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
     if std::is_x86_feature_detected!("avx2") {
         // SAFETY: the AVX2 probe dominates the isolated kernel call.
@@ -642,6 +643,7 @@ unsafe fn simd_align_x86_64_avx2(query: &[u8], target: &[u8]) -> AlignmentScore 
 }
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]
+/// `Default::simd_align_aarch64`.
 pub fn simd_align_aarch64(query: &[u8], target: &[u8]) -> AlignmentScore {
     #[cfg(target_feature = "neon")]
     unsafe {

@@ -27,7 +27,7 @@
 
 ## Follow-up (agent, 2026-09-11)
 
-**Root cause (confirmed):** Desktop `webizen-studio` Dioxus Poet never mounted `lexicon_bay`. WASM `poet-ui` did.
+**Root cause (confirmed):** Desktop `webizen-studio` Aether Poet never mounted `lexicon_bay`. WASM `poet-ui` did.
 
 **Fix landed** on branch `cursor/desktop-catalog-lexicon-57c7`: Catalog · Lexicon studio bay on Desktop Poet + Script/Zone D tabs + `GraphDatabase.lexicon_manifest` bind. Mesh/Aura/SHACL/Pulse/Job wait-honest → held / not yet.
 

@@ -1,14 +1,17 @@
 //! WASM MC8 engine — residency concern (split from mc8_wasm.rs; verbatim, no behaviour change).
+#![allow(dead_code)]
 use super::super::*;
 use std::sync::Arc;
 
 impl QTensorEngine {
+    /// Flushes pending writes to the pipeline.
     pub(crate) fn mc8_flush(&self, pipeline: &mut WasmGpuPipeline) {
         let finished = std::mem::replace(pipeline, WasmGpuPipeline::begin(self));
         self.gpu_queue().submit(Some(finished.finish()));
     }
 
-    pub(crate) fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &wgpu::Buffer {
+    /// Buffer backing `role`.
+    pub(crate) fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &etalon::Buffer {
         let arena = self.mc8_weight_arena.as_ref().expect("mc8 weight arena");
         match role {
             Mc8WeightRole::AttnK => &arena.qkv_k,
@@ -21,14 +24,10 @@ impl QTensorEngine {
         }
     }
 
+    /// Writes `raw` into the `role` buffer, bounded by `max_bytes`.
     pub(crate) fn write_weight_role(&self, role: Mc8WeightRole, raw: &[u8], max_bytes: usize) {
-        let weight_buf = self.mc8_weight_role_buf(role);
-        let upload = if raw.len() <= max_bytes {
-            raw
-        } else {
-            &raw[..max_bytes]
-        };
-        self.gpu_queue().write_buffer(weight_buf, 0, upload);
+        etalon_inference::browser_prefill::PrefillEngine { host: self }
+            .write_weight_role(role, raw, max_bytes)
     }
 
     /// MC8 Part 3x: weight binding for `role` at `layer`. When weights are resident, binds the
@@ -38,18 +37,8 @@ impl QTensorEngine {
         &self,
         role: Mc8WeightRole,
         layer: u32,
-    ) -> wgpu::BindingResource<'_> {
-        let buf = self.mc8_weight_role_buf(role);
-        if self.mc8_weights_resident {
-            let stride = self.mc8_weight_role_stride[role.idx()];
-            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                buffer: buf,
-                offset: layer as u64 * stride,
-                size: std::num::NonZeroU64::new(stride.max(4)),
-            })
-        } else {
-            buf.as_entire_binding()
-        }
+    ) -> etalon::BindingResource<'_> {
+        etalon_inference::browser_prefill::PrefillEngine { host: self }.weight_binding(role, layer)
     }
 
     /// MC8 Part 3x: upload every layer's K/V/Q/O/gate/up/down weights to the GPU **once**, into
@@ -66,7 +55,7 @@ impl QTensorEngine {
             return true;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -134,11 +123,11 @@ impl QTensorEngine {
         // Drop the placeholder arena before allocating resident buffers to minimize peak GPU memory.
         self.mc8_weight_arena = None;
         // Allocate the 7 resident role buffers (replaces the single-layer arena).
-        let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+        let usage = etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST;
         let arena = {
             let dev = self.gpu_device();
             let mk = |i: usize, label: &str| {
-                dev.create_buffer(&wgpu::BufferDescriptor {
+                dev.create_buffer(&etalon::BufferDescriptor {
                     label: Some(label),
                     size: stride[i] * n_layer as u64,
                     usage,
@@ -207,7 +196,7 @@ impl QTensorEngine {
             return false;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -224,10 +213,10 @@ impl QTensorEngine {
         let row_bytes = total / vocab;
         // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
         // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("MC8ResidentLogits"),
             size: total as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         self.gpu_queue().write_buffer(&buf, 0, raw);
@@ -259,7 +248,7 @@ impl QTensorEngine {
         if n_layer == 0 || n_embd == 0 || n_embd > MAX_HIDDEN_DIM {
             return false;
         }
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -267,10 +256,10 @@ impl QTensorEngine {
         let tds = index.tensor_data_start;
         let stride_bytes = (((n_embd * 4) + 255) & !255) as u64;
         let slots = n_layer as u64 * 2;
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("MC8ResidentNorms"),
             size: slots * stride_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let queue = self.gpu_queue();
@@ -312,7 +301,7 @@ impl QTensorEngine {
         n_embd: usize,
         layer: u32,
         is_ffn: bool,
-    ) -> Option<(&wgpu::Buffer, wgpu::BufferAddress)> {
+    ) -> Option<(&etalon::Buffer, etalon::BufferAddress)> {
         if let Some(buf) = self.mc8_norm_resident_buf.as_ref() {
             let slot = 2u64 * layer as u64 + if is_ffn { 1 } else { 0 };
             Some((buf, slot * self.mc8_norm_stride as u64))
@@ -336,6 +325,8 @@ impl QTensorEngine {
         if hp.n_layer == 0 || hp.n_embd == 0 {
             return Err("P64: missing hyperparameters in header".to_string());
         }
+        hp.decode_supported()?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         let staging = index
@@ -368,6 +359,7 @@ impl QTensorEngine {
         Ok(())
     }
 
+    /// `true` when all resident weight buffers are allocated.
     pub(crate) fn mc8_buffers_ready(&self) -> bool {
         self.gemm_input_buf.is_some()
             && self.gemm_output_buf.is_some()
@@ -381,6 +373,7 @@ impl QTensorEngine {
             && self.mc8_weight_arena.is_some()
     }
 
+    /// Uploads normalization weights to their resident buffers.
     pub(crate) fn upload_norm_weights(
         &self,
         mmap: &[u8],

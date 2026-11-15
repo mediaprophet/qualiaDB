@@ -27,6 +27,18 @@ pub fn face_roi_center(src: RgbView<'_>) -> FaceRoi {
 
 /// Mean RGB in ROI into `out` \[r,g,b\].
 pub fn roi_mean_rgb(src: RgbView<'_>, roi: FaceRoi, out: &mut [f32; 3]) {
+    if src.stride == src.width * 3 && roi.w > 0 && roi.h > 0 {
+        *out = etalon_signal::vision::roi_mean_rgb_u8(
+            src.bytes,
+            src.width as usize,
+            src.height as usize,
+            roi.x as usize,
+            roi.y as usize,
+            roi.w as usize,
+            roi.h as usize,
+        );
+        return;
+    }
     let mut s = [0.0f32; 3];
     let mut n = 0.0f32;
     let x1 = roi.x.min(src.width.saturating_sub(1));

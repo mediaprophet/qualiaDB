@@ -34,6 +34,7 @@ impl ChallengeKind {
         Self::PitchDown,
     ];
 
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::YawLeft => "yaw_left",
@@ -46,6 +47,7 @@ impl ChallengeKind {
         }
     }
 
+    /// `true` when rotation.
     pub const fn is_rotation(self) -> bool {
         matches!(
             self,

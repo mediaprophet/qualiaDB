@@ -79,6 +79,7 @@ impl ContentManifest {
     }
 
     #[inline]
+    /// `ContentManifest::range_count`.
     pub fn range_count(&self) -> usize {
         self.range_count as usize
     }

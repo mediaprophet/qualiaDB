@@ -1,0 +1,10 @@
+
+running 5 tests
+test semantic_instruments::resolve::bounded_closure::tests::diamond_preserves_originals_and_dependency_order_under_permutation ... ok
+test semantic_instruments::resolve::bounded_closure::tests::exact_hash_and_zero_digest_checks_do_not_mint_authority ... ok
+test semantic_instruments::resolve::bounded_closure::tests::missing_duplicate_disconnected_and_cycle_inputs_refuse ... ok
+test semantic_instruments::resolve::bounded_closure::tests::original_byte_budget_is_cumulative_and_accepts_exact_boundary ... ok
+test semantic_instruments::resolve::bounded_closure::tests::sixteen_nodes_and_dense_dag_fit_but_seventeen_or_257_edges_refuse ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 10282 filtered out; finished in 1.32s
+

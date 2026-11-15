@@ -256,6 +256,7 @@ pub struct RetentionPolicy {
 // Supporting implementations
 
 impl PortfolioManager {
+    /// Construct a `PortfolioManager` with default field values.
     pub fn new() -> Self {
         Self {
             portfolio_storage: PortfolioStorage::new(),
@@ -265,6 +266,7 @@ impl PortfolioManager {
         }
     }
 
+    /// Initialize `PortfolioManager`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.portfolio_storage.initialize()?;
         self.asset_manager.initialize()?;
@@ -273,6 +275,7 @@ impl PortfolioManager {
         Ok(())
     }
 
+    /// Reject `portfolio` when it has no assets (`ValidationError`); `Ok` otherwise. Structural check only — no rule engine.
     pub fn validate_portfolio(&self, portfolio: &Portfolio) -> Result<(), FinancialError> {
         // Validate portfolio
         if portfolio.assets.is_empty() {
@@ -283,20 +286,24 @@ impl PortfolioManager {
         Ok(())
     }
 
+    /// Store `portfolio` via `portfolio_storage` and return it on success.
     pub fn create_portfolio(&mut self, portfolio: Portfolio) -> Result<Portfolio, FinancialError> {
         // Create portfolio
         self.portfolio_storage.store_portfolio(portfolio.clone())?;
         Ok(portfolio)
     }
 
+    /// Look up `portfolio` by id; `None`/`Err` when absent.
     pub fn get_portfolio(&self, portfolio_id: &str) -> Result<Portfolio, FinancialError> {
         self.portfolio_storage.get_portfolio(portfolio_id)
     }
 
+    /// Ids of every registered `portfolio`.
     pub fn list_portfolios(&self) -> Vec<String> {
         self.portfolio_storage.list_portfolios()
     }
 
+    /// Look up `performance_metrics` by id; `None`/`Err` when absent.
     pub fn get_performance_metrics(&self) -> FinancialPerformanceMetrics {
         self.performance_tracker.get_metrics()
     }
@@ -329,6 +336,7 @@ impl PortfolioManager {
 }
 
 impl PortfolioStorage {
+    /// Construct a `PortfolioStorage` with default field values.
     pub fn new() -> Self {
         Self {
             portfolios: HashMap::new(),
@@ -338,10 +346,12 @@ impl PortfolioStorage {
         }
     }
 
+    /// Initialize `PortfolioStorage`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// `PortfolioStorage` operation `store_portfolio`.
     pub fn store_portfolio(&mut self, portfolio: Portfolio) -> Result<(), FinancialError> {
         let pid = portfolio.portfolio_id.clone();
         let owner = portfolio.owner_id.clone();
@@ -369,6 +379,7 @@ impl PortfolioStorage {
         Ok(())
     }
 
+    /// Look up `portfolio` by id; `None`/`Err` when absent.
     pub fn get_portfolio(&self, portfolio_id: &str) -> Result<Portfolio, FinancialError> {
         let portfolio = self
             .portfolios
@@ -394,33 +405,40 @@ impl PortfolioStorage {
         Ok(portfolio)
     }
 
+    /// Ids of every registered `portfolio`.
     pub fn list_portfolios(&self) -> Vec<String> {
         self.portfolios.keys().cloned().collect()
     }
 
+    /// Add `metadata` to the `PortfolioStorage`.
     pub fn add_metadata(&mut self, metadata: PortfolioMetadata) {
         self.portfolio_metadata
             .insert(metadata.portfolio_id.clone(), metadata);
     }
 
+    /// Look up `metadata` by id; `None`/`Err` when absent.
     pub fn get_metadata(&self, portfolio_id: &str) -> Option<&PortfolioMetadata> {
         self.portfolio_metadata.get(portfolio_id)
     }
 
+    /// Ids of every registered `metadata`.
     pub fn list_metadata(&self) -> Vec<String> {
         self.portfolio_metadata.keys().cloned().collect()
     }
 
+    /// The `access_control` component.
     pub fn access_control(&self) -> &PortfolioAccessControl {
         &self.access_control
     }
 
+    /// The `access_control` component (mutable).
     pub fn access_control_mut(&mut self) -> &mut PortfolioAccessControl {
         &mut self.access_control
     }
 }
 
 impl PortfolioAccessControl {
+    /// Construct a `PortfolioAccessControl` with default field values.
     pub fn new() -> Self {
         Self {
             access_policies: HashMap::new(),
@@ -452,11 +470,13 @@ impl PortfolioAccessControl {
         })
     }
 
+    /// Add `authentication_requirement` to the `PortfolioAccessControl`.
     pub fn add_authentication_requirement(&mut self, requirement: AuthenticationRequirement) {
         self.authentication_requirements
             .insert(requirement.requirement_id.clone(), requirement);
     }
 
+    /// Look up `authentication_requirement` by id; `None` when absent.
     pub fn get_authentication_requirement(
         &self,
         requirement_id: &str,
@@ -464,20 +484,24 @@ impl PortfolioAccessControl {
         self.authentication_requirements.get(requirement_id)
     }
 
+    /// Ids of every registered `authentication_requirement`.
     pub fn list_authentication_requirements(&self) -> Vec<String> {
         self.authentication_requirements.keys().cloned().collect()
     }
 
+    /// `true` when audit logging is enabled.
     pub fn is_audit_logging_enabled(&self) -> bool {
         self.audit_logging
     }
 
+    /// Replace the `audit_logging`.
     pub fn set_audit_logging(&mut self, enabled: bool) {
         self.audit_logging = enabled;
     }
 }
 
 impl PortfolioAuditTrail {
+    /// Construct a `PortfolioAuditTrail` with default field values.
     pub fn new() -> Self {
         Self {
             audit_entries: Mutex::new(Vec::new()),
@@ -510,16 +534,19 @@ impl PortfolioAuditTrail {
             .unwrap_or_default()
     }
 
+    /// The `retention_policy` component.
     pub fn retention_policy(&self) -> &RetentionPolicy {
         &self.retention_policy
     }
 
+    /// Replace the `retention_policy`.
     pub fn set_retention_policy(&mut self, policy: RetentionPolicy) {
         self.retention_policy = policy;
     }
 }
 
 impl RetentionPolicy {
+    /// Construct a `RetentionPolicy` with default field values.
     pub fn new() -> Self {
         Self {
             retention_days: 2555, // 7 years
@@ -532,6 +559,7 @@ impl RetentionPolicy {
 // Supporting structs
 
 impl Portfolio {
+    /// Construct a `Portfolio` with default field values.
     pub fn new() -> Self {
         Self {
             portfolio_id: "portfolio_1".to_string(),
@@ -549,6 +577,7 @@ impl Portfolio {
 }
 
 impl RiskProfile {
+    /// Construct a `RiskProfile` with default field values.
     pub fn new() -> Self {
         Self {
             risk_tolerance: RiskTolerance::Moderate,
@@ -560,6 +589,7 @@ impl RiskProfile {
 }
 
 impl Asset {
+    /// Construct a `Asset` with default field values.
     pub fn new() -> Self {
         Self {
             asset_id: "asset_1".to_string(),
@@ -578,6 +608,7 @@ impl Asset {
 }
 
 impl PortfolioMetadata {
+    /// Construct a `PortfolioMetadata` with default field values.
     pub fn new() -> Self {
         Self {
             portfolio_id: "portfolio_1".to_string(),
@@ -590,6 +621,7 @@ impl PortfolioMetadata {
 }
 
 impl AccessPolicy {
+    /// Construct a `AccessPolicy` with default field values.
     pub fn new() -> Self {
         Self {
             policy_id: "policy_1".to_string(),
@@ -603,6 +635,7 @@ impl AccessPolicy {
 }
 
 impl TimeRestrictions {
+    /// Construct a `TimeRestrictions` with default field values.
     pub fn new() -> Self {
         Self {
             allowed_hours: (0..24).collect(),
@@ -614,6 +647,7 @@ impl TimeRestrictions {
 }
 
 impl AuthenticationRequirement {
+    /// Construct a `AuthenticationRequirement` with default field values.
     pub fn new() -> Self {
         Self {
             requirement_id: "auth_1".to_string(),
@@ -627,6 +661,7 @@ impl AuthenticationRequirement {
 }
 
 impl AuditEntry {
+    /// Construct a `AuditEntry` with default field values.
     pub fn new() -> Self {
         Self {
             entry_id: "audit_1".to_string(),

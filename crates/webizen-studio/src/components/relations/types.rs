@@ -13,6 +13,7 @@ pub enum RelationsSection {
 }
 
 impl RelationsSection {
+    /// Label.
     pub const fn label(self) -> &'static str {
         match self {
             Self::Inbox => "Inbox",
@@ -27,6 +28,7 @@ impl RelationsSection {
         }
     }
 
+    /// `true` for advanced-only items.
     pub const fn advanced_only(self) -> bool {
         matches!(self, Self::Topology | Self::ExistingTools)
     }
@@ -85,7 +87,10 @@ mod tests {
     fn mail_deep_link_opens_daily_inbox_not_domains_admin() {
         assert_eq!(section_from_talk_tab("mail", false), RelationsSection::Mail);
         assert_eq!(section_from_talk_tab("email", true), RelationsSection::Mail);
-        assert_eq!(section_from_talk_tab("dir", false), RelationsSection::People);
+        assert_eq!(
+            section_from_talk_tab("dir", false),
+            RelationsSection::People
+        );
         assert_eq!(
             section_from_talk_tab("directory", false),
             RelationsSection::People

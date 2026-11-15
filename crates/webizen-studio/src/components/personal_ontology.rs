@@ -1,8 +1,9 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `PersonalOntologyBuilder` component.
 pub fn PersonalOntologyBuilder() -> Element {
     rsx! {
         div { class: "personal-ontology-pane flex flex-col h-full",

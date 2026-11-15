@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+/// Active model path.
 pub fn active_model_path() -> PathBuf {
     app_meta_dir().join("active_model.json")
 }
@@ -19,6 +20,7 @@ fn legacy_active_model_path() -> PathBuf {
     app_meta_dir().join("active_model.txt")
 }
 
+/// Loads active-model-record-from-disk.
 pub fn load_active_model_record_from_disk() -> Option<crate::model_lifecycle::ActiveModelRecord> {
     let json_path = active_model_path();
     if let Ok(text) = std::fs::read_to_string(&json_path) {
@@ -67,6 +69,7 @@ pub fn load_active_model_record_from_disk() -> Option<crate::model_lifecycle::Ac
     None
 }
 
+/// Loads active-model-from-disk.
 pub fn load_active_model_from_disk() -> Option<String> {
     load_active_model_record_from_disk().map(|r| r.gguf_path)
 }
@@ -80,11 +83,13 @@ fn persist_active_model_record(
     std::fs::write(active_model_path(), json).map_err(|e| e.to_string())
 }
 
+/// Clears the active-model record.
 pub fn clear_active_model_record() {
     let _ = std::fs::remove_file(active_model_path());
     let _ = std::fs::remove_file(legacy_active_model_path());
 }
 
+/// Restores the active model on startup.
 pub fn restore_active_model_on_startup() {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -121,11 +126,13 @@ pub fn restore_active_model_on_startup() {
     }
 }
 
+/// Gets active-model.
 pub fn get_active_model() -> Option<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     state.active_model.lock().unwrap().clone()
 }
 
+/// Gets model-lifecycle-status.
 pub fn get_model_lifecycle_status() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let path = state.active_model.lock().unwrap().clone();
@@ -155,6 +162,7 @@ pub fn get_model_lifecycle_status() -> Result<serde_json::Value, String> {
     serde_json::to_value(status).map_err(|e| e.to_string())
 }
 
+/// Sets active-model.
 pub fn set_active_model(model_name: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -208,6 +216,7 @@ pub fn set_active_model_async(model_name: String) -> Result<(), String> {
     spawn_model_activation(move || set_active_model(model_name))
 }
 
+/// Applies a model preference (async).
 pub fn try_apply_model_preference_async(task: &str) -> Result<(), String> {
     let task = task.to_string();
     spawn_model_activation(move || try_apply_model_preference(&task))
@@ -240,18 +249,22 @@ fn spawn_model_activation(
     Ok(())
 }
 
+/// `true` when model-activation-in-progress.
 pub fn is_model_activation_in_progress() -> bool {
     MODEL_ACTIVATION_IN_PROGRESS.load(Ordering::Acquire)
 }
 
+/// Takes the model-activation error.
 pub fn take_model_activation_error() -> Option<String> {
     MODEL_ACTIVATION_ERROR.lock().ok()?.take()
 }
 
+/// Gets inference-backend-settings.
 pub fn get_inference_backend_settings() -> crate::inference_backend::InferenceBackendSettings {
     crate::inference_backend::load_inference_backend_settings()
 }
 
+/// Saves inference-backend-settings.
 pub fn save_inference_backend_settings(
     settings: crate::inference_backend::InferenceBackendSettings,
 ) -> Result<(), String> {
@@ -263,6 +276,7 @@ pub fn probe_ollama_status() -> crate::ollama_harness::OllamaStatus {
     crate::ollama_harness::probe_configured_ollama()
 }
 
+/// Probes Ollama status (async).
 pub async fn probe_ollama_status_async() -> crate::ollama_harness::OllamaStatus {
     crate::ollama_harness::probe_configured_ollama_async().await
 }
@@ -280,6 +294,7 @@ pub fn ollama_generate(
     crate::ollama_harness::OllamaHarness::from_loaded_settings().generate(&system, &prompt)
 }
 
+/// Ollama generate (async).
 pub async fn ollama_generate_async(
     system: String,
     prompt: String,
@@ -289,6 +304,7 @@ pub async fn ollama_generate_async(
         .await
 }
 
+/// Gets model-preferences.
 pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -296,6 +312,7 @@ pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {
     crate::model_preferences::ensure_preferences(Path::new(&storage), &catalog)
 }
 
+/// Saves model-preferences.
 pub fn save_model_preferences(
     prefs: crate::model_preferences::ModelPreferences,
 ) -> Result<(), String> {
@@ -304,12 +321,14 @@ pub fn save_model_preferences(
     crate::model_preferences::save_preferences(Path::new(&storage), &prefs)
 }
 
+/// Lists installed LLM IDs.
 pub fn list_installed_llm_ids() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
     crate::model_preferences::list_installed_model_ids(Path::new(&storage))
 }
 
+/// Resolves a model preference.
 pub fn resolve_model_preference(
     task: &str,
 ) -> Option<crate::model_preferences::ResolvedModelPreference> {
@@ -321,6 +340,7 @@ pub fn resolve_model_preference(
     crate::model_preferences::resolve_preference(Path::new(&storage), &catalog, &prefs, task)
 }
 
+/// Applies a model preference.
 pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -345,6 +365,7 @@ pub fn try_apply_model_preference(task: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Installs a catalog LLM.
 pub async fn install_catalog_llm(id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();

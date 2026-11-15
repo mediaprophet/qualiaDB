@@ -101,6 +101,7 @@ pub struct DataMetrics {
 }
 
 impl PhysicsPerformanceMonitor {
+    /// Creates a monitor with zeroed physics metrics.
     pub fn new() -> Self {
         Self {
             simulation_metrics: SimulationMetrics::new(),
@@ -110,6 +111,7 @@ impl PhysicsPerformanceMonitor {
         }
     }
 
+    /// Snapshot of aggregated `PhysicsPerformanceMetrics`.
     pub fn get_metrics(&self) -> PhysicsPerformanceMetrics {
         PhysicsPerformanceMetrics {
             simulation_metrics: self.simulation_metrics.clone(),
@@ -123,6 +125,7 @@ impl PhysicsPerformanceMonitor {
 }
 
 impl SimulationMetrics {
+    /// Creates zeroed `SimulationMetrics`.
     pub fn new() -> Self {
         Self {
             total_simulations: 0,
@@ -135,6 +138,7 @@ impl SimulationMetrics {
 }
 
 impl StabilityMetrics {
+    /// Creates zeroed `StabilityMetrics`.
     pub fn new() -> Self {
         Self {
             cfl_number: 0.0,
@@ -146,6 +150,7 @@ impl StabilityMetrics {
 }
 
 impl SolverMetrics {
+    /// Creates zeroed `SolverMetrics`.
     pub fn new() -> Self {
         Self {
             linear_solver_metrics: LinearSolverMetrics::new(),
@@ -157,6 +162,7 @@ impl SolverMetrics {
 }
 
 impl LinearSolverMetrics {
+    /// Creates zeroed `LinearSolverMetrics`.
     pub fn new() -> Self {
         Self {
             average_iterations: 0.0,
@@ -168,6 +174,7 @@ impl LinearSolverMetrics {
 }
 
 impl NonlinearSolverMetrics {
+    /// Creates zeroed `NonlinearSolverMetrics`.
     pub fn new() -> Self {
         Self {
             average_iterations: 0.0,
@@ -179,6 +186,7 @@ impl NonlinearSolverMetrics {
 }
 
 impl EigenvalueSolverMetrics {
+    /// Creates zeroed `EigenvalueSolverMetrics`.
     pub fn new() -> Self {
         Self {
             average_iterations: 0.0,
@@ -190,6 +198,7 @@ impl EigenvalueSolverMetrics {
 }
 
 impl OptimizationSolverMetrics {
+    /// Creates zeroed `OptimizationSolverMetrics`.
     pub fn new() -> Self {
         Self {
             average_iterations: 0.0,
@@ -201,6 +210,7 @@ impl OptimizationSolverMetrics {
 }
 
 impl MeshMetrics {
+    /// Creates zeroed `MeshMetrics`.
     pub fn new() -> Self {
         Self {
             total_nodes: 0,
@@ -212,6 +222,7 @@ impl MeshMetrics {
 }
 
 impl PartitionMetrics {
+    /// Creates zeroed `PartitionMetrics`.
     pub fn new() -> Self {
         Self {
             number_of_partitions: 1,
@@ -223,6 +234,7 @@ impl PartitionMetrics {
 }
 
 impl DataMetrics {
+    /// Creates zeroed `DataMetrics`.
     pub fn new() -> Self {
         Self {
             total_data_size: 0,

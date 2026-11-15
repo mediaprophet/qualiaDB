@@ -23,8 +23,6 @@
 //! - Uses A5 (`blackboard`) for inter-agent state channels.
 //! - Verification frames use bounded arrays (zero-heap on hot paths).
 
-use std::collections::HashMap;
-
 // ── DAG Node ───────────────────────────────────────────────────────────────
 
 /// Maximum nodes per DAG.
@@ -66,6 +64,7 @@ pub struct DagNode {
 }
 
 impl DagNode {
+    /// Creates a new `DagNode`.
     pub fn new(id: u32, name: &str, effect: NodeEffect) -> Self {
         Self {
             id,
@@ -79,26 +78,31 @@ impl DagNode {
         }
     }
 
+    /// Builder — sets capability.
     pub fn with_capability(mut self, cap: &str) -> Self {
         self.capabilities.push(cap.to_string());
         self
     }
 
+    /// Builder — sets input.
     pub fn with_input(mut self, channel: &str) -> Self {
         self.inputs.push(channel.to_string());
         self
     }
 
+    /// Builder — sets output.
     pub fn with_output(mut self, channel: &str) -> Self {
         self.outputs.push(channel.to_string());
         self
     }
 
+    /// Builder — sets budget.
     pub fn with_budget(mut self, budget: u32) -> Self {
         self.budget = budget;
         self
     }
 
+    /// `control-unit` form.
     pub fn as_control_unit(mut self) -> Self {
         self.is_control_unit = true;
         self
@@ -115,6 +119,7 @@ pub struct DagEdge {
 }
 
 impl DagEdge {
+    /// Creates a new `DagEdge`.
     pub fn new(from: u32, to: u32) -> Self {
         Self { from, to }
     }
@@ -124,7 +129,6 @@ impl DagEdge {
 
 /// Errors that can occur during DAG construction or execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum DagError {
     /// Node ID exceeds MAX_DAG_NODES.
     NodeIdOverflow,
@@ -154,36 +158,47 @@ pub enum NodeStatus {
 
 /// The DAG pipeline definition.
 pub struct DagPipeline {
-    nodes: HashMap<u32, DagNode>,
+    slots: [Option<usize>; MAX_DAG_NODES],
+    nodes: Vec<DagNode>,
     edges: Vec<DagEdge>,
-    /// Adjacency list: node_id → list of downstream node_ids.
-    adjacency: HashMap<u32, Vec<u32>>,
-    /// Reverse adjacency: node_id → list of upstream node_ids.
-    reverse_adjacency: HashMap<u32, Vec<u32>>,
+    /// Adjacency list indexed by node slot: slot → list of downstream node_ids.
+    adjacency: Vec<Vec<u32>>,
+    /// Reverse adjacency indexed by node slot: slot → list of upstream node_ids.
+    reverse_adjacency: Vec<Vec<u32>>,
 }
 
 impl DagPipeline {
+    /// Creates a new `DagPipeline`.
     pub fn new() -> Self {
         Self {
-            nodes: HashMap::new(),
+            slots: [None; MAX_DAG_NODES],
+            nodes: Vec::new(),
             edges: Vec::new(),
-            adjacency: HashMap::new(),
-            reverse_adjacency: HashMap::new(),
+            adjacency: Vec::new(),
+            reverse_adjacency: Vec::new(),
         }
+    }
+
+    fn slot_of(&self, id: u32) -> Option<usize> {
+        usize::try_from(id)
+            .ok()
+            .and_then(|idx| self.slots.get(idx).copied().flatten())
     }
 
     /// Add a node to the DAG.
     pub fn add_node(&mut self, node: DagNode) -> Result<(), DagError> {
-        if node.id as usize >= MAX_DAG_NODES {
+        let id_idx = node.id as usize;
+        if id_idx >= MAX_DAG_NODES {
             return Err(DagError::NodeIdOverflow);
         }
-        if self.nodes.contains_key(&node.id) {
+        if self.slots[id_idx].is_some() {
             return Err(DagError::DuplicateNode);
         }
-        let id = node.id;
-        self.nodes.insert(id, node);
-        self.adjacency.entry(id).or_default();
-        self.reverse_adjacency.entry(id).or_default();
+        let slot = self.nodes.len();
+        self.slots[id_idx] = Some(slot);
+        self.nodes.push(node);
+        self.adjacency.push(Vec::new());
+        self.reverse_adjacency.push(Vec::new());
         Ok(())
     }
 
@@ -192,26 +207,34 @@ impl DagPipeline {
         if self.edges.len() >= MAX_DAG_EDGES {
             return Err(DagError::EdgeOverflow);
         }
-        if !self.nodes.contains_key(&edge.from) || !self.nodes.contains_key(&edge.to) {
+        let Some(from_slot) = self.slot_of(edge.from) else {
             return Err(DagError::InvalidEdge);
-        }
-        self.edges.push(edge);
-        self.adjacency.entry(edge.from).or_default().push(edge.to);
-        self.reverse_adjacency
-            .entry(edge.to)
-            .or_default()
-            .push(edge.from);
+        };
+        let Some(to_slot) = self.slot_of(edge.to) else {
+            return Err(DagError::InvalidEdge);
+        };
+        self.edges.push(edge.clone());
+        self.adjacency[from_slot].push(edge.to);
+        self.reverse_adjacency[to_slot].push(edge.from);
         Ok(())
     }
 
     /// Get a node by ID.
     pub fn get_node(&self, id: u32) -> Option<&DagNode> {
-        self.nodes.get(&id)
+        self.slot_of(id).and_then(|slot| self.nodes.get(slot))
     }
 
     /// Get all nodes.
-    pub fn nodes(&self) -> &HashMap<u32, DagNode> {
+    pub fn nodes(&self) -> &[DagNode] {
         &self.nodes
+    }
+
+    /// Iterate present node IDs in deterministic ascending ID order.
+    pub fn node_ids(&self) -> impl Iterator<Item = u32> + '_ {
+        self.slots
+            .iter()
+            .enumerate()
+            .filter_map(|(id, slot)| slot.map(|_| id as u32))
     }
 
     /// Get all edges.
@@ -221,47 +244,44 @@ impl DagPipeline {
 
     /// Get the downstream nodes of a given node.
     pub fn downstream(&self, id: u32) -> &[u32] {
-        self.adjacency.get(&id).map(|v| v.as_slice()).unwrap_or(&[])
+        self.slot_of(id)
+            .and_then(|slot| self.adjacency.get(slot))
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
     }
 
     /// Get the upstream nodes of a given node.
     pub fn upstream(&self, id: u32) -> &[u32] {
-        self.reverse_adjacency
-            .get(&id)
+        self.slot_of(id)
+            .and_then(|slot| self.reverse_adjacency.get(slot))
             .map(|v| v.as_slice())
             .unwrap_or(&[])
     }
 
     /// Detect cycles using DFS. Returns true if a cycle is found.
     pub fn has_cycle(&self) -> bool {
-        let mut visited = HashMap::new();
-        for &id in self.nodes.keys() {
-            visited.insert(id, 0u8); // 0=unvisited, 1=in-progress, 2=done
-        }
-        for &id in self.nodes.keys() {
-            if visited[&id] == 0 {
-                if self.dfs_cycle(id, &mut visited) {
-                    return true;
-                }
+        // 0=unvisited, 1=in-progress, 2=done; zero-heap stack buffer.
+        let mut visited = [0u8; MAX_DAG_NODES];
+        for id in self.node_ids() {
+            if visited[id as usize] == 0 && self.dfs_cycle(id, &mut visited) {
+                return true;
             }
         }
         false
     }
 
-    fn dfs_cycle(&self, id: u32, visited: &mut HashMap<u32, u8>) -> bool {
-        visited.insert(id, 1);
-        if let Some(downstream) = self.adjacency.get(&id) {
-            for &next in downstream {
-                let state = visited[&next];
-                if state == 1 {
-                    return true; // Back edge → cycle.
-                }
-                if state == 0 && self.dfs_cycle(next, visited) {
-                    return true;
-                }
+    fn dfs_cycle(&self, id: u32, visited: &mut [u8; MAX_DAG_NODES]) -> bool {
+        visited[id as usize] = 1;
+        for &next in self.downstream(id) {
+            let state = visited[next as usize];
+            if state == 1 {
+                return true; // Back edge → cycle.
+            }
+            if state == 0 && self.dfs_cycle(next, visited) {
+                return true;
             }
         }
-        visited.insert(id, 2);
+        visited[id as usize] = 2;
         false
     }
 
@@ -271,33 +291,30 @@ impl DagPipeline {
         if self.has_cycle() {
             return Err(DagError::CycleDetected);
         }
-        let mut in_degree: HashMap<u32, usize> = HashMap::new();
-        for &id in self.nodes.keys() {
-            in_degree.insert(
-                id,
-                self.reverse_adjacency
-                    .get(&id)
-                    .map(|v| v.len())
-                    .unwrap_or(0),
-            );
+        let mut in_degree = [0usize; MAX_DAG_NODES];
+        let mut queue = [0u32; MAX_DAG_NODES];
+        let mut q_len = 0usize;
+        for id in self.node_ids() {
+            let deg = self.upstream(id).len();
+            in_degree[id as usize] = deg;
+            if deg == 0 {
+                queue[q_len] = id;
+                q_len += 1;
+            }
         }
-        let mut queue: Vec<u32> = in_degree
-            .iter()
-            .filter(|(_, &d)| d == 0)
-            .map(|(&id, _)| id)
-            .collect();
-        queue.sort();
-        let mut result = Vec::new();
-        while let Some(id) = queue.pop() {
+        queue[..q_len].sort_unstable();
+        let mut result = Vec::with_capacity(self.nodes.len());
+        while q_len > 0 {
+            q_len -= 1;
+            let id = queue[q_len];
             result.push(id);
-            if let Some(downstream) = self.adjacency.get(&id) {
-                for &next in downstream {
-                    let d = in_degree.get_mut(&next).unwrap();
-                    *d -= 1;
-                    if *d == 0 {
-                        queue.push(next);
-                        queue.sort();
-                    }
+            for &next in self.downstream(id) {
+                let d = &mut in_degree[next as usize];
+                *d -= 1;
+                if *d == 0 {
+                    queue[q_len] = next;
+                    q_len += 1;
+                    queue[..q_len].sort_unstable();
                 }
             }
         }
@@ -306,19 +323,15 @@ impl DagPipeline {
 
     /// Get the entry nodes (nodes with no upstream dependencies).
     pub fn entry_nodes(&self) -> Vec<u32> {
-        self.nodes
-            .keys()
-            .filter(|&&id| self.upstream(id).is_empty())
-            .copied()
+        self.node_ids()
+            .filter(|&id| self.upstream(id).is_empty())
             .collect()
     }
 
     /// Get the exit nodes (nodes with no downstream dependencies).
     pub fn exit_nodes(&self) -> Vec<u32> {
-        self.nodes
-            .keys()
-            .filter(|&&id| self.downstream(id).is_empty())
-            .copied()
+        self.node_ids()
+            .filter(|&id| self.downstream(id).is_empty())
             .collect()
     }
 
@@ -328,7 +341,7 @@ impl DagPipeline {
         if self.has_cycle() {
             return Err(DagError::CycleDetected);
         }
-        for node in self.nodes.values() {
+        for node in &self.nodes {
             // Hot and Async nodes must have a budget.
             if (node.effect == NodeEffect::Hot || node.effect == NodeEffect::Async)
                 && node.budget == 0
@@ -393,6 +406,7 @@ pub enum RouterStrategy {
 }
 
 impl ControlUnit {
+    /// Creates a new `ControlUnit`.
     pub fn new(node_id: u32, strategy: RouterStrategy) -> Self {
         Self { node_id, strategy }
     }
@@ -440,71 +454,83 @@ impl ControlUnit {
 
 // ── Execution State ────────────────────────────────────────────────────────
 
-/// Tracks the execution state of all nodes in the DAG.
+/// Tracks the execution state of all nodes in the DAG using zero-heap inline storage.
 pub struct ExecutionState {
-    statuses: HashMap<u32, NodeStatus>,
+    statuses: [Option<NodeStatus>; MAX_DAG_NODES],
     /// Completed node IDs in order.
-    completed_order: Vec<u32>,
+    completed_order: [u32; MAX_DAG_NODES],
+    completed_len: usize,
 }
 
 impl ExecutionState {
+    /// Creates a new `ExecutionState`.
     pub fn new(pipeline: &DagPipeline) -> Self {
-        let statuses: HashMap<u32, NodeStatus> = pipeline
-            .nodes()
-            .keys()
-            .map(|&id| (id, NodeStatus::Pending))
-            .collect();
+        let mut statuses = [None; MAX_DAG_NODES];
+        for id in pipeline.node_ids() {
+            statuses[id as usize] = Some(NodeStatus::Pending);
+        }
         Self {
             statuses,
-            completed_order: Vec::new(),
+            completed_order: [0; MAX_DAG_NODES],
+            completed_len: 0,
         }
     }
 
     /// Get the status of a node.
     pub fn status(&self, id: u32) -> NodeStatus {
-        self.statuses
-            .get(&id)
-            .copied()
+        usize::try_from(id)
+            .ok()
+            .and_then(|idx| self.statuses.get(idx).copied().flatten())
             .unwrap_or(NodeStatus::Pending)
     }
 
     /// Set the status of a node.
     pub fn set_status(&mut self, id: u32, status: NodeStatus) {
-        if status == NodeStatus::Completed {
-            self.completed_order.push(id);
+        if status == NodeStatus::Completed && self.completed_len < MAX_DAG_NODES {
+            self.completed_order[self.completed_len] = id;
+            self.completed_len += 1;
         }
-        self.statuses.insert(id, status);
+        if let Ok(idx) = usize::try_from(id) {
+            if let Some(slot) = self.statuses.get_mut(idx) {
+                *slot = Some(status);
+            }
+        }
     }
 
     /// Get all nodes that are ready to execute (all upstream completed).
     pub fn ready_nodes(&self, pipeline: &DagPipeline) -> Vec<u32> {
         pipeline
-            .nodes()
-            .keys()
-            .filter(|&&id| {
+            .node_ids()
+            .filter(|&id| {
                 self.status(id) == NodeStatus::Pending
                     && pipeline
                         .upstream(id)
                         .iter()
                         .all(|&up| self.status(up) == NodeStatus::Completed)
             })
-            .copied()
             .collect()
     }
 
     /// Are all nodes completed?
     pub fn all_completed(&self) -> bool {
-        self.statuses.values().all(|s| *s == NodeStatus::Completed)
+        self.statuses
+            .iter()
+            .flatten()
+            .all(|&s| s == NodeStatus::Completed)
     }
 
     /// Get the completion order.
     pub fn completed_order(&self) -> &[u32] {
-        &self.completed_order
+        &self.completed_order[..self.completed_len]
     }
 
     /// Count nodes by status.
     pub fn count_by_status(&self, status: NodeStatus) -> usize {
-        self.statuses.values().filter(|s| **s == status).count()
+        self.statuses
+            .iter()
+            .flatten()
+            .filter(|&&s| s == status)
+            .count()
     }
 }
 
@@ -534,6 +560,7 @@ pub struct JudgeFrame {
 }
 
 impl JudgeFrame {
+    /// Creates a new `JudgeFrame`.
     pub fn new() -> Self {
         Self {
             claims: Vec::with_capacity(MAX_JUDGE_CLAIMS),

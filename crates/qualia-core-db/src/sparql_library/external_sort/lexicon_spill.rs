@@ -28,10 +28,12 @@ pub struct LexiconSpill {
 }
 
 impl LexiconSpill {
+    /// Creates a lexicon spill buffer in `temp_dir` with the default cap.
     pub fn new(temp_dir: PathBuf) -> Self {
         Self::with_cap(temp_dir, DEFAULT_LEX_MEM_BYTES)
     }
 
+    /// Creates a spill buffer with an explicit byte/entry cap.
     pub fn with_cap(temp_dir: PathBuf, cap: usize) -> Self {
         let _ = std::fs::create_dir_all(&temp_dir);
         Self {
@@ -46,6 +48,7 @@ impl LexiconSpill {
         }
     }
 
+    /// Installs a sink for spill/diagnostic notes.
     pub fn set_note_sink(&mut self, sink: Arc<dyn Fn(&str) + Send + Sync>) {
         self.note = Some(sink);
     }
@@ -59,14 +62,17 @@ impl LexiconSpill {
         }
     }
 
+    /// Hash collisions observed while interning.
     pub fn collision_count(&self) -> u64 {
         self.collisions
     }
 
+    /// Terms interned so far.
     pub fn interned_count(&self) -> u64 {
         self.interned
     }
 
+    /// Sorted runs flushed to disk.
     pub fn run_count(&self) -> usize {
         self.runs.len() + usize::from(!self.map.is_empty())
     }
@@ -99,6 +105,7 @@ impl LexiconSpill {
         }
     }
 
+    /// Interns `(hash, term)`, spilling when over cap.
     pub fn intern(&mut self, hash: u64, term: &str) -> io::Result<()> {
         match self.map.get(&hash) {
             Some(existing) if existing == term => return Ok(()),
@@ -123,6 +130,7 @@ impl LexiconSpill {
         Ok(())
     }
 
+    /// Flushes the current sorted run to a spill file.
     pub fn flush_run(&mut self) -> io::Result<()> {
         if self.map.is_empty() {
             return Ok(());

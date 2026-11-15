@@ -44,6 +44,7 @@ pub struct KBucketTable {
 }
 
 impl KBucketTable {
+    /// Creates a default `KBucketTable`.
     pub const fn new(local: StrongDigest) -> Self {
         Self {
             local,
@@ -55,11 +56,13 @@ impl KBucketTable {
     }
 
     #[inline]
+    /// `KBucketTable::local_id`.
     pub const fn local_id(&self) -> StrongDigest {
         self.local
     }
 
     #[inline]
+    /// `KBucketTable::len`.
     pub const fn len(&self) -> usize {
         self.len as usize
     }

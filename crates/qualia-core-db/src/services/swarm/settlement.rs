@@ -11,12 +11,12 @@
 //! wallet, a connector, or the network.
 //!
 //! The money arithmetic (fair-price cap, energy viability) reuses
-//! [`crate::modalities::value_flow`] — the single source of truth — rather than
+//! [`crate::modalities::socioeconomics`] — the single source of truth — rather than
 //! re-implementing it.
 
 use super::verify::VerificationVerdict;
 use super::SwarmError;
-use crate::modalities::value_flow::{commons_cost, eroi_viable};
+use crate::modalities::socioeconomics::{commons_cost, eroi_viable};
 use crate::rpc::MicropaymentInstruction;
 
 /// Escrow lifecycle. A job is paid only by passing left-to-right through `Verified`.

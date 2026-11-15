@@ -32,6 +32,7 @@ pub struct RealmRouteTable {
 }
 
 impl RealmRouteTable {
+    /// Creates a default `RealmRouteTable`.
     pub const fn new() -> Self {
         Self {
             defaults: [false; 64],
@@ -50,6 +51,7 @@ impl RealmRouteTable {
         false
     }
 
+    /// `true` when `default_in` present.
     pub fn has_default_in(&self, realm: u8) -> bool {
         if realm >= 64 {
             return false;

@@ -30,6 +30,7 @@ pub struct SyncOutboxEntry {
 }
 
 impl SyncOutboxEntry {
+    /// Constructs from envelope.
     pub fn from_envelope(envelope: &RecordEnvelope, committed_unix: u32) -> Self {
         Self {
             operation_id: uuid::Uuid::new_v4().to_string(),
@@ -46,6 +47,7 @@ pub struct SyncOutbox {
 }
 
 impl SyncOutbox {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(SYNC_OUTBOX_FILE);
         if let Some(parent) = path.parent() {
@@ -57,6 +59,7 @@ impl SyncOutbox {
         Ok(Self { path })
     }
 
+    /// Enqueues a job.
     pub fn enqueue(&self, entry: &SyncOutboxEntry) -> std::io::Result<()> {
         let line =
             serde_json::to_string(entry).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -66,6 +69,7 @@ impl SyncOutbox {
         Ok(())
     }
 
+    /// Lists all entries.
     pub fn list_all(&self) -> std::io::Result<Vec<SyncOutboxEntry>> {
         let file = fs::File::open(&self.path)?;
         let reader = BufReader::new(file);
@@ -82,6 +86,7 @@ impl SyncOutbox {
         Ok(entries)
     }
 
+    /// Lists recent entries.
     pub fn list_recent(&self, limit: usize) -> std::io::Result<Vec<SyncOutboxEntry>> {
         let mut entries = self.list_all()?;
         let keep = limit.min(MAX_LIST);
@@ -92,6 +97,7 @@ impl SyncOutbox {
         Ok(entries)
     }
 
+    /// Queued count.
     pub fn count_queued(&self) -> std::io::Result<usize> {
         Ok(self
             .list_all()?
@@ -100,6 +106,7 @@ impl SyncOutbox {
             .count())
     }
 
+    /// Updates state.
     pub fn update_state(
         &self,
         operation_id: &str,

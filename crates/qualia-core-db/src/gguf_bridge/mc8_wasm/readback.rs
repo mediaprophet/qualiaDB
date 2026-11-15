@@ -2,13 +2,14 @@
 use super::super::*;
 
 impl QTensorEngine {
+    /// Pipeline helper: `read-hidden`.
     pub(crate) async fn pipeline_read_hidden(&self, emb_dim: usize, hidden: &mut [f32]) -> bool {
         let staging = self.gemm_output_staging.as_ref().unwrap();
         let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
-        let out_bytes = (emb_dim * 4) as wgpu::BufferAddress;
+        let out_bytes = (emb_dim * 4) as etalon::BufferAddress;
         let mut encoder = self
             .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("MC8Readback"),
             });
         encoder.copy_buffer_to_buffer(hidden_buf, 0, staging, 0, out_bytes);
@@ -30,19 +31,20 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-batch`.
     pub(crate) async fn pipeline_read_batch(&self, batch_elems: usize, out: &mut [f32]) -> bool {
         if batch_elems > out.len() || batch_elems > self.gemm_max_input_floats {
             return false;
         }
         let staging = self.gemm_output_staging.as_ref().unwrap();
         let batch_buf = self.gemm_output_buf.as_ref().unwrap();
-        let out_bytes = (batch_elems * 4) as wgpu::BufferAddress;
+        let out_bytes = (batch_elems * 4) as etalon::BufferAddress;
         if out_bytes > staging.size() {
             return false;
         }
         let mut encoder = self
             .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("MC8BatchReadback"),
             });
         encoder.copy_buffer_to_buffer(batch_buf, 0, staging, 0, out_bytes);
@@ -64,23 +66,24 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-gpu-bytes-at`.
     pub(crate) async fn pipeline_read_gpu_bytes_at(
         &self,
-        src: &wgpu::Buffer,
-        byte_offset: wgpu::BufferAddress,
+        src: &etalon::Buffer,
+        byte_offset: etalon::BufferAddress,
         out: &mut [u8],
     ) -> bool {
         if out.is_empty() {
             return false;
         }
         let staging = self.gemm_output_staging.as_ref().unwrap();
-        let nbytes = out.len() as wgpu::BufferAddress;
+        let nbytes = out.len() as etalon::BufferAddress;
         if nbytes > staging.size() {
             return false;
         }
         let mut encoder = self
             .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("MC8ProbeReadback"),
             });
         encoder.copy_buffer_to_buffer(src, byte_offset, staging, 0, nbytes);
@@ -101,6 +104,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-kv-head`.
     pub(crate) async fn pipeline_read_kv_head(
         &self,
         layout: &KvCacheLayout,
@@ -123,7 +127,7 @@ impl QTensorEngine {
         } else {
             layout.v_index(layer, slot, kv_h, 0)
         };
-        let byte_off = (idx * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let byte_off = (idx * std::mem::size_of::<f32>()) as etalon::BufferAddress;
         let mut bytes = [0u8; 512];
         let nbytes = head_dim * std::mem::size_of::<f32>();
         if nbytes > bytes.len() {

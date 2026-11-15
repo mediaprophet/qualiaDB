@@ -36,12 +36,14 @@ _NT_RE  = re.compile(r'<([^>]+)>\s+<([^>]+)>\s+<([^>]+)>\s+\.')
 
 
 def _free_port() -> int:
+    """Internal helper."""
     with socket.socket() as s:
         s.bind(("", 0))
         return s.getsockname()[1]
 
 
 def _sql(url: str, auth: str, stmt: str) -> list:
+    """Internal helper."""
     req = urllib.request.Request(
         url,
         data=stmt.encode(),
@@ -59,6 +61,7 @@ def _sql(url: str, auth: str, stmt: str) -> list:
 
 
 def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """Benchmark set."""
     if dataset is None:
         dataset = {
             "n_triples": n,

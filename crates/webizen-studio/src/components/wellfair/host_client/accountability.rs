@@ -20,6 +20,7 @@ pub async fn ledger_verify() -> Result<serde_json::Value, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn ledger_verify() -> Result<serde_json::Value, String> {
     Err("The accountability ledger requires the Tauri desktop host".into())
 }
@@ -44,6 +45,7 @@ pub async fn ledger_entries(limit: usize) -> Result<serde_json::Value, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn ledger_entries(_limit: usize) -> Result<serde_json::Value, String> {
     Err("The accountability ledger requires the Tauri desktop host".into())
 }
@@ -87,6 +89,7 @@ pub async fn grant_consent_credential(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Grants consent-credential.
 pub async fn grant_consent_credential(
     _agent_did: &str,
     _scope: &str,
@@ -119,6 +122,7 @@ pub async fn revoke_consent_credential(credential_id: &str) -> Result<bool, Stri
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Revokes consent-credential.
 pub async fn revoke_consent_credential(_credential_id: &str) -> Result<bool, String> {
     Err("Consent credentials require the Tauri desktop host".into())
 }
@@ -139,6 +143,7 @@ pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists consent-credentials.
 pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
     Err("Consent credentials require the Tauri desktop host".into())
 }
@@ -173,6 +178,7 @@ pub async fn record_conduct(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Records conduct.
 pub async fn record_conduct(
     _agent_did: &str,
     _credential_id: &str,
@@ -203,6 +209,7 @@ pub async fn conduct_audit_trail(credential_id: &str) -> Result<serde_json::Valu
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn conduct_audit_trail(_credential_id: &str) -> Result<serde_json::Value, String> {
     Err("Conduct records require the Tauri desktop host".into())
 }
@@ -228,6 +235,7 @@ pub async fn compute_scorecard(threshold: usize) -> Result<serde_json::Value, St
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Computes scorecard.
 pub async fn compute_scorecard(_threshold: usize) -> Result<serde_json::Value, String> {
     Err("The score-card requires the Tauri desktop host".into())
 }
@@ -244,6 +252,7 @@ pub async fn get_weight_model() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets weight-model.
 pub async fn get_weight_model() -> Result<serde_json::Value, String> {
     Err("The score-card requires the Tauri desktop host".into())
 }
@@ -264,6 +273,7 @@ pub async fn set_weight_model(model_json: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets weight-model.
 pub async fn set_weight_model(_model_json: &str) -> Result<(), String> {
     Err("The score-card requires the Tauri desktop host".into())
 }
@@ -277,6 +287,7 @@ pub async fn reset_weight_model() -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Resets weight-model.
 pub async fn reset_weight_model() -> Result<(), String> {
     Err("The score-card requires the Tauri desktop host".into())
 }

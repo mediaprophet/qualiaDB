@@ -138,6 +138,7 @@ pub fn corpus_load(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// `?::corpus_load`.
 pub fn corpus_load(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Corpus.load"))
 }

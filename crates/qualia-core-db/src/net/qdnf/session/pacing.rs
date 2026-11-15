@@ -11,6 +11,7 @@ pub struct Pacer {
 }
 
 impl Pacer {
+    /// Creates a default `Pacer`.
     pub const fn new(rate_bytes_per_s: u64) -> Self {
         Self {
             next_send_us: 0,
@@ -50,7 +51,7 @@ pub fn on_paced_send(pacer: &mut Pacer, bytes: u64, now_us: u64) -> Result<(), Q
 
 /// Idle send fence. After `idle_us` with no send, further send is Closed.
 /// Reopen with the same generation is Replay (nonce reuse). A new generation
-/// is required. Not wired into packet protection.
+/// is required. Wired into packet protection via `PacketProtection::seal_paced`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IdleWatch {
     last_activity_us: u64,
@@ -60,6 +61,7 @@ pub struct IdleWatch {
 }
 
 impl IdleWatch {
+    /// Creates a default `IdleWatch`.
     pub const fn new(idle_us: u64, generation: u64) -> Self {
         Self {
             last_activity_us: 0,
@@ -69,6 +71,7 @@ impl IdleWatch {
         }
     }
 
+    /// Pacing hook on send.
     pub fn on_send(&mut self, now_us: u64) -> Result<(), QdnfError> {
         if self.closed {
             return Err(QdnfError::Closed);
@@ -82,6 +85,7 @@ impl IdleWatch {
         Ok(())
     }
 
+    /// Reopens the pacing window.
     pub fn reopen(&mut self, generation: u64) -> Result<(), QdnfError> {
         if generation == self.generation {
             return Err(QdnfError::Replay);
@@ -163,5 +167,42 @@ mod tests {
         assert_eq!(idle.reopen(1), Err(QdnfError::Replay));
         idle.reopen(2).unwrap();
         idle.on_send(200).unwrap();
+    }
+
+    #[test]
+    fn fuzz_pacing_and_idle_harness() {
+        let rates = [1, 10, 100, 1_000, 10_000, 1_000_000, 100_000_000];
+        let packet_sizes = [1, 64, 512, 1200, 4096, 65535];
+        let timestamps = [0, 10, 100, 1_000, 50_000, 100_000, 1_000_000];
+
+        for &rate in &rates {
+            let mut pacer = Pacer::new(rate);
+            let mut cur_ts = 0u64;
+            for &sz in &packet_sizes {
+                for &delta in &timestamps {
+                    cur_ts = cur_ts.saturating_add(delta);
+                    if let Ok(()) = wait_until(&pacer, cur_ts) {
+                        let res = on_paced_send(&mut pacer, sz, cur_ts);
+                        assert!(res.is_ok());
+                        assert!(pacer.next_send_us > cur_ts);
+                    }
+                }
+            }
+        }
+
+        // IdleWatch fuzzing
+        let mut idle = IdleWatch::new(500, 1);
+        let mut gen = 1u64;
+        for t in (0..5_000).step_by(50) {
+            match idle.on_send(t) {
+                Ok(()) => {}
+                Err(QdnfError::Closed) => {
+                    gen += 1;
+                    assert!(idle.reopen(gen).is_ok());
+                    assert!(idle.on_send(t).is_ok());
+                }
+                Err(e) => panic!("Unexpected error: {:?}", e),
+            }
+        }
     }
 }

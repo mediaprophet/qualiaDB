@@ -15,6 +15,7 @@ enum Gender {
     Neutral,
 }
 
+/// Resolves coreferences into `out`.
 pub fn resolve_coreferences_into(
     source: &str,
     mentions: &[ValidatedMention],

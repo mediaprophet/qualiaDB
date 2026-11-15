@@ -3,7 +3,7 @@
 use super::host_client::{
     approve_live_share, deny_live_share, fetch_pending_live_shares, LiveShareRequestDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]
@@ -16,6 +16,7 @@ struct CommunicationsUi {
 }
 
 #[component]
+/// Aether `WellfairCommunicationsPanel` component.
 pub fn WellfairCommunicationsPanel() -> Element {
     let mut ui = use_signal(CommunicationsUi::default);
 

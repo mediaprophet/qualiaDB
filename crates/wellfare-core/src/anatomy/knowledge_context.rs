@@ -30,6 +30,7 @@ pub struct EthnicityAffiliation {
 }
 
 impl EthnicityAffiliation {
+    /// Declared entries.
     pub fn declared(label: &str) -> Option<Self> {
         let label = label.trim();
         if label.is_empty() {
@@ -60,6 +61,7 @@ pub struct AncestryRecord {
 }
 
 impl AncestryRecord {
+    /// Constructs from import.
     pub fn from_import(label: &str, imported_from: &str) -> Result<Self, AncestryInvalid> {
         let label = label.trim();
         let imported_from = imported_from.trim();
@@ -87,6 +89,7 @@ pub struct SubjectKnowledgeContext {
 }
 
 impl SubjectKnowledgeContext {
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         self.ethnicities.is_empty() && self.genetic_ancestry.is_empty()
     }

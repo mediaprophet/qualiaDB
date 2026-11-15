@@ -4,6 +4,7 @@
 
 use super::*;
 
+/// Mail now (unix time).
 pub fn mail_now_unix() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -575,6 +576,7 @@ pub fn save_mail_transport_config(
     Ok(serde_json::json!({ "saved": true, "path": path.display().to_string() }))
 }
 
+/// Loads mail-transport-config.
 pub fn load_mail_transport_config() -> Result<serde_json::Value, String> {
     let path = crate::state::app_meta_dir().join("mail_transport.json");
     match std::fs::read_to_string(path) {

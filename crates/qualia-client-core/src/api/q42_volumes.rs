@@ -66,10 +66,12 @@ fn storage_root() -> Result<PathBuf, String> {
     Ok(PathBuf::from(path))
 }
 
+/// Lists q42 volumes.
 pub fn list_q42_volumes() -> Result<Q42VolumeWorkspace, String> {
     list_q42_volumes_under(&storage_root()?)
 }
 
+/// Lists q42 volumes under a path.
 pub fn list_q42_volumes_under(storage: &Path) -> Result<Q42VolumeWorkspace, String> {
     let mut volumes = Vec::new();
     if storage.is_dir() {
@@ -180,11 +182,13 @@ fn item_from_path(path: &Path, storage: &Path) -> Q42VolumeListItem {
     }
 }
 
+/// Inspects a q42 volume.
 pub fn inspect_q42_volume(path: String) -> Result<Q42InspectReport, String> {
     let path = require_q42_file(&path)?;
     Q42InspectReport::from_path(&path).map_err(|e| e.to_string())
 }
 
+/// Verifies a q42 volume.
 pub fn verify_q42_volume(
     path: String,
     level: Option<String>,
@@ -197,6 +201,7 @@ pub fn verify_q42_volume(
     verify_volume_set_from_root(&path, level).map_err(|e| e.to_string())
 }
 
+/// Magnet link for a q42 volume.
 pub fn magnet_q42_volume(path: String) -> Result<Q42MagnetResult, String> {
     let path = require_q42_file(&path)?;
     let webseed = Some("http://127.0.0.1:4242/torrent/webseed/{hash}");
@@ -215,6 +220,7 @@ pub fn magnet_q42_volume(path: String) -> Result<Q42MagnetResult, String> {
     })
 }
 
+/// Compacts a q42 volume.
 pub fn compact_q42_volume(path: String) -> Result<Q42CompactResult, String> {
     let path = require_q42_file(&path)?;
     let stem = path
@@ -280,7 +286,7 @@ mod tests {
         assert!(workspace.volumes[0].open_error.is_none());
 
         let inspect = inspect_q42_volume(path.display().to_string()).unwrap();
-        assert_eq!(inspect.version, 3);
+        assert_eq!(inspect.version, 4);
         assert_eq!(inspect.block_count, 1);
 
         let verify = verify_q42_volume(path.display().to_string(), Some("full".into())).unwrap();

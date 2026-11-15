@@ -1,0 +1,16 @@
+[package]
+name = "qualia-seal-10d"
+version = "0.0.41"
+edition = "2021"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+description = "Seal a triangle mesh (OBJ) as a QualiaDB .10d container with SKL1 cardiac motion, optional m64/EMF volumes"
+license-file = "../../LICENSE"
+publish = false
+
+[[bin]]
+name = "qualia-seal-10d"
+path = "src/bin/seal_10d.rs"
+
+[dependencies]
+bytemuck = { workspace = true, features = ["derive"] }
+qualia-core-db = { workspace = true, default-features = false }

@@ -18,6 +18,7 @@ pub struct HotBlock {
     pub source: String, // "local" or "remote"
 }
 
+/// Starts the telemetry server.
 pub async fn start_telemetry_server(rx: broadcast::Receiver<TelemetryPayload>) {
     let listener = TcpListener::bind("127.0.0.1:9090")
         .await
@@ -46,6 +47,7 @@ pub async fn start_telemetry_server(rx: broadcast::Receiver<TelemetryPayload>) {
     }
 }
 
+/// Gets peak-rss.
 pub fn get_peak_rss(sys: &mut System) -> f64 {
     sys.refresh_all();
     let pid = sysinfo::get_current_pid().unwrap();

@@ -133,6 +133,7 @@ pub struct StatisticalAnalysisResult<T> {
 }
 
 impl StatisticalDataStorage {
+    /// Creates empty in-memory dataset storage.
     pub fn new() -> Self {
         Self {
             zones: HashMap::new(),
@@ -144,6 +145,7 @@ impl StatisticalDataStorage {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         // Initialize zones
         self.create_zones()?;
@@ -185,6 +187,7 @@ impl StatisticalDataStorage {
         Ok(())
     }
 
+    /// Stores a dataset; error at capacity.
     pub fn store_dataset(&mut self, dataset: Dataset) -> Result<(), StatisticalError> {
         // Determine best zone for this dataset
         let zone_id = self.select_best_zone(&dataset)?;
@@ -206,11 +209,13 @@ impl StatisticalDataStorage {
         Ok(())
     }
 
+    /// Fetches a dataset by id; error when absent.
     pub fn get_dataset(&self, dataset_id: &str) -> Result<Dataset, StatisticalError> {
         // Get from storage
         self.get_dataset_data(dataset_id)
     }
 
+    /// Metadata for `dataset_id`.
     pub fn get_dataset_metadata(&self, dataset_id: &str) -> Option<DatasetMetadata> {
         for zone in self.zones.values() {
             if let Some(metadata) = zone.datasets.get(dataset_id) {
@@ -220,6 +225,7 @@ impl StatisticalDataStorage {
         None
     }
 
+    /// All stored dataset ids.
     pub fn list_datasets(&self) -> Vec<String> {
         let mut datasets = Vec::new();
         for zone in self.zones.values() {

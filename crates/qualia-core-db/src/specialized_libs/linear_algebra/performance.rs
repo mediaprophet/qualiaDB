@@ -62,6 +62,7 @@ pub struct SystemMetrics {
 }
 
 impl LAPerformanceMonitor {
+    /// Creates `LAPerformanceMonitor` with the given state.
     pub fn new() -> Self {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

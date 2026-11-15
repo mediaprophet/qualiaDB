@@ -35,6 +35,7 @@ pub enum ProjectionKind {
 }
 
 impl ProjectionKind {
+    /// Builds `ProjectionKind` from `u8`.
     pub fn from_u8(value: u8) -> Result<Self, AppManifestError> {
         match value {
             1 => Ok(Self::Manifold),

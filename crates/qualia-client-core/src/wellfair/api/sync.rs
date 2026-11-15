@@ -53,6 +53,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
+    /// Lists the sync inbox.
     pub fn list_sync_inbox(&self, limit: usize) -> Result<Vec<InboxRecord>, String> {
         SyncInbox::open(&self.storage_root)
             .map_err(|e| e.to_string())?

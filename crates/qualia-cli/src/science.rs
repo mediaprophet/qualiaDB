@@ -3,6 +3,7 @@
 
 // ── Chemistry ─────────────────────────────────────────────────────────────────
 
+/// CLI: SMILES parse.
 pub fn run_chem_smiles(smiles: &str) {
     use qualia_core_db::domains::chemical::organic_chemistry::{
         compute_descriptors, compute_logp, compute_tpsa, evaluate_lipinski, exact_molecular_weight,
@@ -26,6 +27,7 @@ pub fn run_chem_smiles(smiles: &str) {
     );
 }
 
+/// CLI: thermodynamics.
 pub fn run_chem_thermo(reaction: &str, a: f64, b: f64, c: f64) {
     use qualia_core_db::domains::chemical::organic_chemistry::{
         arrhenius_rate, gibbs_free_energy, henderson_hasselbalch,
@@ -66,6 +68,7 @@ pub fn run_chem_thermo(reaction: &str, a: f64, b: f64, c: f64) {
     }
 }
 
+/// CLI: drug-likeness.
 pub fn run_chem_druglike(smiles: &str) {
     use qualia_core_db::domains::chemical::organic_chemistry::{
         compute_descriptors, compute_logp, compute_tpsa, evaluate_egan, evaluate_ghose,
@@ -100,6 +103,7 @@ pub fn run_chem_druglike(smiles: &str) {
     );
 }
 
+/// CLI: pKa/Henderson-Hasselbalch.
 pub fn run_chem_pka(pka: f64, conc_base: f64, conc_acid: f64) {
     use qualia_core_db::domains::chemical::organic_chemistry::{
         henderson_hasselbalch, ionisation_fraction,
@@ -114,6 +118,7 @@ pub fn run_chem_pka(pka: f64, conc_base: f64, conc_acid: f64) {
 
 // ── Biology ───────────────────────────────────────────────────────────────────
 
+/// CLI: sequence alignment.
 pub fn run_bio_align(query: &str, target: &str, mode: &str) {
     use qualia_core_db::domains::biological::bioinformatics::{align_nucleotide, align_protein};
     let q = query.as_bytes();
@@ -131,6 +136,7 @@ pub fn run_bio_align(query: &str, target: &str, mode: &str) {
     println!("  Matches: {}", result.num_matches);
 }
 
+/// CLI: k-mer analysis.
 pub fn run_bio_kmer(sequence: &str, k: usize) {
     use qualia_core_db::domains::biological::bioinformatics::kmer_frequencies;
     let freqs = kmer_frequencies(sequence.as_bytes(), k);
@@ -147,6 +153,7 @@ pub fn run_bio_kmer(sequence: &str, k: usize) {
     }
 }
 
+/// CLI: DNA translate.
 pub fn run_bio_translate(dna: &str) {
     use qualia_core_db::domains::biological::bioinformatics::translate_dna_to_protein;
     let dna_bytes = dna.as_bytes();
@@ -158,6 +165,7 @@ pub fn run_bio_translate(dna: &str) {
     println!("  Protein: {protein}  ({n} aa)");
 }
 
+/// CLI: isoelectric point.
 pub fn run_bio_isoelectric(protein: &str) {
     use qualia_core_db::domains::biological::bioinformatics::calculate_isoelectric_point;
     let pi = calculate_isoelectric_point(protein.as_bytes());
@@ -168,6 +176,7 @@ pub fn run_bio_isoelectric(protein: &str) {
     println!("  pI = {pi:.4}");
 }
 
+/// CLI: Jaccard sketch.
 pub fn run_bio_jaccard(sketch_a: &str, sketch_b: &str) {
     use qualia_core_db::domains::biological::bioinformatics::jaccard_similarity;
     let parse_hashes = |s: &str| -> Vec<u64> {
@@ -190,6 +199,7 @@ pub fn run_bio_jaccard(sketch_a: &str, sketch_b: &str) {
     println!("  J(A,B)     = {j:.6}");
 }
 
+/// CLI: MinHash sketch.
 pub fn run_bio_minhash(sequence: &str, k: usize, sketch_size: usize) {
     use qualia_core_db::domains::biological::bioinformatics::minhash_sketch;
     let sketch = minhash_sketch(sequence.as_bytes(), k, sketch_size);
@@ -205,6 +215,7 @@ pub fn run_bio_minhash(sequence: &str, k: usize, sketch_size: usize) {
 
 // ── Geospatial ────────────────────────────────────────────────────────────────
 
+/// CLI: .
 pub fn run_geo_embed_h3(index: u64) {
     use qualia_core_db::domains::geospatial::spatial::embed_h3_context;
     let context = embed_h3_context(index, 0, 0);
@@ -215,6 +226,7 @@ pub fn run_geo_embed_h3(index: u64) {
 
 // ── Thermodynamics ────────────────────────────────────────────────────────────
 
+/// CLI: .
 pub fn run_thermo_gibbs(enthalpy: f64, entropy: f64, temp: f64) {
     use qualia_core_db::domains::physical::thermodynamics::ThermodynamicSampler;
     let sampler = ThermodynamicSampler::new(temp, 1);
@@ -225,6 +237,7 @@ pub fn run_thermo_gibbs(enthalpy: f64, entropy: f64, temp: f64) {
     println!("  Spontaneous: {}", if dg < 0.0 { "yes" } else { "no" });
 }
 
+/// CLI: .
 pub fn run_thermo_anneal(initial_temp: f64, particles: usize, proposed_energy: f64, random: f64) {
     use qualia_core_db::domains::physical::thermodynamics::ThermodynamicSampler;
     let mut sampler = ThermodynamicSampler::new(initial_temp, particles);
@@ -251,6 +264,7 @@ fn parse_vec3(s: &str) -> Option<[f32; 3]> {
     }
 }
 
+/// CLI: .
 pub fn run_geometric_cross(a_str: &str, b_str: &str) {
     use qualia_core_db::geometric_algebra::utils::{cross_product, dot_product};
     let (Some(a), Some(b)) = (parse_vec3(a_str), parse_vec3(b_str)) else {
@@ -268,6 +282,7 @@ pub fn run_geometric_cross(a_str: &str, b_str: &str) {
     println!("  a·b = {dot:.6}");
 }
 
+/// CLI: .
 pub fn run_geometric_angle(a_str: &str, b_str: &str) {
     use qualia_core_db::geometric_algebra::utils::{angle_between_vectors, rad_to_deg};
     let (Some(a), Some(b)) = (parse_vec3(a_str), parse_vec3(b_str)) else {
@@ -283,6 +298,7 @@ pub fn run_geometric_angle(a_str: &str, b_str: &str) {
 
 // ── Clinical ──────────────────────────────────────────────────────────────────
 
+/// CLI: .
 pub fn run_clinical_framingham(
     age: u8,
     sex_male: bool,
@@ -316,6 +332,7 @@ pub fn run_clinical_framingham(
     println!("  Log score: {:.4}", r.log_score);
 }
 
+/// CLI: .
 pub fn run_clinical_sofa(
     pao2_fio2: f64,
     platelets: f64,
@@ -356,6 +373,7 @@ pub fn run_clinical_sofa(
     println!("  Est. mortality: {mortality}");
 }
 
+/// CLI: .
 pub fn run_clinical_ckd(age: u8, sex_male: bool, weight_kg: f64, creatinine: f64) {
     use qualia_core_db::clinical_engine::{ckd_epi_egfr, cockcroft_gault_crcl, RenalInput};
     let input = RenalInput {
@@ -384,6 +402,7 @@ pub fn run_clinical_ckd(age: u8, sex_male: bool, weight_kg: f64, creatinine: f64
     println!("  CKD stage              : {stage}");
 }
 
+/// CLI: .
 pub fn run_clinical_pk(dose_mg: f64, vd_l: f64, cl_l_hr: f64, time_hr: f64) {
     use qualia_core_db::clinical_engine::{one_compartment_pk_model, PkOneCompartmentInput};
     let input = PkOneCompartmentInput {
@@ -399,6 +418,7 @@ pub fn run_clinical_pk(dose_mg: f64, vd_l: f64, cl_l_hr: f64, time_hr: f64) {
     println!("  Half-life      = {:.4} hr", r.half_life_hr);
 }
 
+/// CLI: .
 pub fn run_clinical_drug_interactions(drug_names: &str) {
     use qualia_core_db::clinical_engine::check_drug_interactions;
     use qualia_core_db::mini_parser::hash_token;
@@ -422,6 +442,7 @@ pub fn run_clinical_drug_interactions(drug_names: &str) {
 
 // ── Economics ─────────────────────────────────────────────────────────────────
 
+/// CLI: .
 pub fn run_economics_gbm(price: f64, drift: f64, vol: f64, horizon: f64, steps: usize) {
     use qualia_core_db::domains::financial::economics::simulate_gbm_path;
     let final_price = simulate_gbm_path(price, drift, vol, horizon, steps);
@@ -432,6 +453,7 @@ pub fn run_economics_gbm(price: f64, drift: f64, vol: f64, horizon: f64, steps: 
     println!("  E[S(T)] = {expected:.4}  (drift-only estimate)");
 }
 
+/// CLI: .
 pub fn run_economics_var(
     price: f64,
     drift: f64,
@@ -448,6 +470,7 @@ pub fn run_economics_var(
     println!("  95% VaR (loss) : {var95:.4}");
 }
 
+/// CLI: .
 pub fn run_economics_macro(
     m0: f64,
     p0: f64,
@@ -470,6 +493,7 @@ pub fn run_economics_macro(
     }
 }
 
+/// CLI: .
 pub fn run_economics_bond(face: f64, coupon_rate: f64, y: f64, n: u32) {
     use qualia_core_db::specialized_libs::computational_economics::fixed_income::coupon_bond_price;
     match coupon_bond_price(face, coupon_rate, y, n as f64, 1) {
@@ -481,6 +505,7 @@ pub fn run_economics_bond(face: f64, coupon_rate: f64, y: f64, n: u32) {
     }
 }
 
+/// CLI: .
 pub fn run_economics_paper(qty: f64, last: f64) {
     use qualia_core_db::specialized_libs::computational_economics::paper_trading::{
         simulate_fills_against_snapshots, submit_paper_order, Fill, MarketSnapshot, OrderType,
@@ -529,6 +554,7 @@ pub fn run_economics_paper(qty: f64, last: f64) {
     }
 }
 
+/// CLI: .
 pub fn run_economics_welfare(incomes_str: &str) {
     use qualia_core_db::specialized_libs::computational_economics::welfare::{
         atkinson_inequality, gini_coefficient,
@@ -549,6 +575,7 @@ pub fn run_economics_welfare(incomes_str: &str) {
     }
 }
 
+/// CLI: .
 pub fn run_economics_game(a: f64) {
     use qualia_core_db::specialized_libs::computational_economics::game_theory::cournot_duopoly;
     match cournot_duopoly(a, 1.0, 1.0, 1.0) {

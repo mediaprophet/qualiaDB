@@ -71,20 +71,18 @@ pub fn render_contract_from_panes(panes: &[PanePlacement]) -> RenderScene {
     RenderScene::from(workspace_scene_from_panes(panes))
 }
 
-/// Digest tensor buffer bytes for telemetry sidebar (count + dominant opacity).
+/// Read tensor buffer telemetry without converting the canonical EMF spectrum
+/// into display colour. Colour is a later observer-specific projection.
 pub fn tensor_buffer_digest(buffer: &[u8]) -> (usize, f64) {
-    let legacy = TensorBufferView::new(buffer);
-    if legacy.is_empty() {
+    let view = TensorBufferView::new(buffer);
+    if view.is_empty() {
         return (0, 0.0);
     }
-    let table = TensorBufferView::build_index_table(legacy.len());
-    let view = TensorBufferView::new_with_index(buffer, &table);
     let count = view.len();
     let opacity = view
-        .get_by_index(0)
-        .or_else(|| view.get(0))
+        .get(0)
         .map(|t| {
-            let _color = t.spectral_color();
+            let _emf_spectrum = t.emf_spectrum();
             let _energy = t.manifold_energy();
             t.opacity()
         })
@@ -253,6 +251,32 @@ mod tests {
     #[test]
     fn tensor_digest_handles_empty_buffer() {
         assert_eq!(tensor_buffer_digest(&[]), (0, 0.0));
+    }
+
+    #[test]
+    fn tensor_digest_reads_engine_abi_and_keeps_emf_sigma_unclamped() {
+        use super::super::tensor_buffer::{
+            Q42_TENSOR_HEADER_BYTES, Q42_TENSOR_MAGIC, Q42_TENSOR_STRIDE, Q42_TENSOR_VERSION,
+        };
+
+        let mut buffer = vec![0u8; Q42_TENSOR_HEADER_BYTES + Q42_TENSOR_STRIDE];
+        buffer[0..4].copy_from_slice(&Q42_TENSOR_MAGIC.to_le_bytes());
+        buffer[4..6].copy_from_slice(&Q42_TENSOR_VERSION.to_le_bytes());
+        buffer[8..12].copy_from_slice(&1_u32.to_le_bytes());
+        buffer[12..16].copy_from_slice(&(Q42_TENSOR_STRIDE as u32).to_le_bytes());
+        buffer[Q42_TENSOR_HEADER_BYTES + 7 * 4..Q42_TENSOR_HEADER_BYTES + 8 * 4]
+            .copy_from_slice(&0.7_f32.to_le_bytes());
+        buffer[Q42_TENSOR_HEADER_BYTES + 9 * 4..Q42_TENSOR_HEADER_BYTES + 10 * 4]
+            .copy_from_slice(&2.5_f32.to_le_bytes());
+
+        let (count, opacity) = tensor_buffer_digest(&buffer);
+        assert_eq!(count, 1);
+        assert!((opacity - 0.7).abs() < 1e-6);
+        let tensor = TensorBufferView::new(&buffer).get(0).unwrap();
+        let emf = tensor.emf_spectrum();
+        assert!((emf[0] - 0.7).abs() < 1e-6);
+        assert_eq!(emf[1], 0.0);
+        assert_eq!(emf[2], 2.5);
     }
 
     #[test]

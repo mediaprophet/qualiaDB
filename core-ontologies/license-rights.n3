@@ -1,0 +1,258 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix hro:    <https://vocab.Burst.net.au/hro#> .
+
+# =============================================================================
+# Humanitarian Rights & Obligations Ontology (hro:) — QualiaDB Core Spine
+# =============================================================================
+# SHACL-First Non-Thing Rule:
+# Human beings (hro:NaturalAgent), human dignity, and creative acts are defined
+# via rdfs:Class and SHACL NodeShapes (sh:NodeShape). They NEVER subclass owl:Thing.
+# =============================================================================
+
+<https://vocab.Burst.net.au/hro>
+    a owl:Ontology ;
+    dct:title "Humanitarian Rights, Contribution Lifecycle, and Contextual Assertions Ontology" ;
+    dct:description "SHACL-first ontology for finite project compensation, 9-stage contribution lifecycle, and contextual assertions." ;
+    owl:versionInfo "0.2.0" .
+
+# -----------------------------------------------------------------------------
+# 1. Non-Thing Human-Centric Domain Classes (rdfs:Class + sh:NodeShape)
+# -----------------------------------------------------------------------------
+
+hro:NaturalAgent
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Natural Agent (Human Person)" ;
+    rdfs:comment "A living human being. Never represented as an owl:Thing." .
+
+hro:CreativeAct
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Creative Act" ;
+    rdfs:comment "An act of human authorship, stewardship, or care." ;
+    rdfs:subClassOf prov:Activity .
+
+hro:HumanRightsStandard
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Human Rights Standard" ;
+    rdfs:comment "A binding normative human-rights instrument (UDHR, ICCPR, ICESCR, CRPD, CRC)." ;
+    rdfs:subClassOf skos:Concept .
+
+hro:UDHR_Art27_2
+    a hro:HumanRightsStandard ;
+    skos:prefLabel "UDHR Article 27(2) Moral and Material Interests" .
+
+hro:ICESCR_Art15_1_c
+    a hro:HumanRightsStandard ;
+    skos:prefLabel "ICESCR Article 15(1)(c) Authorial Protection" .
+
+hro:ICCPR_Art17
+    a hro:HumanRightsStandard ;
+    skos:prefLabel "ICCPR Article 17 Privacy and Unlawful Attacks on Honour" .
+
+hro:ICCPR_Art19
+    a hro:HumanRightsStandard ;
+    skos:prefLabel "ICCPR Article 19 Freedom of Expression" .
+
+hro:CRPD_Art12
+    a hro:HumanRightsStandard ;
+    skos:prefLabel "CRPD Article 12 Equal Recognition Before the Law and Supported Decision-Making" .
+
+# -----------------------------------------------------------------------------
+# 2. Artifacts, Instruments, and 8-Ledger Finite Compensation Classes
+# -----------------------------------------------------------------------------
+
+hro:DigitalArtifact
+    a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Digital Artifact" .
+
+hro:StewardEntity
+    a owl:Class ;
+    rdfs:subClassOf prov:Organization ;
+    rdfs:label "Steward Entity" .
+
+hro:CommercialEntity
+    a owl:Class ;
+    rdfs:subClassOf prov:Organization ;
+    rdfs:label "Commercial Entity" .
+
+hro:AutonomousSystem
+    a owl:Class ;
+    rdfs:subClassOf prov:SoftwareAgent ;
+    rdfs:label "Autonomous Software or AI System" .
+
+hro:CompensationLedger
+    a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Finite Project Compensation Ledger" .
+
+# -----------------------------------------------------------------------------
+# 3. Nine-Stage Contribution Lifecycle Classes (CONTRIBUTION-LIFECYCLE.md)
+# -----------------------------------------------------------------------------
+
+hro:RequestAndAgreement
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 1: Request and Agreement" .
+
+hro:ActivityAndResources
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 2: Activity and Resources" .
+
+hro:OutputOrService
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 3: Output or Service" .
+
+hro:SubmissionOrClaim
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 4: Submission or Claim" .
+
+hro:AcceptanceDecision
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 5: Acceptance Decision" .
+
+hro:Valuation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 6: Valuation" .
+
+hro:LifecycleObligation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 7: Lifecycle Obligation" .
+
+hro:SettlementAllocation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 8: Settlement Allocation" .
+
+hro:TransitionDecision
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Stage 9: Licence Transition Decision" .
+
+# -----------------------------------------------------------------------------
+# 4. Contextual Assertion Classes (CONTEXTUAL-ASSERTIONS.md)
+# -----------------------------------------------------------------------------
+
+hro:Observation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Primary Observation" .
+
+hro:Inference
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Derived Inference" .
+
+hro:Allegation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Unadjudicated Allegation" .
+
+hro:Attestation
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Signed Attestation" .
+
+hro:AdjudicatedFinding
+    a rdfs:Class , sh:NodeShape ;
+    rdfs:label "Human-Adjudicated Finding" .
+
+# -----------------------------------------------------------------------------
+# 5. Core Normative & Accounting Properties
+# -----------------------------------------------------------------------------
+
+hro:groundsInRight
+    a owl:ObjectProperty ;
+    rdfs:label "grounds in human right" ;
+    rdfs:range hro:HumanRightsStandard .
+
+hro:hasCompensationLedger
+    a owl:ObjectProperty ;
+    rdfs:domain hro:DigitalArtifact ;
+    rdfs:range hro:CompensationLedger .
+
+hro:hasRecoveryCapCents
+    a owl:DatatypeProperty ;
+    rdfs:domain hro:CompensationLedger ;
+    rdfs:range xsd:integer .
+
+hro:hasRecoveredAmountCents
+    a owl:DatatypeProperty ;
+    rdfs:domain hro:CompensationLedger ;
+    rdfs:range xsd:integer .
+
+hro:hasSettledContributorCents
+    a owl:DatatypeProperty ;
+    rdfs:domain hro:CompensationLedger ;
+    rdfs:range xsd:integer .
+
+hro:hasBeneficiaryReceiptHash
+    a owl:DatatypeProperty ;
+    rdfs:domain hro:SettlementAllocation ;
+    rdfs:range xsd:string .
+
+hro:hasLedgerVisibility
+    a owl:DatatypeProperty ;
+    rdfs:domain hro:CompensationLedger ;
+    rdfs:range xsd:string .
+
+hro:adjudicatedBy
+    a owl:ObjectProperty ;
+    rdfs:range hro:NaturalAgent .
+
+# -----------------------------------------------------------------------------
+# 6. SHACL Governance & Rights Protection Shapes
+# -----------------------------------------------------------------------------
+
+hro:CreatorProtectionPolicyShape
+    a sh:NodeShape ;
+    sh:targetClass odrl:Policy ;
+    rdfs:label "Creator Protection Policy Shape" ;
+    sh:property hro:CreatorProtectionRightPropShape ;
+    sh:property hro:CreatorProtectionTargetPropShape .
+
+hro:CreatorProtectionRightPropShape
+    a sh:PropertyShape ;
+    sh:path hro:groundsInRight ;
+    sh:minCount 1 ;
+    sh:message "Every creator protection policy must ground its rules in at least one HumanRightsStandard." .
+
+hro:CreatorProtectionTargetPropShape
+    a sh:PropertyShape ;
+    sh:path odrl:target ;
+    sh:minCount 1 ;
+    sh:message "Every creator protection policy must specify a target DigitalArtifact." .
+
+hro:LedgerPrivacyShape
+    a sh:NodeShape ;
+    sh:targetClass hro:CompensationLedger ;
+    rdfs:label "Ledger Privacy and Conservation Shape" ;
+    sh:property hro:LedgerVisibilityPropShape ;
+    sh:property hro:LedgerRecoveryCapPropShape .
+
+hro:LedgerVisibilityPropShape
+    a sh:PropertyShape ;
+    sh:path hro:hasLedgerVisibility ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "Every CompensationLedger must declare its privacy visibility tier." .
+
+hro:LedgerRecoveryCapPropShape
+    a sh:PropertyShape ;
+    sh:path hro:hasRecoveryCapCents ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "Every CompensationLedger must declare an integer minor-unit recovery cap." .
+
+hro:NoAutonomousAdjudicationShape
+    a sh:NodeShape ;
+    sh:targetClass hro:AdjudicatedFinding ;
+    rdfs:label "No Autonomous Adjudication Shape" ;
+    sh:property hro:HumanAdjudicatorRequiredPropShape .
+
+hro:HumanAdjudicatorRequiredPropShape
+    a sh:PropertyShape ;
+    sh:path hro:adjudicatedBy ;
+    sh:class hro:NaturalAgent ;
+    sh:minCount 1 ;
+    sh:message "Adjudicated findings and licence transitions require an authorised human NaturalAgent adjudicator." .

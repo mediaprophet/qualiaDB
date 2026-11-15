@@ -12,6 +12,38 @@ use std::sync::Mutex;
 
 static DECODE_BUDGET_OVERRIDE: AtomicU32 = AtomicU32::new(0);
 
+// Application-profile bootstrap is intentionally allowed to reset the normal
+// override to its production default.  A benchmark is different: it requires a
+// fixed, reproducible budget for its complete cold/warm scope.  Keep that
+// request separate so profile startup in the inference thread cannot silently
+// turn a requested 64-token measurement back into the 256-token UI default.
+static BENCHMARK_DECODE_BUDGET_OVERRIDE: AtomicU32 = AtomicU32::new(0);
+static BENCHMARK_DECODE_SCOPE: Mutex<()> = Mutex::new(());
+
+/// Serializes and installs a benchmark-only decode budget.
+///
+/// The returned guard restores the production behaviour when dropped.  This
+/// is process-global because the underlying inference toggles are global too;
+/// concurrent benchmarks are therefore deliberately serialized.
+pub struct BenchmarkDecodeBudgetGuard {
+    _scope: std::sync::MutexGuard<'static, ()>,
+}
+
+impl Drop for BenchmarkDecodeBudgetGuard {
+    fn drop(&mut self) {
+        BENCHMARK_DECODE_BUDGET_OVERRIDE.store(0, Ordering::Release);
+    }
+}
+
+/// RAII guard installing a temporary decode budget; restores the previous value on drop.
+pub fn benchmark_decode_budget_scope(n: u32) -> BenchmarkDecodeBudgetGuard {
+    let scope = BENCHMARK_DECODE_SCOPE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    BENCHMARK_DECODE_BUDGET_OVERRIDE.store(n, Ordering::Release);
+    BenchmarkDecodeBudgetGuard { _scope: scope }
+}
+
 /// Set a fixed decode-token budget for benchmarking (0 = production default).
 #[inline]
 pub fn set_decode_budget_override(n: u32) {
@@ -22,13 +54,22 @@ pub fn set_decode_budget_override(n: u32) {
 /// (prevents early-stop from inflating/deflating tok/s on short prompts).
 #[inline]
 pub fn decode_budget_fixed_tokens() -> bool {
-    DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed) > 0
+    decode_budget_override() > 0
 }
 
 /// Current decode-budget override (0 = none).
 #[inline]
 pub fn decode_budget_override() -> u32 {
-    DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+    if let Some(value) = super::prepared_settings::read(|settings| settings.decode_budget_override)
+    {
+        return value;
+    }
+    let benchmark = BENCHMARK_DECODE_BUDGET_OVERRIDE.load(Ordering::Acquire);
+    if benchmark > 0 {
+        benchmark
+    } else {
+        DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+    }
 }
 
 // ── Wall-clock inference timeout override (batch / overnight jobs) ────────────
@@ -45,6 +86,9 @@ pub fn set_inference_timeout_override_ms(ms: u64) {
 /// Effective timeout: override if non-zero, else env `QUALIA_INFERENCE_TIMEOUT_MS`, else 30s.
 #[inline]
 pub fn inference_timeout_ms() -> u64 {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.inference_timeout_ms) {
+        return value;
+    }
     let o = INFERENCE_TIMEOUT_OVERRIDE_MS.load(Ordering::Relaxed);
     if o > 0 {
         return o;
@@ -76,6 +120,9 @@ pub fn set_gpu_topk(on: bool) {
 /// (`0`/`false` → off, `1`/`true` → on); otherwise the process default (ON) applies.
 #[inline]
 pub fn gpu_topk_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.gpu_topk_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_GPU_TOPK").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -100,6 +147,9 @@ pub fn set_ternary_ffn(on: bool) {
 /// FFN GEMMs fall back to the CPU oracle (correct, slower) — the toggle's OFF baseline.
 #[inline]
 pub fn ternary_ffn_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.ternary_ffn_enabled) {
+        return value;
+    }
     TERNARY_FFN.load(Ordering::Relaxed)
         || matches!(
             std::env::var("QUALIA_LLM_TERNARY_FFN").ok().as_deref(),
@@ -114,12 +164,19 @@ pub fn ternary_ffn_enabled() -> bool {
 static ATTN_PREPROJECT: AtomicBool = AtomicBool::new(true);
 
 #[inline]
+/// Enables/disables the attention pre-projection bench toggle (atomic).
 pub fn set_attention_preproject(on: bool) {
     ATTN_PREPROJECT.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current attention pre-projection toggle state.
 pub fn attention_preproject_enabled() -> bool {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.attention_preproject_enabled)
+    {
+        return value;
+    }
     // W5b Phase 4b: the dict-coded write happens in `write_kv_head` (the attention pass); the fused
     // pre-projection bypasses it, so force it off in dict mode.
     if kv_dict_enabled() {
@@ -139,12 +196,19 @@ pub fn attention_preproject_enabled() -> bool {
 static ATTN_O_FUSE: AtomicBool = AtomicBool::new(true);
 
 #[inline]
+/// Enables/disables the attention-o fusion bench toggle.
 pub fn set_attention_o_fuse(on: bool) {
     ATTN_O_FUSE.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current attention-o fusion state.
 pub fn attention_o_fuse_enabled() -> bool {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.attention_o_fuse_enabled)
+    {
+        return value;
+    }
     // W5b Phase 4b: the fused Q+O tail reads K/V from the cache on the GPU path; keep the plain
     // read_k/read_v (dict-aware) path in dict mode.
     if kv_dict_enabled() {
@@ -154,6 +218,30 @@ pub fn attention_o_fuse_enabled() -> bool {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
         _ => ATTN_O_FUSE.load(Ordering::Relaxed),
+    }
+}
+
+// Certified Forge WGSL attention: dispatches Naga-validated Forge causal attention
+// directly on wgpu device during decode step.
+static FORGE_ATTENTION: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+/// Enables/disables the forge-attention bench toggle.
+pub fn set_forge_attention(on: bool) {
+    FORGE_ATTENTION.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+/// Current forge-attention state.
+pub fn forge_attention_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.forge_attention_enabled)
+    {
+        return value;
+    }
+    match std::env::var("QUALIA_LLM_FORGE_ATTENTION").ok().as_deref() {
+        Some("1") | Some("true") => true,
+        Some("0") | Some("false") => false,
+        _ => FORGE_ATTENTION.load(Ordering::Relaxed),
     }
 }
 
@@ -176,6 +264,11 @@ pub fn set_resident_weights(on: bool) {
 /// re-uploading the weight every token. Env forces either direction; otherwise the atomic flag.
 #[inline]
 pub fn resident_weights_enabled() -> bool {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.resident_weights_enabled)
+    {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_RESIDENT_WEIGHTS").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -202,6 +295,10 @@ pub fn set_resident_decode(on: bool) {
 /// Whether native decode should run the GPU-resident single-fence token path.
 #[inline]
 pub fn resident_decode_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.resident_decode_enabled)
+    {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_RESIDENT_DECODE").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -231,6 +328,11 @@ pub fn set_resident_prefill(on: bool) {
 /// Whether native prefill should run the GPU-resident single-fence-per-chunk arena.
 #[inline]
 pub fn resident_prefill_enabled() -> bool {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.resident_prefill_enabled)
+    {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_RESIDENT_PREFILL").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -265,6 +367,9 @@ pub fn set_spec_decode(on: bool) {
 /// wins if set, else the runtime flag). Read this to reflect the current mode in a UI.
 #[inline]
 pub fn spec_decode_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.spec_decode_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_SPEC_DECODE").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -291,6 +396,9 @@ pub fn set_kv_int8(on: bool) {
 /// Whether the KV cache should be int8-quantized.
 #[inline]
 pub fn kv_int8_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.kv_int8_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_KV_INT8").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -315,6 +423,9 @@ pub fn set_kv_dict(on: bool) {
 /// Whether the KV cache should use the installed sparse dictionary.
 #[inline]
 pub fn kv_dict_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.kv_dict_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_KV_DICT").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -341,6 +452,9 @@ pub fn set_sampler_config(cfg: Option<crate::sampler::SamplerConfig>) {
 /// The active decode sampler config, if a non-greedy one is installed.
 #[inline]
 pub fn sampler_config() -> Option<crate::sampler::SamplerConfig> {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.sampler_config) {
+        return value;
+    }
     SAMPLER_CONFIG.lock().ok().and_then(|g| *g)
 }
 
@@ -354,6 +468,9 @@ static DOMINO_MASKER: Mutex<Option<crate::inference::DominoMasker>> = Mutex::new
 /// Install a DOMINO masker for constrained decoding. The masker must be
 /// built from the tokenizer vocabulary. Pass `None` to disable.
 pub fn set_domino_masker(masker: Option<crate::inference::DominoMasker>) {
+    if super::prepared_domino::invalidate() {
+        return;
+    }
     if let Ok(mut g) = DOMINO_MASKER.lock() {
         *g = masker;
     }
@@ -361,6 +478,11 @@ pub fn set_domino_masker(masker: Option<crate::inference::DominoMasker>) {
 
 /// Whether DOMINO constrained decoding is active.
 pub fn domino_active() -> bool {
+    if let Some(active) = super::prepared_domino::with(|grammar| {
+        grammar.as_ref().is_some_and(|grammar| grammar.active())
+    }) {
+        return active;
+    }
     DOMINO_MASKER
         .lock()
         .ok()
@@ -376,6 +498,13 @@ pub fn domino_sample(
     logits: &mut [f32],
     ctx: &[u32],
 ) -> Option<u32> {
+    if let Some(token) = super::prepared_domino::with(|grammar| {
+        grammar
+            .as_mut()
+            .and_then(|grammar| grammar.sample(sampler, logits, ctx))
+    }) {
+        return token;
+    }
     let mut g = DOMINO_MASKER.lock().ok()?;
     let masker = g.as_mut()?;
     if !masker.is_active() {
@@ -392,6 +521,15 @@ pub fn domino_sample(
 /// otherwise the grammar state never advances and every token gets masked
 /// against the initial state.
 pub fn domino_feed_token(bytes: &[u8]) {
+    if super::prepared_domino::with(|grammar| {
+        if let Some(grammar) = grammar {
+            grammar.feed(bytes);
+        }
+    })
+    .is_some()
+    {
+        return;
+    }
     if let Ok(mut g) = DOMINO_MASKER.lock() {
         if let Some(masker) = g.as_mut() {
             masker.feed_token(bytes);
@@ -402,11 +540,44 @@ pub fn domino_feed_token(bytes: &[u8]) {
 /// Reset the DOMINO grammar state to the initial state (e.g. for a new
 /// generation turn). No-op when no masker is installed (T53/W11).
 pub fn domino_reset() {
+    if super::prepared_domino::with(|grammar| {
+        if let Some(grammar) = grammar {
+            grammar.reset();
+        }
+    })
+    .is_some()
+    {
+        return;
+    }
     if let Ok(mut g) = DOMINO_MASKER.lock() {
         if let Some(masker) = g.as_mut() {
             masker.reset();
         }
     }
+}
+
+/// Cold request-local grammar ownership. The process template is only read;
+/// no provisional or accepted grammar mutation can alter future requests.
+pub fn prepare_domino_scope(
+    budget: crate::inference::speculative_decode::DominoPreparationBudget,
+) -> Result<super::prepared_domino::PreparedDominoScope, &'static str> {
+    let grammar = DOMINO_MASKER
+        .lock()
+        .map_err(|_| "DOMINO template poisoned")?
+        .as_ref()
+        .map(|grammar| grammar.prepare_owned(budget))
+        .transpose()?;
+    super::prepared_domino::PreparedDominoScope::enter(grammar)
+}
+
+/// Reserve private grammar capacity before a candidate can be accepted.
+pub fn domino_admit_piece(raw_bytes: usize) -> bool {
+    super::prepared_domino::with(|grammar| {
+        grammar
+            .as_mut()
+            .is_none_or(|grammar| grammar.admit_raw_piece(raw_bytes))
+    })
+    .unwrap_or(true)
 }
 
 // ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
@@ -427,6 +598,9 @@ pub fn set_ffn_fusion(on: bool) {
 /// Whether the native FFN should run fused (one submit/layer) rather than three GEMM round-trips.
 #[inline]
 pub fn ffn_fusion_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.ffn_fusion_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_FFN_FUSION").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -438,6 +612,7 @@ pub fn ffn_fusion_enabled() -> bool {
 static FFN_FUSION_IN_RESIDENT: AtomicBool = AtomicBool::new(false);
 
 #[inline]
+/// Sets `ffn-fusion-in-resident`.
 pub fn set_ffn_fusion_in_resident(on: bool) {
     FFN_FUSION_IN_RESIDENT.store(on, Ordering::Relaxed);
 }
@@ -464,6 +639,9 @@ pub fn set_ffn_f16(on: bool) {
 /// Whether FFN weights should be promoted to f16 in VRAM for decode/prefill GEMV.
 #[inline]
 pub fn ffn_f16_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.ffn_f16_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_FFN_F16").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -492,6 +670,9 @@ pub fn set_coop_gemv(on: bool) {
 /// 1-thread/row `main`. Env forces either direction; otherwise the atomic flag (default OFF).
 #[inline]
 pub fn coop_gemv_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.coop_gemv_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_COOP_GEMV").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -531,6 +712,9 @@ pub fn set_coopmat_gemm(on: bool) {
 /// does not mean coopmat runs — see [`coopmat_gemm_usable`], which also requires the hardware probe.
 #[inline]
 pub fn coopmat_gemm_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.coopmat_gemm_enabled) {
+        return value;
+    }
     match std::env::var("QUALIA_LLM_COOPMAT").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -604,9 +788,120 @@ pub fn set_cpu_attention(on: bool) {
 /// [`set_cpu_attention`].
 #[inline]
 pub fn cpu_attention_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.cpu_attention_enabled) {
+        return value;
+    }
     CPU_ATTENTION.load(Ordering::Relaxed)
         || matches!(
             std::env::var("QUALIA_LLM_CPU_ATTENTION").ok().as_deref(),
             Some("1") | Some("true")
         )
+}
+
+// ── Prefix cache enabled toggle ───────────────────────────────────────────────
+static PREFIX_CACHE_ENABLED: AtomicBool = AtomicBool::new(true);
+
+#[inline]
+/// Sets the prefix-cache flag (atomic) — F22: previously a no-op whose getter always read `true`.
+pub fn set_prefix_cache_enabled(on: bool) {
+    PREFIX_CACHE_ENABLED.store(on, Ordering::Relaxed);
+}
+
+#[inline]
+/// Current prefix-cache flag — real atomic read since F22 fix.
+pub fn prefix_cache_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.prefix_cache_enabled) {
+        return value;
+    }
+    PREFIX_CACHE_ENABLED.load(Ordering::Relaxed)
+}
+
+// ── KV pool budget override in MB (0 = default) ──────────────────────────────
+static KV_POOL_BUDGET_MB: AtomicU32 = AtomicU32::new(0);
+
+#[inline]
+/// Sets the KV-pool budget in MiB.
+pub fn set_kv_pool_budget_mb(mb: u32) {
+    KV_POOL_BUDGET_MB.store(mb, Ordering::Relaxed);
+}
+
+#[inline]
+/// Configured KV-pool budget in MiB.
+pub fn kv_pool_budget_mb() -> u32 {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.kv_pool_budget_mb) {
+        return value;
+    }
+    KV_POOL_BUDGET_MB.load(Ordering::Relaxed)
+}
+
+// ── Prefill chunk size override (0 = default PREFILL_CHUNK_SIZE) ──────────────
+static PREFILL_CHUNK_SIZE_OVERRIDE: AtomicU32 = AtomicU32::new(0);
+
+#[inline]
+/// Sets the prefill chunk-size override.
+pub fn set_prefill_chunk_size_override(sz: u32) {
+    PREFILL_CHUNK_SIZE_OVERRIDE.store(sz, Ordering::Relaxed);
+}
+
+#[inline]
+/// Current prefill chunk-size override.
+pub fn prefill_chunk_size_override() -> u32 {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.prefill_chunk_size_override)
+    {
+        return value;
+    }
+    PREFILL_CHUNK_SIZE_OVERRIDE.load(Ordering::Relaxed)
+}
+
+// ── Prompt precision mode setting ─────────────────────────────────────────────
+static PROMPT_PRECISION_MODE: Mutex<String> = Mutex::new(String::new());
+
+/// Sets the prompt precision mode string.
+pub fn set_prompt_precision_mode(mode: &str) {
+    if let Ok(mut m) = PROMPT_PRECISION_MODE.lock() {
+        m.clear();
+        m.push_str(mode);
+    }
+}
+
+/// Current prompt precision mode.
+pub fn prompt_precision_mode() -> String {
+    if let Some(value) =
+        super::prepared_settings::read(|settings| settings.prompt_precision_mode.clone())
+    {
+        return value;
+    }
+    PROMPT_PRECISION_MODE
+        .lock()
+        .map(|m| m.clone())
+        .unwrap_or_default()
+}
+
+// ── Lifecycle stage telemetry (inference-lifecycle.n3 `stage:*`) ─────────────
+// Per-turn StageTrace recording inside the live decode loop. Recording is a
+// fixed 16-slot stack structure coalesced per stage kind — no hot allocations.
+// Default ON; `QUALIA_STAGE_TELEMETRY=0` disables the instrumentation entirely.
+static STAGE_TELEMETRY: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable per-turn lifecycle stage telemetry (`QUALIA_STAGE_TELEMETRY`).
+#[inline]
+pub fn set_stage_telemetry(on: bool) {
+    STAGE_TELEMETRY.store(on, Ordering::Relaxed);
+}
+
+/// Whether lifecycle stage telemetry is active. The env var overrides the flag
+/// in BOTH directions (`0`/`false` → off, `1`/`true` → on); otherwise the
+/// process default (ON) applies.
+#[inline]
+pub fn stage_telemetry_enabled() -> bool {
+    if let Some(value) = super::prepared_settings::read(|settings| settings.stage_telemetry_enabled)
+    {
+        return value;
+    }
+    match std::env::var("QUALIA_STAGE_TELEMETRY").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => STAGE_TELEMETRY.load(Ordering::Relaxed),
+    }
 }

@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `EpistemologyQapp` component.
 pub fn EpistemologyQapp() -> Element {
     rsx! {
         QAppEngine {

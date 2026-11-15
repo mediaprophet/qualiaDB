@@ -21,6 +21,7 @@ pub struct QuantumPipelineResult {
     pub summary: String,
 }
 
+/// Detects the quantum task kind from a prompt.
 pub fn detect_task_from_prompt(prompt: &str) -> Option<QuantumTaskKind> {
     let lower = prompt.to_lowercase();
     if lower.contains("[qpu:qubo]") {
@@ -47,6 +48,7 @@ pub fn detect_task_from_prompt(prompt: &str) -> Option<QuantumTaskKind> {
     None
 }
 
+/// Executes a quantum pipeline — feature-gated, compiles and dispatches to real providers.
 pub fn execute_quantum_pipeline(
     task: QuantumTaskKind,
     quins: &[NQuin],

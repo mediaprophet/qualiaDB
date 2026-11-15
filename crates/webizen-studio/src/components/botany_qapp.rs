@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `BotanyQapp` component.
 pub fn BotanyQapp() -> Element {
     rsx! {
         QAppEngine {

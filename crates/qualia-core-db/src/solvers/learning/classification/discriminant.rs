@@ -110,6 +110,7 @@ impl LdaModel {
         })
     }
 
+    /// LDA-predicts one row `q`.
     pub fn predict_row(&self, q: &[f64]) -> usize {
         let mut best = 0;
         let mut best_s = f64::NEG_INFINITY;
@@ -128,6 +129,7 @@ impl LdaModel {
         self.classes[best]
     }
 
+    /// LDA-predicts `m` rows in `x`.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
@@ -195,6 +197,7 @@ impl QdaModel {
         })
     }
 
+    /// QDA-predicts one row `q`.
     pub fn predict_row(&self, q: &[f64]) -> usize {
         let p = self.p;
         let mut diff = vec![0.0; p];
@@ -220,6 +223,7 @@ impl QdaModel {
         self.classes[best]
     }
 
+    /// QDA-predicts `m` rows in `x`.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))

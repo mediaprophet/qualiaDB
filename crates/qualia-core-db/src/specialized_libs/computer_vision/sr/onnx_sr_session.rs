@@ -86,7 +86,17 @@ pub fn probe_sr_asset(path: &Path, backend: &'static str) -> Result<SrSessionInf
 /// Build an `ort` session from a weight file. Mirrors vision's `load_ort_session`.
 #[cfg(feature = "vision-onnx")]
 pub fn load_sr_session(path: &Path) -> Result<ort::session::Session, SrSessionError> {
-    ort::session::Session::builder()
+    let environment = crate::inference::onnx_runtime::shared_environment()
+        .map_err(|_| SrSessionError::LoadFailed)?;
+    load_sr_session_with_environment(path, environment)
+}
+
+#[cfg(feature = "vision-onnx")]
+pub fn load_sr_session_with_environment(
+    path: &Path,
+    environment: &ort::environment::Environment,
+) -> Result<ort::session::Session, SrSessionError> {
+    ort::session::Session::builder(environment)
         .map_err(|_| SrSessionError::LoadFailed)?
         .commit_from_file(path)
         .map_err(|_| SrSessionError::LoadFailed)

@@ -63,6 +63,7 @@ class GgufInspection:
     tensors_truncated: bool
 
     def as_dict(self) -> dict[str, object]:
+        """Dict form."""
         result = asdict(self)
         result["tensors"] = [asdict(tensor) for tensor in self.tensors]
         return result
@@ -70,17 +71,20 @@ class GgufInspection:
 
 class _Reader:
     def __init__(self, handle: BinaryIO, file_bytes: int, max_string_bytes: int):
+        """Initializes the instance."""
         self.handle = handle
         self.file_bytes = file_bytes
         self.max_string_bytes = max_string_bytes
         self.offset = 0
 
     def _checked_end(self, size: int, label: str) -> int:
+        """Checked-end helper."""
         if size < 0 or size > self.file_bytes - self.offset:
             raise GgufError(f"truncated {label} at byte {self.offset}")
         return self.offset + size
 
     def read(self, size: int, label: str) -> bytes:
+        """Reads bytes."""
         self._checked_end(size, label)
         data = self.handle.read(size)
         if len(data) != size:
@@ -89,17 +93,21 @@ class _Reader:
         return data
 
     def skip(self, size: int, label: str) -> None:
+        """Skips bytes."""
         self._checked_end(size, label)
         self.handle.seek(size, 1)
         self.offset += size
 
     def u32(self, label: str) -> int:
+        """Reads a u32."""
         return int.from_bytes(self.read(4, label), "little")
 
     def u64(self, label: str) -> int:
+        """Reads a u64."""
         return int.from_bytes(self.read(8, label), "little")
 
     def string(self, label: str, capture: bool) -> Optional[str]:
+        """Reads a GGUF string."""
         size = self.u64(f"{label} length")
         if size > self.max_string_bytes:
             raise GgufError(
@@ -111,6 +119,7 @@ class _Reader:
         return data.decode("utf-8", errors="replace")
 
     def value(self, value_type: int, capture: bool) -> object:
+        """Reads a typed value."""
         if value_type == 8:
             return self.string("GGUF string", capture)
         if value_type == 9:
@@ -146,6 +155,7 @@ class _Reader:
 
 
 def _aligned(value: int, alignment: int) -> int:
+    """Alignment helper."""
     if alignment <= 0 or alignment & (alignment - 1):
         raise GgufError(f"GGUF alignment {alignment} is not a positive power of two")
     return (value + alignment - 1) & -alignment

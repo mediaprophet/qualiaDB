@@ -35,6 +35,7 @@ pub struct ContactTable {
 }
 
 impl ContactTable {
+    /// Creates a default `ContactTable`.
     pub const fn new() -> Self {
         Self {
             contacts: [None; CONTACT_SLOTS],
@@ -42,6 +43,7 @@ impl ContactTable {
         }
     }
 
+    /// `true` when the contact slot is occupied.
     pub fn contact_occupied(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -54,6 +56,7 @@ impl ContactTable {
         n
     }
 
+    /// `true` when the help slot is occupied.
     pub fn help_occupied(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -79,6 +82,7 @@ impl ContactTable {
         Err(QdnfError::Unauthorized)
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, peer: StrongDigest) -> Result<ContactSlot, QdnfError> {
         let i = self.index_of(peer)?;
         self.contacts[i].ok_or(QdnfError::Unauthorized)

@@ -38,6 +38,15 @@ pub trait Host {
         Ok(())
     }
 
+    /// Complete a `transaction { ... }` block on normal exit.
+    ///
+    /// Hosts that stage writes inside a transaction override this to commit
+    /// uncommitted work; the default delegates to `graph_abort` for backwards
+    /// compatibility with external mock hosts.
+    fn graph_end(&mut self, span: Span) -> Result<(), Diagnostic> {
+        self.graph_abort(span)
+    }
+
     fn aura_validate(
         &mut self,
         node: &Value,
@@ -139,10 +148,9 @@ pub trait Host {
     fn capability_invoke(
         &mut self,
         id: &str,
-        args: &Value,
+        _args: &Value,
         span: Span,
     ) -> Result<Value, Diagnostic> {
-        let _ = args;
         Err(Diagnostic::new(
             DiagCode::E300,
             span,

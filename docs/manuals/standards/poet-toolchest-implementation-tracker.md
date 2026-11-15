@@ -1,6 +1,6 @@
 # Poet Tool-Chest implementation tracker
 
-**Date:** 2026-09-05 · **Branch:** `0.0.36-dev` · **Freeze:** `vibe-host-0.1`  
+**Date:** 2026-09-05 · **Branch:** `0.0.40-dev` · **Freeze:** `vibe-host-0.1`  
 **Live source:** `crates/poet/src/browser/registration/` via `build_registry()`  
 **Dispatch:** `crates/poet/src/browser/tool_actions.rs` + `chain_actions.rs` + `shapes_actions.rs`  
 **Regression:** `every_chain_has_at_least_one_tool` · `every_registered_nonplacement_tool_has_an_explicit_policy`

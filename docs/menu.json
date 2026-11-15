@@ -1,8 +1,8 @@
 {
-  "version": "0.0.39",
+  "version": "0.0.41",
   "brand": {
     "name": "Webizen",
-    "tagline": "Life-domain habitat \u00b7 QualiaDB engine",
+    "tagline": "Life-domain habitat · QualiaDB engine",
     "icon": "W"
   },
   "navigation": [
@@ -13,23 +13,75 @@
       "group": "Core"
     },
     {
-      "label": "POET Habitat (Live)",
+      "label": "POET WASM (Live)",
       "href": "poet-app/index.html",
       "icon": "fa-cube",
       "highlight": true,
       "group": "Core"
     },
     {
-      "label": "0.0.39 Progress",
-      "href": "progress-0.0.39.html",
+      "label": "0.0.41 Release",
+      "href": "progress-0.0.41.html",
+      "icon": "fa-rocket",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Demos & Showcases",
+      "href": "release-showcase-0.0.41.html",
+      "icon": "fa-play",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "0.0.40 Baseline",
+      "href": "progress-0.0.40.html",
       "icon": "fa-wand-magic-sparkles",
       "highlight": true,
       "group": "Core"
     },
     {
-      "label": "Prompt Precision",
-      "href": "prompt-precision.html",
-      "icon": "fa-sliders",
+      "label": "Hypermedia Studio (150)",
+      "href": "hypermedia-studio.html",
+      "icon": "fa-cubes",
+      "group": "Studio"
+    },
+    {
+      "label": "Qualia-Vision (rPPG)",
+      "href": "vision-showcase.html",
+      "icon": "fa-eye",
+      "group": "Sensing"
+    },
+    {
+      "label": "Qualia-Audio (HRTF)",
+      "href": "audio-showcase.html",
+      "icon": "fa-headphones",
+      "group": "Sensing"
+    },
+    {
+      "label": "Domains & Solvers",
+      "href": "domains-solvers.html",
+      "icon": "fa-layer-group",
+      "group": "Core"
+    },
+    {
+      "label": "Geospatial & GIS",
+      "href": "spatial.html",
+      "icon": "fa-mountain",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "AAA Graphics & WebGPU",
+      "href": "graphics.html",
+      "icon": "fa-vr-cardboard",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "RDF Holograph Theatre",
+      "href": "graph.html",
+      "icon": "fa-atom",
       "highlight": true,
       "group": "Core"
     },
@@ -41,15 +93,30 @@
       "group": "Core"
     },
     {
-      "label": "0.0.38 Progress",
-      "href": "progress-0.0.38.html",
-      "icon": "fa-heart-pulse",
+      "label": "Agreement Instruments",
+      "href": "agreement-instruments.html",
+      "icon": "fa-handshake",
+      "highlight": true,
       "group": "Core"
     },
     {
-      "label": "0.0.37 Progress",
-      "href": "progress-0.0.37.html",
-      "icon": "fa-clock-rotate-left",
+      "label": "Agreement Ledger",
+      "href": "agreement-ledger.html",
+      "icon": "fa-book-open",
+      "group": "Core"
+    },
+    {
+      "label": "Human-Centric Authoring",
+      "href": "human-centric-authoring.html",
+      "icon": "fa-pen-ruler",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Prompt Precision",
+      "href": "prompt-precision.html",
+      "icon": "fa-sliders",
+      "highlight": true,
       "group": "Core"
     },
     {
@@ -74,9 +141,35 @@
       "group": "Core"
     },
     {
+      "label": "QBDL Streaming",
+      "href": "qbdl-streaming.html",
+      "icon": "fa-layer-group",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "did:qi & Identifier Fabric",
+      "href": "qdnf-did-qi.html",
+      "icon": "fa-id-card",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "Release Matrix",
       "href": "release-matrix.html",
       "icon": "fa-table-cells",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.39 Progress",
+      "href": "progress-0.0.39.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.38 Progress",
+      "href": "progress-0.0.38.html",
+      "icon": "fa-heart-pulse",
       "group": "Core"
     },
     {
@@ -116,7 +209,7 @@
       "group": "Core"
     },
     {
-      "label": "VibeScript Overview",
+      "label": "VibeScript Present",
       "href": "vibe/index.html",
       "icon": "fa-code",
       "highlight": true,
@@ -136,7 +229,7 @@
       "group": "VibeScript"
     },
     {
-      "label": "RDF \u2192 Q42 \u2192 Vibe",
+      "label": "RDF → Q42 → Vibe",
       "href": "rdf-q42-vibe-demo.html",
       "icon": "fa-diagram-project",
       "highlight": true,
@@ -170,24 +263,27 @@
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
+      "group": "Benchmarks",
+      "highlight": true
+    },
+    {
+      "label": "VibeScript vs V8",
+      "href": "benchmark.html#vibescript",
+      "icon": "fa-bolt",
+      "highlight": true,
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Geometry & Renderer",
+      "href": "benchmark.html#geometry",
+      "icon": "fa-shapes",
+      "highlight": true,
       "group": "Benchmarks"
     },
     {
       "label": "Browser LLM",
       "href": "benchmark.html#llm",
       "icon": "fa-robot",
-      "group": "Benchmarks"
-    },
-    {
-      "label": "Comparative",
-      "href": "comparative_benchmarks.html",
-      "icon": "fa-chart-line",
-      "group": "Benchmarks"
-    },
-    {
-      "label": "Visualizer",
-      "href": "benchmark_visualizer.html",
-      "icon": "fa-chart-area",
       "group": "Benchmarks"
     },
     {
@@ -240,31 +336,11 @@
       "group": "Sciences"
     },
     {
-      "label": "WGSL Forge",
-      "href": "forge-showcase.html",
-      "icon": "fa-hammer",
-      "highlight": true,
-      "group": "Sciences"
-    },
-    {
-      "label": "Spatial / GeoSPARQL",
-      "href": "spatial.html",
-      "icon": "fa-cube",
-      "group": "Sciences"
-    },
-    {
       "label": "Knowledge Universe",
       "href": "universe.html",
       "icon": "fa-globe",
       "highlight": true,
       "group": "Sciences"
-    },
-    {
-      "label": "Design Studio",
-      "href": "design-studio.html",
-      "icon": "fa-pen-ruler",
-      "highlight": true,
-      "group": "Tools"
     },
     {
       "label": "Phone Console",
@@ -285,7 +361,7 @@
       "group": "Tools"
     },
     {
-      "label": "3D Anatomy",
+      "label": "3D Welfare Anatomy",
       "href": "playground/anatomy.html",
       "icon": "fa-heart-pulse",
       "group": "Tools"
@@ -385,15 +461,34 @@
       "group": "Data"
     },
     {
+      "label": "EMF & QAC Showcase",
+      "href": "emf-qac-showcase.html",
+      "icon": "fa-wave-square",
+      "highlight": true,
+      "group": "Data"
+    },
+    {
+      "label": "EMF & QAC Architecture",
+      "href": "emf-qac-architecture.html",
+      "icon": "fa-compass-drafting",
+      "group": "Data"
+    },
+    {
       "label": "Zero-Heap",
       "href": "zero-heap-compliance.html",
       "icon": "fa-memory",
       "group": "Data"
     },
     {
-      "label": "Ontology Demo",
+      "label": "Ontology browse",
       "href": "ontology.html",
       "icon": "fa-book-open",
+      "group": "Data"
+    },
+    {
+      "label": "Q42 Integrity",
+      "href": "integrity.html",
+      "icon": "fa-shield-halved",
       "highlight": true,
       "group": "Data"
     },

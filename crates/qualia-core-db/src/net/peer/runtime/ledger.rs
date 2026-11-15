@@ -6,6 +6,9 @@
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::Generation;
 
+mod headroom;
+mod incarnation;
+mod inspect;
 const HANDLE_SLOTS: usize = 32;
 
 #[repr(C)]
@@ -23,6 +26,7 @@ impl ResourceBudget {
         io: 0,
     };
 
+    /// Checked budget add; `QdnfError` on overflow.
     pub fn saturating_add(self, other: Self) -> Result<Self, QdnfError> {
         Ok(Self {
             bytes: self
@@ -86,10 +90,12 @@ impl ChargeRef {
 
 impl ReservationHandle {
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> Generation {
         self.generation
     }
 
+    /// `ReservationHandle::as_ref`.
     pub(crate) fn as_ref(&self) -> ChargeRef {
         ChargeRef {
             slot: self.slot,
@@ -97,6 +103,7 @@ impl ReservationHandle {
         }
     }
 
+    /// Wraps a charge reference as a handle.
     pub(crate) fn from_ref(r: ChargeRef) -> Self {
         Self {
             slot: r.slot,
@@ -106,6 +113,7 @@ impl ReservationHandle {
 }
 
 pub struct ReservationLedger {
+    incarnation: super::incarnation::CanonicalIncarnation,
     host_cap: ResourceBudget,
     cell_cap: ResourceBudget,
     role_cap: ResourceBudget,
@@ -118,6 +126,7 @@ pub struct ReservationLedger {
 }
 
 impl ReservationLedger {
+    /// Creates a default `ReservationLedger`.
     pub const fn new(
         host_cap: ResourceBudget,
         cell_cap: ResourceBudget,
@@ -126,6 +135,7 @@ impl ReservationLedger {
         operation_cap: ResourceBudget,
     ) -> Self {
         Self {
+            incarnation: super::incarnation::CanonicalIncarnation::UNASSIGNED,
             host_cap,
             cell_cap,
             role_cap,
@@ -202,6 +212,7 @@ impl ReservationLedger {
         })
     }
 
+    /// Releases `handle`'s reservation.
     pub fn release(&mut self, handle: ReservationHandle) -> Result<(), QdnfError> {
         let i = handle.slot as usize;
         if i >= HANDLE_SLOTS {
@@ -219,6 +230,30 @@ impl ReservationLedger {
         slot.occupied = false;
         slot.budget = ResourceBudget::ZERO;
         self.sub_used(add, verified_peer)
+    }
+
+    /// Release `handle` only if `(slot, generation)` matches AND the authoritative
+    /// recorded byte reservation equals `expected_bytes` (`R10` / `R11`).
+    pub fn release_checked_bytes(
+        &mut self,
+        handle: ReservationHandle,
+        expected_bytes: u64,
+    ) -> Result<(), QdnfError> {
+        let i = handle.slot as usize;
+        if i >= HANDLE_SLOTS {
+            return Err(QdnfError::Range);
+        }
+        let slot = &self.handles[i];
+        if !slot.occupied {
+            return Err(QdnfError::DoubleRelease);
+        }
+        if slot.generation != handle.generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        if slot.budget.bytes != expected_bytes {
+            return Err(QdnfError::Conflict);
+        }
+        self.release(handle)
     }
 
     fn sub_used(&mut self, add: ResourceBudget, verified_peer: bool) -> Result<(), QdnfError> {
@@ -249,14 +284,17 @@ impl ReservationLedger {
         Ok(())
     }
 
+    /// Aggregate usage across admission scopes.
     pub fn used(&self) -> AdmissionScopes {
         self.used
     }
 
+    /// Transient-scope usage.
     pub fn transient_used(&self) -> ResourceBudget {
         self.transient_used
     }
 
+    /// Host bytes remaining under budget.
     pub fn host_remaining_bytes(&self) -> u64 {
         self.host_cap.bytes.saturating_sub(self.used.host.bytes)
     }
@@ -360,5 +398,24 @@ mod tests {
         };
         let _ = handle;
         assert_eq!(ledger.release(forged), Err(QdnfError::StaleGeneration));
+    }
+
+    #[test]
+    fn r10_r11_release_checked_bytes_rejects_mismatched_caller_amount_and_stale_generation() {
+        let mut ledger = caps();
+        let add = ResourceBudget {
+            bytes: 32,
+            work: 1,
+            io: 1,
+        };
+        let handle = ledger.reserve(add, true).unwrap();
+        let wrong_amount_ref = handle.as_ref();
+        assert_eq!(
+            ledger.release_checked_bytes(ReservationHandle::from_ref(wrong_amount_ref), 64),
+            Err(QdnfError::Conflict)
+        );
+        assert_eq!(ledger.used().host.bytes, 32);
+        assert_eq!(ledger.release_checked_bytes(handle, 32), Ok(()));
+        assert_eq!(ledger.used().host.bytes, 0);
     }
 }

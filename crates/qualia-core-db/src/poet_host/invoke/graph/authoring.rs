@@ -9,6 +9,7 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_SOURCE_BYTES: usize = 256 * 1024;
 
+/// VibeScript seam: graph authoring.
 pub fn author(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let source = args::rec_str(args_v, "source")
         .ok_or_else(|| args::bad(span, "GraphAuthoring.process needs source"))?;

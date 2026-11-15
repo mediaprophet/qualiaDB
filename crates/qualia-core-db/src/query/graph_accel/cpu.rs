@@ -63,6 +63,7 @@ pub fn radix_sort_u64_indices(keys: &[u64], indices: &mut [u32]) {
     indices.copy_from_slice(&src_idx);
 }
 
+/// CPU sort by object.
 pub fn sort_quins_by_object_cpu(quins: &mut [NQuin]) {
     radix_sort_by_key(quins, |q| q.object);
 }
@@ -114,6 +115,7 @@ pub enum QuinField {
 
 impl QuinField {
     #[inline]
+    /// `QuinField::get`.
     pub fn get(self, q: &NQuin) -> u64 {
         match self {
             Self::Subject => q.subject,
@@ -140,6 +142,7 @@ pub fn sort_merge_join_u64(build: &[u64], probe: &[u64], out: &mut [(u32, u32)])
     merge_sorted_pairs(build, probe, &b_idx, &p_idx, out)
 }
 
+/// Merges two sorted pair lists.
 pub fn merge_sorted_pairs(
     build: &[u64],
     probe: &[u64],

@@ -22,6 +22,7 @@ pub struct ProtectedAckSession {
 }
 
 impl ProtectedAckSession {
+    /// Builds `ProtectedAckSession` from `keys`.
     pub fn from_keys(
         send_key: [u8; 32],
         recv_key: [u8; 32],
@@ -35,11 +36,13 @@ impl ProtectedAckSession {
     }
 
     #[inline]
+    /// `true` when closed.
     pub const fn is_closed(&self) -> bool {
         self.closed
     }
 
     #[inline]
+    /// `ProtectedAckSession::in_flight`.
     pub fn in_flight(&self) -> usize {
         self.sent.in_flight_count()
     }
@@ -130,6 +133,7 @@ impl ProtectedAckSession {
     }
 }
 
+/// Packet number for the ack.
 pub fn packet_number_of(sealed: &[u8], len: usize) -> Result<u64, QdnfError> {
     if len < OVERHEAD || sealed.len() < PN_LEN {
         return Err(QdnfError::Truncated);

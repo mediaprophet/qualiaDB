@@ -12,18 +12,21 @@ pub struct Exterior3 {
 }
 
 impl Exterior3 {
+    /// `Exterior3::zero`.
     pub const fn zero() -> Self {
         Self {
             coefficients: [0.0; EXTERIOR3_COMPONENTS],
         }
     }
 
+    /// `Exterior3::scalar`.
     pub const fn scalar(value: f64) -> Self {
         let mut coefficients = [0.0; EXTERIOR3_COMPONENTS];
         coefficients[0] = value;
         Self { coefficients }
     }
 
+    /// `Exterior3::basis`.
     pub const fn basis(mask: usize, value: f64) -> Self {
         let mut coefficients = [0.0; EXTERIOR3_COMPONENTS];
         if mask < EXTERIOR3_COMPONENTS {
@@ -32,6 +35,7 @@ impl Exterior3 {
         Self { coefficients }
     }
 
+    /// Validates the multivector component layout.
     pub fn validate(&self) -> Result<(), AnalysisError> {
         if self.coefficients.iter().all(|value| value.is_finite()) {
             Ok(())
@@ -40,6 +44,7 @@ impl Exterior3 {
         }
     }
 
+    /// Projects to a single grade.
     pub fn grade(self, grade: u32) -> Self {
         let mut result = Self::zero();
         for mask in 0..EXTERIOR3_COMPONENTS {
@@ -50,6 +55,7 @@ impl Exterior3 {
         result
     }
 
+    /// Grade-wise addition.
     pub fn add(self, other: Self) -> Self {
         let mut result = Self::zero();
         for mask in 0..EXTERIOR3_COMPONENTS {
@@ -58,6 +64,7 @@ impl Exterior3 {
         result
     }
 
+    /// Scalar multiplication; `AnalysisError` on non-finite scalar.
     pub fn scale(self, scalar: f64) -> Result<Self, AnalysisError> {
         if !scalar.is_finite() {
             return Err(AnalysisError::NonFinite);
@@ -69,6 +76,7 @@ impl Exterior3 {
         Ok(result)
     }
 
+    /// Exterior (wedge) product with grade bookkeeping.
     pub fn wedge(self, other: Self) -> Result<Self, AnalysisError> {
         self.validate()?;
         other.validate()?;
@@ -86,6 +94,7 @@ impl Exterior3 {
         Ok(result)
     }
 
+    /// Interior product contraction against `vector`.
     pub fn interior(self, vector: Vector<3>) -> Result<Self, AnalysisError> {
         self.validate()?;
         vector.validate()?;
@@ -129,6 +138,7 @@ fn wedge_basis(left: usize, right: usize) -> (usize, f64) {
     (left | right, if inversions & 1 == 0 { 1.0 } else { -1.0 })
 }
 
+/// Sign of `permutation` (+1/−1); error on invalid input.
 pub fn permutation_parity(permutation: &[usize]) -> Result<i8, AnalysisError> {
     for (index, value) in permutation.iter().enumerate() {
         if *value >= permutation.len()
@@ -146,6 +156,7 @@ pub fn permutation_parity(permutation: &[usize]) -> Result<i8, AnalysisError> {
     Ok(if inversions & 1 == 0 { 1 } else { -1 })
 }
 
+/// Determinant of 3 columns computed via the top-grade wedge.
 pub fn determinant_from_wedge(columns: [Vector<3>; 3]) -> Result<f64, AnalysisError> {
     let mut forms = [Exterior3::zero(); 3];
     for column in 0..3 {
@@ -156,6 +167,7 @@ pub fn determinant_from_wedge(columns: [Vector<3>; 3]) -> Result<f64, AnalysisEr
     Ok(forms[0].wedge(forms[1])?.wedge(forms[2])?.coefficients[0b111])
 }
 
+/// Pulls a 1-form back through a linear map.
 pub fn pullback_one_form(
     derivative: &LinearMap<3, 3>,
     one_form: Vector<3>,

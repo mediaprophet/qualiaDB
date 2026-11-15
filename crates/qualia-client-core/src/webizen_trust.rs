@@ -43,6 +43,10 @@ pub struct TrustAnchor {
     pub enabled: bool,
     pub notes: String,
     pub added_unix: u64,
+    #[serde(default)]
+    pub jurisdiction: Option<String>,
+    #[serde(default)]
+    pub signature_algorithm: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -54,6 +58,7 @@ pub struct TrustStore {
 }
 
 impl TrustStore {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             version: 1,
@@ -62,10 +67,12 @@ impl TrustStore {
         }
     }
 
+    /// Path.
     pub fn path(storage_root: &Path) -> PathBuf {
         storage_root.join(TRUST_STORE_FILE)
     }
 
+    /// Loads.
     pub fn load(storage_root: &Path) -> Self {
         let p = Self::path(storage_root);
         match fs::read_to_string(&p) {
@@ -74,6 +81,7 @@ impl TrustStore {
         }
     }
 
+    /// Saves.
     pub fn save(&self, storage_root: &Path) -> Result<(), String> {
         let p = Self::path(storage_root);
         if let Some(parent) = p.parent() {
@@ -85,6 +93,7 @@ impl TrustStore {
         fs::rename(&tmp, &p).map_err(|e| e.to_string())
     }
 
+    /// Adds pem-root.
     pub fn add_pem_root(
         &mut self,
         label: &str,
@@ -112,11 +121,59 @@ impl TrustStore {
             enabled: true,
             notes: notes.into(),
             added_unix: now,
+            jurisdiction: None,
+            signature_algorithm: None,
         };
         self.anchors.push(a.clone());
         Ok(a)
     }
 
+    /// Adds a PEM root with explicit jurisdiction (e.g. "AU") and signature algorithm (e.g. "ML-DSA-65", "Ed25519").
+    pub fn add_jurisdiction_pem_root(
+        &mut self,
+        label: &str,
+        pem: &str,
+        jurisdiction: &str,
+        signature_algorithm: &str,
+        notes: &str,
+        now: u64,
+    ) -> Result<TrustAnchor, String> {
+        let pem = pem.trim();
+        if !pem.contains("BEGIN CERTIFICATE") {
+            return Err("expected PEM certificate (BEGIN CERTIFICATE)".into());
+        }
+        let id = format!("pem:{}", short_hash(pem.as_bytes()));
+        if self.anchors.iter().any(|a| a.id == id) {
+            return Err("anchor already present".into());
+        }
+        let a = TrustAnchor {
+            id: id.clone(),
+            label: if label.trim().is_empty() {
+                format!("Root {id}")
+            } else {
+                label.trim().into()
+            },
+            kind: AnchorKind::PemRoot,
+            material: pem.into(),
+            enabled: true,
+            notes: notes.into(),
+            added_unix: now,
+            jurisdiction: if jurisdiction.trim().is_empty() {
+                None
+            } else {
+                Some(jurisdiction.trim().to_string())
+            },
+            signature_algorithm: if signature_algorithm.trim().is_empty() {
+                None
+            } else {
+                Some(signature_algorithm.trim().to_string())
+            },
+        };
+        self.anchors.push(a.clone());
+        Ok(a)
+    }
+
+    /// Adds did.
     pub fn add_did(
         &mut self,
         label: &str,
@@ -144,11 +201,14 @@ impl TrustStore {
             enabled: true,
             notes: notes.into(),
             added_unix: now,
+            jurisdiction: None,
+            signature_algorithm: None,
         };
         self.anchors.push(a.clone());
         Ok(a)
     }
 
+    /// Sets enabled.
     pub fn set_enabled(&mut self, id: &str, enabled: bool) -> Result<(), String> {
         let a = self
             .anchors
@@ -159,6 +219,7 @@ impl TrustStore {
         Ok(())
     }
 
+    /// Removes.
     pub fn remove(&mut self, id: &str) -> bool {
         let before = self.anchors.len();
         self.anchors.retain(|a| a.id != id);
@@ -175,6 +236,28 @@ impl TrustStore {
             .join("\n")
     }
 
+    /// Enabled PEM root anchors matching the given jurisdiction (e.g. "AU", case-insensitive).
+    pub fn enabled_pem_roots_for_jurisdiction(&self, jurisdiction: &str) -> Vec<&TrustAnchor> {
+        let target = jurisdiction.trim();
+        self.anchors
+            .iter()
+            .filter(|a| {
+                a.enabled
+                    && a.kind == AnchorKind::PemRoot
+                    && a.jurisdiction
+                        .as_deref()
+                        .map(|j| j.eq_ignore_ascii_case(target))
+                        .unwrap_or(false)
+            })
+            .collect()
+    }
+
+    /// Export all enabled PEM root blocks concatenated as a bundle for TLS verifiers (e.g. Chora).
+    pub fn export_enabled_pem_bundle(&self) -> String {
+        self.enabled_pem_bundle()
+    }
+
+    /// Enabled DIDs.
     pub fn enabled_dids(&self) -> Vec<&str> {
         self.anchors
             .iter()
@@ -367,6 +450,7 @@ impl Default for SuggestedTrustCatalog {
 }
 
 impl SuggestedTrustCatalog {
+    /// `true` when empty / empty set.
     pub fn empty() -> Self {
         Self::default()
     }
@@ -379,6 +463,7 @@ impl SuggestedTrustCatalog {
         serde_json::from_slice(bytes).map_err(|e| format!("suggested catalog parse: {e}"))
     }
 
+    /// Constructs from json-str.
     pub fn from_json_str(s: &str) -> Result<Self, String> {
         Self::from_json_bytes(s.as_bytes())
     }
@@ -405,6 +490,7 @@ impl SuggestedTrustCatalog {
         Ok(Self::empty())
     }
 
+    /// Gets.
     pub fn get(&self, id: &str) -> Option<&SuggestedAnchor> {
         self.entries.iter().find(|e| e.id == id)
     }
@@ -454,7 +540,13 @@ pub fn import_suggested_into_store(
     let enabled = force_enabled || entry.enabled_by_default;
     match entry.kind {
         AnchorKind::PemRoot => {
-            let a = store.add_pem_root(&entry.label, &material, &entry.notes, now)?;
+            let mut a = store.add_pem_root(&entry.label, &material, &entry.notes, now)?;
+            if !entry.jurisdiction.trim().is_empty() {
+                if let Some(anchor) = store.anchors.iter_mut().find(|x| x.id == a.id) {
+                    anchor.jurisdiction = Some(entry.jurisdiction.trim().to_string());
+                    a.jurisdiction = Some(entry.jurisdiction.trim().to_string());
+                }
+            }
             if !enabled {
                 let _ = store.set_enabled(&a.id, false);
             }
@@ -490,6 +582,12 @@ pub fn import_suggested_into_store(
                 enabled,
                 notes: entry.notes.clone(),
                 added_unix: now,
+                jurisdiction: if entry.jurisdiction.trim().is_empty() {
+                    None
+                } else {
+                    Some(entry.jurisdiction.trim().to_string())
+                },
+                signature_algorithm: None,
             };
             store.anchors.push(a.clone());
             Ok(a)
@@ -797,6 +895,8 @@ mod tests {
             enabled: true,
             notes: "".into(),
             added_unix: 1,
+            jurisdiction: None,
+            signature_algorithm: None,
         });
         assert_eq!(
             cert_override_decision(&s, "intranet.local"),
@@ -819,6 +919,8 @@ mod tests {
             enabled: true,
             notes: "".into(),
             added_unix: 1,
+            jurisdiction: None,
+            signature_algorithm: None,
         });
         // Swarm-2: PEMs present → candidate only, never auto-allow without chain verify.
         assert_eq!(
@@ -830,6 +932,58 @@ mod tests {
         let d = cert_override_decision_full(&s, "h.test", false, false, Some(true));
         assert_eq!(d, CertOverrideDecision::AllowChainVerified);
         assert!(decision_allows(d));
+    }
+
+    #[test]
+    fn jurisdiction_pem_roots_and_bundle_export() {
+        let mut s = TrustStore::new();
+        let pem_au = "-----BEGIN CERTIFICATE-----\nMIIC_AU_ROOT\n-----END CERTIFICATE-----\n";
+        let pem_global = "-----BEGIN CERTIFICATE-----\nMIIC_GLOBAL_ROOT\n-----END CERTIFICATE-----\n";
+
+        let au_anchor = s
+            .add_jurisdiction_pem_root(
+                "Australian Community Root",
+                pem_au,
+                "AU",
+                "ML-DSA-65",
+                "Community Post-Quantum Root for AU ecosystem",
+                100,
+            )
+            .unwrap();
+
+        assert_eq!(au_anchor.jurisdiction.as_deref(), Some("AU"));
+        assert_eq!(au_anchor.signature_algorithm.as_deref(), Some("ML-DSA-65"));
+
+        let global_anchor = s
+            .add_pem_root("Global Root", pem_global, "Standard X.509 root", 101)
+            .unwrap();
+        assert_eq!(global_anchor.jurisdiction, None);
+        assert_eq!(global_anchor.signature_algorithm, None);
+
+        // Filter by "AU"
+        let au_roots = s.enabled_pem_roots_for_jurisdiction("AU");
+        assert_eq!(au_roots.len(), 1);
+        assert_eq!(au_roots[0].id, au_anchor.id);
+
+        // Case-insensitive jurisdiction filter
+        let au_roots_lower = s.enabled_pem_roots_for_jurisdiction("au");
+        assert_eq!(au_roots_lower.len(), 1);
+
+        // Mismatched jurisdiction filter
+        let us_roots = s.enabled_pem_roots_for_jurisdiction("US");
+        assert_eq!(us_roots.len(), 0);
+
+        // Export bundle contains both enabled roots
+        let bundle = s.export_enabled_pem_bundle();
+        assert!(bundle.contains("MIIC_AU_ROOT"));
+        assert!(bundle.contains("MIIC_GLOBAL_ROOT"));
+
+        // When AU root is disabled, it is excluded from jurisdiction query and bundle
+        s.set_enabled(&au_anchor.id, false).unwrap();
+        assert_eq!(s.enabled_pem_roots_for_jurisdiction("AU").len(), 0);
+        let bundle2 = s.export_enabled_pem_bundle();
+        assert!(!bundle2.contains("MIIC_AU_ROOT"));
+        assert!(bundle2.contains("MIIC_GLOBAL_ROOT"));
     }
 
     #[test]

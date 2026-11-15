@@ -12,8 +12,7 @@ use crate::semantic_instruments::errors::InstrumentError;
 /// W3C VC 1.1 context required on every export.
 pub const VC_V1_CONTEXT: &str = "https://www.w3.org/2018/credentials/v1";
 /// Open Badges v3 context URL (same string as `OpenBadgeCodec`; not that codec).
-pub const OB_V3_CONTEXT: &str =
-    "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json";
+pub const OB_V3_CONTEXT: &str = "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json";
 
 /// Accessible badge image bound to a digest. Not proof of the claim.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,8 +155,7 @@ mod tests {
     use crate::semantic_instruments::demo::demo_catalog;
     use crate::semantic_instruments::visual::VISUAL_MEDIA_TYPE;
 
-    const DIGEST: &str =
-        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const DIGEST: &str = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const ACTOR: &str = "did:webizen:agent:demo-reviewer";
     const LEARNER: &str = "did:webizen:agent:learner";
 
@@ -236,8 +234,11 @@ mod tests {
             .iter()
             .any(|c| c.as_str() == Some(OB_V3_CONTEXT)));
         let types = v["type"].as_array().unwrap();
-        for required in ["VerifiableCredential", "OpenBadgeCredential", "InstrumentAttestation"]
-        {
+        for required in [
+            "VerifiableCredential",
+            "OpenBadgeCredential",
+            "InstrumentAttestation",
+        ] {
             assert!(types.iter().any(|t| t.as_str() == Some(required)));
         }
     }

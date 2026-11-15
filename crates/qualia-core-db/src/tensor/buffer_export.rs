@@ -24,6 +24,7 @@ pub struct TensorBufferHeader {
 }
 
 impl TensorBufferHeader {
+    /// Creates a default `TensorBufferHeader`.
     pub fn new(node_count: u32) -> Self {
         Self {
             magic: TENSOR_BUFFER_MAGIC,
@@ -34,6 +35,7 @@ impl TensorBufferHeader {
         }
     }
 
+    /// `total` size in bytes.
     pub fn total_bytes(node_count: usize) -> usize {
         std::mem::size_of::<TensorBufferHeader>() + node_count * TENSOR_STRIDE
     }

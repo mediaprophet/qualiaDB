@@ -11,19 +11,23 @@ from gguf_reader import GgufError, inspect_gguf
 
 
 def string(value: str) -> bytes:
+    """Reads a GGUF string."""
     encoded = value.encode()
     return struct.pack("<Q", len(encoded)) + encoded
 
 
 def kv_string(key: str, value: str) -> bytes:
+    """KV string helper."""
     return string(key) + struct.pack("<I", 8) + string(value)
 
 
 def kv_u32(key: str, value: int) -> bytes:
+    """KV u32 helper."""
     return string(key) + struct.pack("<I", 4) + struct.pack("<I", value)
 
 
 def valid_fixture() -> bytes:
+    """Valid fixture builder."""
     metadata = b"".join((
         kv_string("general.architecture", "llama"),
         kv_u32("general.alignment", 32),
@@ -38,6 +42,7 @@ def valid_fixture() -> bytes:
 
 class GgufReaderTests(unittest.TestCase):
     def write(self, data: bytes) -> Path:
+        """Writes."""
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         path = Path(directory.name) / "fixture.gguf"
@@ -45,6 +50,7 @@ class GgufReaderTests(unittest.TestCase):
         return path
 
     def test_reads_minimal_valid_gguf_without_tensor_payload_loading(self) -> None:
+        """Test: reads minimal valid gguf without tensor payload loading."""
         report = inspect_gguf(self.write(valid_fixture()))
         self.assertEqual(report.version, 3)
         self.assertEqual(report.metadata["general.architecture"], "llama")
@@ -52,16 +58,19 @@ class GgufReaderTests(unittest.TestCase):
         self.assertEqual(report.tensors[0].dimensions, [4, 8])
 
     def test_rejects_truncated_header(self) -> None:
+        """Test: rejects truncated header."""
         with self.assertRaises(GgufError):
             inspect_gguf(self.write(b"GGUF"))
 
     def test_enforces_metadata_string_limit(self) -> None:
+        """Test: enforces metadata string limit."""
         data = b"GGUF" + struct.pack("<IQQ", 3, 0, 1)
         data += kv_string("general.name", "x" * 32)
         with self.assertRaises(GgufError):
             inspect_gguf(self.write(data), max_string_bytes=8)
 
     def test_enforces_total_metadata_limit_after_final_entry(self) -> None:
+        """Test: enforces total metadata limit after final entry."""
         data = b"GGUF" + struct.pack("<IQQ", 3, 0, 1)
         data += kv_string("general.name", "x" * 32)
         with self.assertRaises(GgufError):

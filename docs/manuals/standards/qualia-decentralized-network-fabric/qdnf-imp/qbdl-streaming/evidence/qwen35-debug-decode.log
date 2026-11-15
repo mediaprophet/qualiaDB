@@ -1,0 +1,58 @@
+
+running 1 test
+[gguf_bridge] KV arena 17039360 slots (65.0 MiB, int8+scale), context=1024
+[smoke] Loaded C:\LLM_files\qwen\Qwen3.5-4B-GGUF\Qwen3.5-4B-Q4_K_M.gguf in 219887.9 ms | layers=32 emb_dim=2560 arch=255 kv_mib=65.0 prompt_tokens=[760, 6511, 314, 9338, 369]
+[fwd-dbg] post-embed nonfinite=0/2560 sample=[0.0012536049, 0.0012536049, -0.03886175, 0.0012536049]
+[layer-dbg] L0 attn_ok=true attn_norm=true ffn_norm=false max|attn_out|=0.1477 max|hidden_postattn|=0.1490
+[fwd-dbg] after layer 0 nonfinite=0/2560 ran=1 sample=[0.14871278, -0.0012459892, -0.02224741, -0.021381294]
+[layer-dbg] L1 attn_ok=true attn_norm=true ffn_norm=false max|attn_out|=0.0117 max|hidden_postattn|=0.1542
+[fwd-dbg] after layer 1 nonfinite=0/2560 ran=2 sample=[0.15331617, -0.005328737, -0.026628844, -0.025341136]
+[layer-dbg] L2 attn_ok=true attn_norm=true ffn_norm=false max|attn_out|=0.0043 max|hidden_postattn|=0.1495
+[fwd-dbg] after layer 2 nonfinite=0/2560 ran=3 sample=[0.14673322, -0.0057201274, -0.026964406, -0.024712155]
+[fwd-dbg] after layer 3 nonfinite=0/2560 ran=4 sample=[0.1458862, -0.0057242736, -0.026900295, -0.024583332]
+[fwd-dbg] after layer 4 nonfinite=0/2560 ran=5 sample=[0.14013924, -0.0039029843, -0.028486177, -0.023599928]
+[fwd-dbg] after layer 5 nonfinite=0/2560 ran=6 sample=[0.09857735, 0.002457802, -0.036737062, -0.019574283]
+[fwd-dbg] after layer 6 nonfinite=0/2560 ran=7 sample=[0.15737648, 0.0033176935, -0.035764445, -0.007962991]
+[fwd-dbg] after layer 7 nonfinite=0/2560 ran=8 sample=[0.15726773, 0.0033262386, -0.03576399, -0.007905851]
+[fwd-dbg] after layer 8 nonfinite=0/2560 ran=9 sample=[0.16140193, 0.0013952125, -0.04012087, -0.001996338]
+[fwd-dbg] after layer 9 nonfinite=0/2560 ran=10 sample=[0.16002284, 0.0014318957, -0.040351827, -0.0017389152]
+[fwd-dbg] after layer 10 nonfinite=0/2560 ran=11 sample=[0.014911688, 0.1407018, -0.058149196, -0.06729791]
+[fwd-dbg] after layer 11 nonfinite=0/2560 ran=12 sample=[0.012376029, 0.14115326, -0.05815655, -0.066102445]
+[fwd-dbg] after layer 12 nonfinite=0/2560 ran=13 sample=[0.012038643, 0.13921201, -0.05879708, -0.06487053]
+[fwd-dbg] after layer 13 nonfinite=0/2560 ran=14 sample=[0.007170314, 0.14009716, -0.058573976, -0.064663485]
+[fwd-dbg] after layer 14 nonfinite=0/2560 ran=15 sample=[0.0008985568, 0.13741702, -0.060576055, -0.06440771]
+[fwd-dbg] after layer 15 nonfinite=0/2560 ran=16 sample=[-0.0051045096, 0.13683182, -0.060979106, -0.064189576]
+[fwd-dbg] after layer 16 nonfinite=0/2560 ran=17 sample=[-0.004965325, 0.137448, -0.06226561, -0.06483424]
+[fwd-dbg] after layer 17 nonfinite=0/2560 ran=18 sample=[0.0005337307, 0.13536714, -0.061921638, -0.06444276]
+[fwd-dbg] after layer 18 nonfinite=0/2560 ran=19 sample=[0.03496317, 0.14076324, -0.05565241, -0.06571211]
+[fwd-dbg] after layer 19 nonfinite=0/2560 ran=20 sample=[0.03212308, 0.1414121, -0.056166157, -0.0664036]
+[fwd-dbg] after layer 20 nonfinite=0/2560 ran=21 sample=[0.0361424, 0.16068158, -0.038457926, -0.07196523]
+[fwd-dbg] after layer 21 nonfinite=0/2560 ran=22 sample=[0.035964258, 0.16930315, -0.041209623, -0.074452706]
+[fwd-dbg] after layer 22 nonfinite=0/2560 ran=23 sample=[0.032767847, 0.17268246, -0.043464664, -0.071223885]
+[fwd-dbg] after layer 23 nonfinite=0/2560 ran=24 sample=[0.0285168, 0.17218031, -0.04407193, -0.07206839]
+[fwd-dbg] after layer 24 nonfinite=0/2560 ran=25 sample=[-0.008460231, 0.17590103, -0.037505493, -0.06096096]
+[fwd-dbg] after layer 25 nonfinite=0/2560 ran=26 sample=[-0.010314691, 0.17834035, -0.039326016, -0.06251183]
+[fwd-dbg] after layer 26 nonfinite=0/2560 ran=27 sample=[-0.015326304, 0.19063254, -0.04185945, -0.05727587]
+[fwd-dbg] after layer 27 nonfinite=0/2560 ran=28 sample=[-0.0139572285, 0.19297464, -0.04251455, -0.056735728]
+[fwd-dbg] after layer 28 nonfinite=0/2560 ran=29 sample=[-0.015501923, 0.19954592, -0.04124743, -0.056165926]
+[fwd-dbg] after layer 29 nonfinite=0/2560 ran=30 sample=[-0.015300889, 0.19543572, -0.042640846, -0.06491308]
+[fwd-dbg] after layer 30 nonfinite=0/2560 ran=30 sample=[-0.015300889, 0.19543572, -0.042640846, -0.06491308]
+[fwd-dbg] after layer 31 nonfinite=0/2560 ran=31 sample=[-0.018746259, 0.19449268, -0.043227438, -0.066580534]
+
+thread 'qwen35-4b-test' (36952) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35.rs:1260:13:
+assertion `left == right` failed: expected all 32 layers to execute at pos=0, got 31
+  left: 31
+ right: 32
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode' (31776) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35.rs:1356:23:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+test gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode ... FAILED
+
+failures:
+
+failures:
+    gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10318 filtered out; finished in 364.79s
+

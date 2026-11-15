@@ -1,0 +1,9 @@
+# vibe-vocab-0.1
+@prefix snomed: <http://snomed.info/id/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+snomed:386661006 rdfs:label "Fever" .
+snomed:386661006 rdfs:subClassOf snomed:64572001 .
+snomed:64572001 rdfs:label "Disease" .
+snomed:404684003 rdfs:label "Clinical finding" .
+snomed:64572001 rdfs:subClassOf snomed:404684003 .

@@ -5,6 +5,7 @@ use super::TAG_VIBE_AST;
 use crate::ast::*;
 use crate::span::Span;
 
+/// Encodes CBOR.
 pub fn encode(program: &Program) -> Vec<u8> {
     let mut enc = CborEncoder::new();
     enc.tag(TAG_VIBE_AST);
@@ -159,22 +160,36 @@ fn encode_item(enc: &mut CborEncoder, item: &Item) {
             encode_block(enc, &f.body);
         }
         Item::Hook(h) => {
-            enc.map(4);
+            enc.map(7);
             enc.str("type");
             enc.str("Hook");
+            enc.str("span");
+            encode_span(enc, h.span);
             enc.str("path");
             encode_str_list(enc, &h.path);
             enc.str("params");
             encode_params(enc, &h.params);
+            enc.str("budget");
+            encode_named_args(enc, &h.budget);
+            enc.str("ret");
+            match &h.ret {
+                Some(t) => encode_type_expr(enc, t),
+                None => enc.null(),
+            };
             enc.str("body");
             encode_block(enc, &h.body);
         }
         Item::Const(c) => {
-            enc.map(4);
+            enc.map(5);
             enc.str("type");
             enc.str("Const");
             enc.str("name");
             enc.str(&c.name);
+            enc.str("ty");
+            match &c.ty {
+                Some(t) => encode_type_expr(enc, t),
+                None => enc.null(),
+            };
             enc.str("value");
             encode_expr(enc, &c.value);
             enc.str("span");
@@ -689,7 +704,7 @@ fn encode_arm_body(enc: &mut CborEncoder, b: &ArmBody) {
     }
 }
 
-fn encode_expr(enc: &mut CborEncoder, e: &Expr) {
+pub(crate) fn encode_expr(enc: &mut CborEncoder, e: &Expr) {
     enc.map(2);
     enc.str("kind");
     encode_expr_kind(enc, &e.kind);
@@ -862,6 +877,8 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
             args,
             body,
         } => {
+            enc.map(1);
+            enc.str("ModalLogic");
             enc.map(3);
             enc.str("modality");
             enc.str(match modality {
@@ -882,8 +899,11 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
             for a in args {
                 encode_expr(enc, a);
             }
-            enc.str("has_body");
-            enc.bool(body.is_some());
+            enc.str("body");
+            match body {
+                Some(b) => encode_expr(enc, b),
+                None => enc.null(),
+            }
         }
         ExprKind::Interpolate(parts) => {
             enc.map(1);
@@ -928,6 +948,21 @@ fn encode_expr_kind(enc: &mut CborEncoder, k: &ExprKind) {
                 Some(args) => encode_named_args(enc, args),
                 None => enc.null(),
             };
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            enc.map(4);
+            enc.str("type");
+            enc.str("IfElse");
+            enc.str("cond");
+            encode_expr(enc, cond);
+            enc.str("then");
+            encode_expr(enc, then_value);
+            enc.str("else");
+            encode_expr(enc, else_value);
         }
     }
 }

@@ -6,7 +6,7 @@ struct Uniforms {
     time: f32,
     view_width: f32,
     view_height: f32,
-    _padding: f32,
+    world_frame: u32,
 };
 
 struct Telemetry {
@@ -20,7 +20,7 @@ struct Telemetry {
 
 struct ParticleInstance {
     position: vec3<f32>,
-    _padding: f32,
+    seed: u32,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -74,8 +74,20 @@ fn vertex_main(
     // LLM heat adds high-frequency vibration
     let heat_jitter = sin(t * 20.0 + pos.x * 10.0) * telemetry.llm_heat * 0.1;
     
+    // Stable seed-driven wind in the declared world frame.
+    let seed_phase = f32(particle.seed & 1023u) * 0.0061359233;
+    let frame_phase = f32(uniforms.world_frame & 255u) * 0.015625;
+    let wind_phase = t * (0.7 + telemetry.baking_crystallization * 0.4)
+        + seed_phase + frame_phase + base_pos.x * 1.7 + base_pos.z * 2.1;
+    let wind = sin(wind_phase) * telemetry.network_ripple * 0.18;
+    let sway = cos(wind_phase * 0.73 + seed_phase) * telemetry.network_ripple * 0.08;
+
     // Combine all displacements
-    let animated_pos = pos + vec3<f32>(ripple + heat_jitter, morph + heat_jitter, ripple + heat_jitter);
+    let animated_pos = pos + vec3<f32>(
+        ripple + heat_jitter + wind,
+        morph + heat_jitter + sway,
+        ripple + heat_jitter + wind * 0.55
+    );
     
     // Project to screen space (simple perspective)
     let fov = 1.0;

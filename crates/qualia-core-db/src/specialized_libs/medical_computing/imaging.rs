@@ -218,6 +218,7 @@ pub enum CompressionMethodType {
 }
 
 impl MedicalImaging {
+    /// Empty `MedicalImaging` registry.
     pub fn new() -> Self {
         Self {
             image_acquisition: ImageAcquisition::new(),
@@ -227,6 +228,7 @@ impl MedicalImaging {
         }
     }
 
+    /// Mark the `MedicalImaging` subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.image_acquisition.initialize()?;
         self.image_processing.initialize()?;
@@ -235,6 +237,7 @@ impl MedicalImaging {
         Ok(())
     }
 
+    /// Validate image metadata against acquisition/QC constraints.
     pub fn validate_image(&self, image: &MedicalImage) -> Result<(), MedicalError> {
         if image.image_id.is_empty() {
             return Err(MedicalError::ValidationError(
@@ -333,6 +336,7 @@ impl MedicalImaging {
 }
 
 impl ImageAcquisition {
+    /// Empty `ImageAcquisition` registry.
     pub fn new() -> Self {
         Self {
             acquisition_protocols: HashMap::new(),
@@ -340,25 +344,30 @@ impl ImageAcquisition {
         }
     }
 
+    /// Mark the `ImageAcquisition` subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register a acquisition protocol entry.
     pub fn add_acquisition_protocol(&mut self, protocol: AcquisitionProtocol) {
         self.acquisition_protocols
             .insert(protocol.protocol_id.clone(), protocol);
     }
 
+    /// Look up a acquisition protocol by id.
     pub fn get_acquisition_protocol(&self, protocol_id: &str) -> Option<&AcquisitionProtocol> {
         self.acquisition_protocols.get(protocol_id)
     }
 
+    /// The quality-control sub-registry.
     pub fn quality_control(&self) -> &QualityControl {
         &self.quality_control
     }
 }
 
 impl QualityControl {
+    /// Empty `QualityControl` registry.
     pub fn new() -> Self {
         Self {
             quality_metrics: HashMap::new(),
@@ -366,26 +375,31 @@ impl QualityControl {
         }
     }
 
+    /// Register a quality metric entry.
     pub fn add_quality_metric(&mut self, metric: QualityMetric) {
         self.quality_metrics
             .insert(metric.metric_id.clone(), metric);
     }
 
+    /// Look up a quality metric by id.
     pub fn get_quality_metric(&self, metric_id: &str) -> Option<&QualityMetric> {
         self.quality_metrics.get(metric_id)
     }
 
+    /// Register a quality standard entry.
     pub fn add_quality_standard(&mut self, standard: QualityStandard) {
         self.quality_standards
             .insert(standard.standard_id.clone(), standard);
     }
 
+    /// Look up a quality standard by id.
     pub fn get_quality_standard(&self, standard_id: &str) -> Option<&QualityStandard> {
         self.quality_standards.get(standard_id)
     }
 }
 
 impl ImageProcessing {
+    /// Empty `ImageProcessing` registry.
     pub fn new() -> Self {
         Self {
             preprocessing_algorithms: HashMap::new(),
@@ -393,15 +407,18 @@ impl ImageProcessing {
         }
     }
 
+    /// Mark the `ImageProcessing` subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register a preprocessing algorithm entry.
     pub fn add_preprocessing_algorithm(&mut self, algorithm: PreprocessingAlgorithm) {
         self.preprocessing_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Look up a preprocessing algorithm by id.
     pub fn get_preprocessing_algorithm(
         &self,
         algorithm_id: &str,
@@ -409,17 +426,20 @@ impl ImageProcessing {
         self.preprocessing_algorithms.get(algorithm_id)
     }
 
+    /// Register a enhancement technique entry.
     pub fn add_enhancement_technique(&mut self, technique: EnhancementTechnique) {
         self.enhancement_techniques
             .insert(technique.technique_id.clone(), technique);
     }
 
+    /// Look up a enhancement technique by id.
     pub fn get_enhancement_technique(&self, technique_id: &str) -> Option<&EnhancementTechnique> {
         self.enhancement_techniques.get(technique_id)
     }
 }
 
 impl ImageAnalysis {
+    /// Empty `ImageAnalysis` registry.
     pub fn new() -> Self {
         Self {
             analysis_algorithms: HashMap::new(),
@@ -427,30 +447,36 @@ impl ImageAnalysis {
         }
     }
 
+    /// Mark the `ImageAnalysis` subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register a analysis algorithm entry.
     pub fn add_analysis_algorithm(&mut self, algorithm: AnalysisAlgorithm) {
         self.analysis_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Look up a analysis algorithm by id.
     pub fn get_analysis_algorithm(&self, algorithm_id: &str) -> Option<&AnalysisAlgorithm> {
         self.analysis_algorithms.get(algorithm_id)
     }
 
+    /// Register a detection method entry.
     pub fn add_detection_method(&mut self, method: DetectionMethod) {
         self.detection_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Look up a detection method by id.
     pub fn get_detection_method(&self, method_id: &str) -> Option<&DetectionMethod> {
         self.detection_methods.get(method_id)
     }
 }
 
 impl ImageStorage {
+    /// Empty `ImageStorage` registry.
     pub fn new() -> Self {
         Self {
             storage_systems: HashMap::new(),
@@ -458,24 +484,29 @@ impl ImageStorage {
         }
     }
 
+    /// Mark the `ImageStorage` subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register a storage system entry.
     pub fn add_storage_system(&mut self, system: StorageSystem) {
         self.storage_systems
             .insert(system.system_id.clone(), system);
     }
 
+    /// Look up a storage system by id.
     pub fn get_storage_system(&self, system_id: &str) -> Option<&StorageSystem> {
         self.storage_systems.get(system_id)
     }
 
+    /// Register a compression method entry.
     pub fn add_compression_method(&mut self, method: CompressionMethod) {
         self.compression_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Look up a compression method by id.
     pub fn get_compression_method(&self, method_id: &str) -> Option<&CompressionMethod> {
         self.compression_methods.get(method_id)
     }

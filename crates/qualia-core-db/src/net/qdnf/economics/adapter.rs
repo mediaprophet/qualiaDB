@@ -27,6 +27,7 @@ pub struct MicropaymentAggregate {
 }
 
 impl MicropaymentAggregate {
+    /// Creates a default `MicropaymentAggregate`.
     pub fn new(cap: u64) -> Result<Self, QdnfError> {
         if cap == 0 {
             return Err(QdnfError::Malformed);
@@ -35,11 +36,13 @@ impl MicropaymentAggregate {
     }
 
     #[inline]
+    /// `MicropaymentAggregate::pending`.
     pub const fn pending(&self) -> u64 {
         self.pending
     }
 
     #[inline]
+    /// `MicropaymentAggregate::cap`.
     pub const fn cap(&self) -> u64 {
         self.cap
     }

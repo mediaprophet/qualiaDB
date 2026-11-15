@@ -15,20 +15,49 @@ pub mod chebi_parse;
 /// ChEBI in-memory chemical knowledge queries (AST-05).
 pub mod chebi_query;
 pub mod design_encode;
+/// Complete BLAKE3 digests for aligned EMF/M64 chunk payloads.
+pub mod chunk_integrity;
+/// Electromagnetic & wave-optical field container (.emf / EMF-64).
+pub mod emf_container;
+/// Maxwell Yee-FDTD, Poynting & dispersion operators delegated to Etalon providers.
+pub mod emf_operators;
+/// Typed candidate scientific EMF observations with explicit profile admission.
+pub mod emf_profiles;
+/// Cross-domain electromagnetic/acoustic material coupling & constitutive transducers.
+pub mod material_coupling;
+/// First-principles science oracle validation (energy conservation, Stokes-Mueller, calibration).
+pub mod science_validation;
+/// Shared candidate field-envelope structure and integrity; no scientific admission.
+pub mod field_envelope;
+/// Bounded shared field metadata/reference validation with domain-registry hooks.
+pub mod field_semantics;
+/// Full-spectrum physical axes and explicit SI conversions; independent of display bands.
+pub mod field_spectrum;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
+pub mod journal;
 /// Host GPU native capability profile (CUDA / DX12 / Vulkan / Metal tiers over WGSL floor).
 pub mod machine_gpu_profile;
 /// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
+/// Canonical M64 Matter-64 container for physical strata, points, and holographic entities.
+pub mod m64_matter;
 pub mod p64_weight;
 pub mod q42_kvp;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
+/// Unified `.q42` volume format. The byte-format layer (header, BIDX,
+/// SuperBlock codec, range-source reader) compiles on wasm32 so verified
+/// pack entries decode in the browser; memmap/filesystem/publish paths
+/// stay native.
 pub mod q42_volume;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;
+pub mod selective_streamer;
+/// One taxon concept's sources, evidenced assertions, conflicts and gaps (Ecopunk G72).
+pub mod species_corpus;
+/// Canonical `.q42` spatial, volumetric, and multi-sensory ontological predicates (§3.6.2).
+pub mod spatial_predicates;
 pub mod yaml_ld_q42;

@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: statistical analysis.
 pub fn statistical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::statistical_computing::{
         CorrelationMethod, DataType, DataValue, HypothesisType, PrivacyLevel,

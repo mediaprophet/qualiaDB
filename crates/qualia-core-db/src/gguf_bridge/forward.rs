@@ -3,6 +3,34 @@
 //! Split from gguf_bridge/mod.rs (structural refactor; no behaviour change).
 use super::*;
 
+/// Exact failure point for native chunked prefill.  Returning this to the
+/// caller keeps a failed model forward from being misreported as a zero-rate
+/// benchmark.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PrefillDispatchFailure {
+    EmptyInput,
+    Layer {
+        layer: u32,
+        stage: PrefillLayerStage,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PrefillLayerStage {
+    EmptyBatch,
+    MissingKvLayout,
+    MissingAttentionK,
+    MissingAttentionV,
+    MissingAttentionQ,
+    BatchHiddenTooSmall,
+    MissingModelMap,
+    FetchAttentionK,
+    FetchAttentionV,
+    DispatchAttentionK,
+    DispatchAttentionV,
+    DispatchQueryFfn,
+}
+
 impl QTensorEngine {
     /// One transformer layer for a batched prefill chunk: batched K/V then per-token Q+FFN.
     pub(crate) fn dispatch_prefill_layer_batch(
@@ -15,42 +43,75 @@ impl QTensorEngine {
         batch_start_token_idx: u32,
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
-    ) -> bool {
+    ) -> Result<(), PrefillLayerStage> {
         if n_tokens == 0 {
             wlog("[prefill_layer] FAILED n_tokens=0");
-            return false;
+            return Err(PrefillLayerStage::EmptyBatch);
         }
         let layout = match self.kv_layout {
             Some(l) => l,
             None => {
                 wlog("[prefill_layer] FAILED kv_layout is None");
-                return false;
+                return Err(PrefillLayerStage::MissingKvLayout);
             }
         };
         let tensors = index.get_layer_tensors(layer);
-        let k_info = match tensors.attn_k.as_ref() {
-            Some(i) => i,
-            None => {
-                wlog(&format!(
-                    "[prefill_layer] FAILED missing attn_k layer={layer}"
-                ));
-                return false;
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_GEMMA4
+            || Self::is_qwen35_gated_attention_layer(index, &tensors)
+        {
+            let batch_elems = emb_dim * n_tokens as usize;
+            if batch_elems > batch_hidden.len() {
+                return Err(PrefillLayerStage::BatchHiddenTooSmall);
             }
-        };
-        let v_info = match tensors.attn_v.as_ref() {
-            Some(i) => i,
-            None => {
-                wlog(&format!(
-                    "[prefill_layer] FAILED missing attn_v layer={layer}"
-                ));
-                return false;
+            for t in 0..n_tokens {
+                let off = t as usize * emb_dim;
+                let t_hidden = &mut batch_hidden[off..off + emb_dim];
+                if !self.dispatch_transformer_layer(
+                    index,
+                    layer,
+                    batch_start_token_idx + t,
+                    t_hidden,
+                    emb_dim,
+                    scratch_a,
+                    scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
             }
-        };
+            return Ok(());
+        }
+        if tensors.is_hybrid_ssm_layer() {
+            let batch_elems = emb_dim * n_tokens as usize;
+            if batch_elems > batch_hidden.len() {
+                return Err(PrefillLayerStage::BatchHiddenTooSmall);
+            }
+            for t in 0..n_tokens {
+                let off = t as usize * emb_dim;
+                let t_hidden = &mut batch_hidden[off..off + emb_dim];
+                if !self.dispatch_hybrid_ssm_layer(
+                    index, layer, t_hidden, emb_dim, &tensors, scratch_a, scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
+                if !self.dispatch_ffn_block_pre_norm(
+                    index, t_hidden, emb_dim, &tensors, scratch_a, scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
+            }
+            return Ok(());
+        }
+
+        let k_info = tensors
+            .attn_k
+            .as_ref()
+            .ok_or(PrefillLayerStage::MissingAttentionK)?;
+        let v_info = tensors
+            .attn_v
+            .as_ref()
+            .ok_or(PrefillLayerStage::MissingAttentionV)?;
         if tensors.attn_q.is_none() {
-            wlog(&format!(
-                "[prefill_layer] FAILED missing attn_q layer={layer}"
-            ));
-            return false;
+            return Err(PrefillLayerStage::MissingAttentionQ);
         }
         let h = index.hyperparams;
         let n_kv = h.effective_n_kv_head();
@@ -61,13 +122,13 @@ impl QTensorEngine {
                 "[prefill_layer] FAILED batch_elems OOB elems={batch_elems} hidden={}",
                 batch_hidden.len()
             ));
-            return false;
+            return Err(PrefillLayerStage::BatchHiddenTooSmall);
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => {
                 wlog("[prefill_layer] FAILED gguf_mmap is None");
-                return false;
+                return Err(PrefillLayerStage::MissingModelMap);
             }
         };
         let k_raw =
@@ -75,7 +136,7 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(e) => {
                     wlog(&format!("[prefill_layer] FAILED fetch attn_k bytes: {e:?}"));
-                    return false;
+                    return Err(PrefillLayerStage::FetchAttentionK);
                 }
             };
         let v_raw =
@@ -83,7 +144,7 @@ impl QTensorEngine {
                 Ok(s) => s,
                 Err(e) => {
                     wlog(&format!("[prefill_layer] FAILED fetch attn_v bytes: {e:?}"));
-                    return false;
+                    return Err(PrefillLayerStage::FetchAttentionV);
                 }
             };
         let n_kv_wg = n_tokens.saturating_mul(n_kv);
@@ -116,7 +177,7 @@ impl QTensorEngine {
             None,
         ) {
             wlog(&format!("[prefill_layer] K pass FAILED layer={layer}"));
-            return false;
+            return Err(PrefillLayerStage::DispatchAttentionK);
         }
         if !self.dispatch_attention_pass(
             &batch_hidden[..batch_elems],
@@ -135,7 +196,7 @@ impl QTensorEngine {
             None,
         ) {
             wlog(&format!("[prefill_layer] V pass FAILED layer={layer}"));
-            return false;
+            return Err(PrefillLayerStage::DispatchAttentionV);
         }
         for t in 0..n_tokens {
             let abs = batch_start_token_idx + t;
@@ -153,10 +214,10 @@ impl QTensorEngine {
                 wlog(&format!(
                     "[prefill_layer] q_ffn FAILED layer={layer} t={t} abs={abs}"
                 ));
-                return false;
+                return Err(PrefillLayerStage::DispatchQueryFfn);
             }
         }
-        true
+        Ok(())
     }
 
     /// Phase 2B: batched prefill layer via async GPU attention (K/V GPU; Q+FFN per token).
@@ -219,7 +280,7 @@ impl QTensorEngine {
             ));
             return false;
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => {
                 wlog("[prefill_layer] FAILED gguf_mmap is None");
@@ -344,10 +405,25 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
         max_layers: u32,
-    ) -> bool {
+    ) -> Result<(), PrefillDispatchFailure> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return Err(PrefillDispatchFailure::Layer {
+                layer: 0,
+                stage: PrefillLayerStage::DispatchQueryFfn,
+            });
+        }
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            // Qwen prompt execution is token-major in its admitted Session;
+            // the generic layer-major KV prefill has incompatible state rules.
+            return Err(PrefillDispatchFailure::Layer {
+                layer: 0,
+                stage: PrefillLayerStage::DispatchQueryFfn,
+            });
+        }
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || n_tokens == 0 {
-            return false;
+            return Err(PrefillDispatchFailure::EmptyInput);
         }
         // W3: resident single-fence-per-chunk arena (toggle-gated, default OFF). Populates the KV
         // cache for the whole chunk in ONE submit; any ineligibility falls back to the legacy loop.
@@ -365,7 +441,7 @@ impl QTensorEngine {
                 .is_some()
             {
                 crate::llm_bench::record_resident_prefill_hit();
-                return true;
+                return Ok(());
             }
             crate::llm_bench::record_resident_prefill_fallback();
         }
@@ -375,7 +451,7 @@ impl QTensorEngine {
             max_layers.min(n_layer)
         };
         for layer in 0..limit {
-            if !self.dispatch_prefill_layer_batch(
+            if let Err(stage) = self.dispatch_prefill_layer_batch(
                 index,
                 layer,
                 batch_hidden,
@@ -385,10 +461,10 @@ impl QTensorEngine {
                 scratch_a,
                 scratch_b,
             ) {
-                return false;
+                return Err(PrefillDispatchFailure::Layer { layer, stage });
             }
         }
-        true
+        Ok(())
     }
 
     /// One transformer block using real mmap tensor offsets (stack buffers only).
@@ -402,72 +478,44 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
-        let tensors = index.get_layer_tensors(layer);
-        let mut attn_ok = false;
-        // Decode-profiler: intra-layer split — attention (this block) vs FFN (below).
-        // Native-only: `llm_bench` is `#[cfg(not(wasm32))]`; the wasm-full LLM bundle skips profiling.
         #[cfg(not(target_arch = "wasm32"))]
-        let t_attn = std::time::Instant::now();
-
-        if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
-            if let Some(n) = self.dispatch_attention_layer(
-                index,
-                layer,
-                token_idx,
-                &hidden[..emb_dim],
-                emb_dim,
-                &tensors,
-                scratch_a,
-                scratch_b,
-            ) {
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
-                attn_ok = true;
-            }
-        } else if let Some(info) = tensors.attn_output {
-            let (n_in, n_out) = Self::matmul_dims(&info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
-            {
-                add_residual_inplace(
-                    &mut hidden[..emb_dim],
-                    &scratch_a[..n_out],
-                    emb_dim.min(n_out),
-                );
-                attn_ok = true;
-            }
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
-
-        if !attn_ok && tensors.attn_output.is_none() && tensors.ffn_gate.is_none() {
+        if self.gemma4_required {
+            // Hidden-only execution lacks the token required by Gemma PLE.
             return false;
         }
-
-        // #48 diagnostic: localize the residual explosion — attention output magnitude per layer.
-        if layer < 3 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
-            let max_attn = scratch_a[..emb_dim]
-                .iter()
-                .fold(0f32, |m, &v| m.max(v.abs()));
-            let max_hid = hidden[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
-            eprintln!(
-                "[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}",
-                layer,
-                attn_ok,
-                tensors.attn_norm.is_some(),
-                tensors.ffn_norm.is_some(),
-                max_attn,
-                max_hid,
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required {
+            return self.dense_qwen_layer(
+                index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
             );
         }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let t_ffn = std::time::Instant::now();
-        let ffn_ok = self
-            .dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b);
-        #[cfg(not(target_arch = "wasm32"))]
-        crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
-        ffn_ok
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let Some(plan) = self.qwen35_plan(index) else {
+                    return false;
+                };
+                if emb_dim != plan.profile.hidden
+                    || hidden.len() != emb_dim
+                    || layer as usize >= plan.layers.len()
+                {
+                    return false;
+                }
+                let Some(session) = &mut self.qwen35_ftw else {
+                    return false;
+                };
+                return session.position() == Ok(token_idx as usize)
+                    && session.forward(layer as usize..layer as usize + 1, hidden) == Ok(1);
+            }
+            #[cfg(target_arch = "wasm32")]
+            return false;
+        }
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_GEMMA4 {
+            return false;
+        }
+        etalon_inference::ordinary::HybridEngine { host: self }.layer(
+            index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
+        )
     }
 
     /// Attempt the CUDA mega-pass: all layers in one fenced CUDA stream.
@@ -480,6 +528,9 @@ impl QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         self.try_prepared_cuda_decode(index, hidden, emb_dim, token_idx)
     }
 
@@ -495,6 +546,9 @@ impl QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         self.try_prepared_cuda_decode_token(index, token_id, hidden, emb_dim, token_idx)
     }
 
@@ -510,7 +564,7 @@ impl QTensorEngine {
         token_idx: u32,
     ) -> Option<u32> {
         use super::RMS_NORM_EPS;
-        use crate::ggml_quants::{fetch_tensor_bytes, GGML_TYPE_Q4_K_SOA};
+        use crate::ggml_quants::{GGML_TYPE_Q4_K_SOA, fetch_tensor_bytes};
         use crate::gguf_bridge::cpu_ops::dequant_norm_row_into;
         use crate::inference::cuda_lane::{MegaPassLayerDims, MegaPassLayerWeights};
 
@@ -527,7 +581,7 @@ impl QTensorEngine {
         if layout.int8 || layout.dict_k > 0 {
             return None;
         }
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let tds = index.tensor_data_start;
 
         // Phase 1: Collect raw weights, dims, and norm weights.
@@ -710,6 +764,22 @@ impl QTensorEngine {
         token_idx: u32,
         max_layers: u32,
     ) -> u32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required {
+            return 0;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required {
+            return self.dense_qwen_forward(
+                index, hidden, emb_dim, token_idx, max_layers, scratch_a, scratch_b,
+            );
+        }
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_forward(index, hidden, emb_dim, token_idx, max_layers);
+            #[cfg(target_arch = "wasm32")]
+            return 0;
+        }
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 {
             return 0;
@@ -722,7 +792,7 @@ impl QTensorEngine {
         // #48 diagnostic: localize where the hidden state turns non-finite (gated; runs once).
         use std::sync::atomic::{AtomicBool, Ordering as DbgOrdering};
         static FWD_DBG_DONE: AtomicBool = AtomicBool::new(false);
-        let dbg = std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
+        let dbg = crate::gguf_bridge::execution_env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
             && !FWD_DBG_DONE.swap(true, DbgOrdering::Relaxed);
         if dbg {
             let nf = hidden[..emb_dim].iter().filter(|v| !v.is_finite()).count();
@@ -826,11 +896,11 @@ impl QTensorEngine {
         token_idx: u32,
         emb_dim: usize,
         tensors: &crate::gguf_sharder::LayerTensors,
-        token_hidden: &wgpu::Buffer,
-        attn_input: Option<&wgpu::Buffer>,
+        token_hidden: &etalon::Buffer,
+        attn_input: Option<&etalon::Buffer>,
         work_aliases_hidden: bool,
     ) -> bool {
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -872,7 +942,7 @@ impl QTensorEngine {
             token_hidden
         };
         let ffn_buf = self.gemm_ffn_buf.as_ref().unwrap();
-        let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
+        let emb_bytes = (emb_dim * 4) as etalon::BufferAddress;
         let q_dim = (h.n_head * h.head_dim()) as usize;
         let (mask_words, mask_active, mask_word_count) =
             Self::attention_kv_mask_for_dispatch(&layout, token_idx, 0);
@@ -941,7 +1011,7 @@ impl QTensorEngine {
                 return false;
             }
             self.mc8_flush(pipeline);
-            let attn_residual_base: &wgpu::Buffer = if work_aliases_hidden {
+            let attn_residual_base: &etalon::Buffer = if work_aliases_hidden {
                 aux_buf
             } else {
                 token_hidden
@@ -1094,7 +1164,7 @@ impl QTensorEngine {
             Some(l) => l,
             None => return false,
         };
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -1287,7 +1357,7 @@ impl QTensorEngine {
         }
         self.gpu_queue()
             .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return 0,
         };
@@ -1399,7 +1469,7 @@ impl QTensorEngine {
             // Phase 5.5: K/V projection on the parallel GEMM → proj buffers; the (now lightweight)
             // attention shader reads the pre-computed projection instead of matmul-ing on 1 thread.
             let kv_dim = (n_kv * h.head_dim()) as usize;
-            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as etalon::BufferAddress;
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
@@ -1552,7 +1622,7 @@ impl QTensorEngine {
         let prefill_scratch = self.prefill_scratch_buf.as_ref()?;
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let norm_buf = self.norm_weight_buf.as_ref().unwrap();
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let layout = self.kv_layout?;
 
         // Upload hidden to batch_buf
@@ -1658,7 +1728,7 @@ impl QTensorEngine {
             };
             let n_kv_wg = n_tokens.saturating_mul(n_kv);
             let kv_dim = (n_kv * h.head_dim()) as usize;
-            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as etalon::BufferAddress;
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
@@ -1770,12 +1840,16 @@ impl QTensorEngine {
             return None;
         }
 
+        // Flush the transformer layers to the GPU now. This guarantees all layer
+        // GEMMs execute with their staged parameters, avoids uniform buffer overwrite
+        // hazards, and ensures the hidden state in batch_buf is fully computed.
+        self.mc8_flush(&mut enc);
+
         // === Output norm on GPU ===
         let output_norm_info = match index.output_norm_info() {
             Some(i) => i,
             None => {
                 // No output norm — just read hidden and fall back to CPU argmax
-                self.mc8_flush(&mut enc);
                 if !self.pipeline_read_hidden(emb_dim, hidden).await {
                     return None;
                 }
@@ -1787,13 +1861,12 @@ impl QTensorEngine {
         if dequant_norm_row_into(mmap, index.tensor_data_start, output_norm_info, &mut norm_w)
             < n_embd
         {
-            self.mc8_flush(&mut enc);
             return None;
         }
         self.gpu_queue()
             .write_buffer(norm_buf, 0, bytemuck::cast_slice(&norm_w[..n_embd]));
         // RMS norm: read from batch_buf, write to prefill_scratch
-        let n_embd_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        let n_embd_bytes = (n_embd * 4) as etalon::BufferAddress;
         self.encode_elem_offset(
             &mut enc,
             ELEM_OP_RMS_NORM,
@@ -1819,8 +1892,11 @@ impl QTensorEngine {
         // Copy normed hidden back to batch_buf for argmax GEMM input
         enc.encoder
             .copy_buffer_to_buffer(prefill_scratch, 0, batch_buf, 0, n_embd_bytes);
+        // Flush the output norm pass so batch_buf contains the normalized hidden state
+        // before the logits projection GEMM pass reads it.
+        self.mc8_flush(&mut enc);
 
-        // === Batched argmax in same encoder ===
+        // === Batched argmax in fresh encoder ===
         let resident_buf = self.mc8_logits_resident_buf.as_ref()?;
         let row_bytes = self.mc8_logits_row_bytes as u64;
         let output_buf = self.gemm_output_buf.as_ref().unwrap();
@@ -1860,18 +1936,18 @@ impl QTensorEngine {
         let use_mmv_q8_0 =
             logits_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
         #[cfg(target_arch = "wasm32")]
-        let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+        let logits_pipeline: &etalon::ComputePipeline = if use_mmv_q8_0 {
             &self.mmv_q8_0_pipeline
         } else {
             &self.pipeline
         };
         #[cfg(not(target_arch = "wasm32"))]
-        let logits_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+        let logits_pipeline: &etalon::ComputePipeline = &self.pipeline;
         let bind_layout = logits_pipeline.get_bind_group_layout(0);
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            let weight = etalon::BindingResource::Buffer(etalon::BufferBinding {
                 buffer: resident_buf,
                 offset: row_start as u64 * row_bytes,
                 size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
@@ -1895,30 +1971,30 @@ impl QTensorEngine {
                 match cached {
                     Some(bg) => bg,
                     None => {
-                        let bg = self
-                            .gpu_device()
-                            .create_bind_group(&wgpu::BindGroupDescriptor {
-                                label: Some("FusedArgmaxBind"),
-                                layout: &bind_layout,
-                                entries: &[
-                                    wgpu::BindGroupEntry {
-                                        binding: 0,
-                                        resource: batch_buf.as_entire_binding(),
-                                    },
-                                    wgpu::BindGroupEntry {
-                                        binding: 1,
-                                        resource: weight,
-                                    },
-                                    wgpu::BindGroupEntry {
-                                        binding: 2,
-                                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                                    },
-                                    wgpu::BindGroupEntry {
-                                        binding: 3,
-                                        resource: output_buf.as_entire_binding(),
-                                    },
-                                ],
-                            });
+                        let bg =
+                            self.gpu_device()
+                                .create_bind_group(&etalon::BindGroupDescriptor {
+                                    label: Some("FusedArgmaxBind"),
+                                    layout: &bind_layout,
+                                    entries: &[
+                                        etalon::BindGroupEntry {
+                                            binding: 0,
+                                            resource: batch_buf.as_entire_binding(),
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 1,
+                                            resource: weight,
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 2,
+                                            resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 3,
+                                            resource: output_buf.as_entire_binding(),
+                                        },
+                                    ],
+                                });
                         if let Ok(mut c) = self.mc8_bg_cache.lock() {
                             c.insert(key, bg.clone());
                         }
@@ -1929,7 +2005,7 @@ impl QTensorEngine {
             {
                 let mut cpass = enc
                     .encoder
-                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    .begin_compute_pass(&etalon::ComputePassDescriptor {
                         label: None,
                         timestamp_writes: None,
                     });
@@ -1958,7 +2034,7 @@ impl QTensorEngine {
 
         // One submit/fence. Logits remain on-device; only bounded block
         // candidates are mapped for the deterministic global merge.
-        self.gpu_queue().submit(Some(enc.encoder.finish()));
+        self.submit_commands(Some(enc.encoder.finish()));
         self.read_browser_top1(staging, top1_plan).await
     }
 
@@ -1975,7 +2051,12 @@ impl QTensorEngine {
         max_layers: u32,
         max_vocab_chunks: u32,
     ) -> u32 {
-        let mmap = match self.gguf_mmap.clone() {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required || self.qwen35_gguf_required {
+            // This legacy speculative path lacks architecture-owned state rollback.
+            return 0;
+        }
+        let mmap = match self.clone_model_bytes() {
             Some(m) => m,
             None => return 0,
         };

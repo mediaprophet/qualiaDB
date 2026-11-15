@@ -45,6 +45,7 @@ pub struct TaxonomyTerm {
 }
 
 impl TaxonomyTerm {
+    /// Creates a new instance.
     pub fn new(id: impl Into<TermId>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -55,16 +56,19 @@ impl TaxonomyTerm {
         }
     }
 
+    /// `true` when in the category.
     pub fn in_category(mut self, category: impl Into<TermId>) -> Self {
         self.category = Some(category.into());
         self
     }
 
+    /// `true` when described.
     pub fn described(mut self, description: impl Into<String>) -> Self {
         self.description = description.into();
         self
     }
 
+    /// Builder — sets attr.
     pub fn with_attr(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.attributes.push((key.into(), value.into()));
         self
@@ -107,10 +111,12 @@ pub struct Taxonomy {
 }
 
 impl Taxonomy {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Constructs from terms.
     pub fn from_terms(terms: impl IntoIterator<Item = TaxonomyTerm>) -> Self {
         let mut t = Self::new();
         for term in terms {
@@ -136,10 +142,12 @@ impl Taxonomy {
         }
     }
 
+    /// Gets a value.
     pub fn get(&self, id: &str) -> Option<&TaxonomyTerm> {
         self.terms.iter().find(|t| t.id == id)
     }
 
+    /// `true` when it contains the item.
     pub fn contains(&self, id: &str) -> bool {
         self.get(id).is_some()
     }
@@ -152,14 +160,17 @@ impl Taxonomy {
             .collect()
     }
 
+    /// All entries.
     pub fn all(&self) -> &[TaxonomyTerm] {
         &self.terms
     }
 
+    /// Length.
     pub fn len(&self) -> usize {
         self.terms.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.terms.is_empty()
     }

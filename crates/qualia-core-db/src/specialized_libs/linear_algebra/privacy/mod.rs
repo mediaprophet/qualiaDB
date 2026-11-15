@@ -64,6 +64,7 @@ pub struct HomomorphicKeyManager {
 }
 
 impl HomomorphicKeyManager {
+    /// Creates a default `HomomorphicKeyManager`.
     pub const fn new() -> Self {
         Self {
             keys: [None; 8],
@@ -75,6 +76,7 @@ impl HomomorphicKeyManager {
         }
     }
 
+    /// Registers a BFV key under its hash; `PrivacyError` when the registry is full or the key is expired.
     pub fn register(&mut self, key: HomomorphicKey) -> Result<(), PrivacyError> {
         if let Some(existing) = self
             .keys
@@ -93,6 +95,7 @@ impl HomomorphicKeyManager {
         Ok(())
     }
 
+    /// Looks up a registered key by hash.
     pub fn get(&self, key_id_hash: u64) -> Option<&HomomorphicKey> {
         self.keys
             .iter()
@@ -100,6 +103,7 @@ impl HomomorphicKeyManager {
             .find(|key| key.key_id_hash == key_id_hash)
     }
 
+    /// Drops all keys expiring at or before `now_unix`; returns the count removed.
     pub fn remove_expired(&mut self, now_unix: u64) -> usize {
         let mut removed = 0;
         for slot in &mut self.keys {
@@ -111,10 +115,12 @@ impl HomomorphicKeyManager {
         removed
     }
 
+    /// Registered key count.
     pub fn len(&self) -> usize {
         self.keys.iter().flatten().count()
     }
 
+    /// `true` when no keys are registered.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -135,6 +141,7 @@ pub struct HomomorphicOperations {
 }
 
 impl HomomorphicOperations {
+    /// Creates a default `HomomorphicOperations`.
     pub const fn new() -> Self {
         Self {
             supported_operations: [
@@ -147,6 +154,7 @@ impl HomomorphicOperations {
         }
     }
 
+    /// No-op returning `Ok(())` — HE keys are registered lazily via the key manager.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.backend_available = cfg!(feature = "privacy-he");
         Ok(())
@@ -173,6 +181,7 @@ pub struct SecureAggregation {
 }
 
 impl SecureAggregation {
+    /// Creates a secure-aggregation coordinator.
     pub fn new() -> Self {
         Self {
             aggregation_protocols: [
@@ -183,6 +192,7 @@ impl SecureAggregation {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.privacy_budget
             .validate()
@@ -205,6 +215,7 @@ pub struct PrivacyEngine {
 }
 
 impl PrivacyEngine {
+    /// Creates the privacy engine (HE key manager + DP accountant + secure aggregation).
     pub fn new() -> Self {
         Self {
             zk_proofs: Arc::new(Mutex::new(crate::zk_proofs::ZkProofSystem::new())),
@@ -214,6 +225,7 @@ impl PrivacyEngine {
         }
     }
 
+    /// Initializes sub-engines; `LinearAlgebraError` propagates.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.homomorphic_operations.initialize()?;
         self.secure_aggregation.initialize()?;

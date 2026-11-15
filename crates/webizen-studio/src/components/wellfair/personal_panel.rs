@@ -8,7 +8,7 @@ use super::host_client::{
     EmergencyContactDto,
 };
 use super::host_dto::{AccessibilityPreferences, HealthRecordDto, NetworkExposure, VaultLifecycle};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn network_label(n: NetworkExposure) -> &'static str {
     match n {
@@ -57,6 +57,7 @@ fn summary_preview(summary: &Option<String>) -> String {
 }
 
 #[component]
+/// Aether `WellfairPersonalPanel` component.
 pub fn WellfairPersonalPanel() -> Element {
     let snapshot = use_host_snapshot();
     let snap = snapshot();

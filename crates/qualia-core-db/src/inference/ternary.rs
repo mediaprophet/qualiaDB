@@ -22,7 +22,7 @@ pub const TRITS_PER_BYTE: usize = 5;
 
 /// Engine element-type code for a BitNet-1.58b ternary tensor (well outside the GGML code range,
 /// so it never collides with `F32=0 / F16=1 / Q8_0=8 / Q4_K=12 / BF16=30`). Mnemonic: "1.58b".
-pub const GGML_TYPE_TERNARY_158: u32 = 1158;
+pub use etalon_model::ggml::GGML_TYPE_TERNARY_158;
 
 /// Bytes needed to pack `count` trits (5 per byte).
 #[inline]

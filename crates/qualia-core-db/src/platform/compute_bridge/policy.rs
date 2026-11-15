@@ -47,7 +47,7 @@ pub struct Plan {
     /// Number of sequential tiles a GPU job is split into so each fits in VRAM
     /// (graceful degradation, never an OOM hard-fail). 1 on CPU or when it fits.
     pub tiles: u32,
-    /// How data reaches the device (mmap-direct on unified memory, else staging).
+    /// Portable GPU upload, or in-pool CPU data.
     #[cfg(feature = "gpu-runtime")]
     pub zero_copy: ZeroCopyStrategy,
 }
@@ -150,7 +150,11 @@ impl ComputePolicy {
             let param_count = (problem_bytes / 4).max(1);
             let precision = select_precision(param_count, &self.budget);
 
-            let best = self.matrix.best_for(class);
+            let best = self
+                .matrix
+                .rows(class)
+                .iter()
+                .find(|row| row.kind != CircuitKind::Npu);
             let cpu_ms = self
                 .matrix
                 .rows(class)
@@ -158,30 +162,28 @@ impl ComputePolicy {
                 .find(|r| r.kind == CircuitKind::Cpu)
                 .map(|r| r.ms_per_gemv);
 
-            let choose_gpu = match best {
-                None => false,                                  // class not probed at all → CPU
-                Some(b) if b.kind == CircuitKind::Cpu => false, // CPU already won
-                Some(b) => {
-                    // A GPU/other circuit measured fastest. Honour it unless the class is
-                    // not GPU-amenable AND the win over CPU is within ~5% (measurement
-                    // noise) — then prefer the simpler CPU path.
-                    if class.is_typically_gpu_amenable() {
-                        true
-                    } else if let Some(cms) = cpu_ms {
-                        b.ms_per_gemv < cms * 0.95
-                    } else {
-                        true
+            let choose_gpu = self.host.gpu_available
+                && match best {
+                    None => false,                                  // class not probed at all → CPU
+                    Some(b) if b.kind == CircuitKind::Cpu => false, // CPU already won
+                    Some(b) => {
+                        // A GPU/other circuit measured fastest. Honour it unless the class is
+                        // not GPU-amenable AND the win over CPU is within ~5% (measurement
+                        // noise) — then prefer the simpler CPU path.
+                        if class.is_typically_gpu_amenable() {
+                            true
+                        } else if let Some(cms) = cpu_ms {
+                            b.ms_per_gemv < cms * 0.95
+                        } else {
+                            true
+                        }
                     }
-                }
-            };
+                };
 
             if let (true, Some(b)) = (choose_gpu, best) {
                 let dispatcher = HeterogeneousDispatcher::new(self.host);
                 let tiles = dispatcher.gpu_tiles(problem_bytes);
-                let zero_copy = match b.kind {
-                    CircuitKind::DiscreteGpu => ZeroCopyStrategy::StagingUpload,
-                    _ => ZeroCopyStrategy::MmapDirect, // integrated/unified or NPU
-                };
+                let zero_copy = ZeroCopyStrategy::StagingUpload;
                 Plan {
                     backend: BackendId(backend_id_for(&b.backend)),
                     circuit_kind: b.kind,
@@ -276,6 +278,59 @@ mod tests {
     }
 
     #[test]
+    fn an_integrated_gpu_uses_portable_staging() {
+        let (budget, host) = roomy_host();
+        let matrix = ClassMatrix::from_per_class(vec![(
+            KernelClass::DenseLinear,
+            vec![
+                row(CircuitKind::IntegratedGpu, "Dx12", 0.4),
+                row(CircuitKind::Cpu, "native", 20.0),
+            ],
+        )]);
+        let policy = ComputePolicy::from_class_matrix(matrix, budget, host);
+        let plan = policy.select(KernelClass::DenseLinear, 64 * 1024 * 1024);
+        assert_eq!(plan.circuit_kind, CircuitKind::IntegratedGpu);
+        assert_eq!(plan.zero_copy, ZeroCopyStrategy::StagingUpload);
+    }
+
+    #[test]
+    fn an_npu_measurement_cannot_be_dispatched_as_wgpu() {
+        let (budget, mut host) = roomy_host();
+        host.npu_available = true;
+        let matrix = ClassMatrix::from_per_class(vec![(
+            KernelClass::DenseLinear,
+            vec![
+                row(CircuitKind::Npu, "OpenVINO", 0.1),
+                row(CircuitKind::Cpu, "native", 20.0),
+            ],
+        )]);
+        let policy = ComputePolicy::from_class_matrix(matrix, budget, host);
+        assert!(policy
+            .select(KernelClass::DenseLinear, 64 * 1024 * 1024)
+            .is_cpu());
+    }
+
+    #[test]
+    fn an_unroutable_npu_row_does_not_hide_a_gpu_candidate() {
+        let (budget, host) = roomy_host();
+        let matrix = ClassMatrix::from_per_class(vec![(
+            KernelClass::DenseLinear,
+            vec![
+                row(CircuitKind::Npu, "OpenVINO", 0.1),
+                row(CircuitKind::IntegratedGpu, "Dx12", 0.4),
+                row(CircuitKind::Cpu, "native", 20.0),
+            ],
+        )]);
+        let policy = ComputePolicy::from_class_matrix(matrix, budget, host);
+        assert_eq!(
+            policy
+                .select(KernelClass::DenseLinear, 64 * 1024 * 1024)
+                .circuit_kind,
+            CircuitKind::IntegratedGpu
+        );
+    }
+
+    #[test]
     fn falls_back_to_cpu_when_only_cpu_probed() {
         let (budget, host) = roomy_host();
         let policy = ComputePolicy::from_class_matrix(synth_matrix(), budget, host);
@@ -283,6 +338,17 @@ mod tests {
         assert!(plan.is_cpu());
         assert_eq!(plan.backend, BackendId::CPU);
         assert_eq!(plan.tiles, 1);
+    }
+
+    #[test]
+    fn cached_gpu_measurements_do_not_override_current_unavailability() {
+        let (budget, mut host) = roomy_host();
+        host.gpu_available = false;
+        host.npu_available = true;
+        let policy = ComputePolicy::from_class_matrix(synth_matrix(), budget, host);
+        assert!(policy
+            .select(KernelClass::DenseLinear, 64 * 1024 * 1024)
+            .is_cpu());
     }
 
     #[test]

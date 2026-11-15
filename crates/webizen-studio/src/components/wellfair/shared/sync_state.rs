@@ -1,7 +1,8 @@
 use super::super::host_dto::SyncQueueState;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `SyncState` component.
 pub fn SyncState(state: SyncQueueState, pending_jobs: u32) -> Element {
     let (label, tone) = match state {
         SyncQueueState::Idle => ("Sync idle", "#6c757d"),

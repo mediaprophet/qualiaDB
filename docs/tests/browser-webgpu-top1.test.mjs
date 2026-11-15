@@ -12,12 +12,16 @@ assert.match(helper, /TOPK_BLOCK_SIZE/);
 assert.match(helper, /encode_browser_top1_chunk/);
 assert.match(helper, /read_browser_top1/);
 assert.match(helper, /value == max_logit && token_id < best_token_id/);
+assert.match(helper, /topk_params_bytes_with_base/);
+assert.match(helper, /cand_offset/);
 
 assert.match(forward, /encode_browser_top1_chunk/);
 assert.match(forward, /read_browser_top1/);
+assert.match(forward, /mc8_flush[\s\S]*Output norm on GPU/);
 assert.doesNotMatch(forward, /still reads the complete vocabulary back for CPU argmax/);
 assert.match(asyncOutput, /dispatch_output_argmax_batched_async[\s\S]*encode_browser_top1_chunk/);
 assert.match(asyncOutput, /dispatch_output_argmax_batched_async[\s\S]*read_browser_top1/);
+assert.match(asyncOutput, /use_mmv_q8_0[\s\S]*mmv_q8_0_pipeline/);
 assert.match(glue, /export function getBrowserExecutionReceipt\(/);
 
 // SmolLM2's 49,152-token vocabulary becomes 48 block winners:

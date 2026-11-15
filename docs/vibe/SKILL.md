@@ -47,4 +47,4 @@ Do not wasm-opt the playground binary. GitHub Pages CI rebuilds both artifacts.`
 
 NL pairs: `crates/vibe/fixtures/nl/`.
 
-Related (not the language spec): `docs/plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md` — HID / WebView / WASM presentation. Destination pair: **CBOR-LD on the wire**, **Vibe instead of JS**; Dioxus/JSON IPC is temporary host.
+Related (not the language spec): `docs/plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md` — HID / WebView / WASM presentation. Destination pair: **CBOR-LD on the wire**, **Vibe instead of JS**; Aether/JSON IPC is temporary host.

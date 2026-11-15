@@ -11,6 +11,7 @@ pub struct ServiceId {
 }
 
 impl ServiceId {
+    /// Builds `ServiceId` from `iri`.
     pub fn from_iri(iri: &[u8]) -> Result<Self, QdnfError> {
         if iri.is_empty() {
             return Err(QdnfError::Range);
@@ -21,6 +22,7 @@ impl ServiceId {
     }
 
     #[inline]
+    /// Digest.
     pub const fn digest(self) -> StrongDigest {
         self.digest
     }

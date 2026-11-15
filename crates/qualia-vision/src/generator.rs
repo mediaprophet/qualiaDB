@@ -38,9 +38,11 @@ pub struct CancelFlag {
 }
 
 impl CancelFlag {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self { cancelled: false }
     }
+    /// Cancels.
     pub fn cancel(&mut self) {
         self.cancelled = true;
     }
@@ -60,6 +62,7 @@ impl Default for NativeImageGenerator {
 }
 
 impl NativeImageGenerator {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             model_hash: q_hash(GENERATOR_MODEL_ID),

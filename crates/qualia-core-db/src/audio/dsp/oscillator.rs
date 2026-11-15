@@ -6,23 +6,32 @@
 /// Oscillator waveform type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Waveform {
+    /// Pure sinusoid.
     Sine,
+    /// 50% duty-cycle square wave.
     Square,
+    /// Rising sawtooth (-1 → +1 per cycle).
     Sawtooth,
+    /// Triangle wave.
     Triangle,
 }
 
 /// An oscillator with phase accumulation.
 #[derive(Debug, Clone)]
 pub struct Oscillator {
+    /// Waveform shape produced by `tick`.
     pub waveform: Waveform,
+    /// Frequency in Hz.
     pub frequency: f64,
+    /// Sample rate the phase increment is computed against.
     pub sample_rate: f64,
+    /// Output amplitude multiplier (typically 0–1).
     pub gain: f64,
     phase: f64,
 }
 
 impl Oscillator {
+    /// Create an oscillator at unity gain, phase 0.
     pub fn new(waveform: Waveform, frequency: f64, sample_rate: f64) -> Self {
         Self {
             waveform,

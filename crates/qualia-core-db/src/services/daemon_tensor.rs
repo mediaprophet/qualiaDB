@@ -20,6 +20,7 @@ pub enum TensorSliceLane {
 }
 
 impl TensorSliceLane {
+    /// Builds `TensorSliceLane` from `header`.
     pub fn from_header(value: &str) -> Self {
         match value.trim().to_ascii_lowercase().as_str() {
             "identifier" | "did" | "vault" => Self::Identifier,
@@ -52,11 +53,13 @@ impl Default for TensorSliceRequest {
 
 impl TensorSliceRequest {
     #[inline]
+    /// `TensorSliceRequest::clamp_max_nodes`.
     pub fn clamp_max_nodes(max_nodes: usize) -> usize {
         max_nodes.clamp(1, ABSOLUTE_SLICE_MAX_NODES)
     }
 
     #[inline]
+    /// `TensorSliceRequest::temporal_passes`.
     pub fn temporal_passes(&self, tensor_t: f32) -> bool {
         if self.t_window <= 0.0 {
             return true;
@@ -65,6 +68,7 @@ impl TensorSliceRequest {
     }
 
     #[inline]
+    /// `TensorSliceRequest::requires_identifier_auth`.
     pub fn requires_identifier_auth(&self) -> bool {
         self.standpoint_class >= STANDPOINT_DID
     }

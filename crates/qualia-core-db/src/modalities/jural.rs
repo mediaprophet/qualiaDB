@@ -106,11 +106,13 @@ pub const fn position_name(pos: u8) -> Option<&'static str> {
 }
 
 #[inline]
+/// `?::jural_position`.
 pub const fn jural_position(predicate: u64) -> u8 {
     (predicate & 0xFF) as u8
 }
 
 #[inline]
+/// `?::jural_content`.
 pub const fn jural_content(predicate: u64) -> u64 {
     predicate & CONTENT_MASK
 }

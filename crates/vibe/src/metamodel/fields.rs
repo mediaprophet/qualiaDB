@@ -103,6 +103,7 @@ pub const FIELD_DESCRIPTORS: &[FieldDescriptor] = &[
     },
 ];
 
+/// Property IRI.
 pub fn property_iri(f: &FieldDescriptor) -> String {
     term(f.rdfs_property_local)
 }

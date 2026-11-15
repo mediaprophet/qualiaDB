@@ -271,7 +271,7 @@ pub fn acquire_body_assets_controlled(
         return Err("cancelled".to_string());
     }
     let BodyCompileResult {
-        model: _,
+        model: compiled_model,
         organs: compiled,
         unmapped,
         failed: compile_failed,
@@ -343,7 +343,7 @@ pub fn acquire_body_assets_controlled(
         .map_err(|e| format!("manifest write: {e}"))?;
 
     let report = AcquireReport {
-        model: model.as_str().to_string(),
+        model: compiled_model.as_str().to_string(),
         organs_cached: manifest.organs.len(),
         organs_failed: failed.len(),
         organs_unmapped: unmapped.len(),

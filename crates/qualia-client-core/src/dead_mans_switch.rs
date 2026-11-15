@@ -37,6 +37,7 @@ pub struct Heartbeat {
 }
 
 impl Heartbeat {
+    /// Creates a new instance.
     pub fn new(last_seen_unix: u64, lapse_after_secs: u64) -> Self {
         Self {
             last_seen_unix,

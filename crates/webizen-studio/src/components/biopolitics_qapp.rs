@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `BiopoliticsQapp` component.
 pub fn BiopoliticsQapp() -> Element {
     rsx! {
         QAppEngine {

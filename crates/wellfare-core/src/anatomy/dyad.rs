@@ -42,6 +42,7 @@ pub struct PrincipalRef {
 }
 
 impl PrincipalRef {
+    /// Creates a new instance.
     pub fn new(did: impl Into<String>) -> Self {
         Self { did: did.into() }
     }

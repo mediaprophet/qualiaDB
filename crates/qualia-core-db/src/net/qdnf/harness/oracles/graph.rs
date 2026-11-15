@@ -5,6 +5,7 @@ use sha2::{Digest, Sha384};
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 
+/// Independent SHA-384 oracle.
 pub fn independent_sha384(data: &[u8]) -> StrongDigest {
     let hash = Sha384::digest(data);
     let mut out = StrongDigest::ZERO;
@@ -12,6 +13,7 @@ pub fn independent_sha384(data: &[u8]) -> StrongDigest {
     out
 }
 
+/// Oracle: zero digest is not identity.
 pub fn zero_digest_is_not_identity(digest: StrongDigest) -> Result<(), QdnfError> {
     if digest.is_zero() {
         Err(QdnfError::Unauthorized)

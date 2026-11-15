@@ -41,6 +41,7 @@ pub struct LiveShareRequestRecord {
 }
 
 impl LiveShareRequestRecord {
+    /// Constructs from request.
     pub fn from_request(request: LiveSectionRequest, enqueued_at_unix: u64) -> Self {
         let classified_kinds: Vec<String> = request
             .requested_kinds
@@ -69,6 +70,7 @@ pub struct LiveShareStore {
 }
 
 impl LiveShareStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let root = storage_root.as_ref();
         let requests_path = root.join(LIVE_SHARE_REQUESTS_FILE);
@@ -87,6 +89,7 @@ impl LiveShareStore {
         })
     }
 
+    /// Enqueues a live-share request.
     pub fn enqueue_request(
         &self,
         request: LiveSectionRequest,
@@ -101,6 +104,7 @@ impl LiveShareStore {
         Ok(record)
     }
 
+    /// Lists pending requests.
     pub fn list_pending(&self, limit: usize) -> std::io::Result<Vec<LiveSectionRequest>> {
         let all = self.load_requests()?;
         let mut pending: Vec<LiveSectionRequest> = all
@@ -116,6 +120,7 @@ impl LiveShareStore {
         Ok(pending)
     }
 
+    /// Gets request.
     pub fn get_request(&self, request_id: &str) -> std::io::Result<Option<LiveShareRequestRecord>> {
         Ok(self
             .load_requests()?
@@ -123,6 +128,7 @@ impl LiveShareStore {
             .find(|r| r.request.id == request_id))
     }
 
+    /// Decides a pending live-share request (fails on double-decision).
     pub fn decide(
         &self,
         request_id: &str,
@@ -168,6 +174,7 @@ impl LiveShareStore {
         Ok(updated)
     }
 
+    /// Saves usage-agreement.
     pub fn save_usage_agreement(&self, agreement: &UsageAgreement) -> std::io::Result<()> {
         let line =
             serde_json::to_string(agreement).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -179,6 +186,7 @@ impl LiveShareStore {
         Ok(())
     }
 
+    /// Gets usage-agreement.
     pub fn get_usage_agreement(&self, device_id: &str) -> std::io::Result<Option<UsageAgreement>> {
         let file = fs::File::open(&self.agreements_path)?;
         let reader = BufReader::new(file);
@@ -259,10 +267,12 @@ pub fn validate_live_share_decision(
     Ok(())
 }
 
+/// `true` when sanctuary prefs allow classified projection (`enabled && !locked && !decoy_session`).
 pub fn sanctuary_allows_classified_projection(prefs: &super::sanctuary::SanctuaryPrefs) -> bool {
     prefs.enabled && !prefs.locked && !prefs.decoy_session
 }
 
+/// Journal entry for a live-share request.
 pub fn live_share_request_journal_entry(
     record: &LiveShareRequestRecord,
     committed_unix: u32,
@@ -298,6 +308,7 @@ pub fn live_share_request_journal_entry(
     }
 }
 
+/// Journal entry for a live-share decision.
 pub fn live_share_decision_journal_entry(
     record: &LiveShareRequestRecord,
     committed_unix: u32,
@@ -355,6 +366,7 @@ pub fn live_section_decision_from_record(record: &LiveShareRequestRecord) -> Liv
     }
 }
 
+/// Appends a live-share journal entry.
 pub fn append_live_share_journal(
     storage_root: impl AsRef<Path>,
     entry: &JournalEntry,

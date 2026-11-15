@@ -17,6 +17,7 @@ pub enum MeterKind {
 }
 
 impl MeterKind {
+    /// Builds `MeterKind` from `resource`.
     pub fn from_resource(kind: ResourceKind) -> Self {
         match kind {
             ResourceKind::EnergyJoules => Self::EnergyJoules,
@@ -36,6 +37,7 @@ pub struct MeterReading {
 }
 
 impl MeterReading {
+    /// Adds an entry.
     pub fn add(self, other: Self) -> Result<Self, QdnfError> {
         if self.kind != other.kind {
             return Err(QdnfError::Malformed);

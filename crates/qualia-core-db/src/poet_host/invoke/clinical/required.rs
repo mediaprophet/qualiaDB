@@ -4,6 +4,7 @@
 use super::super::args;
 use vibe::{Diagnostic, Span, Value};
 
+/// Extracts required `u64` arg `key`; diagnostic error naming `unit` when absent/wrong type.
 pub fn need_u64(args_v: &Value, span: Span, key: &str, unit: &str) -> Result<u64, Diagnostic> {
     args::rec_u64(args_v, key).ok_or_else(|| {
         args::bad(
@@ -13,6 +14,7 @@ pub fn need_u64(args_v: &Value, span: Span, key: &str, unit: &str) -> Result<u64
     })
 }
 
+/// Extracts required `f64` arg `key`; diagnostic naming `unit` on failure.
 pub fn need_f64(args_v: &Value, span: Span, key: &str, unit: &str) -> Result<f64, Diagnostic> {
     let value = args::rec_f64(args_v, key).ok_or_else(|| {
         args::bad(
@@ -29,6 +31,7 @@ pub fn need_f64(args_v: &Value, span: Span, key: &str, unit: &str) -> Result<f64
     Ok(value)
 }
 
+/// Extracts required `bool` arg `key`.
 pub fn need_bool(args_v: &Value, span: Span, key: &str) -> Result<bool, Diagnostic> {
     args::rec_bool(args_v, key).ok_or_else(|| {
         args::bad(
@@ -38,6 +41,7 @@ pub fn need_bool(args_v: &Value, span: Span, key: &str) -> Result<bool, Diagnost
     })
 }
 
+/// Extracts required `&str` arg `key`.
 pub fn need_str<'a>(args_v: &'a Value, span: Span, key: &str) -> Result<&'a str, Diagnostic> {
     let value = args::rec_str(args_v, key)
         .ok_or_else(|| args::bad(span, format!("{key} is required; missing is not a default")))?;
@@ -50,6 +54,7 @@ pub fn need_str<'a>(args_v: &'a Value, span: Span, key: &str) -> Result<&'a str,
     Ok(value)
 }
 
+/// Extracts a required age in years with range validation.
 pub fn need_age_years(
     args_v: &Value,
     span: Span,
@@ -69,6 +74,7 @@ pub fn need_age_years(
     u8::try_from(age).map_err(|_| args::bad(span, "age (years) is out of range"))
 }
 
+/// Extracts a required positive `f64`; error when ≤0.
 pub fn need_positive_f64(
     args_v: &Value,
     span: Span,
@@ -87,6 +93,7 @@ pub fn need_positive_f64(
     Ok(value)
 }
 
+/// Builds a provenance diagnostic record for a clinical invocation.
 pub fn provenance(
     algorithm: &'static str,
     version: &'static str,

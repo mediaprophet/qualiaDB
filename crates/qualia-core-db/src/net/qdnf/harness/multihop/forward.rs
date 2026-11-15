@@ -18,10 +18,12 @@ const TYPE_DGRAM: u8 = 64;
 const DEFAULT_HOP: u8 = 3;
 
 impl MultiHop {
+    /// Sends `frame`+`payload` on the next hop.
     pub fn send_stream(&mut self, frame: StreamFrame, payload: &[u8]) -> Result<(), QdnfError> {
         self.send_stream_with_hop(frame, payload, DEFAULT_HOP)
     }
 
+    /// Sends a stream frame pinned to a specific hop.
     pub fn send_stream_with_hop(
         &mut self,
         frame: StreamFrame,
@@ -45,6 +47,7 @@ impl MultiHop {
         self.inject(&mut wire[..n])
     }
 
+    /// Sends a datagram on the next hop.
     pub fn send_datagram(&mut self, dgram: Datagram, payload: &[u8]) -> Result<(), QdnfError> {
         self.preflight()?;
         dgram.live_at(0)?;
@@ -68,6 +71,7 @@ impl MultiHop {
         self.inject(&mut wire[..n])
     }
 
+    /// Drains queued outbound bytes into `out`.
     pub fn consume(&mut self, out: &mut [u8]) -> Result<usize, QdnfError> {
         let mut scratch = [0u8; FRAME_CAP];
         let n = self.middle.pop(&mut scratch)?;

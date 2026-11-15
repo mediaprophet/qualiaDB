@@ -19,6 +19,7 @@ impl LocalLlmAgent {
     // NOTE: `pub(super)` widening (was a private associated fn) so the
     // `AgentRuntime` impl in `runtime.rs` can call it via `Self::` across the
     // new submodule boundary. Visibility stays crate-internal.
+    /// Evaluates an intent frame.
     pub(super) fn evaluate_intent_frame(
         agent: &LocalLlmAgent,
         frame: &AgentIntentFrame,

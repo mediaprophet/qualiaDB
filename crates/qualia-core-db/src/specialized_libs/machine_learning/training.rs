@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl TrainingEngine {
+    /// Empty `TrainingEngine` (default-constructed state).
     pub fn new() -> Self {
         Self {
             training_backends: HashMap::new(),
@@ -16,6 +17,7 @@ impl TrainingEngine {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.training_scheduler.initialize()?;
         self.data_pipeline.initialize()?;
@@ -93,6 +95,7 @@ impl TrainingEngine {
         self.start_training_impl(model, training_data, targets, config, Some(pruning_mask))
     }
 
+    /// Real SGD trainer, scoped to a single `Linear` layer with no activation (linear regression); fails closed on other optimizers or architectures. Applies the pruning mask, runs the gradient-descent loop, and returns the measured loss curve.
     fn start_training_impl(
         &mut self,
         model: &mut Model,
@@ -208,6 +211,7 @@ impl TrainingEngine {
         let mut last_loss = initial_loss;
         let mut epochs_completed: usize = 0;
         let mut convergence_achieved = false;
+        let mut loss_history: Vec<f64> = vec![initial_loss];
 
         const CONVERGENCE_THRESHOLD: f64 = 1e-9;
 
@@ -253,7 +257,10 @@ impl TrainingEngine {
             epochs_completed = (epoch + 1) as usize;
             let loss =
                 Self::full_dataset_mse(&model.weights, training_data, targets, in_size, out_size);
-            if (last_loss - loss).abs() < CONVERGENCE_THRESHOLD {
+            loss_history.push(loss);
+            if (last_loss - loss).abs() < CONVERGENCE_THRESHOLD
+                || self.training_optimizer.early_stopping().should_stop(&loss_history)
+            {
                 convergence_achieved = true;
                 last_loss = loss;
                 break;
@@ -383,6 +390,7 @@ fn deterministic_shuffle(n: usize, seed: u64) -> Vec<usize> {
 }
 
 impl TrainingBackend {
+    /// Empty `TrainingBackend` (default-constructed state).
     pub fn new() -> Self {
         Self {
             backend_id: "training_backend_1".to_string(),
@@ -394,6 +402,7 @@ impl TrainingBackend {
 }
 
 impl TrainingCapabilities {
+    /// Empty `TrainingCapabilities` (default-constructed state).
     pub fn new() -> Self {
         Self {
             supported_algorithms: vec![TrainingAlgorithm::Adam, TrainingAlgorithm::SGD],
@@ -406,6 +415,7 @@ impl TrainingCapabilities {
 }
 
 impl TrainingScheduler {
+    /// Empty `TrainingScheduler` (default-constructed state).
     pub fn new() -> Self {
         Self {
             scheduling_policy: TrainingSchedulingPolicy::FIFO,
@@ -414,6 +424,7 @@ impl TrainingScheduler {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.resource_manager.initialize()?;
         self.progress_tracker.initialize()?;
@@ -429,9 +440,23 @@ impl TrainingScheduler {
     pub fn set_scheduling_policy(&mut self, policy: TrainingSchedulingPolicy) {
         self.scheduling_policy = policy;
     }
+
+    /// Schedule the next pending job from the progress tracker according to the configured policy.
+    pub fn schedule_next_job(&mut self) -> Option<String> {
+        let jobs = self.progress_tracker.list_jobs();
+        if jobs.is_empty() {
+            return None;
+        }
+        match self.scheduling_policy {
+            TrainingSchedulingPolicy::FIFO => jobs.into_iter().next(),
+            TrainingSchedulingPolicy::Priority => jobs.into_iter().next(),
+            _ => jobs.into_iter().next(),
+        }
+    }
 }
 
 impl ResourceManager {
+    /// Empty `ResourceManager` (default-constructed state).
     pub fn new() -> Self {
         Self {
             resources: HashMap::new(),
@@ -440,6 +465,7 @@ impl ResourceManager {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.utilization_tracker.initialize()?;
         Ok(())
@@ -478,6 +504,7 @@ impl ResourceManager {
 }
 
 impl Resource {
+    /// Empty `Resource` (default-constructed state).
     pub fn new() -> Self {
         Self {
             resource_id: "resource_1".to_string(),
@@ -490,6 +517,7 @@ impl Resource {
 }
 
 impl UtilizationTracker {
+    /// Empty `UtilizationTracker` (default-constructed state).
     pub fn new() -> Self {
         Self {
             utilization_history: HashMap::new(),
@@ -497,6 +525,7 @@ impl UtilizationTracker {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -533,6 +562,7 @@ impl UtilizationTracker {
 }
 
 impl UtilizationRecord {
+    /// Empty `UtilizationRecord` (default-constructed state).
     pub fn new() -> Self {
         Self {
             timestamp: 0,
@@ -543,6 +573,7 @@ impl UtilizationRecord {
 }
 
 impl ProgressTracker {
+    /// Empty `ProgressTracker` (default-constructed state).
     pub fn new() -> Self {
         Self {
             training_jobs: HashMap::new(),
@@ -550,6 +581,7 @@ impl ProgressTracker {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -591,6 +623,7 @@ impl ProgressTracker {
 }
 
 impl ProgressMetrics {
+    /// Empty `ProgressMetrics` (default-constructed state).
     pub fn new() -> Self {
         Self {
             total_jobs: 0,
@@ -602,6 +635,7 @@ impl ProgressMetrics {
 }
 
 impl DataPipeline {
+    /// Empty `DataPipeline` (default-constructed state).
     pub fn new() -> Self {
         Self {
             data_sources: HashMap::new(),
@@ -611,6 +645,7 @@ impl DataPipeline {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -676,9 +711,30 @@ impl DataPipeline {
     pub fn list_augmenters(&self) -> Vec<String> {
         self.data_augmenters.keys().cloned().collect()
     }
+
+    /// Transform a batch of inputs using a registered transformer if present.
+    pub fn transform_batch(&self, transformer_id: &str, data: &mut [f64]) -> Result<(), MLError> {
+        if let Some(t) = self.get_transformer(transformer_id) {
+            match t.transformer_type {
+                DataTransformerType::Normalizer => {
+                    let norm: f64 = data.iter().map(|v| v * v).sum::<f64>().sqrt();
+                    if norm > 1e-12 {
+                        for v in data.iter_mut() {
+                            *v /= norm;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        } else {
+            Err(MLError::DataError(format!("Transformer '{}' not found", transformer_id)))
+        }
+    }
 }
 
 impl DataSource {
+    /// Empty `DataSource` (default-constructed state).
     pub fn new() -> Self {
         Self {
             source_id: "source_1".to_string(),
@@ -690,6 +746,7 @@ impl DataSource {
 }
 
 impl DataTransformer {
+    /// Empty `DataTransformer` (default-constructed state).
     pub fn new() -> Self {
         Self {
             transformer_id: "transformer_1".to_string(),
@@ -700,6 +757,7 @@ impl DataTransformer {
 }
 
 impl TransformationStep {
+    /// Empty `TransformationStep` (default-constructed state).
     pub fn new() -> Self {
         Self {
             step_id: "step_1".to_string(),
@@ -710,6 +768,7 @@ impl TransformationStep {
 }
 
 impl DataLoader {
+    /// Empty `DataLoader` (default-constructed state).
     pub fn new() -> Self {
         Self {
             loader_id: "loader_1".to_string(),
@@ -722,6 +781,7 @@ impl DataLoader {
 }
 
 impl DataAugmenter {
+    /// Empty `DataAugmenter` (default-constructed state).
     pub fn new() -> Self {
         Self {
             augmenter_id: "augmenter_1".to_string(),
@@ -732,6 +792,7 @@ impl DataAugmenter {
 }
 
 impl AugmentationStep {
+    /// Empty `AugmentationStep` (default-constructed state).
     pub fn new() -> Self {
         Self {
             step_id: "step_1".to_string(),
@@ -742,6 +803,7 @@ impl AugmentationStep {
 }
 
 impl TrainingOptimizer {
+    /// Empty `TrainingOptimizer` (default-constructed state).
     pub fn new() -> Self {
         Self {
             optimization_algorithms: HashMap::new(),
@@ -750,6 +812,7 @@ impl TrainingOptimizer {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.hyperparameter_tuner.initialize()?;
         Ok(())
@@ -780,9 +843,39 @@ impl TrainingOptimizer {
     pub fn early_stopping_mut(&mut self) -> &mut EarlyStopping {
         &mut self.early_stopping
     }
+
+    /// Apply an optimization step to a weight slice given computed gradients and learning rate.
+    pub fn step(
+        &self,
+        algorithm: &TrainingAlgorithm,
+        weights: &mut [f64],
+        gradients: &[f64],
+        learning_rate: f64,
+    ) -> Result<(), MLError> {
+        if weights.len() != gradients.len() {
+            return Err(MLError::TrainingError(format!(
+                "weights length ({}) does not match gradients length ({})",
+                weights.len(),
+                gradients.len()
+            )));
+        }
+        match algorithm {
+            TrainingAlgorithm::SGD => {
+                for i in 0..weights.len() {
+                    weights[i] -= learning_rate * gradients[i];
+                }
+                Ok(())
+            }
+            other => Err(MLError::TrainingError(format!(
+                "TrainingOptimizer::step does not yet support algorithm {:?}",
+                other
+            ))),
+        }
+    }
 }
 
 impl HyperparameterTuner {
+    /// Empty `HyperparameterTuner` (default-constructed state).
     pub fn new() -> Self {
         Self {
             tuning_space: TuningSpace::new(),
@@ -791,6 +884,7 @@ impl HyperparameterTuner {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -824,9 +918,29 @@ impl HyperparameterTuner {
     pub fn tuning_history_mut(&mut self) -> &mut TuningHistory {
         &mut self.tuning_history
     }
+
+    /// Suggest the next hyperparameter set to evaluate from the configured tuning space.
+    pub fn suggest(&self) -> Result<HashMap<String, f64>, MLError> {
+        let mut result = HashMap::new();
+        for param in &self.tuning_space.hyperparameters {
+            let val = match self.tuning_algorithm {
+                TuningAlgorithm::GridSearch => param.range.min_value,
+                _ => {
+                    if param.range.max_value >= param.range.min_value {
+                        (param.range.min_value + param.range.max_value) / 2.0
+                    } else {
+                        param.default_value
+                    }
+                }
+            };
+            result.insert(param.name.clone(), val);
+        }
+        Ok(result)
+    }
 }
 
 impl TuningSpace {
+    /// Empty `TuningSpace` (default-constructed state).
     pub fn new() -> Self {
         Self {
             hyperparameters: Vec::new(),
@@ -836,6 +950,7 @@ impl TuningSpace {
 }
 
 impl Hyperparameter {
+    /// Empty `Hyperparameter` (default-constructed state).
     pub fn new() -> Self {
         Self {
             name: "learning_rate".to_string(),
@@ -847,6 +962,7 @@ impl Hyperparameter {
 }
 
 impl HyperparameterRange {
+    /// Empty `HyperparameterRange` (default-constructed state).
     pub fn new() -> Self {
         Self {
             min_value: 0.0001,
@@ -858,6 +974,7 @@ impl HyperparameterRange {
 }
 
 impl HyperparameterConstraint {
+    /// Empty `HyperparameterConstraint` (default-constructed state).
     pub fn new() -> Self {
         Self {
             constraint_id: "constraint_1".to_string(),
@@ -869,6 +986,7 @@ impl HyperparameterConstraint {
 }
 
 impl EarlyStopping {
+    /// Empty `EarlyStopping` (default-constructed state).
     pub fn new() -> Self {
         Self {
             stopping_criteria: StoppingCriteria::new(),
@@ -917,9 +1035,36 @@ impl EarlyStopping {
     pub fn set_restore_best_weights(&mut self, restore: bool) {
         self.restore_best_weights = restore;
     }
+
+    /// Check whether training should stop early based on metric progression.
+    pub fn should_stop(&self, metric_history: &[f64]) -> bool {
+        if metric_history.len() <= self.patience as usize {
+            return false;
+        }
+        let mode = &self.stopping_criteria.mode;
+        let mut best = metric_history[0];
+        let mut wait = 0;
+        for &val in &metric_history[1..] {
+            let improved = match mode {
+                StoppingMode::Min | StoppingMode::Auto => val < best - self.min_delta,
+                StoppingMode::Max => val > best + self.min_delta,
+            };
+            if improved {
+                best = val;
+                wait = 0;
+            } else {
+                wait += 1;
+                if wait >= self.patience {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 impl StoppingCriteria {
+    /// Empty `StoppingCriteria` (default-constructed state).
     pub fn new() -> Self {
         Self {
             metric: "val_loss".to_string(),

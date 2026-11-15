@@ -13,6 +13,7 @@ pub const DEV_ETHERTYPE: u16 = 0x4242;
 /// most `IFNAMSIZ - 1` bytes.
 pub(crate) const IFNAMSIZ: usize = 16;
 
+/// Validates `ifname`.
 pub(crate) fn validate_ifname(interface: &[u8]) -> Result<(), QdnfError> {
     if interface.is_empty() || interface.len() >= IFNAMSIZ {
         Err(QdnfError::Range)
@@ -21,6 +22,7 @@ pub(crate) fn validate_ifname(interface: &[u8]) -> Result<(), QdnfError> {
     }
 }
 
+/// MAC derived from locator.
 pub(crate) fn mac_from_locator(loc: &ObservedLocator) -> Result<[u8; 6], QdnfError> {
     let src = loc.as_slice();
     if src.len() != 6 {
@@ -31,6 +33,7 @@ pub(crate) fn mac_from_locator(loc: &ObservedLocator) -> Result<[u8; 6], QdnfErr
     Ok(mac)
 }
 
+/// Locator derived from MAC.
 pub(crate) fn locator_from_mac(mac: &[u8; 6]) -> ObservedLocator {
     let mut loc = ObservedLocator::EMPTY;
     loc.bytes[..6].copy_from_slice(mac);

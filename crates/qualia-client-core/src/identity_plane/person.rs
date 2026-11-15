@@ -98,14 +98,17 @@ fn person_wrapping_key() -> Result<[u8; 32], String> {
 }
 
 impl PersonPrincipal {
+    /// Signing key.
     pub fn signing_key(&self) -> SigningKey {
         SigningKey::from_bytes(&self.ed25519_secret)
     }
 
+    /// Verifying key as hex.
     pub fn verifying_key_hex(&self) -> String {
         hex::encode(VerifyingKey::from(&self.signing_key()).to_bytes())
     }
 
+    /// Converts to public.
     pub fn to_public(&self) -> PersonPublic {
         PersonPublic {
             person_id: self.person_id.clone(),
@@ -115,10 +118,12 @@ impl PersonPrincipal {
         }
     }
 
+    /// DID from verifying-key bytes.
     pub fn did_from_verifying_key_bytes(vk: &[u8; 32]) -> String {
         format!("did:q42:person:{}", hex::encode(vk))
     }
 
+    /// Generates.
     pub fn generate(display_hint: impl Into<String>) -> Result<Self, String> {
         let mut secret = [0u8; 32];
         rand::fill(&mut secret);
@@ -177,6 +182,7 @@ impl PersonPrincipal {
         Err("invalid person identity file".into())
     }
 
+    /// Persists.
     pub fn persist(&self) -> Result<(), String> {
         let path = person_path();
         if let Some(parent) = path.parent() {
@@ -204,6 +210,7 @@ impl PersonPrincipal {
         self.signing_key().sign(message).to_bytes()
     }
 
+    /// Verifies a message signature.
     pub fn verify_message(
         person_id: &str,
         verifying_key_hex: &str,
@@ -227,6 +234,7 @@ impl PersonPrincipal {
             .map_err(|_| "person signature invalid".to_string())
     }
 
+    /// Replaces with another.
     pub fn replace_with(person: PersonPrincipal) -> Result<PersonPrincipal, String> {
         if !person.person_id.starts_with("did:q42:person:") {
             return Err("person_id must be a did:q42:person:… identifier".into());
@@ -241,6 +249,7 @@ impl PersonPrincipal {
         Ok(person)
     }
 
+    /// Transfer bundle.
     pub fn transfer_bundle(&self) -> PersonTransferBundle {
         PersonTransferBundle {
             format: PERSON_TRANSFER_FORMAT.to_string(),
@@ -248,6 +257,7 @@ impl PersonPrincipal {
         }
     }
 
+    /// Constructs from transfer-bundle.
     pub fn from_transfer_bundle(bundle: PersonTransferBundle) -> Result<Self, String> {
         if bundle.format != PERSON_TRANSFER_FORMAT {
             return Err(format!(

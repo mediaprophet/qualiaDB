@@ -321,7 +321,8 @@ fn modal_lowers_when_family_granted() {
         Some(&Value::String("DeonticLogic.evaluate".into()))
     );
     assert_eq!(map.get("evaluated"), Some(&Value::Bool(true)));
-    assert_ne!(map.get("status"), Some(&Value::String("Active".into())));
+    assert_eq!(map.get("status"), Some(&Value::String("Active".into())));
+    assert_eq!(map.get("verdict_count"), Some(&Value::U64(1)));
 }
 
 #[test]
@@ -356,6 +357,32 @@ fn workspace_budget_charges_strings() {
     let err = engine.eval_expr(&expr, &mut env).expect_err("budget");
     assert_eq!(err.code, vibe::DiagCode::E400);
     assert!(err.message.contains("workspace budget"));
+}
+
+#[test]
+fn using_econ_gini_computes_on_local_host() {
+    let src = r#"
+        using Econ;
+        effect fn run() -> Record {
+            return Econ.gini(incomes: [0.0, 1.0]);
+        }
+    "#;
+    let prog = parse_program(src).expect("parse");
+    vibe::check_program(&prog).expect("check");
+    let mut host = LocalHost::default();
+    let mut engine = Engine::new(&mut host, Budget::default());
+    let mut env = Env::default();
+    let val = engine
+        .call_function(&prog, "run", Vec::new(), &mut env)
+        .expect("eval");
+    let Value::Record(m) = val else {
+        panic!("expected record");
+    };
+    let g = match m.get("gini") {
+        Some(Value::F64(g)) => *g,
+        _ => panic!("missing gini"),
+    };
+    assert!((g - 0.5).abs() < 1e-12);
 }
 
 #[test]

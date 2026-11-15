@@ -24,7 +24,7 @@ This changes the greenfield recommendation in the earlier [Internet connectivity
 
 Standards maturity was assessed on **10 September 2026**. Sources below distinguish published RFCs, Internet-Drafts, implementation reports and empirical research. Vendor deployment statements demonstrate implementation activity, not independently established reliability for Qualia or humanitarian missions. Recommendations, proposed interfaces and acceptance criteria are this report's engineering synthesis, not requirements imposed by the cited standards.
 
-The local baseline remains `0.0.37` at `79231d7d`. The separately reviewed Cursor proposal and implementation are on `origin/0.0.38`, including `dc6462d8` and `7a275039`. Fetching and reviewing those commits did not merge them or qualify their runtime. This report is documentation only; it does not implement a transport, deploy relays or certify security.
+The local baseline remains `0.0.40` at `79231d7d`. The separately reviewed Cursor proposal and implementation are on `origin/0.0.40`, including `dc6462d8` and `7a275039`. Fetching and reviewing those commits did not merge them or qualify their runtime. This report is documentation only; it does not implement a transport, deploy relays or certify security.
 
 The target is native desktop/edge peers, an explicitly different browser profile, and intermittent or hostile access networks. Protection means enforceable disclosure and cryptographic requirements, not a claim of anonymity or guaranteed connectivity. No protocol can deliver live traffic through a total network outage, and endpoint compromise remains outside what transport encryption alone can repair.
 

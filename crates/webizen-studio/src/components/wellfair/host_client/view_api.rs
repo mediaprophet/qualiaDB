@@ -11,6 +11,7 @@ pub async fn view_session() -> Result<serde_json::Value, String> {
     invoke_json("view_session", serde_json::json!({})).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View session.
 pub async fn view_session() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({
         "observer": "principal",
@@ -27,6 +28,7 @@ pub async fn view_set_observer(status: &str) -> Result<serde_json::Value, String
     invoke_json("view_set_observer", serde_json::json!({ "status": status })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View set-observer.
 pub async fn view_set_observer(status: &str) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "observer": status }))
 }
@@ -41,6 +43,7 @@ pub async fn view_set_presentation_level(level: u8) -> Result<serde_json::Value,
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View set-presentation-level.
 pub async fn view_set_presentation_level(level: u8) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "presentation_level": level }))
 }
@@ -65,6 +68,7 @@ pub async fn view_project_library(
     invoke_json("view_project_library", serde_json::Value::Object(args)).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View project-library.
 pub async fn view_project_library(
     _section: Option<&str>,
     _observer: Option<&str>,
@@ -85,6 +89,7 @@ pub async fn view_morph(mode: &str) -> Result<serde_json::Value, String> {
     invoke_json("view_morph", serde_json::json!({ "mode": mode })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View morph.
 pub async fn view_morph(mode: &str) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "morph": mode, "flat": [], "scene_nodes": [], "hidden_count": 0 }))
 }
@@ -95,6 +100,7 @@ pub async fn view_pick_scene(nx: f64, ny: f64) -> Result<serde_json::Value, Stri
     invoke_json("view_pick_scene", serde_json::json!({ "nx": nx, "ny": ny })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View pick-scene.
 pub async fn view_pick_scene(_nx: f64, _ny: f64) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "found": false, "entity_id": null }))
 }
@@ -105,6 +111,7 @@ pub async fn view_select(entity_id: u64) -> Result<serde_json::Value, String> {
     invoke_json("view_select", serde_json::json!({ "entityId": entity_id })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View select.
 pub async fn view_select(_entity_id: u64) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "selection": [] }))
 }
@@ -115,15 +122,18 @@ pub async fn view_select_uri(uri: &str) -> Result<serde_json::Value, String> {
     invoke_json("view_select_uri", serde_json::json!({ "uri": uri })).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View select-uri.
 pub async fn view_select_uri(uri: &str) -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "attention_url": uri, "selection": [] }))
 }
 
 #[cfg(target_arch = "wasm32")]
+/// View clear-selection.
 pub async fn view_clear_selection() -> Result<serde_json::Value, String> {
     invoke_json("view_clear_selection", serde_json::json!({})).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View clear-selection.
 pub async fn view_clear_selection() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "selection": [] }))
 }
@@ -142,6 +152,7 @@ pub async fn view_project_web_locus(
     invoke_json("view_project_web_locus", serde_json::Value::Object(args)).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View project-web-locus.
 pub async fn view_project_web_locus(
     url: &str,
     _observer: Option<&str>,
@@ -161,6 +172,7 @@ pub async fn view_capability_report() -> Result<serde_json::Value, String> {
     invoke_json("view_capability_report", serde_json::json!({})).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View capability-report.
 pub async fn view_capability_report() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({
         "version": 1,
@@ -189,6 +201,7 @@ pub async fn view_render_memory_spatial(
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View render-memory-spatial.
 pub async fn view_render_memory_spatial(
     _width: Option<u32>,
     _height: Option<u32>,
@@ -202,6 +215,7 @@ pub async fn view_remote_controller_info() -> Result<serde_json::Value, String> 
     invoke_json("view_remote_controller_info", serde_json::json!({})).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// View remote-controller-info.
 pub async fn view_remote_controller_info() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({
         "urls": { "localhost": "http://127.0.0.1:8080/remote-controller/" },

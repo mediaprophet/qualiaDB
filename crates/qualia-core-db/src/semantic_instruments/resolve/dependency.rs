@@ -50,6 +50,7 @@ pub struct DependencyLock {
 }
 
 impl DependencyLock {
+    /// Dependency digest.
     pub fn digest(&self) -> String {
         let mut buf = self.release_id.clone().into_bytes();
         for e in &self.entries {
@@ -61,6 +62,7 @@ impl DependencyLock {
         sha256_prefixed(&buf)
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -76,10 +78,15 @@ pub fn version_matches(constraint: &str, version: &str) -> bool {
     if c == version {
         return true;
     }
-    let c = c.trim_start_matches('^').trim_start_matches('~').trim_end_matches('*').trim_end_matches('.');
+    let c = c
+        .trim_start_matches('^')
+        .trim_start_matches('~')
+        .trim_end_matches('*')
+        .trim_end_matches('.');
     version == c || version.starts_with(&format!("{c}."))
 }
 
+/// `Ok(())` when the digest matches.
 pub fn require_digest(req: &DependencyReq, rec: &CatalogRecord) -> Result<(), InstrumentError> {
     if req.expected_digest.is_empty() {
         return Ok(());

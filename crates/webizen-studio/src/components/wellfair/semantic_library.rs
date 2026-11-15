@@ -6,7 +6,7 @@
 use super::host_client::{ingest_document, library_stats, query_library_faceted, IngestFacets};
 use crate::components::qapp_engine::invoke_json;
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 mod views;
 use views::{EmptyCollection, ItemInspector, LibraryOverview, SemanticPipeline};
@@ -252,6 +252,7 @@ async fn process_selected_file(path: &str) -> Result<String, String> {
 }
 
 #[component]
+/// Aether `SemanticLibrary` component.
 pub fn SemanticLibrary() -> Element {
     let mut collection = use_signal(|| Collection::Overview);
     let mut rows = use_signal(Vec::<serde_json::Value>::new);

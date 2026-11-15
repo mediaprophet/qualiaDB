@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;
@@ -10,6 +10,7 @@ struct ClinicalRiskProps {
 }
 
 #[component]
+/// Aether `ClinicalRiskScorer` component.
 pub fn ClinicalRiskScorer() -> Element {
     let mut age = use_signal(|| 45u8);
     let mut gender = use_signal(|| "Male".to_string());

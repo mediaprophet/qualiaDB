@@ -30,6 +30,8 @@ struct VmRegisters {
 }
 
 impl VmRegisters {
+    /// Store `value` in register `id` and mark it bound; ids ≥ 16 are
+    /// ignored (the register file is deliberately bounded).
     fn bind(&mut self, id: u8, value: u64) {
         if (id as usize) < self.values.len() {
             self.values[id as usize] = value;
@@ -138,6 +140,9 @@ pub struct WebRule {
 }
 
 impl WebRule {
+    /// A rule matching all contexts and predicates with no confidence
+    /// floor or domain requirement — narrow it with the `with_*`
+    /// builders.
     pub fn new(rule_id: WebRuleId, rule_type: WebRuleType) -> Self {
         Self {
             rule_id,
@@ -149,21 +154,25 @@ impl WebRule {
         }
     }
 
+    /// Restrict the rule to a single context (`0` keeps it global).
     pub fn with_context(mut self, context_id: u64) -> Self {
         self.context_id = context_id;
         self
     }
 
+    /// Restrict the rule to a single predicate hash (`0` matches all).
     pub fn with_predicate(mut self, predicate_hash: u64) -> Self {
         self.predicate_hash = predicate_hash;
         self
     }
 
+    /// Set the minimum confidence a quin must carry for this rule.
     pub fn with_confidence(mut self, min_confidence: f32) -> Self {
         self.min_confidence = min_confidence;
         self
     }
 
+    /// Require quins to carry domain `required_domain` for this rule.
     pub fn with_domain(mut self, required_domain: u64) -> Self {
         self.required_domain = required_domain;
         self
@@ -188,6 +197,9 @@ pub struct WebValidator {
 }
 
 impl WebValidator {
+    /// Create an empty validator with the default 0.5 confidence
+    /// threshold — `needs_validation` returns false until rules are
+    /// added.
     pub fn new() -> Self {
         Self {
             rules: Vec::new(),
@@ -196,10 +208,12 @@ impl WebValidator {
         }
     }
 
+    /// Override the global confidence floor applied during validation.
     pub fn set_confidence_threshold(&mut self, threshold: f32) {
         self.confidence_threshold = threshold;
     }
 
+    /// Register `rule` and mark its id active for validation.
     pub fn add_rule(&mut self, rule: WebRule) {
         self.active_rule_ids.insert(rule.rule_id);
         self.rules.push(rule);
@@ -286,6 +300,7 @@ impl WebValidator {
 }
 
 impl Default for WebValidator {
+    /// Equivalent to [`WebValidator::new`].
     fn default() -> Self {
         Self::new()
     }
@@ -305,6 +320,11 @@ pub struct WebRuleStorage {
 impl WebRuleStorage {
     const RULE_FLAG: u64 = 0x1 << 62;
 
+    /// Pack each rule into one `NQuin`: `subject` = rule id, `predicate`
+    /// = type tag (high byte) | context low byte, `object` = predicate
+    /// hash, `context` = context id, `metadata` = `RULE_FLAG` |
+    /// confidence bits | domain in the high 32. Parity left 0 — storage
+    /// blocks are verified by flag, not fold.
     pub fn rules_to_quins(rules: &[WebRule]) -> Vec<NQuin> {
         rules
             .iter()
@@ -321,6 +341,10 @@ impl WebRuleStorage {
             .collect()
     }
 
+    /// Recover rules from quins carrying `RULE_FLAG` in metadata;
+    /// non-rule quins are skipped. Confidence is stored as a `u32`
+    /// fraction (`bits / u32::MAX`) so round-trips lose raw `f32`
+    /// precision — callers needing exact values should re-set them.
     pub fn quins_to_rules(quins: &[NQuin]) -> Vec<WebRule> {
         quins
             .iter()

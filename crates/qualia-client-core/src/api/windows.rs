@@ -12,6 +12,7 @@ pub struct PrerequisiteStatus {
     pub bundled_webview2_dir: String,
 }
 
+/// Checks prerequisites.
 pub fn check_prerequisites() -> PrerequisiteStatus {
     let s = crate::prerequisites::check_prerequisites();
     PrerequisiteStatus {
@@ -25,10 +26,12 @@ pub fn check_prerequisites() -> PrerequisiteStatus {
     }
 }
 
+/// Configures the WebView2 runtime.
 pub fn configure_webview2_runtime() -> bool {
     crate::prerequisites::configure_webview2_runtime()
 }
 
+/// Installs a prerequisite.
 pub async fn install_prerequisite(kind: String) -> Result<(), String> {
     crate::prerequisites::install_prerequisite(kind).await
 }

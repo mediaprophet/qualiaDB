@@ -1,0 +1,499 @@
+//! Cold mesh upload, validation, material admission and GPU buffer construction.
+
+use super::*;
+use crate::container_10d::{MaterialRecord, SubmeshRange};
+use crate::render::gpu::materials::create_material_gpu;
+use crate::render::lighting::environment_lighting::{EnvironmentLightingGpu, EnvironmentProbeSet};
+
+const IDENTITY_MAT4: [[f32; 4]; 4] = [
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0],
+];
+
+impl PortalGpu {
+    /// Update the active mesh's GPU environment contract from raw probe inputs.
+    ///
+    /// `None` is a supported resource state: the bound contract has zero usable probes and the
+    /// shader returns the supplied fallback environment contribution. No CPU lighting evaluation
+    /// is performed here.
+    pub fn set_environment_probes(
+        &mut self,
+        probes: Option<&EnvironmentProbeSet>,
+        fallback_radiance: [f32; 3],
+    ) {
+        let environment = EnvironmentLightingGpu::from_probe_set(probes, fallback_radiance);
+        if let Some(mesh) = self.mesh.as_ref() {
+            mesh.material_gpu
+                .update_environment(&self.queue, &environment);
+        }
+    }
+
+    /// Replace the shared mesh instance source stream. Camera-facing forward and AO passes are
+    /// culled automatically from the active camera; the full source stream remains available to
+    /// shadow cascades so off-camera casters are not dropped. Empty input restores the legacy
+    /// single identity instance. Transparent multi-instance draws are refused until per-instance
+    /// back-to-front ordering is available.
+    pub fn set_mesh_instances(
+        &mut self,
+        records: &[crate::render::instance_culling::GpuInstanceRecord],
+    ) -> Result<(), MeshInstanceUploadError> {
+        self.set_mesh_instances_packed(bytemuck::cast_slice(records))
+    }
+
+    /// Replace instances from the stable byte ABI without requiring caller-pointer alignment.
+    pub fn set_mesh_instances_packed(
+        &mut self,
+        packed_records: &[u8],
+    ) -> Result<(), MeshInstanceUploadError> {
+        let record_size = std::mem::size_of::<crate::render::instance_culling::GpuInstanceRecord>();
+        if packed_records.len() % record_size != 0 {
+            return Err(MeshInstanceUploadError::InvalidTransform { index: 0 });
+        }
+        let record_count = packed_records.len() / record_size;
+        if record_count > 1
+            && self.mesh.as_ref().is_some_and(|mesh| {
+                mesh.material_gpu
+                    .draws
+                    .iter()
+                    .any(|draw| draw.opacity_mode == crate::container_10d::OpacityMode::Blend)
+            })
+        {
+            return Err(MeshInstanceUploadError::TransparentInstancesRequireSortedSubmission);
+        }
+        self.visible_mesh_instances.replace_packed(
+            &self.device,
+            &self.queue,
+            &self.mesh_instance_layout,
+            packed_records,
+        )?;
+        if let Err(error) = self.mesh_instances.replace_packed(
+            &self.device,
+            &self.queue,
+            &self.mesh_instance_layout,
+            packed_records,
+        ) {
+            let previous = bytemuck::cast_slice(&self.mesh_instance_source);
+            let _ = self.visible_mesh_instances.replace_packed(
+                &self.device,
+                &self.queue,
+                &self.mesh_instance_layout,
+                previous,
+            );
+            return Err(error);
+        }
+        self.mesh_instance_source.clear();
+        if packed_records.is_empty() {
+            self.mesh_instance_source.push(
+                crate::render::instance_culling::GpuInstanceRecord::new(IDENTITY_MAT4, 0),
+            );
+        } else {
+            let record_size =
+                std::mem::size_of::<crate::render::instance_culling::GpuInstanceRecord>();
+            for bytes in packed_records.chunks_exact(record_size) {
+                self.mesh_instance_source
+                    .push(bytemuck::pod_read_unaligned(bytes));
+            }
+        }
+        self.last_visibility_key = None;
+        self.shadow_map_dirty = true;
+        self.pick_readback.invalidate(true);
+        self.pick_semantic_result = None;
+        self.source_motion.retire();
+        Ok(())
+    }
+
+    /// Upload an imported triangle mesh (Phase 1.2). `positions` are model-space `f32x3` (the caller
+    /// centres + scales them to the orbit frame); `indices` is a flat triangle list (`tris * 3`).
+    /// Returns the triangle count; clears any prior mesh when empty.
+    pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
+        self.upload_mesh_colored(positions, &[], indices)
+    }
+
+    /// Upload a triangle mesh with per-vertex linear RGBA colours. When `colors` is empty the
+    /// engine's neutral blue-grey material is used; any non-empty slice must match `positions`.
+    pub fn upload_mesh_colored(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        indices: &[u32],
+    ) -> u32 {
+        self.upload_mesh_colored_with_normals(positions, colors, None, indices)
+    }
+
+    /// Upload a mesh while preserving a valid authored normal stream when supplied. The generated
+    /// workspace remains resident for later deformation updates, where normals are recomputed from
+    /// the changed geometry.
+    pub fn upload_mesh_colored_with_normals(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        authored_normals: Option<&[[f32; 3]]>,
+        indices: &[u32],
+    ) -> u32 {
+        self.upload_mesh_colored_with_frames(positions, colors, authored_normals, None, indices)
+    }
+
+    /// Upload a mesh with optional authored normal and tangent frame streams.
+    pub fn upload_mesh_colored_with_frames(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        authored_normals: Option<&[[f32; 3]]>,
+        authored_tangents: Option<&[[f32; 4]]>,
+        indices: &[u32],
+    ) -> u32 {
+        let Ok(index_count) = u32::try_from(indices.len()) else {
+            return 0;
+        };
+        let material = MaterialRecord::legacy_default();
+        let range = SubmeshRange {
+            first_index: 0,
+            index_count,
+            material_id: material.id,
+            semantic_id: 0,
+        };
+        self.upload_mesh_colored_with_frames_and_materials(
+            positions,
+            colors,
+            authored_normals,
+            authored_tangents,
+            indices,
+            &[material],
+            &[range],
+        )
+        .unwrap_or(0)
+    }
+
+    /// Upload a triangle mesh with per-submesh MAT1 shading and validated alpha coverage.
+    pub fn upload_mesh_colored_with_frames_and_materials(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        authored_normals: Option<&[[f32; 3]]>,
+        authored_tangents: Option<&[[f32; 4]]>,
+        indices: &[u32],
+        materials: &[MaterialRecord],
+        ranges: &[SubmeshRange],
+    ) -> Result<u32, String> {
+        self.upload_mesh_colored_with_frames_and_materials_and_uv0(
+            positions,
+            colors,
+            authored_normals,
+            authored_tangents,
+            None,
+            indices,
+            materials,
+            ranges,
+        )
+    }
+
+    /// Upload a mesh with optional vertex-aligned glTF TEXCOORD_0 values.
+    pub fn upload_mesh_colored_with_frames_and_materials_and_uv0(
+        &mut self,
+        positions: &[[f32; 3]],
+        colors: &[[f32; 4]],
+        authored_normals: Option<&[[f32; 3]]>,
+        authored_tangents: Option<&[[f32; 4]]>,
+        texture_coordinates_0: Option<&[[f32; 2]]>,
+        indices: &[u32],
+        materials: &[MaterialRecord],
+        ranges: &[SubmeshRange],
+    ) -> Result<u32, String> {
+        self.last_visibility_key = None;
+        if positions.is_empty() || indices.len() < 3 {
+            let generation = self
+                .mesh_generation
+                .checked_add(1)
+                .ok_or_else(|| "mesh generation exhausted".to_string())?;
+            self.mesh = None;
+            self.shadow_map_dirty = true;
+            self.mesh_generation = generation;
+            self.source_motion = Default::default();
+            return Ok(0);
+        }
+        if positions.len() > u32::MAX as usize || indices.len() > u32::MAX as usize {
+            return Err("mesh vertex or index count exceeds u32".to_string());
+        }
+        if !colors.is_empty() && colors.len() != positions.len() {
+            return Err("mesh colour count does not match vertex count".to_string());
+        }
+        if materials.len() > crate::container_10d::MAX_MATERIALS
+            || ranges.len() > materials::MAX_MATERIAL_DRAWS
+        {
+            return Err("mesh material or draw count exceeds renderer limits".to_string());
+        }
+        if self.mesh_instances.count() > 1
+            && materials
+                .iter()
+                .any(|material| material.opacity_mode == crate::container_10d::OpacityMode::Blend)
+        {
+            return Err("transparent meshes require sorted per-instance submission".to_string());
+        }
+        if authored_normals.is_some_and(|normals| {
+            normals.len() != positions.len()
+                || normals.iter().flatten().any(|value| !value.is_finite())
+                || normals.iter().any(|n| {
+                    let length2 = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+                    !length2.is_finite() || length2 <= f32::EPSILON
+                })
+        }) {
+            return Err("mesh authored normal stream is invalid".to_string());
+        }
+        if authored_tangents.is_some_and(|tangents| {
+            tangents.len() != positions.len()
+                || tangents.iter().flatten().any(|value| !value.is_finite())
+                || tangents.iter().any(|t| {
+                    let direction2 = t[0] * t[0] + t[1] * t[1] + t[2] * t[2];
+                    !direction2.is_finite()
+                        || direction2 <= f32::EPSILON
+                        || (t[3].abs() - 1.0).abs() > 1e-3
+                })
+        }) {
+            return Err("mesh authored tangent stream is invalid".to_string());
+        }
+        if texture_coordinates_0.is_some_and(|coordinates| {
+            coordinates.len() != positions.len()
+                || coordinates
+                    .iter()
+                    .flatten()
+                    .any(|value| !value.is_finite() || value.abs() > 1_000_000.0)
+        }) {
+            return Err("mesh TEXCOORD_0 stream is invalid".to_string());
+        }
+        let normal_workspace = mesh_normals::MeshNormalWorkspace::new(positions, indices)
+            .map_err(|error| error.to_string())?;
+        let index_count =
+            u32::try_from(indices.len()).map_err(|_| "mesh index count exceeds u32".to_string())?;
+        crate::container_10d::validate_material_bindings(materials, ranges, index_count)
+            .map_err(|error| format!("material ranges are invalid: {error}"))?;
+        let material_bytes = (materials.len() as u64)
+            .checked_mul(materials::MATERIAL_UNIFORM_STRIDE)
+            .and_then(|bytes| {
+                bytes.checked_add(
+                    crate::render::lighting::environment_lighting::ENVIRONMENT_LIGHTING_GPU_SIZE
+                        as u64,
+                )
+            })
+            .ok_or_else(|| "mesh material-uniform size overflow".to_string())?;
+        let position_bytes = (positions.len() as u64).checked_mul(12);
+        let normal_bytes = (positions.len() as u64).checked_mul(12);
+        let tangent_bytes = (positions.len() as u64).checked_mul(16);
+        let color_bytes = (positions.len() as u64).checked_mul(16);
+        let uv_bytes = (positions.len() as u64).checked_mul(8);
+        let index_bytes = (indices.len() as u64).checked_mul(4);
+        let Some(mesh_bytes) = position_bytes
+            .zip(normal_bytes)
+            .zip(tangent_bytes)
+            .zip(color_bytes)
+            .zip(index_bytes)
+            .zip(uv_bytes)
+            .and_then(
+                |(((((positions, normals), tangents), colors), indices), uvs)| {
+                    positions
+                        .checked_add(normals)?
+                        .checked_add(tangents)?
+                        .checked_add(colors)?
+                        .checked_add(indices)?
+                        .checked_add(material_bytes)
+                        .and_then(|bytes| bytes.checked_add(uvs))
+                },
+            )
+        else {
+            return Err("mesh GPU byte size overflow".to_string());
+        };
+        // Reserve the peak before allocating GPU buffers. The old mesh remains
+        // alive until the replacement has been constructed and installed.
+        let Ok(mesh_reservation) = global_vram_ledger()
+            .try_reserve_graphics(crate::gpu_context::VramResourceClass::Geometry, mesh_bytes)
+        else {
+            return Err("mesh GPU geometry reservation refused".to_string());
+        };
+        let material_gpu = create_material_gpu(
+            &self.device,
+            &self.mesh_material_layout,
+            &self.mesh_texture_layout,
+            &self.material_texture_defaults,
+            &self.resident_textures,
+            materials,
+            ranges,
+            positions,
+            indices,
+            index_count,
+        )?;
+        let shadow_draws = material_gpu
+            .draws
+            .iter()
+            .copied()
+            .filter(|draw| {
+                materials[draw.material_index].casts_shadow
+                    && draw.opacity_mode != crate::container_10d::OpacityMode::Blend
+            })
+            .collect();
+        let receives_shadows = materials.iter().any(|material| material.receives_shadow);
+        let default_colors;
+        let colors = if colors.is_empty() {
+            default_colors = vec![[0.50, 0.60, 0.82, 1.0]; positions.len()];
+            default_colors.as_slice()
+        } else {
+            colors
+        };
+
+        let normal_data = authored_normals.unwrap_or_else(|| normal_workspace.normals());
+
+        let generated_tangents;
+        let tangent_data = if let Some(tangents) = authored_tangents {
+            tangents
+        } else if let Some(uv) = texture_coordinates_0 {
+            // UV-aligned normal maps require a real tangent basis rather than
+            // an arbitrary axis derived only from the geometric normal.
+            if positions.len() > 1_048_576 {
+                return Err("tangent authoring scratch exceeds bounded mesh budget".into());
+            }
+            generated_tangents = {
+                let mut frames = vec![[0.0; 4]; positions.len()];
+                let mut scratch = vec![[0.0; 6]; positions.len()];
+                crate::render::mesh_tangent_frames::tangents_from_uvs_into(
+                    positions,
+                    uv,
+                    normal_data,
+                    indices,
+                    &mut frames,
+                    &mut scratch,
+                )
+                .map_err(|e| format!("mesh tangent frames: {e:?}"))?;
+                frames
+            };
+            generated_tangents.as_slice()
+        } else {
+            generated_tangents = normal_data
+                .iter()
+                .copied()
+                .map(default_gpu_tangent)
+                .collect::<Vec<_>>();
+            generated_tangents.as_slice()
+        };
+
+        let default_uvs;
+        let texture_coordinates_0 = if let Some(coordinates) = texture_coordinates_0 {
+            coordinates
+        } else {
+            default_uvs = vec![[0.0, 0.0]; positions.len()];
+            default_uvs.as_slice()
+        };
+
+        let index_count = indices.len() as u32;
+        let generation = self
+            .mesh_generation
+            .checked_add(1)
+            .ok_or_else(|| "mesh generation exhausted".to_string())?;
+        let buffers = etalon_render::mesh::MeshBuffers::upload(
+            &self.device,
+            positions,
+            colors,
+            normal_data,
+            tangent_data,
+            texture_coordinates_0,
+            indices,
+            mesh_reservation,
+        )?;
+        self.pick_readback.invalidate(false);
+        self.pick_semantic_result = None;
+        self.mesh = Some(MeshGpu {
+            buffers,
+            material_gpu,
+            shadow_draws,
+            receives_shadows,
+            cpu_positions: positions.to_vec(),
+            cpu_indices: indices.to_vec(),
+            normal_workspace,
+        });
+        self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
+        self.last_visibility_key = None;
+        self.shadow_map_dirty = true;
+        self.last_admitted = Motor::identity();
+        self.last_refused = false;
+        self.mesh_generation = generation;
+        self.source_motion = Default::default();
+        Ok(index_count / 3)
+    }
+
+    /// Replace a span of mesh positions. The buffer is `COPY_DST`. Used so a
+    /// part can change over time without uploading the whole scene again.
+    pub fn write_mesh_vertices(&mut self, start: u32, positions: &[[f32; 3]]) {
+        let Some(mesh) = self.mesh.as_mut() else {
+            return;
+        };
+        let start_us = start as usize;
+        let Some(end) = start_us.checked_add(positions.len()) else {
+            return;
+        };
+        if positions.is_empty()
+            || end > mesh.vertex_count as usize
+            || positions.iter().flatten().any(|value| !value.is_finite())
+        {
+            return;
+        }
+        if mesh
+            .normal_workspace
+            .validate_position_span(mesh.cpu_positions.len(), start_us, end)
+            .is_err()
+        {
+            return;
+        }
+        mesh.cpu_positions[start_us..end].copy_from_slice(positions);
+        materials::update_draw_bounds(
+            &mut mesh.material_gpu.draws,
+            &mesh.cpu_positions,
+            &mesh.cpu_indices,
+        );
+        materials::update_draw_bounds(
+            &mut mesh.shadow_draws,
+            &mesh.cpu_positions,
+            &mesh.cpu_indices,
+        );
+        self.mesh_base_aabb = Aabb::from_points(&mesh.cpu_positions);
+        self.last_visibility_key = None;
+        self.shadow_map_dirty = true;
+        mesh.normal_workspace
+            .update_positions_prevalidated(&mesh.cpu_positions, start_us, end);
+        self.pick_readback.invalidate(true);
+        self.pick_semantic_result = None;
+        self.source_motion.retire();
+        self.queue.write_buffer(
+            &mesh.vertex_buf,
+            (start_us * 12) as u64,
+            bytemuck::cast_slice(positions),
+        );
+        let (dirty, normals) = mesh.normal_workspace.sorted_dirty_vertices_and_normals();
+        if let Some(&first) = dirty.first() {
+            let mut run_start = first as usize;
+            let mut run_end = run_start + 1;
+            for &vertex in &dirty[1..] {
+                let vertex = vertex as usize;
+                if vertex == run_end {
+                    run_end += 1;
+                    continue;
+                }
+                self.queue.write_buffer(
+                    &mesh.buffers.normal_buf,
+                    (run_start * 12) as u64,
+                    bytemuck::cast_slice(&normals[run_start..run_end]),
+                );
+                run_start = vertex;
+                run_end = vertex + 1;
+            }
+            self.queue.write_buffer(
+                &mesh.buffers.normal_buf,
+                (run_start * 12) as u64,
+                bytemuck::cast_slice(&normals[run_start..run_end]),
+            );
+        }
+    }
+
+    /// Whether a mesh surface is resident.
+    pub fn has_mesh(&self) -> bool {
+        self.mesh.is_some()
+    }
+}

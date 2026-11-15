@@ -5,17 +5,19 @@ use super::mail_model::{
     mailbox_chips, message_mailbox, receiver_from_status, reply_draft, smtp_ready, text,
     unread_in_mailbox, MailboxKind, ReceiverState,
 };
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::settings::host::invoke_json;
 use crate::components::settings::{
     EMPTY_CARD, FIELD, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SELECTED_ROW, SUCCESS_CARD,
     WARNING_CARD,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const LIST_ROW: &str = "width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1px solid var(--qualia-border);border-radius:10px;background:transparent;color:var(--qualia-text);font:inherit;text-align:left;cursor:pointer;";
 const LIST_ROW_ON: &str = "width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1px solid var(--qualia-accent);border-radius:10px;background:var(--qualia-accent-glow);color:var(--qualia-text);font:inherit;text-align:left;cursor:pointer;";
 
 #[component]
+/// Aether `MailInboxPane` component.
 pub fn MailInboxPane() -> Element {
     let mut addresses = use_signal(Vec::<serde_json::Value>::new);
     let mut messages = use_signal(Vec::<serde_json::Value>::new);
@@ -23,7 +25,7 @@ pub fn MailInboxPane() -> Element {
     let mut selected_mailbox = use_signal(Option::<String>::default);
     let mut selected_id = use_signal(String::new);
     let mut selected = use_signal(|| Option::<serde_json::Value>::None);
-    let mut receiver = use_signal(|| ReceiverState::Held);
+    let mut receiver = use_signal(|| ReceiverState::Planned);
     let mut transport = use_signal(|| serde_json::json!({ "smtp": null }));
     let mut status = use_signal(String::new);
     let mut loading = use_signal(|| true);
@@ -166,7 +168,7 @@ pub fn MailInboxPane() -> Element {
     let send_mail = move |_| {
         if !smtp_ready(&transport()) {
             status.set(
-                "Held / not yet — outbound SMTP is not configured. You can still read mail that has landed. Reception holds domain and transport setup.".into(),
+                "Planned — outbound SMTP is not configured. Reading landed mail stays Live. Reception holds domain and transport setup.".into(),
             );
             return;
         }
@@ -229,7 +231,7 @@ pub fn MailInboxPane() -> Element {
             .cloned()
             .collect::<Vec<_>>()
     };
-    let held = matches!(receiver(), ReceiverState::Held);
+    let receiver_planned = matches!(receiver(), ReceiverState::Planned);
 
     rsx! {
         section {
@@ -255,11 +257,14 @@ pub fn MailInboxPane() -> Element {
                 }
             }
 
-            if held {
+            if receiver_planned {
                 div { style: "{WARNING_CARD} margin:12px 18px 0;flex-shrink:0;",
-                    strong { "Held / not yet" }
+                    div { style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap;",
+                        HonestyChip { level: HonestyLevel::Planned, detail: "receiver".to_string() }
+                        strong { "Planned" }
+                    }
                     p { style: "margin:6px 0 10px;font-size:.76rem;line-height:1.45;",
-                        "The mail receiver is not running. Mail already here stays readable. New messages will not land until you start it."
+                        "Receiver is Planned until started. Mail already here stays readable (Live). New messages will not land until you start it."
                     }
                     button {
                         style: "{PRIMARY_BUTTON}",
@@ -333,7 +338,7 @@ pub fn MailInboxPane() -> Element {
                 div { style: "min-height:0;overflow-y:auto;padding:12px;border-right:1px solid #243044;display:flex;flex-direction:column;gap:6px;",
                     if visible.is_empty() {
                         div { style: "{EMPTY_CARD}",
-                            if held {
+                            if receiver_planned {
                                 "Nothing to read yet. Start the receiver, then mail that lands will list here."
                             } else {
                                 "Inbox is empty. Mail to a purpose address lands here — no provider host required."
@@ -379,7 +384,7 @@ pub fn MailInboxPane() -> Element {
                             }
                             if !smtp_ready(&transport()) {
                                 p { style: "margin:0 0 8px;font-size:.72rem;color:#fde68a;line-height:1.45;",
-                                    "Held / not yet — sending needs outbound SMTP. Draft here; Reception holds transport setup. Reading does not wait on that."
+                                    "Planned — sending needs outbound SMTP. Draft here; Reception holds transport setup. Reading stays Live."
                                 }
                             }
                             label { style: "font-size:.68rem;color:#94a3b8;", "From" }

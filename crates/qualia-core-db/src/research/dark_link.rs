@@ -28,6 +28,7 @@ pub struct DarkLink {
 }
 
 impl DarkLink {
+    /// Creates a `source`→`target` link of `link_type`.
     pub fn new(id: &str, source: &str, target: &str, link_type: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -41,21 +42,25 @@ impl DarkLink {
         }
     }
 
+    /// Attaches evidence for the link.
     pub fn add_evidence(&mut self, evidence: &str) {
         self.evidence.push(evidence.to_string());
         self.confidence = (self.confidence + 0.2).min(1.0);
     }
 
+    /// Marks the link confirmed.
     pub fn confirm(&mut self) {
         self.status = DarkLinkStatus::Confirmed;
         self.confidence = 1.0;
     }
 
+    /// Marks the link refuted.
     pub fn refute(&mut self) {
         self.status = DarkLinkStatus::Refuted;
         self.confidence = 0.0;
     }
 
+    /// Records a provenance gap.
     pub fn add_provenance_gap(&mut self, gap: &str) {
         self.provenance_gaps.push(gap.to_string());
     }

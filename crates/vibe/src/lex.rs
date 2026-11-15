@@ -75,6 +75,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    /// Creates a new `Lexer`.
     pub fn new(src: &'a str) -> Self {
         let src = strip_bom(src);
         Self {
@@ -94,10 +95,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Source text.
     pub fn source(&self) -> &'a str {
         self.src
     }
 
+    /// Next token.
     pub fn next_token(&mut self) -> Result<Token, Diagnostic> {
         self.skip_ws_and_comments()?;
         let start = self.pos;
@@ -692,11 +695,6 @@ fn strip_bom(src: &str) -> &str {
     src.strip_prefix('\u{feff}').unwrap_or(src)
 }
 
-#[allow(dead_code)]
-pub fn is_keyword(text: &str) -> bool {
-    is_keyword_in(text, &[])
-}
-
 fn is_keyword_in(text: &str, extra: &[crate::locale::Locale]) -> bool {
     if crate::locale::ENGLISH_KEYWORDS.iter().any(|k| *k == text) {
         return true;
@@ -713,19 +711,4 @@ fn is_keyword_in(text: &str, extra: &[crate::locale::Locale]) -> bool {
         }
     }
     false
-}
-
-#[allow(dead_code)]
-pub fn tokenize(src: &str) -> Result<Vec<Token>, Diagnostic> {
-    let mut lex = Lexer::new(src);
-    let mut out = Vec::new();
-    loop {
-        let t = lex.next_token()?;
-        let eof = t.kind == TokenKind::Eof;
-        out.push(t);
-        if eof {
-            break;
-        }
-    }
-    Ok(out)
 }

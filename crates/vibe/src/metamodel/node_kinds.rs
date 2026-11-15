@@ -89,6 +89,7 @@ pub const EXPR_KINDS: &[NodeKindDescriptor] = kinds!(
     "ExprKind.Interpolate", "ast::ExprKind::Interpolate", "Expression";
     "ExprKind.Lambda", "ast::ExprKind::Lambda", "Expression";
     "ExprKind.Tween", "ast::ExprKind::Tween", "Expression";
+    "ExprKind.IfElse", "ast::ExprKind::IfElse", "Expression";
 );
 
 pub const MODAL_KINDS: &[NodeKindDescriptor] = kinds!(
@@ -161,13 +162,20 @@ pub const TYPE_KINDS: &[NodeKindDescriptor] = kinds!(
 pub fn all_node_kinds() -> Vec<&'static NodeKindDescriptor> {
     let mut out = Vec::new();
     for slice in [
-        ITEM_KINDS, STMT_KINDS, PATTERN_KINDS, EXPR_KINDS, MODAL_KINDS, EFFECT_KINDS, TYPE_KINDS,
+        ITEM_KINDS,
+        STMT_KINDS,
+        PATTERN_KINDS,
+        EXPR_KINDS,
+        MODAL_KINDS,
+        EFFECT_KINDS,
+        TYPE_KINDS,
     ] {
         out.extend(slice.iter());
     }
     out
 }
 
+/// Kind IRI.
 pub fn kind_iri(d: &NodeKindDescriptor) -> String {
     term(d.rdfs_class_local)
 }

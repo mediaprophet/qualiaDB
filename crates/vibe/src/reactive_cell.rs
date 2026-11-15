@@ -1,10 +1,44 @@
-use std::collections::{HashMap, HashSet};
-
 use crate::ast::{CellDecl, Expr, ExprKind, Item, Program};
 use crate::bind::{Host, LocalHost};
 use crate::error::Diagnostic;
 use crate::eval::{Engine, Env};
 use crate::value::{Instant, Value};
+
+/// Sorted contiguous name-to-index lookup table (zero per-node BTree allocations).
+#[derive(Debug, Clone, Default)]
+pub struct FlatNameIndex {
+    entries: Vec<(String, usize)>,
+}
+
+impl FlatNameIndex {
+    pub fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+        }
+    }
+
+    pub fn insert(&mut self, name: String, idx: usize) {
+        match self.entries.binary_search_by(|(k, _)| k.as_str().cmp(name.as_str())) {
+            Ok(pos) => self.entries[pos].1 = idx,
+            Err(pos) => self.entries.insert(pos, (name, idx)),
+        }
+    }
+
+    pub fn get(&self, name: &str) -> Option<&usize> {
+        self.entries
+            .binary_search_by(|(k, _)| k.as_str().cmp(name))
+            .ok()
+            .map(|pos| &self.entries[pos].1)
+    }
+}
+
+impl std::ops::Index<&str> for FlatNameIndex {
+    type Output = usize;
+
+    fn index(&self, name: &str) -> &Self::Output {
+        self.get(name).expect("reactive cell name not found")
+    }
+}
 
 /// An error that can occur in the reactive cell graph engine.
 #[derive(Debug, Clone, PartialEq)]
@@ -67,8 +101,8 @@ pub struct ReactiveCell {
 pub struct ReactiveCellGraph {
     /// List of cell nodes.
     pub cells: Vec<ReactiveCell>,
-    /// Map from cell name to its index in `cells`.
-    pub name_to_index: HashMap<String, usize>,
+    /// Sorted flat lookup table from cell name to its index in `cells`.
+    pub name_to_index: FlatNameIndex,
     /// Topologically sorted order of cell indices (dependencies before dependents).
     pub topo_order: Vec<usize>,
     /// Dirty bitset words (64 cells per word; grows past 64 cells).
@@ -82,7 +116,7 @@ impl ReactiveCellGraph {
     pub fn new() -> Self {
         Self {
             cells: Vec::new(),
-            name_to_index: HashMap::new(),
+            name_to_index: FlatNameIndex::new(),
             topo_order: Vec::new(),
             dirty_words: Vec::new(),
             clock_seconds: 0.0,
@@ -434,17 +468,19 @@ impl Default for ReactiveCellGraph {
     }
 }
 
-/// Recursively collect all identifier variable names referenced in an expression.
+/// Recursively collect all identifier variable names referenced in an expression in deterministic sorted order.
 fn extract_expr_dependencies(expr: &Expr) -> Vec<String> {
-    let mut deps = HashSet::new();
+    let mut deps = Vec::new();
     walk_expr_deps(expr, &mut deps);
-    deps.into_iter().collect()
+    deps.sort();
+    deps.dedup();
+    deps
 }
 
-fn walk_expr_deps(expr: &Expr, deps: &mut HashSet<String>) {
+fn walk_expr_deps(expr: &Expr, deps: &mut Vec<String>) {
     match &expr.kind {
         ExprKind::Ident(name) => {
-            deps.insert(name.clone());
+            deps.push(name.clone());
         }
         ExprKind::Binary { left, right, .. } => {
             walk_expr_deps(left, deps);
@@ -513,6 +549,15 @@ fn walk_expr_deps(expr: &Expr, deps: &mut HashSet<String>) {
             walk_expr_deps(from, deps);
             walk_expr_deps(to, deps);
             walk_expr_deps(over, deps);
+        }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            walk_expr_deps(cond, deps);
+            walk_expr_deps(then_value, deps);
+            walk_expr_deps(else_value, deps);
         }
         _ => {}
     }

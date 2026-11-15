@@ -63,7 +63,7 @@ impl Default for CoordinateSpace {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum UiMode {
-    NativeDioxus,
+    NativeAether,
     IFrameSandbox,
 }
 

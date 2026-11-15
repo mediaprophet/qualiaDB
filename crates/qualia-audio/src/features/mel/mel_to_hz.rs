@@ -6,7 +6,7 @@
 /// Round-trips `hz_to_mel` to within ~1e-3 relative error over the audible band.
 #[inline]
 pub fn mel_to_hz(mel: f32) -> f32 {
-    700.0 * (10.0f32.powf(mel / 2595.0) - 1.0)
+    etalon_signal::mel::mel_to_hz(mel)
 }
 
 #[cfg(test)]

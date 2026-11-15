@@ -1,5 +1,6 @@
 //! Real forward STFT over actual audio samples — Hann-windowed framing through the
-//! forge FFT (`crate::wgsl_forge::dispatch::fft_f32`, GPU best-path with CPU DFT floor).
+//! forge FFT (`crate::wgsl_forge::dispatch::fft_f32`, GPU best-path with `etalon-signal`
+//! CPU FFT/DFT floor).
 //!
 //! This is the genuine forward transform that the cold-path sidecar bake consumes:
 //! [`bake_stft_sidecar_from_samples`] reduces the real magnitude spectrum to
@@ -14,14 +15,13 @@ use crate::audio::audio_spectral_sheet::{
     AudioSpectralSidecarHeader, SIDECAR_KIND_STFT, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
 use crate::audio::stft_bake::StftBakeError;
+use etalon_signal::audio::{hann_window_sample, stft_one_sided_magnitudes_into};
 
-/// Hann window coefficient `w[i] = 0.5*(1 - cos(2π·i/(N-1)))` for a length-`n` frame.
+/// Hann window coefficient `w[i] = 0.5*(1 - cos(2π·i/(N-1)))` for a length-`n` frame,
+/// delegated to [`etalon_signal::audio::hann_window_sample`].
 #[inline]
 fn hann(i: usize, n: usize) -> f32 {
-    if n <= 1 {
-        return 1.0;
-    }
-    0.5 * (1.0 - (core::f32::consts::TAU * i as f32 / (n - 1) as f32).cos())
+    hann_window_sample(i, n)
 }
 
 /// Real forward STFT over `samples`.
@@ -33,8 +33,8 @@ fn hann(i: usize, n: usize) -> f32 {
 /// For each frame start `s = 0, hop, 2·hop, …` while `s + frame_size ≤ samples.len()`:
 /// take `samples[s..s+frame_size]`, apply the Hann window, build the interleaved
 /// complex buffer `[re = windowed, im = 0]`, run it through
-/// [`crate::wgsl_forge::dispatch::fft_f32`], and collect the frame's `frame_size`
-/// complex bins as `[re, im]`.
+/// [`crate::wgsl_forge::dispatch::fft_f32`] (or `etalon_signal::audio::stft_frame_into`
+/// on non-forge builds), and collect the frame's `frame_size` complex bins as `[re, im]`.
 ///
 /// Returns one inner `Vec<[f32;2]>` (length `frame_size`) per frame.
 pub fn forward_stft(
@@ -83,10 +83,9 @@ pub fn forward_stft(
 
 /// FFT of one interleaved-complex frame. Uses the forge (GPU best-path with its
 /// own CPU DFT floor) when the `wgsl_forge` module is compiled in; otherwise — on
-/// `wasm32`, or with the `wgsl-forge` feature off — a self-contained naive CPU
-/// DFT with the *identical* forward sign convention (`exp(-2πi·k·j/N)`), so the
-/// spectrum is the same transform either way. Keeps the audio path self-sufficient
-/// without depending on the native-only forge.
+/// `wasm32`, or with the `wgsl-forge` feature off — delegates to
+/// [`etalon_signal::dft::dft_interleaved_into`] with the *identical* forward sign
+/// convention (`exp(-2πi·k·j/N)`), so the spectrum is the same transform either way.
 #[inline]
 fn fft_interleaved(interleaved: &[f32]) -> Result<Vec<f32>, StftBakeError> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
@@ -96,49 +95,34 @@ fn fft_interleaved(interleaved: &[f32]) -> Result<Vec<f32>, StftBakeError> {
     }
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
     {
-        if interleaved.len() % 2 != 0 {
-            return Err(StftBakeError::InvalidFrameCount);
-        }
-        Ok(dft_interleaved_cpu(interleaved, interleaved.len() / 2))
+        let mut out = vec![0.0_f32; interleaved.len()];
+        etalon_signal::dft::dft_interleaved_into(interleaved, &mut out)
+            .map_err(|_| StftBakeError::InvalidFrameCount)?;
+        Ok(out)
     }
-}
-
-/// Naive O(N²) forward DFT of interleaved-complex input — the CPU floor used when
-/// the forge isn't compiled in. Angles accumulate in f64 for a clean reference;
-/// matches `wgsl_forge::oracle::dft_cpu` exactly.
-#[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-fn dft_interleaved_cpu(input_interleaved: &[f32], n: usize) -> Vec<f32> {
-    use core::f64::consts::PI;
-    let mut out = vec![0.0_f32; 2 * n];
-    for k in 0..n {
-        let mut re = 0.0f64;
-        let mut im = 0.0f64;
-        for j in 0..n {
-            let xr = input_interleaved[2 * j] as f64;
-            let xi = input_interleaved[2 * j + 1] as f64;
-            let ang = -2.0 * PI * (k as f64) * (j as f64) / (n as f64);
-            let (s, c) = ang.sin_cos();
-            // x * (c + i s): real = xr·c − xi·s, imag = xr·s + xi·c.
-            re += xr * c - xi * s;
-            im += xr * s + xi * c;
-        }
-        out[2 * k] = re as f32;
-        out[2 * k + 1] = im as f32;
-    }
-    out
 }
 
 /// Per-frame one-sided magnitude spectrum: the first `frame_size/2 + 1` bins
-/// (DC … Nyquist) of `|X[k]| = sqrt(re² + im²)`.
+/// (DC … Nyquist) of `|X[k]| = sqrt(re² + im²)`, delegated to
+/// [`etalon_signal::audio::stft_one_sided_magnitudes_into`].
 pub fn stft_magnitudes(spec: &[Vec<[f32; 2]>]) -> Vec<Vec<f32>> {
     spec.iter()
         .map(|frame| {
+            if frame.is_empty() {
+                return Vec::new();
+            }
             let half = frame.len() / 2 + 1;
-            frame
-                .iter()
-                .take(half)
-                .map(|&[re, im]| (re * re + im * im).sqrt())
-                .collect()
+            let mut out = vec![0.0_f32; half];
+            let flat: &[f32] = bytemuck::cast_slice(frame.as_slice());
+            if stft_one_sided_magnitudes_into(flat, &mut out).is_ok() {
+                out
+            } else {
+                frame
+                    .iter()
+                    .take(half)
+                    .map(|&[re, im]| (re * re + im * im).sqrt())
+                    .collect()
+            }
         })
         .collect()
 }

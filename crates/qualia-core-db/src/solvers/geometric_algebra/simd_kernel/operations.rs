@@ -6,6 +6,7 @@ use super::simd_backend::{
 };
 use super::types::{Grade, Multivector, Rotor, Translator};
 
+/// Full GA geometric product of two multivectors.
 pub fn geometric_product(a: &Multivector, b: &Multivector) -> Multivector {
     let coeffs = multivector_geometric_product(&a.coeffs, &b.coeffs);
     Multivector {
@@ -14,6 +15,7 @@ pub fn geometric_product(a: &Multivector, b: &Multivector) -> Multivector {
     }
 }
 
+/// Outer (wedge) product of two multivectors.
 pub fn outer_product(a: &Multivector, b: &Multivector) -> Multivector {
     let coeffs = multivector_outer_product(&a.coeffs, &b.coeffs);
     // Compute grade_mask from the actual non-zero output coefficients.
@@ -42,6 +44,7 @@ pub fn outer_product(a: &Multivector, b: &Multivector) -> Multivector {
     Multivector { coeffs, grade_mask }
 }
 
+/// Builds a rotor for `angle` about `axis`.
 pub fn rotor_from_angle_axis(angle: f32, axis: [f32; 3]) -> Rotor {
     let half_angle = angle * 0.5;
     let sin_half = half_angle.sin();
@@ -65,6 +68,7 @@ pub fn rotor_from_angle_axis(angle: f32, axis: [f32; 3]) -> Rotor {
     }
 }
 
+/// Rotates `vector` by `rotor` (sandwich product).
 pub fn apply_rotor(rotor: &Rotor, vector: &[f32; 3]) -> [f32; 3] {
     let rotor_mv = Multivector::from_rotor(rotor);
     let vector_mv = Multivector::from_vector(vector);
@@ -74,6 +78,7 @@ pub fn apply_rotor(rotor: &Rotor, vector: &[f32; 3]) -> [f32; 3] {
     final_result.to_vector()
 }
 
+/// Builds a translator for `displacement`.
 pub fn translator_from_displacement(displacement: [f32; 3]) -> Translator {
     Translator {
         components: [
@@ -85,6 +90,7 @@ pub fn translator_from_displacement(displacement: [f32; 3]) -> Translator {
     }
 }
 
+/// Applies a translator to `vector`.
 pub fn apply_translator(translator: &Translator, vector: &[f32; 3]) -> [f32; 3] {
     // In Cl_3,0 (non-degenerate 3D GA), true translation versors do not exist.
     // The Translator struct encodes a half-displacement: components[1..=3] = d/2.
@@ -97,6 +103,7 @@ pub fn apply_translator(translator: &Translator, vector: &[f32; 3]) -> [f32; 3] 
     [vector[0] + d[0], vector[1] + d[1], vector[2] + d[2]]
 }
 
+/// Runtime AVX2 detection — `true` when the SIMD kernel initialized with AVX2.
 pub fn is_simd_available() -> bool {
     GA_SIMD_KERNEL.get_or_init(GaKernel::init).has_avx2
 }

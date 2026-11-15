@@ -10,6 +10,7 @@ pub struct Star {
     pub name: Option<&'static str>,
 }
 
+/// B-V color index to RGB.
 pub fn bv_to_rgb(bv: f32) -> [f32; 4] {
     let bv = bv.clamp(-0.4, 2.0);
     let t = (bv + 0.4) / 2.4;
@@ -20,10 +21,12 @@ pub fn bv_to_rgb(bv: f32) -> [f32; 4] {
     [r * brightness, g * brightness, b * brightness, 1.0]
 }
 
+/// Magnitude to point size.
 pub fn mag_to_size(magnitude: f32) -> f32 {
     ((6.5 - magnitude) / 6.5).max(0.1) * 2.0
 }
 
+/// Celestial to cartesian coordinates.
 pub fn celestial_to_cartesian(ra_deg: f64, dec_deg: f64, radius: f64) -> [f32; 3] {
     let ra = ra_deg.to_radians();
     let dec = dec_deg.to_radians();
@@ -524,6 +527,7 @@ pub static BRIGHT_STARS: &[Star] = &[
     },
 ];
 
+/// Bright-stars mesh.
 pub fn bright_stars_mesh(radius: f64) -> (Vec<[f32; 3]>, Vec<[f32; 4]>) {
     let mut positions = Vec::new();
     let mut colors = Vec::new();
@@ -535,6 +539,7 @@ pub fn bright_stars_mesh(radius: f64) -> (Vec<[f32; 3]>, Vec<[f32; 4]>) {
     (positions, colors)
 }
 
+/// Generates a synthetic starfield (self-marking).
 pub fn generate_synthetic_starfield(
     count: u32,
     radius: f64,

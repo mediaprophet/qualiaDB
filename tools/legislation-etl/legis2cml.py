@@ -151,11 +151,13 @@ class Segment:
 
     @property
     def char_count(self) -> int:
+        """Character count."""
         return sum(len(item["text"]) for item in self.items)
 
 
 # --------------------------------------------------------------------------- pdf + text
 def extract_pages(pdf_path: Path) -> list[tuple[int, str]]:
+    """Extracts PDF pages."""
     try:
         import fitz  # PyMuPDF
     except ImportError:
@@ -167,6 +169,7 @@ def extract_pages(pdf_path: Path) -> list[tuple[int, str]]:
 
 
 def clean(raw: str) -> str:
+    """Cleans."""
     raw = raw.replace("\r", "\n")
     raw = re.sub(r"(\w)-\n(\w)", r"\1\2", raw)
     out = []
@@ -185,10 +188,12 @@ def clean(raw: str) -> str:
 
 
 def sha256(s: str) -> str:
+    """SHA-256 digest."""
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
 def slugify(s: str) -> str:
+    """Slugifies text."""
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
@@ -275,16 +280,19 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
     pending_eu_article: tuple[str, int] | None = None
 
     def unique_frag(base: str) -> str:
+        """Unique fragment ID."""
         count = frag_counts.get(base, 0) + 1
         frag_counts[base] = count
         return base if count == 1 else f"{base}-{count}"
 
     def scoped(base: str) -> str:
+        """Scoped helper."""
         # Fragments inside a Schedule are namespaced to it so amendment-item numbers never
         # collide with the principal instrument's own Part/Division/section numbers.
         return unique_frag(f"sch-{current_schedule}-{base}" if current_schedule else base)
 
     def is_heading(match: "re.Match") -> bool:
+        """Returns True when heading."""
         # A real Part/Division heading has an empty or capitalised title. A line like
         # "Division 2 of Part III covers…" or "Part XI of the Crimes Act 1914" is prose or a
         # cross-reference (its title starts lowercase) and must not become a structural node.
@@ -292,6 +300,7 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
         return not head[:1].islower()
 
     def flush():
+        """Flushes."""
         nonlocal cur, buf
         if cur is not None:
             cur.text = "\n".join(buf).strip()
@@ -422,6 +431,7 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
 
 
 def _clean_title(s: str) -> str:
+    """Cleans a title."""
     s = re.sub(r"\s+", " ", s).strip().strip(".,;:").strip()
     if s and s == s.upper():   # ALL-CAPS cover heading -> Title Case
         s = s.title()
@@ -618,6 +628,7 @@ def build_segments(provisions: list[Provision], max_chars: int, overlap_chars: i
     current_chars = 0
 
     def flush() -> None:
+        """Flushes."""
         nonlocal current, current_chars
         if current:
             groups.append(current)
@@ -649,6 +660,7 @@ def build_segments(provisions: list[Provision], max_chars: int, overlap_chars: i
 
 
 def _normalise_classification(value: object) -> dict | None:
+    """Normalises classification."""
     if not isinstance(value, dict):
         return None
     dtype = str(value.get("deonticType", "")).strip().lower()
@@ -772,6 +784,7 @@ def choose_num_ctx(max_segment_chars: int, max_items: int) -> int:
 
 def classify_segment(segment: Segment, model: str, url: str, timeout: int = 180,
                      temperature: float = 0.0, num_ctx: int = MIN_NUM_CTX) -> tuple[dict | None, str | None]:
+    """Classifies a segment."""
     try:
         import requests
     except ImportError:
@@ -886,12 +899,14 @@ def aggregate_classifications(completed: dict) -> dict:
 
 
 def write_json_atomic(path: Path, value: dict) -> None:
+    """Writes json atomic."""
     temp = path.with_suffix(path.suffix + ".tmp")
     temp.write_text(json.dumps(value, indent=2, ensure_ascii=False), encoding="utf-8")
     temp.replace(path)
 
 
 def _loads(s: str):
+    """Loads helper."""
     s = (s or "").strip()
     try:
         return json.loads(s)
@@ -907,10 +922,12 @@ def _loads(s: str):
 
 # --------------------------------------------------------------------------- serialisers
 def _lit(s: str) -> str:
+    """Literal matcher."""
     return (s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").strip()
 
 
 def norm_type(cls: dict | None) -> str:
+    """Normalised type."""
     if not cls:
         return "values:Undertaking"
     return DEONTIC.get(str(cls.get("deonticType", "")).lower(), "values:Undertaking")
@@ -922,10 +939,12 @@ def classification_for(provision: Provision, classifications: dict) -> dict:
 
 
 def logic_application_id(inst: Instrument, provision: Provision, index: int, application: dict) -> str:
+    """Logic application ID."""
     return f"concept:{inst.slug}-{provision.frag}-logic-{slugify(application['logic'])}-{index + 1}"
 
 
 def logic_applications_n3(inst: Instrument, provision: Provision, cls: dict | None) -> str:
+    """Logic applications as N3."""
     blocks = []
     cid = f"concept:{inst.slug}-{provision.frag}"
     for index, application in enumerate((cls or {}).get("logicApplications", [])):
@@ -969,6 +988,7 @@ def instrument_n3(inst: Instrument, source_ref: str) -> str:
 
 def provision_n3(inst: Instrument, p: Provision, cls: dict | None, source_ref: str,
                  source_name: str, schema: str, children: list[str]) -> str:
+    """Provision as N3."""
     cid = f"concept:{inst.slug}-{p.frag}"
     nid = f"{cid}-norm"
     src_text = provision_source_text(p)
@@ -1047,6 +1067,7 @@ def structural_n3(inst: Instrument, p: Provision) -> str:
 
 
 def build_n3(inst: Instrument, cls_by_num: dict, source_ref: str, source_name: str, schema: str) -> str:
+    """Builds n3."""
     doc_ns = f"{NS['values']}{inst.slug}#"
     head = [f"@prefix {k}: <{v}> ." for k, v in NS.items()]
     head.append(f"@prefix doc: <{doc_ns}> .")
@@ -1068,6 +1089,7 @@ def build_n3(inst: Instrument, cls_by_num: dict, source_ref: str, source_name: s
 
 
 def instrument_jsonld(inst: Instrument, source_ref: str) -> dict:
+    """Instrument as JSON-LD."""
     node = {"@id": inst.base_iri, "@type": "cof:Document",
             "dc:title": inst.title, "values:category": inst.jurisdiction,
             "prov:wasDerivedFrom": {"@id": source_ref},
@@ -1086,6 +1108,7 @@ def instrument_jsonld(inst: Instrument, source_ref: str) -> dict:
 
 def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
                  schema: str = SCHEMA_DEFAULT) -> dict:
+    """Builds jsonld."""
     ctx = {**NS, "@base": NS["concept"]}
     kids = children_of(inst.provisions)
     nodes = [instrument_jsonld(inst, source_ref)]
@@ -1183,6 +1206,7 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
 
 
 def build_logic_shacl(inst: Instrument) -> str:
+    """Builds logic shacl."""
     modalities = " ".join(value[0] for value in LOGIC_SUITE.values())
     return f"""@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -1207,10 +1231,12 @@ concept:{inst.slug}-ConceptShape a sh:NodeShape ;
 
 
 def _chk_value(value: object) -> str:
+    """Checksum value helper."""
     return re.sub(r"\s+", " ", str(value)).replace("{", "(").replace("}", ")").strip()
 
 
 def build_cogai(inst: Instrument, classifications: dict) -> tuple[str, int]:
+    """Builds cogai."""
     lines = [f"# CogAI proposed logic-routing chunks — {inst.title}",
              "# Machine-derived; every chunk remains cml:Proposed.", ""]
     count = 0
@@ -1278,6 +1304,7 @@ font:.72rem system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em}
 
 
 def esc(s: str) -> str:
+    """Escapes text."""
     return html.escape(s or "", quote=True)
 
 
@@ -1333,6 +1360,7 @@ def source_legal_details(jurisdiction: str, register_id: str | None,
 
 def legal_notice_html(register_id: str | None, jurisdiction: str = "AU",
                       eli: str | None = None) -> str:
+    """Legal-notice HTML."""
     official_url, record_label, body_law, _rights = source_legal_details(
         jurisdiction, register_id, eli
     )
@@ -1355,6 +1383,7 @@ def legal_notice_html(register_id: str | None, jurisdiction: str = "AU",
 
 
 def rights_metadata_html() -> str:
+    """Rights-metadata HTML."""
     return '''<!-- rights-metadata:start -->
 <meta name="copyright" content="Technical work copyright (c) 2026 Timothy Charles Holborn">
 <meta name="rights-scope" content="Source legislation retains its source rights; technical work is separately licensed CC BY-NC-ND 4.0">
@@ -1367,6 +1396,7 @@ def rights_metadata_html() -> str:
 
 def legal_footer_html(register_id: str | None, jurisdiction: str = "AU",
                       eli: str | None = None) -> str:
+    """Legal-footer HTML."""
     official_url, _record_label, _body_law, source_rights = source_legal_details(
         jurisdiction, register_id, eli
     )
@@ -1394,6 +1424,7 @@ def legal_footer_html(register_id: str | None, jurisdiction: str = "AU",
 
 
 def logic_html(inst: Instrument, p: Provision, cls: dict | None) -> str:
+    """Logic HTML."""
     nid = f"concept:{inst.slug}-{p.frag}-norm"
     dtype = norm_type(cls)
     op = dtype.split(":")[1]
@@ -1424,6 +1455,7 @@ def logic_html(inst: Instrument, p: Provision, cls: dict | None) -> str:
 
 
 def logic_suite_html(inst: Instrument, provision: Provision, cls: dict | None) -> str:
+    """Logic-suite HTML."""
     rows = []
     for index, application in enumerate((cls or {}).get("logicApplications", [])):
         aid = logic_application_id(inst, provision, index, application)
@@ -1560,6 +1592,7 @@ attest it (<code>cml:Attested</code> / <code>skos:exactMatch</code>). Source:
 
 # --------------------------------------------------------------------------- QualiaDB native compilation
 def find_qualia_cli(explicit: Path | None = None) -> Path | None:
+    """Finds qualia cli."""
     if explicit:
         return explicit.resolve() if explicit.is_file() else None
     repo = Path(__file__).resolve().parents[2]
@@ -1571,6 +1604,7 @@ def find_qualia_cli(explicit: Path | None = None) -> Path | None:
 
 
 def compile_and_verify_q42(cli: Path, n3_path: Path) -> tuple[Path, int]:
+    """Compiles and verifies q42 output."""
     ingest = subprocess.run([str(cli), "ingest", "semantic", str(n3_path)],
                             capture_output=True, encoding="utf-8", errors="replace")
     q42_path = n3_path.with_suffix(".q42")
@@ -1629,6 +1663,7 @@ def compile_q42_shards(cli: Path, inst: Instrument, classifications: dict,
 
 # --------------------------------------------------------------------------- main
 def main() -> None:
+    """CLI entry point."""
     try:
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")

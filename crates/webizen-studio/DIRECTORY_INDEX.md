@@ -17,7 +17,7 @@ Comprehensive index of functionality for `webizen-studio`. This document serves 
 ### Files & Exported Functionality
 - 📄 `Cargo.lock`
 - 📄 `Cargo.toml`
-- 📄 `Dioxus.toml`
+- 📄 `Aether.toml`
 - 📄 `PAGES.md`
 - 📄 `THEMING.md`
 - 📄 `dx-build.log`

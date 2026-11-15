@@ -79,6 +79,7 @@ pub struct AccessLogEntry {
 }
 
 impl KeyAccessControl {
+    /// Creates a default `KeyAccessControl`.
     pub fn new() -> Self {
         Self {
             access_policies: HashMap::new(),
@@ -87,6 +88,7 @@ impl KeyAccessControl {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -180,6 +182,7 @@ impl KeyAccessControl {
 }
 
 impl AccessAuditLog {
+    /// Creates a default `AccessAuditLog`.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -234,3 +237,6 @@ impl AccessAuditLog {
         &self.entries
     }
 }
+
+mod managed_policy;
+pub use managed_policy::SigningAccess;

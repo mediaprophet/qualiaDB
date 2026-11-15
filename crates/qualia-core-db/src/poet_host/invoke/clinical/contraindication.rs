@@ -5,6 +5,7 @@ use crate::clinical_engine::{check_contraindications, check_drug_interactions};
 use crate::q_hash;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: drug-drug contraindication check.
 pub fn check_drugs(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let drug_a = args::rec_str(args_v, "drug_a").unwrap_or("warfarin");
     let drug_b = args::rec_str(args_v, "drug_b").unwrap_or("ibuprofen");
@@ -24,6 +25,7 @@ pub fn check_drugs(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::List(list))
 }
 
+/// VibeScript seam: drug-condition contraindication check.
 pub fn check_condition(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let drug = args::rec_str(args_v, "drug").unwrap_or("metformin");
     let condition = args::rec_str(args_v, "condition").unwrap_or("709044004");

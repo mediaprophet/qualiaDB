@@ -4,14 +4,21 @@ pub mod acoustic_plane;
 pub mod acoustic_sab;
 pub mod audio_sidecar_link;
 pub mod audio_spectral_sheet;
+pub mod audio_spectral_sheet_v3;
+pub mod bioacoustics;
 pub mod cqt_bake;
 /// N6: Traditional DAW DSP — oscillator, ADSR, filter, LFO, effects, MIDI, transport, meters.
 pub mod dsp;
 pub mod dsp_kernel;
+pub mod holosonic;
 pub mod hrtf;
 /// AU-CORE-DSP — real inverse STFT (WOLA resynthesis; reuses `qualia-audio`). Native only.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod istft;
+/// Checked canonical acoustic container readers.
+pub mod qac;
+/// Epic 8: Scene-synchronized 3D Holosonic Wavefield & Multi-Bus HRTF Audio Graph with SDF + BVH occlusion.
+pub mod scene_audio_graph;
 pub mod stft;
 pub mod stft_bake;
 /// P7.5 — Time-frequency surface view over STFT/CQT rasters.
@@ -25,22 +32,51 @@ pub use acoustic_plane::{
     SONIC_RING_CAP,
 };
 pub use acoustic_sab::{
-    init_acoustic_sab, push_token_to_sab, read_uniform_from_sab, write_uniform_to_sab,
-    write_uniform_to_sab_with_mirror, AcousticSabHeader, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
+    calculate_acoustic_salience, init_acoustic_sab, push_token_to_sab, read_uniform_from_sab,
+    read_voice_slot, update_voice_slot, write_uniform_to_sab, write_uniform_to_sab_with_mirror,
+    AcousticSabHeader, VoiceDescriptorSlot, VoiceSnapshot, ACOUSTIC_SAB_BYTES, ACOUSTIC_SAB_MAGIC,
+    MAX_ACOUSTIC_VOICE_SLOTS, VOICE_DESCRIPTOR_SLOT_SIZE,
 };
 pub use audio_sidecar_link::{
-    bake_audio_sidecar_into, compile_spectral_sheet_quin, enrich_preview_from_sidecar,
-    format_sidecar_relpath, link_tensor_audio_sidecar, sidecar_content_hash, SidecarBakeKind,
+    compile_spectral_sheet_quin, format_sidecar_relpath,
 };
 pub use audio_spectral_sheet::{
     parse_sidecar_header, AudioSpectralSheetView, AudioSpectralSidecarHeader,
     SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
-pub use cqt_bake::{bake_cqt_sidecar_from_preview, bake_cqt_sidecar_from_samples, forward_cqt};
+pub use audio_spectral_sheet_v3::*;
+pub use bioacoustics::{
+    compile_vocalizations_to_sparql_mm, detect_bioacoustic_vocalizations, BioacousticVocalization,
+    MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,
+};
+pub use cqt_bake::forward_cqt;
+pub use dsp::biquad_df2t::{
+    BiquadCoeffs, Df2tBiquad, Df2tState, ThreeBandParametricBiquad, AUDIO_WORKLET_DF2T_JS,
+    DENORMAL_DC_OFFSET, QUANTUM_SIZE,
+};
 pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
+pub use holosonic::{
+    HolosonicEmitter, HolosonicModality, HolosonicPointSample, HolosonicSonicToken48,
+    HolosonicWavefield, MAX_HOLOSONIC_EMITTERS, SPEED_OF_SOUND_MPS,
+};
 pub use hrtf::{
     binaural_from_position, binaural_render, convolve_fir, set_hrtf_profile, synthesize_hrir,
     BinauralGains, HrtfProfile,
 };
-pub use stft::{bake_stft_sidecar_from_samples, forward_stft, stft_magnitudes};
-pub use stft_bake::{bake_stft_sidecar_from_preview, bake_tensor_stft_sidecar, StftBakeError};
+#[cfg(not(target_arch = "wasm32"))]
+pub use qac::production::{
+    produce_pcm, publish_current_signal, Error as QacProductionError, ProductionOptions,
+};
+pub use qac::signal::writer::{
+    PcmDocument, PcmQuantity, PcmSamples, Provenance, ProvenanceRole, SignalRelation, WriteBuffers,
+    WriteOptions,
+};
+pub use scene_audio_graph::{
+    calc_rbj_lowpass_coeffs, evaluate_acoustic_occlusion_zero_heap, AcousticMaterial,
+    AcousticObstacle, AcousticObstacleShape, AcousticOcclusionResult, AudioListenerPose,
+    DirectBinauralBus, EarlyReflectionsBus, HolosonicNode, HolosonicTelemetryBus,
+    LateReverbFreeverbBus, SceneAudioBusGraph, EARLY_REFLECTION_TAPS, HOLOSONIC_TELEMETRY_RING_CAP,
+    MAX_SCENE_AUDIO_EMITTERS, ZERO_HEAP_HRIR_TAPS,
+};
+pub use stft::{forward_stft, stft_magnitudes};
+pub use stft_bake::StftBakeError;

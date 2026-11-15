@@ -70,6 +70,8 @@ pub enum DdgError {
     EmptyInput,
 }
 
+/// Simplicial boundary operator ∂ — emits the oriented faces of
+/// `simplex` into `out` (caller-buffered).
 pub fn boundary_of_simplex(simplex: ChainTerm, out: &mut [ChainTerm]) -> Result<usize, DdgError> {
     if simplex.vertex_count == 0 {
         return Ok(0);
@@ -102,6 +104,8 @@ pub fn boundary_of_simplex(simplex: ChainTerm, out: &mut [ChainTerm]) -> Result<
     Ok(n)
 }
 
+/// Verify ∂∘∂ = 0 on `simplex` — the chain-complex identity checked
+/// by exhaustive face cancellation.
 pub fn boundary_of_boundary_is_zero(simplex: ChainTerm) -> bool {
     let mut first = [ChainTerm::zeroed(); 4];
     let Ok(n) = boundary_of_simplex(simplex, &mut first) else {
@@ -131,6 +135,8 @@ pub fn boundary_of_boundary_is_zero(simplex: ChainTerm) -> bool {
     true
 }
 
+/// Per-face area vectors `½(v₁−v₀)×(v₂−v₀)` (direction = normal,
+/// magnitude = area; caller-buffered).
 pub fn face_vector_areas(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -152,6 +158,8 @@ pub fn face_vector_areas(
     Ok(triangles.len())
 }
 
+/// Area-weighted vertex normals — normalized sum of incident face
+/// normals (caller-buffered).
 pub fn vertex_normals(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -176,6 +184,8 @@ pub fn vertex_normals(
     Ok(vertices.len())
 }
 
+/// Gradient of total surface area w.r.t. vertex positions — the
+/// mean-curvature-flow direction (caller-buffered).
 pub fn surface_area_gradient(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -204,6 +214,8 @@ pub fn surface_area_gradient(
     Ok(vertices.len())
 }
 
+/// Discrete Gaussian curvature via angle defect: `2π − Σ incident
+/// corner angles` per vertex (caller-buffered).
 pub fn curvature_angle_defect(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -251,6 +263,8 @@ pub fn curvature_angle_defect(
     Ok(vertices.len())
 }
 
+/// Sparse cotangent Laplacian — `w_ij = ½(cot α_ij + cot β_ij)` per
+/// edge, diagonal = −Σw (caller-buffered COO entries).
 pub fn cotangent_laplacian(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -317,6 +331,8 @@ pub fn cotangent_laplacian(
     Ok(nnz)
 }
 
+/// Jacobi-iteration Poisson solve `Lx = b` on the cotangent
+/// Laplacian — bounded iterations, caller-buffered.
 pub fn solve_poisson_jacobi(
     vertex_count: usize,
     laplacian: &[SparseEntry],
@@ -366,6 +382,8 @@ pub fn solve_poisson_jacobi(
     })
 }
 
+/// One implicit heat-diffusion step `x ← x + dt·L·x` (explicit
+/// Euler on the cotangent Laplacian; caller-buffered).
 pub fn heat_step(
     vertex_count: usize,
     laplacian: &[SparseEntry],
@@ -392,6 +410,8 @@ pub fn heat_step(
     Ok(())
 }
 
+/// One explicit mean-curvature-flow step — vertices advect along the
+/// Laplacian of positions.
 pub fn mean_curvature_flow_step(
     vertices: &mut [Point3],
     triangles: &[[u32; 3]],
@@ -424,6 +444,8 @@ pub fn mean_curvature_flow_step(
     Ok(())
 }
 
+/// Single-source geodesic distances over the mesh's edge graph —
+/// Dijkstra with Euclidean edge weights (caller-buffered).
 pub fn geodesic_distances_dijkstra(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -478,6 +500,8 @@ pub fn geodesic_distances_dijkstra(
     Ok(())
 }
 
+/// Harmonic (Tutte) parameterization of a disk-topology mesh —
+/// boundary pinned to a circle, interior solves `Lu = 0`.
 pub fn harmonic_parameterize_disk(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -556,6 +580,9 @@ pub fn harmonic_parameterize_disk(
     Ok(())
 }
 
+/// Topology summary for Hodge decomposition: Euler characteristic
+/// `V−E+F` plus Betti numbers β₀ (components, assumes connected) and
+/// β₁ (from β₀ − χ).
 pub fn hodge_decomposition_summary(
     vertex_count: usize,
     edge_count: usize,
@@ -574,10 +601,15 @@ pub fn hodge_decomposition_summary(
     }
 }
 
+/// Angle after parallel-transport around a region enclosing
+/// `enclosed_curvature` — holonomy rotation, normalized to (−π, π].
 pub fn parallel_transport_angle(angle: f64, enclosed_curvature: f64) -> f64 {
     normalize_angle(angle + enclosed_curvature)
 }
 
+/// Serialize sparse entries into a DDG section blob — 16-byte
+/// header (magic, version, count, payload length, CRC-32C) plus
+/// 16-byte row/col/value entries; caller-buffered, ≤65,535 entries.
 pub fn encode_ddg_operator_section(
     entries: &[SparseEntry],
     out: &mut [u8],
@@ -601,12 +633,15 @@ pub fn encode_ddg_operator_section(
     Ok(required)
 }
 
+/// Canonical sort key for a chain term (dimension + sorted vertex
+/// indices).
 fn chain_key(term: &ChainTerm) -> (u8, [u32; 4]) {
     let mut v = term.vertices;
     v[..term.vertex_count as usize].sort_unstable();
     (term.vertex_count, v)
 }
 
+/// Fetch the 3 vertex positions of triangle `element`.
 fn fetch_tri(vertices: &[Point3], tri: &[u32; 3], element: usize) -> Result<[Point3; 3], DdgError> {
     let mut out = [Point3::new(0.0, 0.0, 0.0); 3];
     for (i, &vi) in tri.iter().enumerate() {
@@ -620,6 +655,8 @@ fn fetch_tri(vertices: &[Point3], tri: &[u32; 3], element: usize) -> Result<[Poi
     Ok(out)
 }
 
+/// Accumulate `w` into the dense n×n Laplacian at (a,b) and (b,a),
+/// and into the diagonal entries.
 fn add_edge_weight(dense: &mut [f64], n: usize, a: u32, b: u32, w: f64) {
     let a = a as usize;
     let b = b as usize;
@@ -628,6 +665,8 @@ fn add_edge_weight(dense: &mut [f64], n: usize, a: u32, b: u32, w: f64) {
 }
 
 #[inline]
+/// Cotangent of the angle between vectors `a` and `b` —
+/// `dot/|cross|`.
 fn cotangent(a: Point3, b: Point3) -> f64 {
     let cr = norm(cross(a, b));
     if cr == 0.0 {
@@ -638,6 +677,7 @@ fn cotangent(a: Point3, b: Point3) -> f64 {
 }
 
 #[inline]
+/// Angle between vectors `a` and `b` (acos of clamped dot).
 fn angle_between(a: Point3, b: Point3) -> f64 {
     let na = norm(a);
     let nb = norm(b);
@@ -649,6 +689,7 @@ fn angle_between(a: Point3, b: Point3) -> f64 {
 }
 
 #[inline]
+/// Unit vector a/‖a‖ (zero vector → zero).
 fn normalize(a: Point3) -> Point3 {
     let n = norm(a);
     if n == 0.0 {
@@ -659,26 +700,31 @@ fn normalize(a: Point3) -> Point3 {
 }
 
 #[inline]
+/// Component-wise vector addition.
 fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
 #[inline]
+/// Component-wise vector subtraction (a − b).
 fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
 #[inline]
+/// Scalar multiplication of a point vector.
 fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 
 #[inline]
+/// Dot product of two point vectors.
 fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 
 #[inline]
+/// Cross product a × b.
 fn cross(a: Point3, b: Point3) -> Point3 {
     Point3::new(
         a.y * b.z - a.z * b.y,
@@ -688,11 +734,13 @@ fn cross(a: Point3, b: Point3) -> Point3 {
 }
 
 #[inline]
+/// Euclidean norm ‖a‖.
 fn norm(a: Point3) -> f64 {
     dot(a, a).sqrt()
 }
 
 #[inline]
+/// Wrap an angle to (−π, π].
 fn normalize_angle(mut angle: f64) -> f64 {
     while angle > core::f64::consts::PI {
         angle -= core::f64::consts::TAU;
@@ -703,6 +751,7 @@ fn normalize_angle(mut angle: f64) -> f64 {
     angle
 }
 
+/// CRC-32C (Castagnoli) checksum over `bytes`.
 fn crc32c(bytes: &[u8]) -> u32 {
     let mut crc = !0u32;
     for &b in bytes {

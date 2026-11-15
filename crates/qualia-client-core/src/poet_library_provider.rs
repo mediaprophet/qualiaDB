@@ -21,6 +21,7 @@ pub struct SemanticLibraryProvider {
 }
 
 impl SemanticLibraryProvider {
+    /// Creates a new instance.
     pub fn new(storage_root: PathBuf, signing_key_bytes: [u8; 32]) -> Self {
         let _ = std::fs::create_dir_all(&storage_root);
         let author_did_hash = qualia_core_db::q_hash("did:q42:local");
@@ -52,6 +53,7 @@ impl SemanticLibraryProvider {
     }
 }
 
+/// Registers a semantic library provider.
 pub fn register_semantic_library_provider(
     storage_root: PathBuf,
     signing_key_bytes: [u8; 32],

@@ -1,5 +1,4 @@
 use std::ops::Range;
-use std::sync::Arc;
 
 use crate::inference::cuda_lane::{
     MegaPassLayerDims, MegaPassLayerWeights, MegaPassPlanView, MegaPassWeightLayout,
@@ -15,7 +14,7 @@ pub(crate) struct CudaLayerPlan {
 pub(crate) struct CudaDecodePlan {
     pub key: (u64, u64, u32),
     pub weight_layout: MegaPassWeightLayout,
-    pub mmap: Arc<memmap2::Mmap>,
+    pub mmap: crate::gguf_bridge::ModelByteHandle,
     pub layers: Vec<CudaLayerPlan>,
     pub output_norm_key: Option<u64>,
     pub token_embedding_key: Option<u64>,

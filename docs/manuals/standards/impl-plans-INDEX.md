@@ -1,6 +1,6 @@
 # Implementation plans (post `vibe-host-0.1` freeze)
 
-**Freeze tip:** `6dc2b8b8` · **Gate board / sync tip:** `a2a4d6b2` · **Branch:** `0.0.36-dev` · **Ops:** Capt. · **Push lane:** Neo
+**Freeze tip:** `6dc2b8b8` · **Gate board / sync tip:** `a2a4d6b2` · **Branch:** `0.0.40-dev` · **Ops:** Capt. · **Push lane:** Neo
 
 | File | Owner | Focus | Status |
 |------|-------|--------|--------|

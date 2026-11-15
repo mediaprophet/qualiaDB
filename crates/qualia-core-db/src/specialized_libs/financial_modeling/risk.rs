@@ -156,6 +156,7 @@ pub struct MarketScenario {
 }
 
 impl MarketScenario {
+    /// Construct a `MarketScenario` from the given fields.
     pub fn new(name: impl Into<String>, probability: f64, shocks: HashMap<String, f64>) -> Self {
         Self {
             name: name.into(),
@@ -253,6 +254,7 @@ pub struct RiskAnalyzer {
 }
 
 impl RiskAssessor {
+    /// Construct a `RiskAssessor` with default field values.
     pub fn new() -> Self {
         Self {
             risk_models: HashMap::new(),
@@ -261,37 +263,45 @@ impl RiskAssessor {
         }
     }
 
+    /// Initialize `RiskAssessor`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
     }
 
+    /// Add `risk_model` to the `RiskAssessor`.
     pub fn add_risk_model(&mut self, model: RiskModel) {
         self.risk_models.insert(model.model_id.clone(), model);
     }
 
+    /// Look up `risk_model` by id; `None` when absent.
     pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
         self.risk_models.get(model_id)
     }
 
+    /// Ids of every registered `risk_model`.
     pub fn list_risk_models(&self) -> Vec<String> {
         self.risk_models.keys().cloned().collect()
     }
 
+    /// Add `risk_metric` to the `RiskAssessor`.
     pub fn add_risk_metric(&mut self, metric: RiskMetric) {
         self.risk_metrics.insert(metric.metric_id.clone(), metric);
     }
 
+    /// Look up `risk_metric` by id; `None` when absent.
     pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
         self.risk_metrics.get(metric_id)
     }
 
+    /// Ids of every registered `risk_metric`.
     pub fn list_risk_metrics(&self) -> Vec<String> {
         self.risk_metrics.keys().cloned().collect()
     }
 }
 
 impl ScenarioAnalyzer {
+    /// Construct a `ScenarioAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             scenarios: HashMap::new(),
@@ -301,6 +311,7 @@ impl ScenarioAnalyzer {
         }
     }
 
+    /// Initialize `ScenarioAnalyzer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
@@ -414,35 +425,43 @@ impl ScenarioAnalyzer {
         Ok(results)
     }
 
+    /// Add `named_scenario` to the `ScenarioAnalyzer`.
     pub fn add_named_scenario(&mut self, scenario: Scenario) {
         self.scenarios
             .insert(scenario.scenario_id.clone(), scenario);
     }
 
+    /// Look up `named_scenario` by id; `None` when absent.
     pub fn get_named_scenario(&self, scenario_id: &str) -> Option<&Scenario> {
         self.scenarios.get(scenario_id)
     }
 
+    /// Ids of every registered `named_scenario`.
     pub fn list_named_scenarios(&self) -> Vec<String> {
         self.scenarios.keys().cloned().collect()
     }
 
+    /// Add `stress_test` to the `ScenarioAnalyzer`.
     pub fn add_stress_test(&mut self, test: StressTest) {
         self.stress_tests.insert(test.test_id.clone(), test);
     }
 
+    /// Look up `stress_test` by id; `None` when absent.
     pub fn get_stress_test(&self, test_id: &str) -> Option<&StressTest> {
         self.stress_tests.get(test_id)
     }
 
+    /// Ids of every registered `stress_test`.
     pub fn list_stress_tests(&self) -> Vec<String> {
         self.stress_tests.keys().cloned().collect()
     }
 
+    /// The `sensitivity_analyzer` component.
     pub fn sensitivity_analyzer(&self) -> &SensitivityAnalyzer {
         &self.sensitivity_analyzer
     }
 
+    /// The `sensitivity_analyzer` component (mutable).
     pub fn sensitivity_analyzer_mut(&mut self) -> &mut SensitivityAnalyzer {
         &mut self.sensitivity_analyzer
     }
@@ -519,6 +538,7 @@ struct McRng {
 }
 
 impl McRng {
+    /// Construct the RNG with `seed` (zero falls back to a canonical non-zero state).
     fn new(seed: u64) -> Self {
         // LCG requires a non-zero state; fall back to a canonical seed.
         Self {
@@ -562,6 +582,7 @@ impl McRng {
 }
 
 impl SensitivityAnalyzer {
+    /// Construct a `SensitivityAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             sensitivity_factors: HashMap::new(),
@@ -569,29 +590,35 @@ impl SensitivityAnalyzer {
         }
     }
 
+    /// Add `factor` to the `SensitivityAnalyzer`.
     pub fn add_factor(&mut self, factor: SensitivityFactor) {
         self.sensitivity_factors
             .insert(factor.factor_id.clone(), factor);
     }
 
+    /// Look up `factor` by id; `None` when absent.
     pub fn get_factor(&self, factor_id: &str) -> Option<&SensitivityFactor> {
         self.sensitivity_factors.get(factor_id)
     }
 
+    /// Ids of every registered `factor`.
     pub fn list_factors(&self) -> Vec<String> {
         self.sensitivity_factors.keys().cloned().collect()
     }
 
+    /// The `correlation_matrix` component.
     pub fn correlation_matrix(&self) -> &CorrelationMatrix {
         &self.correlation_matrix
     }
 
+    /// Replace the `correlation_matrix`.
     pub fn set_correlation_matrix(&mut self, matrix: CorrelationMatrix) {
         self.correlation_matrix = matrix;
     }
 }
 
 impl CorrelationMatrix {
+    /// Construct a `CorrelationMatrix` with default field values.
     pub fn new() -> Self {
         Self {
             assets: Vec::new(),
@@ -602,6 +629,7 @@ impl CorrelationMatrix {
 }
 
 impl RiskAnalyzer {
+    /// Construct a `RiskAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             risk_models: HashMap::new(),
@@ -612,6 +640,7 @@ impl RiskAnalyzer {
         }
     }
 
+    /// Initialize `RiskAnalyzer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.scenario_analyzer.initialize()?;
         Ok(())
@@ -633,6 +662,11 @@ impl RiskAnalyzer {
         self.active_benchmark = name.map(|s| s.to_string());
     }
 
+    /// Compute real risk metrics for `portfolio` via
+    /// `portfolio_risk::compute_risk_metrics` (volatility, VaR/CVaR,
+    /// Sharpe, Sortino, max-drawdown from actual return series). Fails
+    /// `InsufficientData` without price history; beta/alpha are NaN
+    /// unless a benchmark is active via `set_active_benchmark`.
     pub fn calculate_risk_metrics(
         &self,
         portfolio: &Portfolio,
@@ -661,26 +695,32 @@ impl RiskAnalyzer {
         Ok(metrics)
     }
 
+    /// Add `risk_model` to the `RiskAnalyzer`.
     pub fn add_risk_model(&mut self, model: RiskModel) {
         self.risk_models.insert(model.model_id.clone(), model);
     }
 
+    /// Look up `risk_model` by id; `None` when absent.
     pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
         self.risk_models.get(model_id)
     }
 
+    /// Ids of every registered `risk_model`.
     pub fn list_risk_models(&self) -> Vec<String> {
         self.risk_models.keys().cloned().collect()
     }
 
+    /// Add `risk_metric` to the `RiskAnalyzer`.
     pub fn add_risk_metric(&mut self, metric: RiskMetric) {
         self.risk_metrics.insert(metric.metric_id.clone(), metric);
     }
 
+    /// Look up `risk_metric` by id; `None` when absent.
     pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
         self.risk_metrics.get(metric_id)
     }
 
+    /// Ids of every registered `risk_metric`.
     pub fn list_risk_metrics(&self) -> Vec<String> {
         self.risk_metrics.keys().cloned().collect()
     }
@@ -719,6 +759,7 @@ fn assess_risk_profile(tolerance: &RiskTolerance, metrics: &RiskMetrics) -> Opti
 }
 
 impl RiskModel {
+    /// Construct a `RiskModel` with default field values.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -730,6 +771,7 @@ impl RiskModel {
 }
 
 impl RiskModelParameters {
+    /// Construct a `RiskModelParameters` with default field values.
     pub fn new() -> Self {
         Self {
             confidence_level: 0.95,
@@ -741,6 +783,7 @@ impl RiskModelParameters {
 }
 
 impl ValidationResults {
+    /// Construct a `ValidationResults` with default field values.
     pub fn new() -> Self {
         Self {
             backtest_results: BacktestResults::new(),
@@ -752,6 +795,7 @@ impl ValidationResults {
 }
 
 impl BacktestResults {
+    /// Construct a `BacktestResults` with default field values.
     pub fn new() -> Self {
         Self {
             period: (0, 86400 * 365), // 1 year
@@ -764,6 +808,7 @@ impl BacktestResults {
 }
 
 impl RiskMetric {
+    /// Construct a `RiskMetric` with default field values.
     pub fn new() -> Self {
         Self {
             metric_id: "metric_1".to_string(),
@@ -776,6 +821,7 @@ impl RiskMetric {
 }
 
 impl Scenario {
+    /// Construct a `Scenario` with default field values.
     pub fn new() -> Self {
         Self {
             scenario_id: "scenario_1".to_string(),
@@ -788,6 +834,7 @@ impl Scenario {
 }
 
 impl ScenarioParameters {
+    /// Construct a `ScenarioParameters` with default field values.
     pub fn new() -> Self {
         Self {
             market_shocks: HashMap::new(),
@@ -799,6 +846,7 @@ impl ScenarioParameters {
 }
 
 impl StressTest {
+    /// Construct a `StressTest` with default field values.
     pub fn new() -> Self {
         Self {
             test_id: "test_1".to_string(),
@@ -811,6 +859,7 @@ impl StressTest {
 }
 
 impl StressTestResults {
+    /// Construct a `StressTestResults` with default field values.
     pub fn new() -> Self {
         Self {
             portfolio_value_change: -0.2,
@@ -822,6 +871,7 @@ impl StressTestResults {
 }
 
 impl SensitivityFactor {
+    /// Construct a `SensitivityFactor` with default field values.
     pub fn new() -> Self {
         Self {
             factor_id: "factor_1".to_string(),

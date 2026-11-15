@@ -13,38 +13,54 @@
 //! are deprecated; new ingest writes v3 only.
 
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufWriter, Read, Write};
+use std::io::{self, Write};
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{BufWriter, Read};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
+#[cfg(not(target_arch = "wasm32"))]
 use memmap2::{Mmap, MmapOptions};
 
-use crate::q42_lex::{LexError, LexiconEntry, Q42LexMmap, LEX_MAGIC};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::q42_lex::Q42LexMmap;
+use crate::q42_lex::{LexError, LexiconEntry, LEX_MAGIC};
 use crate::{NQuin, QUINS_PER_BLOCK};
 
 #[path = "volume/mod.rs"]
 mod volume;
 
+// Byte-format / transport-neutral surface — compiles on wasm32 so verified
+// `.q42` pack entries decode in the browser through `Q42RangeVolume` over a
+// `Q42RangeSource`.
+pub use volume::{
+    decode_and_verify_car, deny_public_publication, encode_block_postings, encode_postings_section,
+    encode_raw_car, extract_entity_bytes, inclusive_entity_bytes, measure_bloom_false_positives,
+    provenance_path_for, quin_requires_sanctuary, validate_exact_range_response,
+    verify_car_bytes_as_q42_source, verify_source_sha256, BidxBlockRange, BidxMatchPage,
+    BlockFieldPostings, CidSha256, ClassificationCounts, IngestAccessPolicy,
+    IngestProvenanceRecord, OpfsCallbackRangeSource, OpfsSliceRangeSource, PublicationIntent,
+    Q42ByteRange, Q42LexiconRangeFactory, Q42LexiconSegment, Q42ObjectMatchPage,
+    Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict, Q42QueryMode,
+    Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
+    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42SegmentMatchPage,
+    Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42Transport, Q42VolumeManifest,
+    Q42VolumeSegment, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, VerifiedCarBlock,
+    VerifiedCarRangeSource, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
+    RESIDENT_QUERY_MAX_BYTES, WasmSliceQ42Reader,
+};
+// Filesystem / memmap / HTTP / publish surface — native only.
+#[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
     admit_logical_size, append_segment_to_root, classify_q42_path, classify_q42_volume,
-    classify_q42_volume_set, compact_volume_set, compose_magnet, decode_and_verify_car,
-    deny_public_publication, encode_block_postings, encode_postings_section, encode_raw_car,
-    extract_entity_bytes, inclusive_entity_bytes, measure_bloom_false_positives,
-    quin_requires_sanctuary, root_relative_path, sha1_hex_file, validate_exact_range_response,
-    verify_car_bytes_as_q42_source, verify_local_car_as_q42_source, verify_source_sha256,
-    verify_volume_set_from_root, BidxBlockRange, BidxMatchPage, BlockFieldPostings, CheckStatus,
-    CidSha256, ClassificationCounts, Completeness, LocalFileRangeSource, NetworkCursor,
-    OpfsCallbackRangeSource, OpfsSliceRangeSource, PublicationIntent, Q42BlockCursor, Q42BlockMeta,
-    Q42ByteRange, Q42InspectReport, Q42LexiconRangeFactory, Q42LexiconSegment, Q42Magnet,
-    Q42ObjectMatchPage, Q42ObjectSearchCursor, Q42PublicationClass, Q42PublicationVerdict,
-    Q42QueryMode, Q42RangeQueryCursor, Q42RangeQueryPage, Q42RangeQueryPattern, Q42RangeQueryPlan,
-    Q42RangeQueryStrategy, Q42RangeSource, Q42RangeVolume, Q42RangeVolumeSet, Q42RolloverPublisher,
-    Q42SectionReport, Q42SegmentMatchPage, Q42SegmentMatchRange, Q42SegmentRangeFactory,
-    Q42Transport, Q42VerifyReceipt, Q42VerifySetReport, Q42VolumeManifest, Q42VolumeSegment,
-    Q42VolumeSet, Q42VolumeSetMagnets, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, ScanBudget,
-    StreamingQ42VolumeWriter, VerifiedCarBlock, VerifiedCarRangeSource, VerifyCheck, VerifyLevel,
-    DEFAULT_SEGMENT_MAX_BYTES, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
-    RESIDENT_QUERY_MAX_BYTES,
+    classify_q42_volume_set, compact_volume_set, compose_magnet, root_relative_path, sha1_hex_file,
+    verify_local_car_as_q42_source, verify_volume_set_from_root, CheckStatus, Completeness,
+    LocalFileRangeSource, NetworkCursor, Q42BlockCursor, Q42BlockMeta, Q42InspectReport, Q42Magnet,
+    Q42RolloverPublisher, Q42SectionReport, Q42VerifyReceipt, Q42VerifySetReport, Q42VolumeSet,
+    Q42VolumeSetMagnets, ScanBudget, StreamingQ42VolumeWriter, VerifyCheck, VerifyLevel,
+    DEFAULT_SEGMENT_MAX_BYTES,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{
@@ -53,9 +69,36 @@ pub use volume::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
+pub use crate::bundle::cbor_ld_manifest::PayloadCatalogueEntry;
+#[path = "volume/payload_catalogue.rs"]
+pub mod payload_catalogue;
+pub use payload_catalogue::{
+    decode_payload_catalogue_section, decode_payload_catalogue_with_bodies,
+    encode_payload_catalogue_section, encode_payload_catalogue_with_bodies,
+    header_payload_catalogue_range, set_header_payload_catalogue_range,
+    validate_payload_catalogue_entry, PayloadCatalogueBlob,
+};
+
+/// Public publication-policy gate surface (`Q42-00`).
+pub mod publication {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use super::volume::{classify_q42_path, classify_q42_volume, classify_q42_volume_set};
+    pub use super::volume::{
+        check_public_distribution_allowed, deny_public_publication, provenance_path_for,
+        quin_requires_sanctuary, CheckPublicDistribution, ClassificationCounts,
+        IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent, Q42PublicationClass,
+        Q42PublicationVerdict, Q42Transport,
+    };
+}
+pub use publication::check_public_distribution_allowed;
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
+/// Current write generation. v4 volumes carry the namespaced paged Q42LEX
+/// (`q42_lex_ns`, ADR 0015) from `encode_lex`; the header layout itself is
+/// unchanged from v3. Readers accept v3 and v4 — existing pre-release data
+/// stays loadable until regenerated.
+pub const Q42_VERSION_V4: u16 = 4;
 pub const HEADER_SIZE: usize = 256;
 pub const SUPERBLOCK_SIZE: usize = 40_960;
 /// Conservative caller-buffer bound for an LZ4 `prepend_size` encoding of one
@@ -79,6 +122,9 @@ pub const FLAG_PERMISSIVE_COMMONS: u16 = 0x0020;
 /// Writers also set this when any Quin is restricted, classified, medical,
 /// legal, fiduciary, or bilateral.
 pub const FLAG_SANCTUARY: u16 = 0x0040;
+/// Reserved: optional payload catalogue for oversized lexical / prose blobs
+/// (hash-keyed; not for media — use `.hmc`). Stub only until ADR writer lands.
+pub const FLAG_PAYLOAD_CATALOGUE: u16 = 0x0080;
 pub const FIELD_RANGE_INDEX_MAGIC: [u8; 4] = *b"FIDX";
 pub const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
 pub const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
@@ -138,12 +184,16 @@ impl Q42VolumeHeader {
         if magic != Q42_MAGIC {
             return Err(format!("bad magic {magic:?}"));
         }
-        if version != Q42_VERSION_V3 {
-            return Err(format!("Q42 file is version {version}; strict v3 required"));
+        if version != Q42_VERSION_V3 && version != Q42_VERSION_V4 {
+            return Err(format!(
+                "Q42 file is version {version}; v3/v4 required (run q42 migrate meta for v2)"
+            ));
         }
         Ok(())
     }
 
+    /// Embedded volume-manifest (offset, length) decoded from the
+    /// `_reserved` field; `None` unless `FLAG_VOLUME_ROOT` is set.
     fn volume_manifest_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_VOLUME_ROOT == 0 {
             return None;
@@ -155,6 +205,8 @@ impl Q42VolumeHeader {
         ))
     }
 
+    /// Field-range-index (offset, length) from `_reserved`; `None`
+    /// unless `FLAG_FIELD_RANGES` is set.
     fn field_range_index_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_FIELD_RANGES == 0 {
             return None;
@@ -166,6 +218,8 @@ impl Q42VolumeHeader {
         ))
     }
 
+    /// Field-postings (offset, length) from `_reserved`; `None` unless
+    /// `FLAG_FIELD_POSTINGS` is set.
     fn field_postings_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_FIELD_POSTINGS == 0 {
             return None;
@@ -177,8 +231,14 @@ impl Q42VolumeHeader {
         ))
     }
 
-    /// Build a minimal valid v3 header with all extension fields zeroed.
-    pub fn new_v3(
+    /// Payload catalogue `(offset, length)` from `_reserved[48..64]`; `None`
+    /// unless `FLAG_PAYLOAD_CATALOGUE` (`0x0080`) is set.
+    pub fn payload_catalogue_range(&self) -> Option<(u64, u64)> {
+        header_payload_catalogue_range(self)
+    }
+
+    /// Build a minimal valid v4 header with all extension fields zeroed.
+    pub fn new_v4(
         lex_offset: u64,
         lex_length: u64,
         bidx_offset: u64,
@@ -197,7 +257,7 @@ impl Q42VolumeHeader {
             .unwrap_or(0);
         Self {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset,
             lex_length,
@@ -234,6 +294,8 @@ pub struct BlockDirectoryEntry {
 impl BlockDirectoryEntry {
     pub const SIZE: usize = 16;
 
+    /// Serialize the 16-byte entry (`rel_offset`, `comp_len`,
+    /// `uncomp_len`, little-endian) to `out`.
     pub fn write_to(&self, out: &mut impl Write) -> io::Result<()> {
         out.write_all(&self.rel_offset.to_le_bytes())?;
         out.write_all(&self.comp_len.to_le_bytes())?;
@@ -241,6 +303,7 @@ impl BlockDirectoryEntry {
         Ok(())
     }
 
+    /// Deserialize a 16-byte little-endian directory entry.
     fn from_bytes(buf: &[u8; 16]) -> Self {
         Self {
             rel_offset: u64::from_le_bytes(buf[0..8].try_into().unwrap()),
@@ -252,6 +315,7 @@ impl BlockDirectoryEntry {
 
 /// Upgrade a v1/v2 `.q42` file to v3 by rewriting the version field and zeroing
 /// the new extension fields in the 256-byte header.  Data blocks are untouched.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     use std::io::{Seek, SeekFrom};
     let mut f = OpenOptions::new().read(true).write(true).open(path)?;
@@ -265,10 +329,10 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
     }
     let version = u16::from_le_bytes([header[4], header[5]]);
     if version >= Q42_VERSION_V3 as u16 {
-        return Ok(()); // already v3
+        return Ok(()); // v3/v4 headers already share the unified layout
     }
-    // Bump version to 3.
-    header[4..6].copy_from_slice(&(Q42_VERSION_V3 as u16).to_le_bytes());
+    // Bump version to the current generation.
+    header[4..6].copy_from_slice(&(Q42_VERSION_V4 as u16).to_le_bytes());
     // v2 only knew LZ4 + object-sorted. Later flags (root, FIDX, PIDX) must not
     // survive a header bump with their reserved offsets zeroed.
     let flags = u16::from_le_bytes([header[6], header[7]]) & (FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED);
@@ -281,6 +345,7 @@ pub fn migrate_v2_to_v3(path: &Path) -> io::Result<()> {
 }
 
 /// Returns true if `path` begins with a unified volume header.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
     let mut f = File::open(path)?;
     let mut magic = [0u8; 4];
@@ -288,13 +353,14 @@ pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
     Ok(magic == Q42_MAGIC)
 }
 
-/// Encode Q42LEX bytes from a hash → string map.
+/// Encode Q42LEX bytes from a hash → string map (namespaced paged **v4**:
+/// each page carries its own namespace dictionary and qualifying terms are
+/// stored as `(ns_id, local)` references — see `q42_lex_ns` and ADR 0015).
 pub fn encode_lex(lex: &HashMap<u64, String>) -> Result<Vec<u8>, LexError> {
-    // Single source of truth for the Q42LEX write format. `serialize_string_lexicon` is UTF-8 and
-    // truncates over-long literals at a CHARACTER boundary (never mid-codepoint), so multilingual
-    // literals round-trip byte-intact — a plain `b.len().min(65535)` byte cut could split a codepoint
-    // and produce invalid UTF-8 that the reader then drops.
-    crate::q42_lex::serialize_paged_string_lexicon(lex, crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES)
+    crate::q42_lex_ns::serialize_namespaced_paged_lexicon(
+        lex,
+        crate::q42_lex::DEFAULT_LEX_PAGE_ENTRIES,
+    )
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).
@@ -431,6 +497,8 @@ pub fn decode_superblock_quins(block: &[u8]) -> io::Result<Vec<NQuin>> {
     Ok(out)
 }
 
+/// Serialize a v3/v4 volume header to its fixed `HEADER_SIZE` byte
+/// layout (core fields 0–88, v3 extensions 88–176, reserved tail).
 pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     let mut buf = [0u8; HEADER_SIZE];
     // Core fields (0..88)
@@ -461,6 +529,8 @@ pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     buf
 }
 
+/// Deserialize and validate a header — rejects bad magic and
+/// non-v3/v4 versions.
 fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
     if buf[0..4] != Q42_MAGIC {
         return Err(io::Error::new(
@@ -469,10 +539,10 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
         ));
     }
     let version = u16::from_le_bytes(buf[4..6].try_into().unwrap());
-    if version != Q42_VERSION_V3 {
+    if version != Q42_VERSION_V3 && version != Q42_VERSION_V4 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("Q42 file is version {version}; strict v3 required"),
+            format!("Q42 file is version {version}; v3/v4 required"),
         ));
     }
     Ok(Q42VolumeHeader {
@@ -503,6 +573,7 @@ fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
 }
 
 /// Write a unified v3 `.q42` volume.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_unified_volume(
     path: &Path,
     lex: &HashMap<u64, String>,
@@ -535,6 +606,7 @@ pub fn write_unified_volume(
 /// Write a unified v3 .q42 volume with embedded triple support.
 ///
 /// Accepts `HashMap<u64, LexiconEntry>` to support SPARQL-Star embedded triples.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_unified_volume_with_entries(
     path: &Path,
     lex: &HashMap<u64, LexiconEntry>,
@@ -567,6 +639,7 @@ pub fn write_unified_volume_with_entries(
 /// Publish a root Q42 segment whose front matter catalogs immutable child
 /// segments. The root is intentionally data-empty; query code opens the
 /// catalog snapshot through [`Q42VolumeSet`].
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
     UnifiedVolumeBuilder::with_empty_lex()
         .with_volume_manifest(manifest)?
@@ -575,6 +648,7 @@ pub fn write_volume_root(path: &Path, manifest: &Q42VolumeManifest) -> io::Resul
 
 /// Same as [`write_volume_root`], but marks the catalog as Permissive Commons.
 /// Use for public ontologies / knowledge graphs, never for personal volumes.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root_for_commons(path: &Path, manifest: &Q42VolumeManifest) -> io::Result<()> {
     UnifiedVolumeBuilder::with_empty_lex()
         .with_permissive_commons()
@@ -585,6 +659,7 @@ pub fn write_volume_root_for_commons(path: &Path, manifest: &Q42VolumeManifest) 
 /// Publish a logical-volume root with a lossless shared Q42LEX in its front
 /// matter. Child data segments may keep empty local lexicons because all term
 /// resolution for the snapshot is recoverable from this immutable root.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn write_volume_root_with_lex(
     path: &Path,
     lex: &HashMap<u64, String>,
@@ -596,6 +671,9 @@ pub fn write_volume_root_with_lex(
         .finish(path)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+/// Map a `LexError` to `io::Error` (`InvalidInput`, message includes
+/// the lex error debug form).
 fn lex_error_to_io(error: LexError) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
@@ -658,9 +736,13 @@ pub struct UnifiedVolumeBuilder {
     publication_commons: bool,
     publication_sanctuary: bool,
     sanctuary_quin_count: u64,
+    payload_catalogue_blobs: Vec<PayloadCatalogueBlob>,
+    payload_catalogue_bytes: Option<Vec<u8>>,
 }
 
 impl UnifiedVolumeBuilder {
+    /// Builder whose Q42LEX section is encoded from `lex`
+    /// (hash → term string).
     pub fn with_lex_map(lex: &HashMap<u64, String>) -> Result<Self, LexError> {
         Ok(Self {
             lex_bytes: encode_lex(lex)?,
@@ -677,6 +759,8 @@ impl UnifiedVolumeBuilder {
             publication_commons: false,
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
+            payload_catalogue_blobs: Vec::new(),
+            payload_catalogue_bytes: None,
         })
     }
 
@@ -697,9 +781,69 @@ impl UnifiedVolumeBuilder {
             publication_commons: false,
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
+            payload_catalogue_blobs: Vec::new(),
+            payload_catalogue_bytes: None,
         })
     }
 
+    /// Append a UTF-8 prose/descriptor payload (`ADR 0014`) to this volume's `PCAT` section.
+    /// Rejects media MIME types (`image/*`, `audio/*`, `video/*`, `.p64`, `.10d`).
+    pub fn add_payload_catalogue_utf8(
+        &mut self,
+        payload_key: &str,
+        mime_type: &str,
+        language: Option<&str>,
+        role: &str,
+        utf8_body: &str,
+    ) -> io::Result<PayloadCatalogueEntry> {
+        let blob = PayloadCatalogueBlob::new_utf8(
+            payload_key,
+            mime_type,
+            language.map(str::to_string),
+            role,
+            utf8_body,
+        )
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        let entry = blob.entry.clone();
+        self.payload_catalogue_blobs.push(blob);
+        let encoded = encode_payload_catalogue_with_bodies(&self.payload_catalogue_blobs)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(entry)
+    }
+
+    /// Attach a slice of [`PayloadCatalogueBlob`] records (metadata + UTF-8 body arena).
+    pub fn with_payload_catalogue_blobs(mut self, blobs: &[PayloadCatalogueBlob]) -> io::Result<Self> {
+        if blobs.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(self);
+        }
+        let encoded = encode_payload_catalogue_with_bodies(blobs)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_blobs = blobs.to_vec();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(self)
+    }
+
+    /// Attach metadata-only [`PayloadCatalogueEntry`] descriptors.
+    pub fn with_payload_catalogue_entries(
+        mut self,
+        entries: &[PayloadCatalogueEntry],
+    ) -> io::Result<Self> {
+        if entries.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(self);
+        }
+        let encoded = encode_payload_catalogue_section(entries)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_blobs.clear();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(self)
+    }
+
+    /// Builder with an empty (but structurally valid) Q42LEX section.
     pub fn with_empty_lex() -> Self {
         Self::with_lex_map(&HashMap::new()).expect("an empty Q42LEX is valid")
     }
@@ -729,6 +873,10 @@ impl UnifiedVolumeBuilder {
         self
     }
 
+    /// Append one SuperBlock: enforces global object-hash sort order,
+    /// accumulates block/field ranges, postings and the LZ4'd data
+    /// blob, and commits the block to the Merkle-DAG
+    /// (genesis on first block).
     pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
         let (min_hash, max_hash) = object_range(quins)?;
         if let Some(previous) = self.last_object_hash {
@@ -796,10 +944,14 @@ impl UnifiedVolumeBuilder {
         Ok(())
     }
 
+    /// SuperBlocks pushed so far.
     pub fn block_count(&self) -> u64 {
         self.block_ranges.len() as u64
     }
 
+    /// Assemble and write the complete `.q42` file to `path`
+    /// (native only — needs filesystem access).
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn finish(self, path: &Path) -> io::Result<()> {
         let bytes = self.finish_to_bytes();
         let out = OpenOptions::new()
@@ -882,9 +1034,10 @@ impl UnifiedVolumeBuilder {
             reserved[0..8].copy_from_slice(&manifest_offset.to_le_bytes());
             reserved[8..16].copy_from_slice(&(manifest_bytes.len() as u64).to_le_bytes());
         }
-        let header = Q42VolumeHeader {
+        let pcat_bytes = self.payload_catalogue_bytes.as_deref().unwrap_or(&[]);
+        let mut header = Q42VolumeHeader {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags,
             lex_offset,
             lex_length: self.lex_bytes.len() as u64,
@@ -907,6 +1060,11 @@ impl UnifiedVolumeBuilder {
             software_agent_did_offset: 0,
             _reserved: reserved,
         };
+        if !pcat_bytes.is_empty() {
+            let pcat_offset =
+                data_offset + self.data_blob.len() as u64 + dag_bytes.len() as u64;
+            set_header_payload_catalogue_range(&mut header, pcat_offset, pcat_bytes.len() as u64);
+        }
 
         let mut out = Vec::with_capacity(
             HEADER_SIZE
@@ -917,7 +1075,8 @@ impl UnifiedVolumeBuilder {
                 + postings_bytes.len()
                 + block_dir_length as usize
                 + self.data_blob.len()
-                + dag_bytes.len(),
+                + dag_bytes.len()
+                + pcat_bytes.len(),
         );
         out.extend_from_slice(&header_to_bytes(&header));
         out.extend_from_slice(&self.lex_bytes);
@@ -933,17 +1092,24 @@ impl UnifiedVolumeBuilder {
         if !dag_bytes.is_empty() {
             out.extend_from_slice(&dag_bytes);
         }
+        if !pcat_bytes.is_empty() {
+            out.extend_from_slice(pcat_bytes);
+        }
         out
     }
 }
 
 /// Memory-mapped unified v2 volume reader.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Q42Volume {
     mmap: Mmap,
     header: Q42VolumeHeader,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Q42Volume {
+    /// Memory-map/open a `.q42` volume, validating header and section
+    /// bounds.
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { MmapOptions::new().map(&file)? };
@@ -960,24 +1126,29 @@ impl Q42Volume {
         Ok(Self { mmap, header })
     }
 
+    /// The parsed volume header.
     pub fn header(&self) -> &Q42VolumeHeader {
         &self.header
     }
 
+    /// The whole volume as a byte slice.
     pub fn as_bytes(&self) -> &[u8] {
         &self.mmap
     }
 
+    /// Raw Q42LEX section bytes.
     pub fn lex_bytes(&self) -> &[u8] {
         let start = self.header.lex_offset as usize;
         let end = start + self.header.lex_length as usize;
         &self.mmap[start..end]
     }
 
+    /// Zero-copy `Q42LexMmap` view over the lexicon section.
     pub fn lex_view(&self) -> Result<Q42LexMmap<'_>, LexError> {
         Q42LexMmap::from_bytes(self.lex_bytes())
     }
 
+    /// Raw BIDX section bytes.
     pub fn bidx_bytes(&self) -> &[u8] {
         let start = self.header.bidx_offset as usize;
         let end = start + self.header.bidx_length as usize;
@@ -1026,6 +1197,58 @@ impl Q42Volume {
             .transpose()
     }
 
+    /// Raw `PCAT` (`FLAG_PAYLOAD_CATALOGUE = 0x0080`) section bytes when present.
+    pub fn payload_catalogue_bytes(&self) -> io::Result<Option<&[u8]>> {
+        let Some((offset, length)) = self.header.payload_catalogue_range() else {
+            return Ok(None);
+        };
+        let start = usize::try_from(offset).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue offset exceeds platform",
+            )
+        })?;
+        let length = usize::try_from(length).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue length exceeds platform",
+            )
+        })?;
+        let end = start.checked_add(length).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue range overflows",
+            )
+        })?;
+        self.mmap.get(start..end).map(Some).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue lies outside the file",
+            )
+        })
+    }
+
+    /// Read and CRC-32C / SHA-256 verify the `PCAT` v1 payload catalogue (`ADR 0014`),
+    /// returning each [`PayloadCatalogueBlob`] (descriptor + UTF-8 body).
+    /// Returns an empty `Vec` if `FLAG_PAYLOAD_CATALOGUE` is not set.
+    pub fn read_payload_catalogue(&self) -> io::Result<Vec<PayloadCatalogueBlob>> {
+        let Some(bytes) = self.payload_catalogue_bytes()? else {
+            return Ok(Vec::new());
+        };
+        decode_payload_catalogue_with_bodies(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    /// Read and CRC-32C verify the `PCAT` v1 payload catalogue metadata entries (`ADR 0014`).
+    pub fn read_payload_catalogue_entries(&self) -> io::Result<Vec<PayloadCatalogueEntry>> {
+        let Some(bytes) = self.payload_catalogue_bytes()? else {
+            return Ok(Vec::new());
+        };
+        decode_payload_catalogue_section(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    /// SuperBlock count from the header.
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
@@ -1140,6 +1363,8 @@ impl Q42Volume {
         Some((first, last))
     }
 
+    /// Read directory entry `index` from the block directory;
+    /// out-of-range indices error.
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
         if index >= self.header.block_count as usize {
             return Err(io::Error::new(
@@ -1264,7 +1489,7 @@ pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::mini_parser::hash_token;
@@ -1310,7 +1535,7 @@ mod tests {
 
         let vol = Q42Volume::open(tmp.path()).unwrap();
         assert_eq!(vol.block_count(), 2);
-        assert!(vol.lex_view().unwrap().lookup_hash(q1.object).is_some());
+        assert!(vol.lex_view().unwrap().contains(q1.object));
 
         let hits = vol.bidx_blocks_for_hash(q1.object);
         assert!(!hits.is_empty(), "bidx miss for object hash {}", q1.object);
@@ -1573,15 +1798,18 @@ doc:article-1 a values:Undertaking ;
         // The verbatim literal is recoverable from the .q42 alone — the CML prerequisite.
         let lit = "Each Member undertakes to suppress forced labour.";
         assert_eq!(
-            lex.lookup_hash(generate_60bit_token(lit.as_bytes())),
-            Some(lit)
+            lex.lookup_owned(generate_60bit_token(lit.as_bytes())),
+            Some(lit.to_string())
         );
         // Expanded IRIs are recoverable too (queries become human-readable).
+        // The undertaking IRI is stored namespaced (v4 lexicon): prove both the
+        // full reassembly and the (namespace, local) split.
         let undertaking = "https://ns.webcivics.net/values/Undertaking";
-        assert_eq!(
-            lex.lookup_hash(generate_60bit_token(undertaking.as_bytes())),
-            Some(undertaking)
-        );
+        let token = generate_60bit_token(undertaking.as_bytes());
+        assert_eq!(lex.lookup_owned(token), Some(undertaking.to_string()));
+        let (ns, local) = lex.lookup_parts(token).expect("namespaced IRI parts");
+        assert_eq!(ns, "https://ns.webcivics.net/values/");
+        assert_eq!(local, "Undertaking");
     }
 
     /// `finish_to_bytes` must yield the same recoverable volume as `finish` writes to disk —
@@ -1609,11 +1837,11 @@ doc:article-1 a values:Undertaking ;
         let quins = vol.read_all_quins().unwrap();
         assert_eq!(quins.len(), 2);
         let lexv = vol.lex_view().unwrap();
-        let vals: Vec<&str> = quins
+        let vals: Vec<String> = quins
             .iter()
-            .filter_map(|q| lexv.lookup_hash(q.object))
+            .filter_map(|q| lexv.lookup_owned(q.object))
             .collect();
-        assert!(vals.contains(&"circulatory") && vals.contains(&"respiratory"));
+        assert!(vals.iter().any(|v| v == "circulatory") && vals.iter().any(|v| v == "respiratory"));
     }
 
     #[test]
@@ -1627,6 +1855,7 @@ doc:article-1 a values:Undertaking ;
 
 /// Streaming append-only interface for Q42 Unified Volumes.
 /// Allows continuous block accumulation without loading the entire volume in memory.
+#[cfg(not(target_arch = "wasm32"))]
 pub struct StreamingVolumeAppender {
     file: std::fs::File,
     header: Q42VolumeHeader,
@@ -1638,7 +1867,10 @@ pub struct StreamingVolumeAppender {
     last_object_hash: Option<u64>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl StreamingVolumeAppender {
+    /// Create a new streaming volume at `path` — writes the v4 header
+    /// eagerly; rejects non-empty files (immutable segments only).
     pub fn new(path: &std::path::Path) -> std::io::Result<Self> {
         let mut file = std::fs::OpenOptions::new()
             .create(true)
@@ -1648,7 +1880,7 @@ impl StreamingVolumeAppender {
 
         let header = Q42VolumeHeader {
             magic: Q42_MAGIC,
-            version: Q42_VERSION_V3,
+            version: Q42_VERSION_V4,
             flags: FLAG_BLOCKS_LZ4 | FLAG_OBJECT_SORTED,
             lex_offset: HEADER_SIZE as u64,
             lex_length: 0,
@@ -1696,11 +1928,15 @@ impl StreamingVolumeAppender {
         })
     }
 
+    /// Set the author DID recorded on DAG commit nodes.
     pub fn with_author_did(mut self, did: u64) -> Self {
         self.author_did = did;
         self
     }
 
+    /// Append one SuperBlock incrementally — same global object-sort
+    /// enforcement, LZ4 compression, and DAG commit as the batch
+    /// builder, but streamed straight to the file.
     pub fn append_block(&mut self, seq_id: u64, quins: &[NQuin]) -> std::io::Result<()> {
         let (min_hash, max_hash) = object_range(quins)?;
         if let Some(previous) = self.last_object_hash {

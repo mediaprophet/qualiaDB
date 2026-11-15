@@ -8,6 +8,7 @@ pub struct CkanAdapter {
 }
 
 impl CkanAdapter {
+    /// Creates a default `CkanAdapter`.
     pub fn new(id: &'static str, api_endpoint: &str) -> Self {
         Self {
             id,

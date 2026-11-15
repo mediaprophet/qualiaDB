@@ -2,6 +2,8 @@
 //!
 //! Constructors are crate-private. External crates cannot mint Active/Allow.
 
+mod received_finished;
+
 use crate::crypto::network::types::AEAD_KEY_LEN;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, StrongDigest};
@@ -19,6 +21,7 @@ pub struct VerifiedCredential {
 }
 
 impl VerifiedCredential {
+    /// Creates a default `VerifiedCredential`.
     pub(crate) fn new(
         principal: StrongDigest,
         issuer: StrongDigest,
@@ -40,21 +43,25 @@ impl VerifiedCredential {
     }
 
     #[inline]
+    /// Credential principal digest.
     pub const fn principal(self) -> StrongDigest {
         self.principal
     }
 
     #[inline]
+    /// Credential issuer digest.
     pub const fn issuer(self) -> StrongDigest {
         self.issuer
     }
 
     #[inline]
+    /// Credential instrument digest.
     pub const fn instrument(self) -> StrongDigest {
         self.instrument
     }
 
     #[inline]
+    /// Credential generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
@@ -70,6 +77,7 @@ pub struct AuthorisedContact {
 }
 
 impl AuthorisedContact {
+    /// Creates a default `AuthorisedContact`.
     pub(crate) fn new(
         local: StrongDigest,
         remote: StrongDigest,
@@ -91,25 +99,30 @@ impl AuthorisedContact {
     }
 
     #[inline]
+    /// Local digest.
     pub const fn local(self) -> StrongDigest {
         self.local
     }
 
     #[inline]
+    /// Remote digest.
     pub const fn remote(self) -> StrongDigest {
         self.remote
     }
 
     #[inline]
+    /// Contact state.
     pub const fn state(self) -> ContactState {
         self.state
     }
 
     #[inline]
+    /// Contact generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
 
+    /// `Ok(())` when the contact is active.
     pub fn require_active(&self) -> Result<(), QdnfError> {
         match self.state {
             ContactState::Active => Ok(()),
@@ -129,6 +142,7 @@ pub struct InstalledSessionKeys {
 }
 
 impl InstalledSessionKeys {
+    /// Creates a default `InstalledSessionKeys`.
     pub(crate) fn new(
         generation: Generation,
         send: [u8; AEAD_KEY_LEN],
@@ -150,21 +164,25 @@ impl InstalledSessionKeys {
     }
 
     #[inline]
+    /// Key generation.
     pub const fn generation(&self) -> Generation {
         self.generation
     }
 
     #[inline]
+    /// `true` when the keys are confirmed.
     pub const fn confirmed(&self) -> bool {
         self.confirmed
     }
 
     #[inline]
+    /// Send-direction AEAD key.
     pub fn send_key(&self) -> &[u8; AEAD_KEY_LEN] {
         &self.send
     }
 
     #[inline]
+    /// Receive-direction AEAD key.
     pub fn recv_key(&self) -> &[u8; AEAD_KEY_LEN] {
         &self.recv
     }
@@ -178,6 +196,7 @@ impl Drop for InstalledSessionKeys {
     }
 }
 
+/// `true` when the grant matches the contact.
 pub fn grant_matches_contact(grant: &TemporalGrant, contact: &AuthorisedContact) -> bool {
     grant.audience_digest == contact.remote()
 }

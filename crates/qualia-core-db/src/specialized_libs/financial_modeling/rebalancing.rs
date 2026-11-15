@@ -172,6 +172,7 @@ pub struct ConstraintBounds {
 }
 
 impl RebalancingEngine {
+    /// Creates a `RebalancingEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             rebalancing_strategies: HashMap::new(),
@@ -180,6 +181,7 @@ impl RebalancingEngine {
         }
     }
 
+    /// Readies the `RebalancingEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.optimization_engine.initialize()?;
         self.execution_engine.initialize()?;
@@ -275,6 +277,7 @@ impl RebalancingEngine {
 }
 
 impl OptimizationEngine {
+    /// Creates a `OptimizationEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             optimization_algorithms: HashMap::new(),
@@ -283,46 +286,56 @@ impl OptimizationEngine {
         }
     }
 
+    /// Readies the `OptimizationEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Registers `algorithm` in the registry (keyed by its id).
     pub fn add_algorithm(&mut self, algorithm: OptimizationAlgorithm) {
         self.optimization_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Looks up `algorithm` by id; `None` if not registered.
     pub fn get_algorithm(&self, algorithm_id: &str) -> Option<&OptimizationAlgorithm> {
         self.optimization_algorithms.get(algorithm_id)
     }
 
+    /// Iterates over all registered `algorithms` entries.
     pub fn list_algorithms(&self) -> Vec<String> {
         self.optimization_algorithms.keys().cloned().collect()
     }
 
+    /// Registers `objective function` in the registry (keyed by its id).
     pub fn add_objective_function(&mut self, function: ObjectiveFunction) {
         self.objective_functions
             .insert(function.function_id.clone(), function);
     }
 
+    /// Looks up `objective function` by id; `None` if not registered.
     pub fn get_objective_function(&self, function_id: &str) -> Option<&ObjectiveFunction> {
         self.objective_functions.get(function_id)
     }
 
+    /// Iterates over all registered `objective functions` entries.
     pub fn list_objective_functions(&self) -> Vec<String> {
         self.objective_functions.keys().cloned().collect()
     }
 
+    /// Registers `constraint` in the registry (keyed by its id).
     pub fn add_constraint(&mut self, constraint: OptimizationConstraint) {
         self.constraints.push(constraint);
     }
 
+    /// Iterates over all registered `constraints` entries.
     pub fn list_constraints(&self) -> &[OptimizationConstraint] {
         &self.constraints
     }
 }
 
 impl RebalancingStrategy {
+    /// Creates a `RebalancingStrategy` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             strategy_id: "strategy_1".to_string(),
@@ -336,6 +349,7 @@ impl RebalancingStrategy {
 }
 
 impl RebalancingParameters {
+    /// Creates a `RebalancingParameters` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             rebalance_frequency: 30,   // 30 days
@@ -348,6 +362,7 @@ impl RebalancingParameters {
 }
 
 impl TransactionCosts {
+    /// Creates a `TransactionCosts` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             commission_rate: 0.001,
@@ -359,6 +374,7 @@ impl TransactionCosts {
 }
 
 impl RebalancingConstraints {
+    /// Creates a `RebalancingConstraints` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             asset_class_limits: HashMap::new(),
@@ -370,6 +386,7 @@ impl RebalancingConstraints {
 }
 
 impl LiquidityConstraints {
+    /// Creates a `LiquidityConstraints` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             max_daily_volume: 1000000.0,
@@ -380,6 +397,7 @@ impl LiquidityConstraints {
 }
 
 impl RegulatoryConstraints {
+    /// Creates a `RegulatoryConstraints` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             concentration_limits: HashMap::new(),
@@ -390,6 +408,7 @@ impl RegulatoryConstraints {
 }
 
 impl OptimizationAlgorithm {
+    /// Creates a `OptimizationAlgorithm` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             algorithm_id: "algo_1".to_string(),
@@ -400,6 +419,7 @@ impl OptimizationAlgorithm {
 }
 
 impl OptimizationParameters {
+    /// Creates a `OptimizationParameters` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             risk_aversion: 1.0,
@@ -415,6 +435,7 @@ impl OptimizationParameters {
 }
 
 impl ObjectiveFunction {
+    /// Creates a `ObjectiveFunction` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             function_id: "obj_1".to_string(),
@@ -425,6 +446,7 @@ impl ObjectiveFunction {
 }
 
 impl OptimizationConstraint {
+    /// Creates a `OptimizationConstraint` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             constraint_id: "constraint_1".to_string(),
@@ -435,6 +457,7 @@ impl OptimizationConstraint {
 }
 
 impl ConstraintBounds {
+    /// Creates a `ConstraintBounds` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             lower_bound: 0.0,

@@ -35,6 +35,7 @@ impl LanguageResourceBundle {
         }
     }
 
+    /// `true` when able to train.
     pub fn can_train(&self) -> bool {
         self.permitted_training && self.access_class != AccessClass::Ceremonial
     }

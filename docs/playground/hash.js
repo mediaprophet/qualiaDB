@@ -74,34 +74,100 @@ export function parseDidQ42(uri) {
 
 /**
  * Hash a single N-Triples token, applying did:q42 routing when applicable.
- * Strips `<...>` IRI delimiters and `"..."` literal delimiters before hashing.
- * Mirrors `mini_parser::hash_token` in Rust exactly.
+ * Preserves `<...>` IRI delimiters and `"..."` literal delimiters matching
+ * the canonical Q42 v3 volume layout and Q42LEX dictionary.
+ * Applies the 60-bit term identity mask (`0x0FFF_FFFF_FFFF_FFFFn`).
  *
  * @param {string} token   — one S/P/O token from an N-Triples line
  * @returns {bigint}
  */
 export function hashToken(token) {
-    let inner = token;
-    if (token.startsWith('<') && token.endsWith('>')) {
-        inner = token.slice(1, -1);
-    } else if (token.startsWith('"')) {
-        // Strip the opening quote; the closing quote and any @lang / ^^type tag
-        // follow after the literal content.
-        const rest = token.slice(1);
-        let i = 0;
-        while (i < rest.length) {
-            if (rest[i] === '\\') { i += 2; continue; }
-            if (rest[i] === '"')  { inner = rest.slice(0, i); break; }
-            i++;
-        }
-    }
+    if (!token) return 0n;
+    let t = token.trim();
 
-    if (inner.startsWith('did:q42:')) {
-        const ptr = parseDidQ42(inner);
+    if (t.startsWith('<did:q42:') && t.endsWith('>')) {
+        const ptr = parseDidQ42(t.slice(1, -1));
+        if (ptr !== null) return ptr;
+    }
+    if (t.startsWith('did:q42:')) {
+        const ptr = parseDidQ42(t);
         if (ptr !== null) return ptr;
     }
 
-    return fnv1a64(inner);
+    if (t.startsWith('wn31:') || t.startsWith('synset:')) {
+        const payload = t.slice(t.indexOf(':') + 1);
+        if (/^(?:0x)?[0-9a-fA-F]+$/i.test(payload)) {
+            try { return BigInt(payload.startsWith('0x') ? payload : `0x${payload}`) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+        }
+    }
+
+    if (/^0x[0-9a-fA-F]+$/i.test(t)) {
+        try { return BigInt(t) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+    }
+    if (/^\d{15,}$/.test(t)) {
+        try { return BigInt(t) & 0x0fff_ffff_ffff_ffffn; } catch (_) {}
+    }
+
+    // Canonicalize raw HTTP(S) URLs to <URL> if delimiters were omitted
+    if ((t.startsWith('http://') || t.startsWith('https://') || t.startsWith('urn:')) && !t.startsWith('<')) {
+        t = `<${t}>`;
+    }
+
+    return fnv1a64(t) & 0x0fff_ffff_ffff_ffffn;
+}
+
+/**
+ * Strip outer URI (<...>) or literal ("...") delimiters from a token.
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+export function stripDelimiters(token) {
+    if (!token) return '';
+    let t = token.trim();
+    if (t.startsWith('<') && t.endsWith('>')) {
+        return t.slice(1, -1);
+    }
+    if (t.startsWith('"')) {
+        const m = t.match(/^"((?:[^"\\]|\\.)*)"/);
+        if (m) return m[1];
+    }
+    return t;
+}
+
+/**
+ * Return both the verbatim token hash and the delimiter-stripped token hash.
+ * This guarantees interoperability across volumes ingested with delimiters
+ * preserved (e.g. Schema.org NT) and volumes ingested with delimiters stripped
+ * (e.g. Princeton WordNet RDF/XML via mini_parser).
+ *
+ * @param {string} token
+ * @returns {bigint[]}
+ */
+export function hashTokenVariants(token) {
+    if (!token) return [0n];
+    const t = token.trim();
+    const variants = new Set();
+
+    // Check if token represents a direct numeric hash (hex or decimal)
+    let numCandidate = t;
+    if (numCandidate.startsWith('wn31:') || numCandidate.startsWith('synset:')) {
+        numCandidate = numCandidate.slice(numCandidate.indexOf(':') + 1);
+    }
+    if (/^(?:0x[0-9a-fA-F]+|\d{15,})$/i.test(numCandidate)) {
+        try {
+            const b = BigInt(numCandidate);
+            variants.add(b);
+            variants.add(b & 0x0fff_ffff_ffff_ffffn);
+        } catch (_) {}
+    }
+
+    const raw = hashToken(token);
+    variants.add(raw);
+    const stripped = hashToken(stripDelimiters(token));
+    variants.add(stripped);
+
+    return Array.from(variants);
 }
 
 /**

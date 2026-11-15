@@ -80,6 +80,7 @@ pub async fn arm_dead_mans_switch(
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Arms dead-mans-switch.
 pub async fn arm_dead_mans_switch(
     _commitment_hex: &str,
     _lapse_after_secs: u64,
@@ -98,6 +99,7 @@ pub async fn dead_mans_alive(commitment_hex: &str) -> Result<bool, String> {
     Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn dead_mans_alive(_commitment_hex: &str) -> Result<bool, String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }
@@ -138,6 +140,7 @@ pub async fn attest_dead_mans(
     Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Attests dead-mans.
 pub async fn attest_dead_mans(
     _commitment_hex: &str,
     _party_did: &str,
@@ -152,6 +155,7 @@ pub async fn enact_dead_mans(commitment_hex: &str) -> Result<serde_json::Value, 
     invoke_str_arg("wellfair_enact_dead_mans", "commitmentHex", commitment_hex).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Enacts dead-mans.
 pub async fn enact_dead_mans(_commitment_hex: &str) -> Result<serde_json::Value, String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }
@@ -169,6 +173,7 @@ pub async fn list_dead_mans_switches() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists dead-mans-switches.
 pub async fn list_dead_mans_switches() -> Result<serde_json::Value, String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }
@@ -201,6 +206,7 @@ pub async fn enact_dead_mans_release(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Enacts dead-mans-release.
 pub async fn enact_dead_mans_release(
     _commitment_hex: &str,
     _party_keys: Vec<(String, String)>,
@@ -243,6 +249,7 @@ pub async fn split_dek_recovery(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn split_dek_recovery(
     _c: &str,
     _t: usize,
@@ -286,6 +293,7 @@ pub async fn reconstruct_and_release(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn reconstruct_and_release(
     _c: &str,
     _s: serde_json::Value,
@@ -312,6 +320,7 @@ pub async fn set_peer_envelope_key(did: &str, pubkey_hex: &str) -> Result<(), St
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets peer-envelope-key.
 pub async fn set_peer_envelope_key(_did: &str, _pubkey_hex: &str) -> Result<(), String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }
@@ -329,6 +338,7 @@ pub async fn enact_dead_mans_release_via_peers(
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Enacts dead-mans-release-via-peers.
 pub async fn enact_dead_mans_release_via_peers(
     _commitment_hex: &str,
 ) -> Result<serde_json::Value, String> {
@@ -389,6 +399,7 @@ pub async fn arm_incapacity_switch(
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Arms incapacity-switch.
 pub async fn arm_incapacity_switch(
     _principal_did: &str,
     _kind: &str,
@@ -437,6 +448,7 @@ pub async fn activate_incapacity(
         .unwrap_or(false))
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Activates incapacity.
 pub async fn activate_incapacity(
     _principal_did: &str,
     _attesting_parties: Vec<String>,
@@ -452,6 +464,7 @@ pub async fn regain_capacity(principal_did: &str) -> Result<bool, String> {
     Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn regain_capacity(_principal_did: &str) -> Result<bool, String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }
@@ -469,6 +482,7 @@ pub async fn list_incapacity_switches() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists incapacity-switches.
 pub async fn list_incapacity_switches() -> Result<serde_json::Value, String> {
     Err("Safeguard switches require the Tauri desktop host".into())
 }

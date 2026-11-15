@@ -584,6 +584,7 @@ pub struct MinimumImage {
 // Supporting implementations
 
 impl MolecularSimulator {
+    /// Create a `MolecularSimulator` with default sub-components.
     pub fn new() -> Self {
         Self {
             simulation_engine: SimulationEngine::new(),
@@ -596,6 +597,8 @@ impl MolecularSimulator {
         }
     }
 
+    /// Attach optional `LinearAlgebraLibrary` / `StatisticalComputingLibrary`
+    /// shared handles used by the MD integrator.
     pub fn attach_dependencies(
         &mut self,
         linear_algebra: Option<Arc<Mutex<LinearAlgebraLibrary>>>,
@@ -605,11 +608,13 @@ impl MolecularSimulator {
         self.statistical_computing = statistical_computing;
     }
 
+    /// Insert `molecule` into the simulator store keyed by `molecule_id`.
     pub fn store_molecule(&mut self, molecule: Molecule) {
         self.molecule_store
             .insert(molecule.molecule_id.clone(), molecule);
     }
 
+    /// Initialise the `MolecularSimulator` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.simulation_engine.initialize()?;
         self.force_field_calculator.initialize()?;
@@ -622,6 +627,8 @@ impl MolecularSimulator {
         Ok(())
     }
 
+    /// Validate `config` — positive `time_step`/`total_time`, non-negative
+    /// `temperature`; `ValidationError` otherwise.
     pub fn validate_config(&self, config: &SimulationConfig) -> Result<(), ChemistryError> {
         if config.time_step <= 0.0 {
             return Err(ChemistryError::ValidationError(
@@ -641,6 +648,9 @@ impl MolecularSimulator {
         Ok(())
     }
 
+    /// Run a real Lennard-Jones + velocity-Verlet MD via
+    /// `molecular_dynamics::run_md`; fails closed on unparameterized
+    /// input rather than fabricating a trajectory.
     pub fn run_simulation(
         &mut self,
         config: &SimulationConfig,
@@ -659,6 +669,8 @@ impl MolecularSimulator {
         )
     }
 
+    /// Force-field names understood by the force-field calculator
+    /// (AMBER/CHARMM/OPLS).
     pub fn list_force_fields(&self) -> Vec<String> {
         vec![
             "AMBER".to_string(),
@@ -667,6 +679,7 @@ impl MolecularSimulator {
         ]
     }
 
+    /// Clone of the stored molecule `molecule_id`, or `None`.
     pub fn get_molecule(&self, molecule_id: &str) -> Option<Molecule> {
         self.molecule_store.get(molecule_id).cloned()
     }
@@ -713,6 +726,7 @@ impl MolecularSimulator {
 }
 
 impl SimulationEngine {
+    /// Create a `SimulationEngine` with default sub-components.
     pub fn new() -> Self {
         Self {
             simulation_config: SimulationConfig::new(),
@@ -722,6 +736,7 @@ impl SimulationEngine {
         }
     }
 
+    /// Initialise the `SimulationEngine` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.time_step_control.initialize()?;
         self.ensemble_manager.initialize()?;
@@ -771,6 +786,7 @@ impl SimulationEngine {
 }
 
 impl SimulationConfig {
+    /// Create a `SimulationConfig` with default sub-components.
     pub fn new() -> Self {
         Self {
             simulation_id: "sim_1".to_string(),
@@ -787,6 +803,7 @@ impl SimulationConfig {
 }
 
 impl TimeStepControl {
+    /// Create a `TimeStepControl` with default sub-components.
     pub fn new() -> Self {
         Self {
             control_type: TimeStepControlType::Fixed,
@@ -825,12 +842,14 @@ impl TimeStepControl {
         &mut self.stability_analysis
     }
 
+    /// Initialise the `TimeStepControl` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl AdaptiveParameters {
+    /// Create a `AdaptiveParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             min_time_step: 0.0001,
@@ -842,6 +861,7 @@ impl AdaptiveParameters {
 }
 
 impl StabilityAnalysis {
+    /// Create a `StabilityAnalysis` with default sub-components.
     pub fn new() -> Self {
         Self {
             analysis_method: StabilityAnalysisMethod::EnergyDrift,
@@ -882,6 +902,7 @@ impl StabilityAnalysis {
 }
 
 impl EnergyConservation {
+    /// Create a `EnergyConservation` with default sub-components.
     pub fn new() -> Self {
         Self {
             total_energy: 0.0,
@@ -893,6 +914,7 @@ impl EnergyConservation {
 }
 
 impl TemperatureFluctuation {
+    /// Create a `TemperatureFluctuation` with default sub-components.
     pub fn new() -> Self {
         Self {
             current_temperature: 300.0,
@@ -904,6 +926,7 @@ impl TemperatureFluctuation {
 }
 
 impl EnsembleManager {
+    /// Create a `EnsembleManager` with default sub-components.
     pub fn new() -> Self {
         Self {
             ensembles: HashMap::new(),
@@ -912,6 +935,7 @@ impl EnsembleManager {
         }
     }
 
+    /// Initialise the `EnsembleManager` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         // Standard thermodynamic ensembles. GCMC (grand canonical) maps to the
         // `MuVT` variant.
@@ -1017,6 +1041,7 @@ impl EnsembleManager {
 }
 
 impl EnsembleTransition {
+    /// Create a `EnsembleTransition` with default sub-components.
     pub fn new() -> Self {
         Self {
             transition_id: "transition_1".to_string(),
@@ -1028,6 +1053,7 @@ impl EnsembleTransition {
 }
 
 impl SamplingMethod {
+    /// Create a `SamplingMethod` with default sub-components.
     pub fn new() -> Self {
         Self {
             method_id: "method_1".to_string(),
@@ -1038,6 +1064,7 @@ impl SamplingMethod {
 }
 
 impl SamplingParameters {
+    /// Create a `SamplingParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             acceptance_ratio: 0.5,
@@ -1049,6 +1076,7 @@ impl SamplingParameters {
 }
 
 impl TemperatureController {
+    /// Create a `TemperatureController` with default sub-components.
     pub fn new() -> Self {
         Self {
             control_method: TemperatureControlMethod::NoséHoover,
@@ -1087,12 +1115,14 @@ impl TemperatureController {
         &mut self.temperature_profile
     }
 
+    /// Initialise the `TemperatureController` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl ThermostatParameters {
+    /// Create a `ThermostatParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             coupling_constant: 1.0,
@@ -1103,6 +1133,7 @@ impl ThermostatParameters {
 }
 
 impl TemperatureProfile {
+    /// Create a `TemperatureProfile` with default sub-components.
     pub fn new() -> Self {
         Self {
             profile_type: TemperatureProfileType::Constant,
@@ -1114,6 +1145,7 @@ impl TemperatureProfile {
 }
 
 impl ForceFieldCalculator {
+    /// Create a `ForceFieldCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             force_fields: HashMap::new(),
@@ -1122,6 +1154,7 @@ impl ForceFieldCalculator {
         }
     }
 
+    /// Initialise the `ForceFieldCalculator` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.interaction_calculator.initialize()?;
         self.energy_calculator.initialize()?;
@@ -1200,6 +1233,7 @@ impl ForceFieldCalculator {
 }
 
 impl ForceField {
+    /// Create a `ForceField` with default sub-components.
     pub fn new() -> Self {
         Self {
             field_id: "ff_1".to_string(),
@@ -1211,6 +1245,7 @@ impl ForceField {
 }
 
 impl ForceFieldParameters {
+    /// Create a `ForceFieldParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             bond_parameters: vec![BondParameter::new()],
@@ -1222,6 +1257,7 @@ impl ForceFieldParameters {
 }
 
 impl BondParameter {
+    /// Create a `BondParameter` with default sub-components.
     pub fn new() -> Self {
         Self {
             atom_types: vec!["C".to_string(), "H".to_string()],
@@ -1232,6 +1268,7 @@ impl BondParameter {
 }
 
 impl AngleParameter {
+    /// Create a `AngleParameter` with default sub-components.
     pub fn new() -> Self {
         Self {
             atom_types: vec!["C".to_string(), "H".to_string(), "H".to_string()],
@@ -1242,6 +1279,7 @@ impl AngleParameter {
 }
 
 impl TorsionParameter {
+    /// Create a `TorsionParameter` with default sub-components.
     pub fn new() -> Self {
         Self {
             atom_types: vec![
@@ -1258,6 +1296,7 @@ impl TorsionParameter {
 }
 
 impl NonbondedParameter {
+    /// Create a `NonbondedParameter` with default sub-components.
     pub fn new() -> Self {
         Self {
             atom_type: "C".to_string(),
@@ -1269,6 +1308,7 @@ impl NonbondedParameter {
 }
 
 impl InteractionCalculator {
+    /// Create a `InteractionCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             bonded_interactions: BondedInteractions::new(),
@@ -1307,6 +1347,7 @@ impl InteractionCalculator {
         &mut self.long_range_interactions
     }
 
+    /// Initialise the `InteractionCalculator` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         let _ = self.nonbonded_interactions.lennard_jones();
         let _ = self.nonbonded_interactions.coulomb();
@@ -1319,6 +1360,7 @@ impl InteractionCalculator {
 }
 
 impl BondedInteractions {
+    /// Create a `BondedInteractions` with default sub-components.
     pub fn new() -> Self {
         Self {
             bond_calculator: BondCalculator::new(),
@@ -1370,6 +1412,7 @@ impl BondedInteractions {
 }
 
 impl BondCalculator {
+    /// Create a `BondCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             calculator_type: BondCalculatorType::Harmonic,
@@ -1379,6 +1422,7 @@ impl BondCalculator {
 }
 
 impl BondCalculatorParameters {
+    /// Create a `BondCalculatorParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             force_constant: 450.0,
@@ -1389,6 +1433,7 @@ impl BondCalculatorParameters {
 }
 
 impl AngleCalculator {
+    /// Create a `AngleCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             calculator_type: AngleCalculatorType::Harmonic,
@@ -1398,6 +1443,7 @@ impl AngleCalculator {
 }
 
 impl AngleCalculatorParameters {
+    /// Create a `AngleCalculatorParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             force_constant: 50.0,
@@ -1408,6 +1454,7 @@ impl AngleCalculatorParameters {
 }
 
 impl TorsionCalculator {
+    /// Create a `TorsionCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             calculator_type: TorsionCalculatorType::Cosine,
@@ -1417,6 +1464,7 @@ impl TorsionCalculator {
 }
 
 impl TorsionCalculatorParameters {
+    /// Create a `TorsionCalculatorParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             barriers: vec![0.0, 1.0],
@@ -1427,6 +1475,7 @@ impl TorsionCalculatorParameters {
 }
 
 impl ImproperCalculator {
+    /// Create a `ImproperCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             calculator_type: ImproperCalculatorType::Harmonic,
@@ -1436,6 +1485,7 @@ impl ImproperCalculator {
 }
 
 impl ImproperCalculatorParameters {
+    /// Create a `ImproperCalculatorParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             force_constant: 50.0,
@@ -1445,6 +1495,7 @@ impl ImproperCalculatorParameters {
 }
 
 impl NonbondedInteractions {
+    /// Create a `NonbondedInteractions` with default sub-components.
     pub fn new() -> Self {
         Self {
             lennard_jones: LennardJones::new(),
@@ -1485,6 +1536,7 @@ impl NonbondedInteractions {
 }
 
 impl LennardJones {
+    /// Create a `LennardJones` with default sub-components.
     pub fn new() -> Self {
         Self {
             epsilon: 0.086,
@@ -1496,6 +1548,7 @@ impl LennardJones {
 }
 
 impl Coulomb {
+    /// Create a `Coulomb` with default sub-components.
     pub fn new() -> Self {
         Self {
             coulomb_constant: 332.06,
@@ -1507,6 +1560,7 @@ impl Coulomb {
 }
 
 impl Buckingham {
+    /// Create a `Buckingham` with default sub-components.
     pub fn new() -> Self {
         Self {
             a: 1000.0,
@@ -1518,6 +1572,7 @@ impl Buckingham {
 }
 
 impl LongRangeInteractions {
+    /// Create a `LongRangeInteractions` with default sub-components.
     pub fn new() -> Self {
         Self {
             ewald_summation: EwaldSummation::new(),
@@ -1558,6 +1613,7 @@ impl LongRangeInteractions {
 }
 
 impl EwaldSummation {
+    /// Create a `EwaldSummation` with default sub-components.
     pub fn new() -> Self {
         Self {
             alpha: 0.3,
@@ -1569,6 +1625,7 @@ impl EwaldSummation {
 }
 
 impl ParticleMesh {
+    /// Create a `ParticleMesh` with default sub-components.
     pub fn new() -> Self {
         Self {
             grid_size: vec![32, 32, 32],
@@ -1579,6 +1636,7 @@ impl ParticleMesh {
 }
 
 impl ReactionField {
+    /// Create a `ReactionField` with default sub-components.
     pub fn new() -> Self {
         Self {
             dielectric_inside: 1.0,
@@ -1589,6 +1647,7 @@ impl ReactionField {
 }
 
 impl EnergyCalculator {
+    /// Create a `EnergyCalculator` with default sub-components.
     pub fn new() -> Self {
         Self {
             kinetic_energy: KineticEnergy::new(),
@@ -1627,12 +1686,14 @@ impl EnergyCalculator {
         &mut self.total_energy
     }
 
+    /// Initialise the `EnergyCalculator` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl KineticEnergy {
+    /// Create a `KineticEnergy` with default sub-components.
     pub fn new() -> Self {
         Self {
             temperature: 300.0,
@@ -1643,6 +1704,7 @@ impl KineticEnergy {
 }
 
 impl PotentialEnergy {
+    /// Create a `PotentialEnergy` with default sub-components.
     pub fn new() -> Self {
         Self {
             bonded_energy: 0.0,
@@ -1653,6 +1715,7 @@ impl PotentialEnergy {
 }
 
 impl TotalEnergy {
+    /// Create a `TotalEnergy` with default sub-components.
     pub fn new() -> Self {
         Self {
             kinetic: 0.0,
@@ -1664,6 +1727,7 @@ impl TotalEnergy {
 }
 
 impl MolecularIntegrator {
+    /// Create a `MolecularIntegrator` with default sub-components.
     pub fn new() -> Self {
         Self {
             integrator_type: IntegratorType::VelocityVerlet,
@@ -1692,6 +1756,7 @@ impl MolecularIntegrator {
         &mut self.integrator_parameters
     }
 
+    /// Initialise the `MolecularIntegrator` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.constraint_handler.initialize()?;
         Ok(())
@@ -1699,6 +1764,7 @@ impl MolecularIntegrator {
 }
 
 impl IntegratorParameters {
+    /// Create a `IntegratorParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             time_step: 0.001,
@@ -1709,6 +1775,7 @@ impl IntegratorParameters {
 }
 
 impl ConstraintHandler {
+    /// Create a `ConstraintHandler` with default sub-components.
     pub fn new() -> Self {
         Self {
             constraint_algorithm: ConstraintAlgorithm::SHAKE,
@@ -1736,12 +1803,14 @@ impl ConstraintHandler {
         &mut self.constraint_parameters
     }
 
+    /// Initialise the `ConstraintHandler` sub-components; propagates `ChemistryError`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl ConstraintParameters {
+    /// Create a `ConstraintParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,
@@ -1752,6 +1821,7 @@ impl ConstraintParameters {
 }
 
 impl BoundaryConditions {
+    /// Create a `BoundaryConditions` with default sub-components.
     pub fn new() -> Self {
         Self {
             boundary_type: BoundaryType::Periodic,
@@ -1796,6 +1866,7 @@ impl BoundaryConditions {
 }
 
 impl MinimumImage {
+    /// Create a `MinimumImage` with default sub-components.
     pub fn new() -> Self {
         Self {
             box_size: vec![10.0, 10.0, 10.0],

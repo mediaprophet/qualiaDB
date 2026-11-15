@@ -49,6 +49,7 @@ pub struct ModelHelperTokenizer {
 }
 
 impl ModelHelper {
+    /// Creates a default `ModelHelper`.
     pub fn new(
         source_gguf: impl Into<String>,
         p64_path: impl Into<String>,
@@ -115,6 +116,7 @@ impl ModelHelper {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Writes `beside-p64`.
     pub fn write_beside_p64(&self, _p64_path: &Path) -> Result<std::path::PathBuf, String> {
         Err("canonical Q42 model metadata is written by the native conversion tool".into())
     }
@@ -137,6 +139,7 @@ impl ModelHelper {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Loads `beside-p64`.
     pub fn load_beside_p64(_p64_path: &Path) -> Result<Option<Self>, String> {
         Ok(None)
     }
@@ -232,10 +235,17 @@ impl ModelHelper {
             .map_err(|e| format!("read Q42 helper {}: {e}", path.display()))?;
 
         let text = |object: u64| -> Result<String, String> {
-            lex.lookup_webizen_identity(object)
-                .or_else(|| lex.lookup_hash(object))
-                .map(str::to_owned)
-                .ok_or_else(|| format!("Q42 helper has unresolved lexicon hash {object:#018x}"))
+            if let Some(identity) = lex.lookup_webizen_identity(object) {
+                return Ok(identity.to_owned());
+            }
+            let mut term = String::new();
+            if lex.resolve_term_into(object, &mut term) {
+                Ok(term)
+            } else {
+                Err(format!(
+                    "Q42 helper has unresolved lexicon hash {object:#018x}"
+                ))
+            }
         };
         let integer = |object: u64| -> Result<u64, String> {
             if object & INLINE_TAG_MASK != INLINE_TAG_INTEGER {
@@ -363,6 +373,7 @@ pub fn helper_path_for_p64(p64_path: &Path) -> std::path::PathBuf {
     helper_path_with_ext(p64_path, MODEL_HELPER_EXT)
 }
 
+/// `ModelHelper::legacy_helper_path_for_p64`.
 pub fn legacy_helper_path_for_p64(p64_path: &Path) -> std::path::PathBuf {
     helper_path_with_ext(p64_path, LEGACY_MODEL_HELPER_EXT)
 }
@@ -422,7 +433,7 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn canonical_q42_round_trip_preserves_model_metadata() {
-        use crate::q42_volume::{Q42Volume, Q42_MAGIC, Q42_VERSION_V3};
+        use crate::q42_volume::{Q42Volume, Q42_MAGIC, Q42_VERSION_V4};
 
         let dir = tempfile::tempdir().unwrap();
         let p64 = dir.path().join("x.p64");
@@ -432,7 +443,7 @@ mod tests {
         assert_eq!(path.extension().and_then(|x| x.to_str()), Some("q42"));
         assert!(std::fs::read(&path).unwrap().starts_with(&Q42_MAGIC));
         let volume = Q42Volume::open(&path).unwrap();
-        assert_eq!({ volume.header().version }, Q42_VERSION_V3);
+        assert_eq!({ volume.header().version }, Q42_VERSION_V4);
         volume
             .verify_all_blocks()
             .expect("canonical helper must pass five-field ECC + BIDX");

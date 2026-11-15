@@ -196,6 +196,7 @@ mod tests {
     }
 
     #[test]
+    /// `?::all_zero_x25519_rejected`.
     pub fn all_zero_x25519_rejected() {
         let secret = X25519Secret::from_bytes([0x42; 32]);
         let err = secret
@@ -205,6 +206,7 @@ mod tests {
     }
 
     #[test]
+    /// `?::truncated_transcript_item_is_not_hashed_as_success`.
     pub fn truncated_transcript_item_is_not_hashed_as_success() {
         let mut t = Transcript::new();
         t.append(TEST_ITEMS[0].0, TEST_ITEMS[0].1).unwrap();

@@ -12,6 +12,7 @@ pub struct GitTip {
     pub dirty: bool,
 }
 
+/// Reads tip.
 pub fn read_tip(root: &Path) -> Result<GitTip, IndexError> {
     let sha = git_stdout(root, &["rev-parse", "HEAD"])?;
     let branch = git_stdout(root, &["rev-parse", "--abbrev-ref", "HEAD"])?;
@@ -23,6 +24,7 @@ pub fn read_tip(root: &Path) -> Result<GitTip, IndexError> {
     })
 }
 
+/// `git ls-files` listing.
 pub fn ls_files(root: &Path) -> Result<Vec<String>, IndexError> {
     let out = git_stdout_raw(root, &["ls-files", "-z"])?;
     let mut files = Vec::new();

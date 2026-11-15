@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `MetaphysicsQapp` component.
 pub fn MetaphysicsQapp() -> Element {
     rsx! {
         QAppEngine {

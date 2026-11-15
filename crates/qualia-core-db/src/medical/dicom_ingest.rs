@@ -4,18 +4,14 @@
 //! 48-byte Quins appended to the conduct WAL. Core 1 never blocks on I/O — jobs are
 //! handed to a dedicated Swarm worker via a lock-free channel.
 
-use crate::dicom::{
-    decode_blob_pointer, encode_blob_pointer, pack_volume_metadata, split_dicom_payload,
-    DicomMetadata, DicomSplitPayload,
-};
+use crate::dicom::{decode_blob_pointer, encode_blob_pointer, pack_volume_metadata, DicomMetadata};
 use crate::q_hash;
-use crate::wal::WriteAheadLog;
 use crate::NQuin;
 use crossbeam_channel::{bounded, Receiver, Sender};
 use memmap2::Mmap;
 use std::cell::UnsafeCell;
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::OnceLock;
@@ -118,6 +114,7 @@ pub struct DicomBlobStore {
 }
 
 impl DicomBlobStore {
+    /// Opens/creates the pixel blob store at `path`.
     pub fn open(path: &Path) -> Result<Self, std::io::Error> {
         let file = OpenOptions::new()
             .read(true)
@@ -131,6 +128,7 @@ impl DicomBlobStore {
         })
     }
 
+    /// Appends pixel bytes; returns the byte offset.
     pub fn append_pixels(&mut self, pixels: &[u8]) -> Result<u64, std::io::Error> {
         let offset = self.write_offset;
         self.file.seek(SeekFrom::Start(offset))?;
@@ -140,6 +138,7 @@ impl DicomBlobStore {
         Ok(offset)
     }
 
+    /// Memory-maps the store at `path`.
     pub fn path_mmap(&self) -> Result<Mmap, std::io::Error> {
         unsafe { memmap2::MmapOptions::new().map(&self.file) }
     }
@@ -151,6 +150,7 @@ pub struct DicomBlobReader {
 }
 
 impl DicomBlobReader {
+    /// Opens a DICOM blob reader at `path`.
     pub fn open(path: &Path) -> Result<Self, DicomIngestError> {
         let file = File::open(path).map_err(|e| DicomIngestError::Io(e.to_string()))?;
         let mmap = unsafe { memmap2::MmapOptions::new().map(&file) }
@@ -159,6 +159,7 @@ impl DicomBlobReader {
     }
 
     #[inline]
+    /// `DicomBlobReader::slice`.
     pub fn slice(&self, offset: usize, length: usize) -> Result<&[u8], DicomIngestError> {
         let end = offset
             .checked_add(length)
@@ -174,22 +175,22 @@ fn imaging_dir(storage_root: &Path) -> PathBuf {
     storage_root.join("Imaging")
 }
 
-fn blob_path(storage_root: &Path) -> PathBuf {
+pub(super) fn blob_path(storage_root: &Path) -> PathBuf {
     imaging_dir(storage_root).join(BLOB_FILE_NAME)
 }
 
-fn wal_path(storage_root: &Path) -> PathBuf {
+pub(super) fn wal_path(storage_root: &Path) -> PathBuf {
     storage_root.join("qualia_global.wal")
 }
 
-fn hash_series_uid(uid: &str) -> u64 {
+pub(super) fn hash_series_uid(uid: &str) -> u64 {
     if uid.is_empty() {
         return 0;
     }
     q_hash(uid)
 }
 
-fn infer_organ_hash(meta: &DicomMetadata) -> u64 {
+pub(super) fn infer_organ_hash(meta: &DicomMetadata) -> u64 {
     if let Some(organ) =
         crate::dicom::infer_organ_from_metadata(meta, &crate::dicom::default_organ_matchers())
     {
@@ -199,7 +200,7 @@ fn infer_organ_hash(meta: &DicomMetadata) -> u64 {
     }
 }
 
-fn compile_semantic_quins(
+pub(super) fn compile_semantic_quins(
     meta: &DicomMetadata,
     patient_did_hash: u64,
     series_hash: u64,
@@ -260,7 +261,7 @@ fn compile_semantic_quins(
     count
 }
 
-fn publish_series_record(record: DicomSeriesRecord) -> Result<usize, DicomIngestError> {
+pub(super) fn publish_series_record(record: DicomSeriesRecord) -> Result<usize, DicomIngestError> {
     let idx = SERIES_COUNT.load(Ordering::Acquire);
     if idx >= MAX_SERIES_RECORDS {
         return Err(DicomIngestError::RegistryFull);
@@ -277,63 +278,13 @@ fn run_split_ingest(job: IngestJob) {
     let slot_idx = ((job.job_id as usize) - 1) % MAX_SERIES_RECORDS;
     let slot = &JOB_SLOTS[slot_idx];
 
-    let result = (|| -> Result<DicomSeriesRecord, DicomIngestError> {
-        std::fs::create_dir_all(imaging_dir(&job.storage_root))
-            .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-        let mut file_bytes = Vec::new();
-        File::open(&job.source_path)
-            .and_then(|mut f| f.read_to_end(&mut file_bytes))
-            .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-        let DicomSplitPayload { meta, pixels } =
-            split_dicom_payload(&file_bytes).map_err(|e| DicomIngestError::Parse(e.to_string()))?;
-
-        let pixel_bytes = &file_bytes[pixels.offset..pixels.offset + pixels.length];
-        let mut store = DicomBlobStore::open(&blob_path(&job.storage_root))
-            .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-        let blob_offset = store
-            .append_pixels(pixel_bytes)
-            .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-        let series_hash = hash_series_uid(&meta.series_instance_uid);
-        let patient = if job.patient_did_hash != 0 {
-            job.patient_did_hash
-        } else if !meta.patient_id.is_empty() {
-            q_hash(&meta.patient_id)
-        } else {
-            q_hash("q42:anonymousPatient")
-        };
-
-        let mut quins = [NQuin::default(); 6];
-        let quin_count = compile_semantic_quins(
-            &meta,
-            patient,
-            series_hash,
-            blob_offset,
-            pixels.length as u32,
-            &mut quins,
-        );
-
-        let wal_file = wal_path(&job.storage_root);
-        if let Ok(mut wal) = WriteAheadLog::open(&wal_file) {
-            for quin in &quins[..quin_count] {
-                let _ = wal.append_mutation(quin);
-            }
-        }
-
-        let pixel_ptr_parity = quins[quin_count.saturating_sub(1)].parity;
-        Ok(DicomSeriesRecord {
-            patient_did_hash: patient,
-            series_hash,
-            blob_offset,
-            blob_length: pixels.length as u32,
-            rows: meta.rows,
-            cols: meta.columns,
-            organ_hash: infer_organ_hash(&meta),
-            pixel_pointer_quin_parity: pixel_ptr_parity,
-        })
-    })();
+    let result = super::dicom_source::split_ingest_sync_with_source(
+        &job.storage_root,
+        &job.source_path,
+        job.patient_did_hash,
+        super::dicom_source::DicomSourceBudget::default(),
+    )
+    .map(|ingested| ingested.record);
 
     match result {
         Ok(record) => {
@@ -343,7 +294,6 @@ fn run_split_ingest(job: IngestJob) {
                 .store(record.blob_offset, Ordering::Release);
             slot.blob_length
                 .store(record.blob_length, Ordering::Release);
-            let _ = publish_series_record(record);
             slot.status.store(JOB_COMPLETE, Ordering::Release);
         }
         Err(_) => {
@@ -409,70 +359,28 @@ pub fn dicom_ingest_status(job_id: u64) -> u8 {
 }
 
 /// Synchronous split-ingest for tests and CLI (runs on caller thread).
+/// Original Part-10 bytes are retained under the default 256 MiB source budget.
+/// Use `medical::dicom_source::split_ingest_sync_with_source` for explicit admission
+/// and the additive source result; `source_for_record` resolves legacy API records.
 pub fn split_ingest_sync(
     storage_root: &Path,
     source_path: &Path,
     patient_did_hash: u64,
 ) -> Result<DicomSeriesRecord, DicomIngestError> {
-    let mut file_bytes = Vec::new();
-    File::open(source_path)
-        .and_then(|mut f| f.read_to_end(&mut file_bytes))
-        .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-    let DicomSplitPayload { meta, pixels } =
-        split_dicom_payload(&file_bytes).map_err(|e| DicomIngestError::Parse(e.to_string()))?;
-
-    std::fs::create_dir_all(imaging_dir(storage_root))
-        .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-    let pixel_bytes = &file_bytes[pixels.offset..pixels.offset + pixels.length];
-    let mut store = DicomBlobStore::open(&blob_path(storage_root))
-        .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-    let blob_offset = store
-        .append_pixels(pixel_bytes)
-        .map_err(|e| DicomIngestError::Io(e.to_string()))?;
-
-    let series_hash = hash_series_uid(&meta.series_instance_uid);
-    let patient = if patient_did_hash != 0 {
-        patient_did_hash
-    } else if !meta.patient_id.is_empty() {
-        q_hash(&meta.patient_id)
-    } else {
-        q_hash("q42:anonymousPatient")
-    };
-
-    let mut quins = [NQuin::default(); 6];
-    let quin_count = compile_semantic_quins(
-        &meta,
-        patient,
-        series_hash,
-        blob_offset,
-        pixels.length as u32,
-        &mut quins,
-    );
-
-    let wal_file = wal_path(storage_root);
-    if let Ok(mut wal) = WriteAheadLog::open(&wal_file) {
-        for quin in &quins[..quin_count] {
-            let _ = wal.append_mutation(quin);
-        }
-    }
-
-    let record = DicomSeriesRecord {
-        patient_did_hash: patient,
-        series_hash,
-        blob_offset,
-        blob_length: pixels.length as u32,
-        rows: meta.rows,
-        cols: meta.columns,
-        organ_hash: infer_organ_hash(&meta),
-        pixel_pointer_quin_parity: quins[quin_count.saturating_sub(1)].parity,
-    };
-    publish_series_record(record)?;
-    Ok(record)
+    super::dicom_source::split_ingest_sync_with_source(
+        storage_root,
+        source_path,
+        patient_did_hash,
+        super::dicom_source::DicomSourceBudget::default(),
+    )
+    .map(|ingested| ingested.record)
 }
 
 #[cfg(test)]
+pub(super) static INGEST_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[cfg(test)]
+/// `DicomBlobReader::reset_ingest_registry_for_tests`.
 pub fn reset_ingest_registry_for_tests() {
     SERIES_COUNT.store(0, Ordering::Release);
 }
@@ -501,6 +409,7 @@ fn split_ingest_sync_via_worker(
     Ok(unsafe { *SERIES_RECORDS.0[idx - 1].get() })
 }
 
+/// Copies up to `out.len()` series records into `out`; returns count copied.
 pub fn series_records_snapshot(out: &mut [DicomSeriesRecord]) -> usize {
     let count = SERIES_COUNT.load(Ordering::Acquire).min(MAX_SERIES_RECORDS);
     for (i, slot) in out.iter_mut().enumerate().take(count) {
@@ -510,6 +419,7 @@ pub fn series_records_snapshot(out: &mut [DicomSeriesRecord]) -> usize {
     count
 }
 
+/// Finds the series record for `(patient_did_hash, series_hash)`.
 pub fn find_series_record(patient_did_hash: u64, series_hash: u64) -> Option<DicomSeriesRecord> {
     let count = SERIES_COUNT.load(Ordering::Acquire);
     for i in 0..count.min(MAX_SERIES_RECORDS) {
@@ -533,66 +443,5 @@ pub fn read_volume_bytes(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::dicom::{encode_blob_pointer, INLINE_TAG_BLOB_POINTER};
-    use tempfile::TempDir;
-
-    #[test]
-    fn blob_pointer_tag_encoding() {
-        let ptr = encode_blob_pointer(4096);
-        assert_eq!(ptr & INLINE_TAG_BLOB_POINTER, INLINE_TAG_BLOB_POINTER);
-        assert_eq!(crate::dicom::decode_blob_pointer(ptr), Some(4096));
-    }
-
-    /// End-to-end split ingest against gitignored private DICOM (skips if folder absent).
-    #[test]
-    fn local_private_dicom_split_ingest() {
-        let Some(root) = crate::dicom::resolve_local_dicom_dir() else {
-            eprintln!("skip: private DICOM fixtures not present");
-            return;
-        };
-        let paths = crate::dicom::collect_dicom_image_paths_under(&root, 2);
-        assert!(
-            !paths.is_empty(),
-            "no image slices under {}",
-            root.display()
-        );
-
-        reset_ingest_registry_for_tests();
-        let tmp = TempDir::new().unwrap();
-        let storage = tmp.path().to_path_buf();
-
-        for path in &paths {
-            let record =
-                split_ingest_sync(&storage, path, q_hash("did:patient:local-dicom-test")).unwrap();
-            assert!(record.blob_length > 0);
-            assert!(record.rows > 0);
-            assert!(record.cols > 0);
-            let blob = read_volume_bytes(&storage, &record).unwrap();
-            assert_eq!(blob.len(), record.blob_length as usize);
-        }
-    }
-
-    #[test]
-    fn split_ingest_writes_blob_and_registry() {
-        reset_ingest_registry_for_tests();
-        let tmp = TempDir::new().unwrap();
-        let storage = tmp.path().to_path_buf();
-        let bytes = crate::dicom::test_fixture_split_bytes();
-        let dcm_path = storage.join("slice.dcm");
-        std::fs::write(&dcm_path, &bytes).unwrap();
-
-        let split = crate::dicom::split_dicom_payload(&bytes).expect("fixture must parse");
-        assert_eq!(split.pixels.length, 4);
-
-        let record = split_ingest_sync(&storage, &dcm_path, q_hash("did:patient:test")).unwrap();
-        assert!(record.blob_length > 0);
-        assert_eq!(record.rows, 2);
-        assert_eq!(record.cols, 2);
-
-        let blob = read_volume_bytes(&storage, &record).unwrap();
-        assert_eq!(blob.len(), 4);
-        assert_eq!(blob[0], 10);
-    }
-}
+#[path = "dicom_ingest_tests.rs"]
+mod tests;

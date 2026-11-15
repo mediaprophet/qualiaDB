@@ -22,6 +22,8 @@ pub struct TransportWitness {
 }
 
 impl TransportWitness {
+    /// Builds `TransportWitness` from `local`.
+    #[cfg(any(not(target_arch = "wasm32"), test))]
     pub(crate) const fn from_local(
         class: PathClass,
         generation: u32,
@@ -38,6 +40,7 @@ impl TransportWitness {
         }
     }
 
+    /// `TransportWitness::class`.
     pub const fn class(self) -> PathClass {
         self.class
     }
@@ -55,6 +58,7 @@ pub struct PathEvidence {
 }
 
 impl PathEvidence {
+    /// `PathEvidence::remote_assertion`.
     pub const fn remote_assertion(class: PathClass, generation: u32, at_ms: u64) -> Self {
         Self {
             class,
@@ -67,6 +71,7 @@ impl PathEvidence {
         }
     }
 
+    /// Builds `PathEvidence` from `witness`.
     pub const fn from_witness(w: TransportWitness) -> Self {
         Self {
             class: w.class,
@@ -79,10 +84,12 @@ impl PathEvidence {
         }
     }
 
+    /// `PathEvidence::validated`.
     pub const fn validated(&self) -> bool {
         self.validated && matches!(self.observer, ObserverKind::LocalTransport)
     }
 
+    /// `PathEvidence::stale_generation`.
     pub const fn stale_generation(&self, live: u32) -> bool {
         self.generation != live
     }

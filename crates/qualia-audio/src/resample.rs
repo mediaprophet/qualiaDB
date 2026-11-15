@@ -13,26 +13,9 @@ pub fn resample_linear_mono(
     if src_rate == 0 || dst_rate == 0 || src.is_empty() {
         return Err(AudioError::MalformedAudio);
     }
-    if src_rate == dst_rate {
-        let n = src.len().min(out.len());
-        out[..n].copy_from_slice(&src[..n]);
-        return Ok(n);
-    }
-    let out_n = ((src.len() as u64 * dst_rate as u64) / src_rate as u64) as usize;
-    let out_n = out_n.min(out.len());
-    if out_n == 0 {
-        return Ok(0);
-    }
-    let ratio = src_rate as f64 / dst_rate as f64;
-    for i in 0..out_n {
-        let pos = i as f64 * ratio;
-        let i0 = pos.floor() as usize;
-        let frac = (pos - i0 as f64) as f32;
-        let s0 = src.get(i0).copied().unwrap_or(0.0);
-        let s1 = src.get(i0 + 1).copied().unwrap_or(s0);
-        out[i] = s0 * (1.0 - frac) + s1 * frac;
-    }
-    Ok(out_n)
+    Ok(etalon_signal::resample::resample_linear_mono_into(
+        src, src_rate, dst_rate, out,
+    ))
 }
 
 #[cfg(test)]

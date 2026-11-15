@@ -47,6 +47,7 @@ pub enum PresentationModality {
 }
 
 impl PresentationModality {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Visual => "visual",
@@ -56,6 +57,7 @@ impl PresentationModality {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "visual" => Some(Self::Visual),
@@ -87,6 +89,7 @@ pub enum PresentationKind {
 }
 
 impl PresentationKind {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::CssProperties => "css_properties",

@@ -10,6 +10,7 @@ pub const CITATION: &str = "SCORE2 working group / ESC CVD Risk Collaboration 20
 pub const APPLICABILITY: &str = "adults 40–69 years; European risk region required (not defaulted)";
 pub const UNITS: &str = "age years; total_cholesterol_mmol mmol/L; hdl_cholesterol_mmol mmol/L; systolic_bp mmHg; risk_percent percent over 10 years";
 
+/// Scores the input.
 pub fn score(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let input = Score2Input {
         age: required::need_age_years(args_v, span, 40, 69, APPLICABILITY)?,

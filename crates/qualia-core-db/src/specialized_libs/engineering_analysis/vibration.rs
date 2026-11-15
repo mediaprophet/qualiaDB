@@ -31,6 +31,7 @@ pub struct RandomVibration {
     pub fatigue_damage: f64,
 }
 impl VibrationAnalysis {
+    /// Creates a vibration analyzer with default components.
     pub fn new() -> Self {
         Self {
             free_vibration: FreeVibration::new(),
@@ -39,6 +40,7 @@ impl VibrationAnalysis {
         }
     }
 
+    /// Initializes sub-analyzers; `EngineeringError` propagates.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -181,6 +183,7 @@ impl VibrationAnalysis {
 }
 
 impl FreeVibration {
+    /// Creates a free-vibration config.
     pub fn new() -> Self {
         Self {
             natural_frequencies: Vec::new(),
@@ -191,6 +194,7 @@ impl FreeVibration {
 }
 
 impl ForcedVibration {
+    /// Creates a forced-vibration config.
     pub fn new() -> Self {
         Self {
             excitation_frequencies: Vec::new(),
@@ -201,6 +205,7 @@ impl ForcedVibration {
 }
 
 impl RandomVibration {
+    /// Creates a random-vibration config.
     pub fn new() -> Self {
         Self {
             power_spectral_density: Vec::new(),

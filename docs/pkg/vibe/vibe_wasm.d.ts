@@ -2,6 +2,52 @@
 /* eslint-disable */
 
 /**
+ * Persistent compiled cell for the browser binding.
+ *
+ * Keeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call
+ * [`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over
+ * [`decode_and_run`] when the job is "run what we already compiled."
+ */
+export class CompiledCell {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * Compile a cell expression (`= expr`) into a handle. Does not run it.
+     */
+    static compile(src: string): CompiledCell;
+    /**
+     * Human-readable disassembly of the held chunk (inspect only).
+     */
+    disassembly(): string;
+    /**
+     * Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls
+     * do not decode again.
+     */
+    static from_bytes(bytes: Uint8Array): CompiledCell;
+    /**
+     * Run the held chunk on a fresh local VM. Does not decode.
+     */
+    run(): any;
+    /**
+     * `code` size.
+     */
+    readonly code_size: number;
+    /**
+     * Constants.
+     */
+    readonly constants: number;
+    /**
+     * Functions.
+     */
+    readonly functions: number;
+    /**
+     * Top-level locals.
+     */
+    readonly top_locals: number;
+}
+
+/**
  * Apply a structural edit to a VibeScript program and project the result.
  *
  * The edit is specified as a JSON object with an `op` field and
@@ -36,10 +82,11 @@ export function apply_structural_edits(src: string, edits_json: string): any;
 export function ast_schema_json(): string;
 
 /**
- * Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).
- * Args are accepted as a JSON string for the JS boundary.
+ * Capability invoke — routes through `LocalHost` so Civics/stdlib kernels
+ * (`Econ.*`, `Statistics.ols`, `PhysicalUnits.convert`, …) work under WASM.
+ * Ungranted / unknown ids still fail closed with E300 / E100.
  */
-export function capability_invoke(id: string, _args_json: string): any;
+export function capability_invoke(id: string, args_json: string): any;
 
 /**
  * Check a cell expression.
@@ -53,13 +100,26 @@ export function check_program_src(src: string): any;
 
 /**
  * Compile a cell expression to bytecode and return chunk metadata.
+ *
+ * For repeated execution without re-decode, use [`CompiledCell::compile`] and
+ * [`CompiledCell::run`] instead. This export stays for playground inspect /
+ * size reporting.
  */
 export function compile_cell_bytecode(src: string): any;
 
 /**
- * Decode a binary bytecode chunk and run it.
+ * Decode a binary bytecode chunk and run it once.
+ *
+ * Compat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]
+ * then [`CompiledCell::run`] when the same bytes will run more than once.
  */
 export function decode_and_run(bytes: Uint8Array): any;
+
+/**
+ * Decodes tagged CBOR-LD AST bytes (Tag 4200) into a canonical representation,
+ * returning the reconstructed source code, AST hash, and provenance metadata.
+ */
+export function decode_program_cborld_wasm(bytes: Uint8Array): any;
 
 /**
  * Parse + check a module; collect up to eight diagnostics.
@@ -82,8 +142,14 @@ export function ebnf_grammar(): string;
 export function encode_cell_bytecode(src: string): any;
 
 /**
+ * Encodes a VibeScript source program into tagged CBOR-LD AST bytes (Tag 4200).
+ * Validates syntax and type consistency before serializing.
+ */
+export function encode_program_cborld_wasm(src: string): Uint8Array;
+
+/**
  * Evaluate a cell and return the result as a JSON-compatible JS value.
- * This is the main entry point for the playground.
+ * Playground Run uses `eval_program_src` (module + optional `main`), not this.
  */
 export function eval_cell_json(src: string): any;
 
@@ -98,6 +164,12 @@ export function eval_cell_src(src: string): any;
  * Runs preamble items, then `main` when present — same as `vibe eval FILE main`.
  */
 export function eval_program_src(src: string): any;
+
+/**
+ * Evaluates a Vibe program and returns the evaluated value together with a signed,
+ * reproducible execution receipt (containing source hash, AST hash, and engine metadata).
+ */
+export function eval_program_with_receipt_wasm(src: string): any;
 
 /**
  * Get the GBNF grammar (for LLM constrained decoding).
@@ -147,6 +219,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly __wbg_compiledcell_free: (a: number, b: number) => void;
     readonly apply_structural_edit: (a: number, b: number, c: number, d: number) => any;
     readonly apply_structural_edits: (a: number, b: number, c: number, d: number) => any;
     readonly ast_schema_json: () => [number, number];
@@ -154,13 +227,25 @@ export interface InitOutput {
     readonly check_cell_src: (a: number, b: number) => any;
     readonly check_program_src: (a: number, b: number) => any;
     readonly compile_cell_bytecode: (a: number, b: number) => any;
+    readonly compiledcell_code_size: (a: number) => number;
+    readonly compiledcell_compile: (a: number, b: number) => [number, number, number];
+    readonly compiledcell_constants: (a: number) => number;
+    readonly compiledcell_disassembly: (a: number) => [number, number];
+    readonly compiledcell_from_bytes: (a: number, b: number) => [number, number, number];
+    readonly compiledcell_functions: (a: number) => number;
+    readonly compiledcell_run: (a: number) => any;
+    readonly compiledcell_top_locals: (a: number) => number;
     readonly decode_and_run: (a: number, b: number) => any;
+    readonly decode_program_cborld_wasm: (a: number, b: number) => [number, number, number];
     readonly diagnose_src: (a: number, b: number) => any;
     readonly diagnostic_schema_json: () => [number, number];
     readonly ebnf_grammar: () => [number, number];
     readonly encode_cell_bytecode: (a: number, b: number) => any;
+    readonly encode_program_cborld_wasm: (a: number, b: number) => [number, number, number];
     readonly eval_cell_json: (a: number, b: number) => any;
+    readonly eval_cell_src: (a: number, b: number) => any;
     readonly eval_program_src: (a: number, b: number) => any;
+    readonly eval_program_with_receipt_wasm: (a: number, b: number) => any;
     readonly gbnf_grammar: () => [number, number];
     readonly host_version: () => [number, number];
     readonly language_version: () => [number, number];
@@ -169,13 +254,13 @@ export interface InitOutput {
     readonly project_source: (a: number, b: number) => any;
     readonly run_cell_bytecode: (a: number, b: number) => any;
     readonly run_program_bytecode: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
-    readonly eval_cell_src: (a: number, b: number) => any;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_start: () => void;
 }
 

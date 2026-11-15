@@ -305,10 +305,12 @@ pub fn score(
 
 // --- Persistence (same signed-journal pattern as the other records) ---
 
+///  record ID.
 pub fn assessment_record_id(uuid: &str) -> String {
     format!("urn:wellfair:wellbeing_assessment:{uuid}")
 }
 
+/// Builds the  envelope.
 pub fn build_assessment_envelope(
     result: &AssessmentResult,
     owner_did: &str,
@@ -364,6 +366,7 @@ pub struct InstrumentDto {
     pub disclaimer: String,
 }
 
+/// Instrument DTO.
 pub fn instrument_dto(inst: &Instrument) -> InstrumentDto {
     InstrumentDto {
         id: inst.id.to_string(),

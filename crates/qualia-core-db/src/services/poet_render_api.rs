@@ -41,6 +41,7 @@ pub struct PoetRenderResponse {
 }
 
 pub trait PoetRenderProvider: Send + Sync + 'static {
+    /// Renders a preview.
     fn render_preview(&self, request: &PoetRenderRequest) -> PoetRenderResponse;
 }
 
@@ -81,6 +82,7 @@ fn unavailable(request: &PoetRenderRequest, diagnostic: impl Into<String>) -> Po
     }
 }
 
+/// HTTP `render-preview` handler.
 pub async fn render_preview_handler(body: Bytes) -> Response {
     if body.len() > POET_PAYLOAD_LIMIT_BYTES {
         return (

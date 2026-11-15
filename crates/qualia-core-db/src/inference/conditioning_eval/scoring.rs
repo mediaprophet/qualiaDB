@@ -8,6 +8,7 @@ pub struct TaskScore {
 }
 
 impl TaskScore {
+    /// Weighted composite score.
     pub fn composite_score(&self) -> f32 {
         0.5 * self.accuracy + 0.3 * self.citation_fidelity + 0.2 * self.constraint_satisfaction
     }

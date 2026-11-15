@@ -29,6 +29,20 @@ impl StatisticalComputingLibrary {
         Ok(())
     }
 
+    /// Sample a standard normal Gaussian random variable using high-entropy PRNG.
+    pub fn sample_standard_normal(&mut self) -> f64 {
+        let t = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64;
+        let mut seed = t.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let u1 = (((seed >> 11) as f64) / ((1u64 << 53) as f64)).max(1e-15);
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let u2 = ((seed >> 11) as f64) / ((1u64 << 53) as f64);
+        (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
+    }
+
     /// Create a new dataset
     pub fn create_dataset(
         &mut self,

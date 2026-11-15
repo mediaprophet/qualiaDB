@@ -79,6 +79,7 @@ impl Default for AnatomyBodyFit {
 }
 
 impl AnatomyBodyFit {
+    /// Transforms a point by the fit.
     pub fn transform_point(&self, p: [f32; 3], gmin: [f32; 3], gmax: [f32; 3]) -> [f32; 3] {
         let span_y = (gmax[1] - gmin[1]).max(1e-6);
         let mid_x = (gmin[0] + gmax[0]) * 0.5;
@@ -137,6 +138,7 @@ impl AnatomyBodyFit {
         ]
     }
 
+    /// Applies the transform in place.
     pub fn apply_in_place(&self, positions: &mut [[f32; 3]], gmin: [f32; 3], gmax: [f32; 3]) {
         if self.identity {
             return;

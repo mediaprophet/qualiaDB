@@ -51,6 +51,7 @@ pub struct GuardianshipProposal {
 
 impl GuardianshipProposal {
     #[allow(clippy::too_many_arguments)]
+    /// Creates a new instance.
     pub fn new(
         principal_did: impl Into<String>,
         proxy_did: impl Into<String>,
@@ -110,6 +111,7 @@ pub struct GuardianshipVote {
 }
 
 impl GuardianshipVote {
+    /// Creates a new instance.
     pub fn new(
         proposal_id: impl Into<String>,
         guardian_did: impl Into<String>,
@@ -207,10 +209,12 @@ pub fn derive_status(
     }
 }
 
+///  record ID.
 pub fn proposal_record_id(uuid: &str) -> String {
     format!("urn:wellfair:guardianship_proposal:{uuid}")
 }
 
+///  record ID.
 pub fn vote_record_id(uuid: &str) -> String {
     format!("urn:wellfair:guardianship_vote:{uuid}")
 }
@@ -247,6 +251,7 @@ fn governance_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_proposal_envelope(
     proposal: &GuardianshipProposal,
     owner_did: &str,
@@ -261,6 +266,7 @@ pub fn build_proposal_envelope(
     governance_envelope(&id, owner_did, author_did, sensitivity, asserted_unix)
 }
 
+/// Builds the  envelope.
 pub fn build_vote_envelope(
     vote: &GuardianshipVote,
     owner_did: &str,
@@ -277,18 +283,22 @@ pub fn build_vote_envelope(
     )
 }
 
+///  summary.
 pub fn proposal_summary(proposal: &GuardianshipProposal) -> String {
     serde_json::to_string(proposal).unwrap_or_default()
 }
 
+///  summary.
 pub fn vote_summary(vote: &GuardianshipVote) -> String {
     serde_json::to_string(vote).unwrap_or_default()
 }
 
+///  summary.
 pub fn parse_proposal_summary(summary: &str) -> Option<GuardianshipProposal> {
     serde_json::from_str(summary).ok()
 }
 
+///  summary.
 pub fn parse_vote_summary(summary: &str) -> Option<GuardianshipVote> {
     serde_json::from_str(summary).ok()
 }

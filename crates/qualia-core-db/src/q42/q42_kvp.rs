@@ -79,6 +79,7 @@ pub struct Q42QuerySketch {
 }
 
 impl Q42KvPageHeader {
+    /// Creates a default `Q42KvPageHeader`.
     pub fn new() -> Self {
         Self {
             magic: QKVP_MAGIC,

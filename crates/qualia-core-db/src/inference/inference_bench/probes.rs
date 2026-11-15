@@ -30,17 +30,28 @@ pub fn compare_topk_decode(
             architecture: None,
         },
     );
-    set_decode_budget_override(decode_tokens);
+    let _benchmark_budget = benchmark_decode_budget_scope(decode_tokens);
     let model_id = crate::q_hash(model_path);
     let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
 
     set_gpu_topk(false);
-    let (off_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (off_text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
     set_gpu_topk(true);
-    let (on_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (on_text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
 
     set_gpu_topk(false);
-    set_decode_budget_override(0);
     crate::resident_model::clear_resident_model();
     Ok((off_text, on_text))
 }
@@ -91,7 +102,7 @@ pub fn decode_with_metrics(
             architecture: None,
         },
     );
-    set_decode_budget_override(decode_tokens);
+    let _benchmark_budget = benchmark_decode_budget_scope(decode_tokens);
     let model_id = crate::q_hash(model_path);
     if is_q42 {
         crate::resident_model::mount_resident_q42(model_id, model_path, false)?;
@@ -99,10 +110,15 @@ pub fn decode_with_metrics(
         let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
     }
     reset_phase_metrics();
-    let (text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
     let snap = phase_snapshot();
     let decode_tok_s = tok_per_s(snap.decode_tokens, snap.decode_ns);
-    set_decode_budget_override(0);
     crate::resident_model::clear_resident_model();
     Ok((text, decode_tok_s))
 }
@@ -188,6 +204,7 @@ pub fn gemm_parity_probe_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::gemm_parity_probe_blocking`.
 pub fn gemm_parity_probe_blocking(
     n_in: usize,
     n_out: usize,
@@ -275,6 +292,7 @@ pub fn gemm_parity_probe_f16_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::gemm_parity_probe_f16_blocking`.
 pub fn gemm_parity_probe_f16_blocking(
     n_in: usize,
     n_out: usize,
@@ -332,8 +350,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
         }
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
         let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let tok = if is_q42_mmap {
@@ -478,8 +495,7 @@ pub fn capture_kv_gpu_readback(
         }
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
         let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let tok = if is_q42_mmap {
@@ -585,6 +601,7 @@ pub fn capture_kv_gpu_readback(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::capture_kv_gpu_readback`.
 pub fn capture_kv_gpu_readback(
     model_path: &str,
     max_tok: usize,
@@ -716,8 +733,7 @@ pub fn spec_verify_probe_blocking(
         let mut engine = QTensorEngine::new();
         engine.load_gguf(&model_path);
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let tok = GgufTokenizer::from_gguf(&mmap);
         let idx = GgufTensorIndex::from_gguf(&mmap);
@@ -859,6 +875,7 @@ pub fn spec_verify_probe_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::spec_verify_probe_blocking`.
 pub fn spec_verify_probe_blocking(
     model_path: &str,
     prompt: &str,

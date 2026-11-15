@@ -9,38 +9,9 @@ use crate::specialized_libs::computer_vision::cv::error::CvError;
 use crate::specialized_libs::computer_vision::cv::hist::histogram_u8;
 
 /// Otsu threshold for a Gray8 histogram (returns 0 if image empty / single-tone).
+#[inline]
 pub fn otsu_threshold_from_hist(bins: &[u32; 256]) -> u8 {
-    let total: u64 = bins.iter().map(|&c| c as u64).sum();
-    if total == 0 {
-        return 0;
-    }
-    let mut sum_all = 0u64;
-    for (i, &c) in bins.iter().enumerate() {
-        sum_all += (i as u64) * c as u64;
-    }
-    let mut sum_b = 0u64;
-    let mut w_b = 0u64;
-    let mut max_var = -1.0f64;
-    let mut thresh = 0u8;
-    for t in 0..256 {
-        w_b += bins[t] as u64;
-        if w_b == 0 {
-            continue;
-        }
-        let w_f = total - w_b;
-        if w_f == 0 {
-            break;
-        }
-        sum_b += (t as u64) * bins[t] as u64;
-        let m_b = sum_b as f64 / w_b as f64;
-        let m_f = (sum_all - sum_b) as f64 / w_f as f64;
-        let var = (w_b as f64) * (w_f as f64) * (m_b - m_f) * (m_b - m_f);
-        if var > max_var {
-            max_var = var;
-            thresh = t as u8;
-        }
-    }
-    thresh
+    etalon_signal::vision::otsu_threshold_from_hist(bins, 0)
 }
 
 /// Distance-like field on binary foreground (chessboard-ish iterative 4-neigh).

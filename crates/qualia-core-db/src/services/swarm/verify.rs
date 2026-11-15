@@ -24,6 +24,7 @@ pub enum VerificationVerdict {
 }
 
 impl VerificationVerdict {
+    /// `true` when verified.
     pub fn is_verified(&self) -> bool {
         matches!(self, VerificationVerdict::Verified { .. })
     }

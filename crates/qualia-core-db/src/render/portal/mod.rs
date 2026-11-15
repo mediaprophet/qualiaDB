@@ -5,6 +5,12 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement};
 
+#[allow(unused_imports)]
+use etalon_wasm::{
+    MessageHeader, SharedArrayBufferRing, TransferableMessageTransport, TransportMode, WorkerState,
+    WorkerSteward, SAB_RING_MAGIC, SAB_RING_VERSION,
+};
+
 use crate::audio::acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, apply_binaural_to_uniform,
     drain_sonic_tokens, push_sonic_token, sonify_tensor_node, AcousticUniform,
@@ -12,12 +18,6 @@ use crate::audio::acoustic_plane::{
 use crate::audio::acoustic_sab::{
     init_acoustic_sab, push_token_to_sab, write_uniform_to_sab_with_mirror, ACOUSTIC_SAB_BYTES,
 };
-use crate::audio::audio_sidecar_link::enrich_preview_from_sidecar;
-use crate::audio::audio_spectral_sheet::parse_sidecar_header;
-use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
-use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
-use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
-use crate::audio::stft_bake::bake_tensor_stft_sidecar;
 use crate::render::acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
 use crate::render::control::{
     control_pending, pop_control_command, push_control_raw, PortalControlCommand, MENU_ACTION_HOME,
@@ -28,9 +28,18 @@ use crate::render::control::{
 };
 
 use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, OperationalMode};
+use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
+mod camera_lens;
+mod emf_preview;
+#[path = "../portal_emf_metadata.rs"]
+mod emf_metadata;
+#[path = "../portal_qac_js.rs"]
+mod qac_js;
+use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
+use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
-    camera_frame_node, cpu_pick_node_at, CameraFlyTo, Q_COLLAPSED_EPS,
+    camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
 };
 use crate::render::spectral::sigma_to_display_rgb;
 use crate::render::standpoint::{resolve_standpoint_hash, spectator_default};
@@ -40,7 +49,9 @@ use crate::render::telemetry::{
     STANDPOINT_VAULT,
 };
 use crate::sonic_token::SonicToken;
-use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, write_tensor_q_at};
+use crate::tensor::buffer_export::{
+    read_tensor_at, tensor_node_count, write_tensor_buffer, write_tensor_q_at, TENSOR_HEADER_BYTES,
+};
 use crate::{
     export_tensor_buffer_wasm, parse_cbor_ld_wasm, parse_json_wasm, sample_browser_telemetry_wasm,
     spatial_encode_wasm,
@@ -49,7 +60,12 @@ use crate::{
 #[cfg(target_arch = "wasm32")]
 use crate::render::anatomy::webgl2::AnatomyWebGl2;
 #[cfg(target_arch = "wasm32")]
-use crate::render::gpu::{particle_cap_for_mode, PortalGpu};
+use crate::render::gpu::{
+    abort_portal_gpu_init, particle_cap_for_mode, portal_gpu_canvas_claimed,
+    portal_gpu_init_aborted, reset_portal_gpu_init_flags, MeshInstanceUploadError, PortalGpu,
+};
+#[cfg(target_arch = "wasm32")]
+use crate::render::instance_culling::GpuInstanceRecord;
 
 /// Viewport display mode (geometry projection style).
 #[repr(u8)]
@@ -62,6 +78,8 @@ enum DisplayMode {
 }
 
 impl DisplayMode {
+    /// Parse a display-mode name; unknown strings fall back to
+    /// `Wireframe`.
     fn from_str(s: &str) -> Self {
         match s {
             "points" => Self::Points,
@@ -84,175 +102,38 @@ struct ProjectedNode {
     epistemic_ring: bool,
 }
 
-/// Accumulates decoded organ meshes for the whole-body anatomy path.
-/// Keeps decoding entirely in Rust so phone browsers never hold N organ copies in JS.
-struct BodyMeshAccum {
-    positions: Vec<[f32; 3]>,
-    colors: Vec<[f32; 4]>,
-    indices: Vec<u32>,
-    gmin: [f32; 3],
-    gmax: [f32; 3],
-    organs_loaded: u32,
-    organs_refused: u32,
-    total_triangles: u32,
-}
-
-impl BodyMeshAccum {
-    fn new() -> Self {
-        Self {
-            positions: Vec::new(),
-            colors: Vec::new(),
-            indices: Vec::new(),
-            gmin: [f32::INFINITY; 3],
-            gmax: [f32::NEG_INFINITY; 3],
-            organs_loaded: 0,
-            organs_refused: 0,
-            total_triangles: 0,
-        }
-    }
-
-    /// Decode one sealed `.10d` organ. One owned buffer for CRC verify only —
-    /// no JS heap intermediate, no second clone after `to_vec`.
-    fn append_organ_10d(&mut self, organ_bytes: &[u8], rgba: [f32; 4]) {
-        use crate::container_10d::{
-            self,
-            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
-        };
-
-        let mut bytes = organ_bytes.to_vec();
-        let header = match Container10dHeader::parse(&bytes) {
-            Ok(h) => h,
-            Err(_) => return,
-        };
-        if container_10d::verify_whole_file_crc32c(&mut bytes).is_err() {
-            return;
-        }
-        let descs = match container_10d::parse_section_table(&bytes, &header) {
-            Ok(d) => d,
-            Err(_) => return,
-        };
-
-        let mut mesh = None;
-        let mut has_attestation = false;
-        for desc in descs.iter() {
-            let st = match container_10d::SectionType::from_u8(desc.section_type) {
-                Some(st) => st,
-                None => continue,
-            };
-            let off = desc.byte_offset as usize;
-            let len = desc.byte_length as usize;
-            if off.saturating_add(len) > bytes.len() {
-                continue;
-            }
-            let payload = &bytes[off..off + len];
-            match st {
-                container_10d::SectionType::QuantizedMesh => {
-                    if let Ok(m) = container_10d::decode_mesh_section(payload) {
-                        mesh = Some(m);
-                    }
-                }
-                container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) =
-                        container_10d::provenance_section::decode_provenance_section(payload)
-                    {
-                        if container_10d::provenance_section::validate_provenance(&view).is_ok() {
-                            has_attestation = true;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let Some(mesh) = mesh else {
-            return;
-        };
-        let governance_refused =
-            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
-        if governance_refused {
-            self.organs_refused += 1;
-            return;
-        }
-
-        for k in 0..3 {
-            if mesh.min[k] < self.gmin[k] {
-                self.gmin[k] = mesh.min[k];
-            }
-            if mesh.max[k] > self.gmax[k] {
-                self.gmax[k] = mesh.max[k];
-            }
-        }
-        let base = self.positions.len() as u32;
-        let [r, g, b, a] = rgba;
-        for p in mesh.positions.iter() {
-            self.positions.push([p[0], p[1], p[2]]);
-            self.colors.push([r, g, b, a]);
-        }
-        for t in mesh.triangles.iter() {
-            self.indices.push(base + t[0]);
-            self.indices.push(base + t[1]);
-            self.indices.push(base + t[2]);
-        }
-        self.total_triangles += mesh.triangles.len() as u32;
-        self.organs_loaded += 1;
-    }
-
-    /// Apply a person-authored fit, then recompute bounds so orbit framing stays honest.
-    fn apply_body_fit(&mut self, fit: &crate::render::body_fit::AnatomyBodyFit) {
-        if fit.identity || self.positions.is_empty() {
-            return;
-        }
-        fit.apply_in_place(&mut self.positions, self.gmin, self.gmax);
-        let mut gmin = [f32::INFINITY; 3];
-        let mut gmax = [f32::NEG_INFINITY; 3];
-        for p in &self.positions {
-            for k in 0..3 {
-                if p[k] < gmin[k] {
-                    gmin[k] = p[k];
-                }
-                if p[k] > gmax[k] {
-                    gmax[k] = p[k];
-                }
-            }
-        }
-        self.gmin = gmin;
-        self.gmax = gmax;
-    }
-
-    /// One global centre + scale so the body fits ~1.7 of the orbit frame.
-    fn normalise_to_orbit_frame(&mut self) {
-        if self.organs_loaded == 0 {
-            return;
-        }
-        let gc = [
-            (self.gmin[0] + self.gmax[0]) * 0.5,
-            (self.gmin[1] + self.gmax[1]) * 0.5,
-            (self.gmin[2] + self.gmax[2]) * 0.5,
-        ];
-        let gspan = (self.gmax[0] - self.gmin[0])
-            .max(self.gmax[1] - self.gmin[1])
-            .max(self.gmax[2] - self.gmin[2])
-            .max(1e-6);
-        let s = 1.7 / gspan;
-        for p in self.positions.iter_mut() {
-            p[0] = (p[0] - gc[0]) * s;
-            p[1] = (p[1] - gc[1]) * s;
-            p[2] = (p[2] - gc[2]) * s;
-        }
-    }
-}
+mod body_scene;
+mod scene_animation;
+mod scene_mesh;
+mod source_frame;
+pub(crate) use scene_mesh::BodyMeshAccum;
+#[allow(unused_imports)]
+pub(crate) use scene_mesh::SceneMeshAccum;
+mod capabilities;
+pub use capabilities::probe_portal_graphics;
+mod exposure;
+mod graphics;
+mod part_vertices;
+use graphics::PortalGraphicsState;
+mod recovery;
+mod texture_upload;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BodyRendererBackend {
     None,
+    /// Canvas2d projection of the loaded mesh. Used when no WebGPU/WebGL2
+    /// adapter is bound, so a tick still draws the part.
+    CpuCanvas,
     WebGpu,
     WebGl2,
 }
 
 impl BodyRendererBackend {
+    /// Backend name for receipts/diagnostics.
     fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
+            Self::CpuCanvas => "canvas2d",
             Self::WebGpu => "webgpu",
             Self::WebGl2 => "webgl2",
         }
@@ -267,11 +148,16 @@ pub struct QualiaPortal {
     tier: u8,
     time: f64,
     last_tensor: Option<Vec<u8>>,
+    last_emf: RetainedEmf,
+    last_qac: Option<crate::render::portal_qac::RetainedQac>,
+    /// Tensor node data remains pickable when its visual projection is hidden.
+    tensor_projection_enabled: bool,
     telemetry: SystemTelemetry,
     display_mode: DisplayMode,
     camera: CameraState,
     camera_fly: CameraFlyTo,
     selected_node: Option<u32>,
+    selected_semantic_id: Option<u64>,
     #[cfg(target_arch = "wasm32")]
     pending_gpu_pick: bool,
     session_nonce: u64,
@@ -282,32 +168,70 @@ pub struct QualiaPortal {
     anatomy_webgl2: Option<AnatomyWebGl2>,
     #[cfg(target_arch = "wasm32")]
     gpu_init_failed: bool,
+    #[cfg(target_arch = "wasm32")]
+    graphics_recovery_requested: bool,
+    #[cfg(target_arch = "wasm32")]
+    graphics_recovery_pending: bool,
+    #[cfg(target_arch = "wasm32")]
+    graphics_recovery_canvas_only: bool,
     body_renderer: BodyRendererBackend,
     body_vertex_count: u32,
     body_index_count: u32,
     body_frames_presented: u32,
+    /// Verified HMC mesh identity and upload generation for browser playback.
+    hmc_mesh_residency: HmcMeshResidency,
     acoustic_enabled: bool,
     acoustic_pulse_accum: f32,
-    /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
-    acoustic_sidecar: Option<Vec<u8>>,
-    acoustic_sidecar_frame: u32,
     /// Person-authored body fit (JSON-compatible with wellfare `BodyFit`).
     body_fit: crate::render::body_fit::AnatomyBodyFit,
+    /// When true, uploaded meshes keep authored coordinates (town / world)
+    /// instead of being recentred into the orbit frame.
+    preserve_authored_frame: bool,
+    /// Decimated mesh for the proof canvas tick. Kept even when WebGPU owns
+    /// the draw, so a failed present can still paint. Not the lit look.
+    cpu_body: Option<CpuBodyMesh>,
+    scene_animation: scene_animation::SceneAnimation,
+    /// Last `set_sky_preset` value, applied when a GPU is adopted later.
+    sky_preset: Option<u32>,
+    /// Last atmosphere profile, preserved when callers override the sky clear colour.
+    atmosphere_preset: u32,
+    /// Manual HDR exposure compensation, preserved across device recovery.
+    hdr_exposure_ev: f32,
+    /// Linear Rec.709 temperature/tint balance controls in stops.
+    white_balance_ev: [f32; 2],
+    /// Clear colour shared by WebGPU and WebGL2. Daylight, not a black sky.
+    sky_clear: [f32; 4],
+    /// Failed presents since the mesh was uploaded. A few misses are not
+    /// adapter death; proof is only the failover after they stick.
+    present_misses: u8,
+    graphics: PortalGraphicsState,
+    etalon_steward: WorkerSteward,
+    rdf_holograph_w_angle: f32,
+    rdf_scene: Box<crate::render::rdf_holograph::RdfHolographScene>,
 }
 
 #[wasm_bindgen]
 impl QualiaPortal {
-    #[wasm_bindgen(constructor)]
-    pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
-        let tier = detect_tier();
+    /// Construct the portal on `canvas`: detect the device tier, mint a
+    /// session nonce + spectator standpoint, sample ambient telemetry,
+    /// and paint the first frame.
+    fn build_base_portal(tier: u8) -> QualiaPortal {
         let session_nonce = crate::render::standpoint::generate_session_nonce();
         let standpoint = spectator_default(session_nonce);
-        let mut portal = QualiaPortal {
+        let cross_origin_isolated_detected = web_sys::window()
+            .and_then(|w| Reflect::get(&w, &JsValue::from_str("crossOriginIsolated")).ok())
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let etalon_steward = WorkerSteward::new(cross_origin_isolated_detected);
+        QualiaPortal {
             description: "Qualia portal initialized".to_string(),
             last_parsed: None,
             tier,
             time: 0.0,
             last_tensor: None,
+            last_emf: RetainedEmf::default(),
+            last_qac: None,
+            tensor_projection_enabled: true,
             telemetry: SystemTelemetry::from_samples(
                 &crate::gpu_context::sample_ambient_telemetry(),
             ),
@@ -315,6 +239,7 @@ impl QualiaPortal {
             camera: CameraState::default(),
             camera_fly: CameraFlyTo::default(),
             selected_node: None,
+            selected_semantic_id: None,
             #[cfg(target_arch = "wasm32")]
             pending_gpu_pick: false,
             session_nonce,
@@ -325,22 +250,92 @@ impl QualiaPortal {
             anatomy_webgl2: None,
             #[cfg(target_arch = "wasm32")]
             gpu_init_failed: false,
+            #[cfg(target_arch = "wasm32")]
+            graphics_recovery_requested: false,
+            #[cfg(target_arch = "wasm32")]
+            graphics_recovery_pending: false,
+            #[cfg(target_arch = "wasm32")]
+            graphics_recovery_canvas_only: false,
             body_renderer: BodyRendererBackend::None,
             body_vertex_count: 0,
             body_index_count: 0,
             body_frames_presented: 0,
+            hmc_mesh_residency: HmcMeshResidency::default(),
             acoustic_enabled: true,
             acoustic_pulse_accum: 0.0,
-            acoustic_sidecar: None,
-            acoustic_sidecar_frame: 0,
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
-        };
+            preserve_authored_frame: false,
+            cpu_body: None,
+            scene_animation: scene_animation::SceneAnimation::default(),
+            sky_preset: None,
+            atmosphere_preset: 0,
+            hdr_exposure_ev: crate::render::output::DEFAULT_HDR_EXPOSURE_EV,
+            white_balance_ev: [0.0; 2],
+            sky_clear: [0.55, 0.74, 0.92, 1.0],
+            present_misses: 0,
+            graphics: PortalGraphicsState::default(),
+            etalon_steward,
+            rdf_holograph_w_angle: 0.0,
+            rdf_scene: crate::render::rdf_holograph::RdfHolographScene::empty_box(),
+        }
+    }
+
+    #[wasm_bindgen(constructor)]
+    pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
+        let mut portal = Self::build_base_portal(detect_tier());
         portal.paint_frame(&canvas)?;
         Ok(portal)
     }
 
+    /// Lightweight paint-free QAC container reader: no DOM canvas, WebGPU, or paint loop.
+    pub fn new_qac_reader() -> QualiaPortal {
+        Self::build_base_portal(0)
+    }
+
+    /// Device tier — 0 = Canvas2D, 1 = WebGPU-capable, 2 = phenomenal
+    /// viewport (tensor upload confirmed).
     pub fn tier(&self) -> u8 {
         self.tier
+    }
+
+    /// True when the browser host must replace the context-bound canvas and
+    /// recreate a renderer before ticking this portal again.
+    #[cfg(target_arch = "wasm32")]
+    pub fn graphics_recovery_requested(&self) -> bool {
+        self.graphics_recovery_requested
+    }
+
+    /// The last hardware backend refused even reduced geometry. The host must
+    /// replace the context-bound canvas and settle on Canvas2D for this scene.
+    #[cfg(target_arch = "wasm32")]
+    pub fn graphics_recovery_canvas_only(&self) -> bool {
+        self.graphics_recovery_canvas_only
+    }
+
+    /// Complete a host recovery attempt. The host reports `webgpu`, `webgl2`,
+    /// or `canvas2d`; recovered GPU backends re-upload the retained reduced
+    /// mesh and full semantic tensor on the next frame.
+    #[cfg(target_arch = "wasm32")]
+    pub fn complete_graphics_recovery(&mut self, backend: &str) {
+        self.graphics_recovery_requested = false;
+        self.graphics_recovery_pending = matches!(backend, "webgpu" | "webgl2");
+        if backend == "canvas2d" || backend == "unavailable" {
+            self.graphics_recovery_canvas_only = false;
+        }
+        self.gpu_init_failed = backend != "webgpu";
+        self.last_emf.invalidate(backend == "webgpu");
+        self.present_misses = 0;
+        if backend == "canvas2d" || backend == "unavailable" {
+            self.tier = 0;
+            self.body_renderer = BodyRendererBackend::CpuCanvas;
+            self.etalon_steward.notify_device_lost();
+        } else {
+            if let Some(new_gen) = self.etalon_steward.generation().checked_add(1) {
+                let _ = self.etalon_steward.recover(new_gen);
+            } else {
+                self.etalon_steward.terminate();
+            }
+        }
     }
 
     /// Push a packed Interface Control Plane command (`PortalControlCommand` raw `u64`).
@@ -358,8 +353,28 @@ impl QualiaPortal {
         self.drain_and_apply_control(max)
     }
 
+    /// VRAM-ledger operational mode as its `u8` code
+    /// (0 = Full, 1 = Eco, 2 = Reserve).
     pub fn operational_mode(&self) -> u8 {
         global_vram_ledger().mode() as u8
+    }
+
+    /// Operational transport mode for dedicated WebWorker IPC.
+    pub fn etalon_transport_mode(&self) -> String {
+        match self.etalon_steward.transport_mode {
+            TransportMode::SharedArrayBufferRing => "SharedArrayBuffer".to_string(),
+            TransportMode::TransferableArrayBuffer => "TransferableMessage".to_string(),
+        }
+    }
+
+    /// Dedicated GPU worker steward lifecycle state (0=Initializing, 1=Ready, 2=Running, 3=Suspended, 4=Terminated).
+    pub fn etalon_worker_state(&self) -> u8 {
+        self.etalon_steward.state() as u8
+    }
+
+    /// Dedicated GPU worker recovery session generation.
+    pub fn etalon_session_generation(&self) -> u32 {
+        self.etalon_steward.generation()
     }
 
     /// Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
@@ -379,6 +394,8 @@ impl QualiaPortal {
         self.acoustic_enabled = enabled;
     }
 
+    /// Whether the U3 AcousticPlane is effectively on — user flag AND
+    /// the operational-mode gate (off in Reserve).
     pub fn acoustic_enabled(&self) -> bool {
         self.acoustic_enabled && acoustic_enabled_for_mode(global_vram_ledger().mode())
     }
@@ -396,6 +413,7 @@ impl QualiaPortal {
         Ok(arr.into())
     }
 
+    /// Number of sonic tokens currently queued in the SPSC ring.
     pub fn sonic_token_pending(&self) -> u32 {
         crate::audio::acoustic_plane::sonic_token_ring().len() as u32
     }
@@ -415,6 +433,8 @@ impl QualiaPortal {
         ))
     }
 
+    /// Push a raw `u64` sonic token onto the acoustic ring; `false`
+    /// when the ring is full.
     pub fn push_sonic_token_raw(&self, raw: u64) -> bool {
         push_sonic_token(SonicToken { raw })
     }
@@ -458,50 +478,8 @@ impl QualiaPortal {
         Ok(())
     }
 
-    /// Cold-bake STFT sidecar for selected tensor node; pins bytes for hot frame reads.
-    pub fn bake_stft_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
-        self.bake_acoustic_sidecar_demo(frames, false)
-    }
-
-    /// Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
-    pub fn bake_cqt_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
-        self.bake_acoustic_sidecar_demo(frames, true)
-    }
-
-    fn bake_acoustic_sidecar_demo(
-        &mut self,
-        frames: u32,
-        use_cqt: bool,
-    ) -> Result<js_sys::Uint8Array, JsValue> {
-        let node = self.selected_node.unwrap_or(0);
-        let tensor = self
-            .last_tensor
-            .as_ref()
-            .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
-        let t = read_tensor_at(tensor, node as usize).map_err(|e| JsValue::from_str(e))?;
-        let preview = preview_bins_from_tensor(&t);
-        let frame_count = frames.clamp(1, 128);
-        let need = std::mem::size_of::<
-            crate::audio::audio_spectral_sheet::AudioSpectralSidecarHeader,
-        >() + SPECTRAL_PREVIEW_BINS * frame_count as usize * 4;
-        let mut buf = vec![0u8; need];
-        if use_cqt {
-            bake_cqt_sidecar_from_preview(&preview, frame_count, 48_000, &mut buf)
-                .map_err(|_| JsValue::from_str("cqt bake failed"))?;
-        } else {
-            bake_tensor_stft_sidecar(&preview, frame_count, &mut buf)
-                .map_err(|_| JsValue::from_str("stft bake failed"))?;
-        }
-        self.acoustic_sidecar = Some(buf.clone());
-        self.acoustic_sidecar_frame = 0;
-        Ok(js_sys::Uint8Array::from(&buf[..]))
-    }
-
-    /// Whether a baked STFT/CQT sidecar is pinned on the portal.
-    pub fn acoustic_sidecar_pinned(&self) -> bool {
-        self.acoustic_sidecar.is_some()
-    }
-
+    /// Resize the canvas backing store (and the GPU surface when
+    /// active), then repaint.
     pub fn resize(
         &mut self,
         canvas: HtmlCanvasElement,
@@ -512,12 +490,20 @@ impl QualiaPortal {
         canvas.set_height(height);
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
-            gpu.resize(width, height);
+            gpu.resize(width, height)
+                .map_err(|error| JsValue::from_str(&error))?;
         }
         self.paint_frame(&canvas)
     }
 
+    /// Per-frame advance: device-loss check, scene animation, ICP
+    /// control drain (≤16), time/telemetry/acoustic updates, camera-fly
+    /// interpolation, then paint.
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
+        if self.note_device_loss() {
+            self.etalon_steward.notify_device_lost();
+        }
+        self.tick_scene_animation(dt_ms)?;
         self.drain_and_apply_control(16);
         self.time += dt_ms as f64 * 0.001;
         self.telemetry.refresh_from_ledger();
@@ -540,22 +526,25 @@ impl QualiaPortal {
         canvas_w: u32,
         canvas_h: u32,
     ) -> Result<(), JsValue> {
+        // A new pick must not expose the preceding result while GPU readback
+        // is pending or after a miss.
+        self.selected_node = None;
+        self.selected_semantic_id = None;
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
-            if gpu.has_tensor_buffer() {
-                gpu.queue_pick(x, y);
-                self.pending_gpu_pick = true;
-                return Ok(());
-            }
+            gpu.queue_pick(x, y);
+            self.pending_gpu_pick = true;
+            return Ok(());
         }
         if let Some(ref tensor) = self.last_tensor {
-            if let Some(idx) = cpu_pick_node_at(
+            if let Some(idx) = cpu_pick_node_at_camera(
                 tensor,
-                canvas_w.max(1) as f64,
-                canvas_h.max(1) as f64,
+                canvas_w.max(1),
+                canvas_h.max(1),
                 x as f64,
                 y as f64,
-                self.camera.yaw,
+                self.time as f32,
+                self.camera,
                 &self.standpoint,
             ) {
                 self.selected_node = Some(idx);
@@ -569,8 +558,111 @@ impl QualiaPortal {
         self.selected_node_index()
     }
 
+    /// Selected tensor-node index, or `-1` while none/pick pending.
     pub fn selected_node_index(&self) -> i32 {
         self.selected_node.map(|n| n as i32).unwrap_or(-1)
+    }
+
+    /// Spotlight a holographic resource (`-1` recedes the query light).
+    pub fn select_holograph_index(&mut self, index: i32) {
+        if index < 0 || (index as usize) >= self.rdf_scene.node_count() {
+            self.selected_node = None;
+            return;
+        }
+        let kind = self.rdf_scene.labels().get(index as usize).map(|l| l.kind);
+        if matches!(kind, Some("predicate" | "plane")) {
+            self.selected_node = None;
+            return;
+        }
+        self.selected_node = Some(index as u32);
+    }
+
+    /// Pick the nearest resource crystal at canvas pixels. `-1` on miss.
+    pub fn pick_holograph_at(&mut self, x: f32, y: f32, canvas_w: f32, canvas_h: f32) -> i32 {
+        let aspect = canvas_w / canvas_h.max(1.0);
+        let vp = crate::render::camera::orbit_view_projection_with_near(
+            self.camera.yaw,
+            self.camera.pitch,
+            self.camera.zoom,
+            self.camera.target,
+            aspect,
+            self.camera.near_plane,
+        );
+        let idx = crate::render::rdf_holograph::pick_resource_at(
+            &self.rdf_scene,
+            &vp,
+            self.rdf_holograph_w_angle,
+            x,
+            y,
+            canvas_w,
+            canvas_h,
+        );
+        self.select_holograph_index(idx);
+        idx
+    }
+
+    /// Screen-space name chips for in-field labels. Ingest/JS receipt may allocate.
+    pub fn holograph_label_overlays(
+        &self,
+        canvas_w: f32,
+        canvas_h: f32,
+    ) -> Result<JsValue, JsValue> {
+        let aspect = canvas_w / canvas_h.max(1.0);
+        let vp = crate::render::camera::orbit_view_projection_with_near(
+            self.camera.yaw,
+            self.camera.pitch,
+            self.camera.zoom,
+            self.camera.target,
+            aspect,
+            self.camera.near_plane,
+        );
+        let mut chips = [crate::render::rdf_holograph::HolographOverlay::default(); 256];
+        let n = crate::render::rdf_holograph::overlay_chips_into(
+            &self.rdf_scene,
+            &vp,
+            self.rdf_holograph_w_angle,
+            canvas_w,
+            canvas_h,
+            &mut chips,
+        );
+        let labels = Array::new();
+        for chip in chips.iter().take(n) {
+            let obj = js_sys::Object::new();
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("index"),
+                &JsValue::from_f64(chip.index as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("name"),
+                &JsValue::from_str(chip.name_str()),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str(chip.kind),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("x"),
+                &JsValue::from_f64(chip.sx as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("y"),
+                &JsValue::from_f64(chip.sy as f64),
+            )?;
+            labels.push(&obj);
+        }
+        Ok(labels.into())
+    }
+
+    /// Selected mesh semantic identity as hexadecimal, or an empty string while absent/pending.
+    pub fn selected_semantic_id(&self) -> String {
+        self.selected_semantic_id
+            .map(|identity| format!("{identity:016x}"))
+            .unwrap_or_default()
     }
 
     /// Frame the camera on a tensor node (`Maps_to_node`).
@@ -581,6 +673,7 @@ impl QualiaPortal {
             .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
         let t = read_tensor_at(tensor, index as usize).map_err(|e| JsValue::from_str(e))?;
         self.selected_node = Some(index);
+        self.selected_semantic_id = None;
         let target = camera_frame_node([t.x, t.y, t.z]);
         self.camera_fly = CameraFlyTo::start_toward(target);
         Ok(())
@@ -613,19 +706,23 @@ impl QualiaPortal {
         Ok(self.poll_selected_node())
     }
 
+    /// Apply a flat `f32` telemetry sample block to the HUD model.
     pub fn set_telemetry(&mut self, floats: &[f32]) -> Result<(), JsValue> {
         self.telemetry.apply_floats(floats);
         Ok(())
     }
 
+    /// Set the display mode by name (`DisplayMode::from_str`;
+    /// unrecognised names fall back to its default).
     pub fn set_display_mode(&mut self, mode: &str) -> Result<(), JsValue> {
         self.display_mode = DisplayMode::from_str(mode);
         Ok(())
     }
 
-    /// Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
-    /// (a plain mesh/anatomy view has no use for the decorative random cloud); a Tensor10D upload
-    /// turns it on automatically because the particles then encode epistemic nodes.
+    /// Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by
+    /// default and opt-in: a plain mesh/anatomy view (or a game scene) keeps it off, and a
+    /// Tensor10D upload never forces it on. Hosts that want the tensor-node particle view
+    /// enable it explicitly.
     pub fn set_ambient_enabled(&mut self, on: bool) {
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
@@ -635,9 +732,29 @@ impl QualiaPortal {
         let _ = on;
     }
 
+    /// Show or hide semantic tensor nodes while retaining uploaded data for picking.
+    pub fn set_tensor_projection_enabled(&mut self, on: bool) {
+        self.tensor_projection_enabled = on;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_tensor_projection_enabled(on);
+        }
+    }
+
     /// Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) -> Result<(), JsValue> {
-        self.camera = CameraState { yaw, pitch, zoom }.clamped();
+        let current_target = self.camera.target;
+        self.camera = CameraState {
+            near_plane: self.camera.near_plane,
+            yaw,
+            pitch,
+            zoom,
+            target: current_target,
+            sun_dir: self.camera.sun_dir,
+            sun_intensity: self.camera.sun_intensity,
+            ambient_intensity: self.camera.ambient_intensity,
+        }
+        .clamped();
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
             gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
@@ -645,16 +762,277 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Camera orbit yaw (radians).
     pub fn camera_yaw(&self) -> f32 {
         self.camera.yaw
     }
 
+    /// Camera orbit pitch (radians).
     pub fn camera_pitch(&self) -> f32 {
         self.camera.pitch
     }
 
+    /// Camera zoom (eye distance in world units).
     pub fn camera_zoom(&self) -> f32 {
         self.camera.zoom
+    }
+
+    /// RTS camera pan IPC (moves look-at center point in world space).
+    pub fn set_camera_pan(
+        &mut self,
+        target_x: f32,
+        target_y: f32,
+        target_z: f32,
+    ) -> Result<(), JsValue> {
+        self.camera.target = [target_x, target_y, target_z];
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_camera_pan(target_x, target_y, target_z);
+        }
+        Ok(())
+    }
+
+    /// Full camera placement (yaw, pitch, zoom, and world-space target center).
+    pub fn set_camera_target(
+        &mut self,
+        yaw: f32,
+        pitch: f32,
+        zoom: f32,
+        target_x: f32,
+        target_y: f32,
+        target_z: f32,
+    ) -> Result<(), JsValue> {
+        self.camera = CameraState {
+            yaw,
+            pitch,
+            zoom,
+            target: [target_x, target_y, target_z],
+            near_plane: self.camera.near_plane,
+            sun_dir: self.camera.sun_dir,
+            sun_intensity: self.camera.sun_intensity,
+            ambient_intensity: self.camera.ambient_intensity,
+        }
+        .clamped();
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_camera_target(yaw, pitch, zoom, target_x, target_y, target_z);
+        }
+        Ok(())
+    }
+
+    /// X of the camera look-at target.
+    pub fn camera_target_x(&self) -> f32 {
+        self.camera.target[0]
+    }
+
+    /// Y of the camera look-at target.
+    pub fn camera_target_y(&self) -> f32 {
+        self.camera.target[1]
+    }
+
+    /// Z of the camera look-at target.
+    pub fn camera_target_z(&self) -> f32 {
+        self.camera.target[2]
+    }
+
+    /// Configure viewport background / sky clear color (r, g, b, a in 0.0..1.0).
+    pub fn set_clear_color(&mut self, r: f64, g: f64, b: f64, a: f64) {
+        self.sky_preset = None;
+        self.sky_clear = [r as f32, g as f32, b as f32, a as f32];
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_clear_color(r, g, b, a);
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.set_clear(self.sky_clear);
+        }
+    }
+
+    /// Configure directional sun lighting (direction vector, sun intensity, and ambient intensity).
+    pub fn set_lighting(
+        &mut self,
+        sun_x: f32,
+        sun_y: f32,
+        sun_z: f32,
+        sun_intensity: f32,
+        ambient_intensity: f32,
+    ) {
+        self.camera.sun_dir = [sun_x, sun_y, sun_z];
+        self.camera.sun_intensity = sun_intensity;
+        self.camera.ambient_intensity = ambient_intensity;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_lighting(sun_x, sun_y, sun_z, sun_intensity, ambient_intensity);
+        }
+    }
+
+    /// Enable the budgeted half-resolution screen-space AO pass when available.
+    pub fn set_screen_space_ao_enabled(&mut self, enabled: bool) {
+        self.graphics
+            .set_screen_space_ao_enabled(enabled, self.gpu.as_mut());
+    }
+
+    /// Tune SSAO kernel parameters (world-space radius, strength,
+    /// depth bias); forwarded to the GPU when active.
+    pub fn set_screen_space_ao(&mut self, radius: f32, strength: f32, bias: f32) {
+        self.graphics
+            .set_screen_space_ao(radius, strength, bias, self.gpu.as_mut());
+    }
+
+    /// Set the SSAO per-pixel sample count.
+    pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
+        self.graphics
+            .set_screen_space_ao_sample_count(samples, self.gpu.as_mut());
+    }
+
+    /// Toggle auto temporal smoothing; a change invalidates the
+    /// temporal history so the first frame isn't blended from stale data.
+    pub fn set_auto_temporal_enabled(&mut self, enabled: bool) {
+        if self.graphics.set_auto_temporal_enabled(enabled) {
+            self.graphics.invalidate_temporal_history(self.gpu.as_mut());
+        }
+    }
+
+    /// Drop accumulated temporal history (e.g. after a camera cut or
+    /// scene swap) so the next frame isn't ghosted.
+    pub fn invalidate_temporal_history(&mut self) {
+        self.graphics.invalidate_temporal_history(self.gpu.as_mut());
+    }
+
+    /// Toggle the shadow pass on the GPU renderer when present.
+    pub fn set_shadows_enabled(&mut self, enabled: bool) {
+        self.graphics
+            .set_shadows_enabled(enabled, self.gpu.as_mut());
+    }
+
+    /// Whether the active backend supports the shadow pass.
+    pub fn shadows_available(&self) -> bool {
+        PortalGraphicsState::shadows_available(self.gpu.as_ref())
+    }
+
+    /// Whether SSAO is currently enabled on the GPU backend
+    /// (`false` without an active GPU).
+    pub fn screen_space_ao_enabled(&self) -> bool {
+        self.gpu
+            .as_ref()
+            .map(PortalGpu::screen_space_ao_enabled)
+            .unwrap_or(false)
+    }
+
+    /// Upload packed IBL probe coefficients plus a fallback radiance
+    /// colour; `false`/error when the GPU backend can't take them.
+    pub fn set_environment_probe_data(
+        &mut self,
+        packed_probes: &[f32],
+        fallback_radiance: &[f32],
+    ) -> Result<bool, JsValue> {
+        self.graphics.set_environment_probe_data(
+            packed_probes,
+            fallback_radiance,
+            self.gpu.as_mut(),
+        )
+    }
+
+    /// Replace the water surface mesh using world-space XYZ triples and triangle indices.
+    pub fn set_water_geometry(
+        &mut self,
+        positions_xyz: &[f32],
+        indices: &[u32],
+    ) -> Result<bool, JsValue> {
+        self.graphics
+            .set_water_geometry(positions_xyz, indices, self.gpu.as_mut())
+    }
+
+    /// Set water-surface appearance — RGBA colour, wave amplitude and
+    /// frequency, and mesh `quality` tier.
+    pub fn set_water_surface(
+        &mut self,
+        r: f32,
+        g: f32,
+        b: f32,
+        alpha: f32,
+        wave_amplitude: f32,
+        wave_frequency: f32,
+        quality: u32,
+    ) {
+        self.graphics.set_water_surface(
+            [r, g, b, alpha, wave_amplitude, wave_frequency],
+            quality,
+            self.gpu.as_mut(),
+        );
+    }
+
+    /// Temporal-graphics execution receipt for honesty reporting.
+    pub fn temporal_graphics_receipt(&self) -> JsValue {
+        self.graphics.temporal_receipt(self.gpu.as_ref())
+    }
+
+    /// Whether the backend supports the SSAO pass at all.
+    pub fn screen_space_ao_available(&self) -> bool {
+        PortalGraphicsState::screen_space_ao_available(self.gpu.as_ref())
+    }
+
+    /// SSAO target width (0 without an active GPU pass).
+    pub fn screen_space_ao_width(&self) -> u32 {
+        self.gpu
+            .as_ref()
+            .and_then(PortalGpu::screen_space_ao_resolution)
+            .map(|extent| extent.0)
+            .unwrap_or(0)
+    }
+
+    /// SSAO target height (0 without an active GPU pass).
+    pub fn screen_space_ao_height(&self) -> u32 {
+        self.gpu
+            .as_ref()
+            .and_then(PortalGpu::screen_space_ao_resolution)
+            .map(|extent| extent.1)
+            .unwrap_or(0)
+    }
+    /// Apply an authored atmospheric sky preset:
+    /// - 0: Cyber-Dark / Deep Void
+    /// - 1: Daylight (clear sky, high warm sun, balanced ambient)
+    /// - 2: Sunset / Golden Hour (warm orange sky, low golden sun)
+    /// - 3: Night / Moonlight (dark indigo sky, cold moonlight)
+    /// Keep the next `load_body_*` upload in authored coordinates.
+    /// Anatomy stays false (orbit frame). A town scene sets this so the
+    /// camera and the mesh share one frame.
+    pub fn set_preserve_authored_frame(&mut self, on: bool) {
+        if self.preserve_authored_frame != on {
+            self.hmc_mesh_residency.clear();
+        }
+        self.preserve_authored_frame = on;
+    }
+
+    /// Select an authored sky preset index
+    /// (0 = deep void, 1 = daylight, 2 = sunset, 3 = moonlight).
+    pub fn set_sky_preset(&mut self, preset: u32) {
+        self.sky_preset = Some(preset);
+        self.atmosphere_preset = preset;
+        let profile = AtmospherePreset::from_id(preset);
+        self.camera.sun_dir = profile.sun_direction;
+        self.camera.sun_intensity = profile.sun_radiance;
+        self.camera.ambient_intensity = profile.ambient_irradiance;
+        self.sky_clear = profile.clear_rgba;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_sky_preset(preset);
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.set_sky_preset(preset);
+        }
+    }
+
+    /// Directional (sun) light intensity.
+    pub fn sun_intensity(&self) -> f32 {
+        self.camera.sun_intensity
+    }
+
+    /// Ambient light intensity.
+    pub fn ambient_intensity(&self) -> f32 {
+        self.camera.ambient_intensity
     }
 
     /// Human-Centric observer standpoint IPC (independent of camera lens).
@@ -703,22 +1081,28 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Current standpoint class (observer role code).
     pub fn standpoint_class(&self) -> u32 {
         self.standpoint.standpoint_class
     }
 
+    /// Standpoint epistemic-quality scalar ∈ [0, 1].
     pub fn epistemic_q(&self) -> f32 {
         self.standpoint.epistemic_q
     }
 
+    /// Standpoint temporal-slice position ∈ [0, 1].
     pub fn t_slice(&self) -> f32 {
         self.standpoint.t_slice
     }
 
+    /// Standpoint temporal-window width ∈ (0, 1].
     pub fn t_window(&self) -> f32 {
         self.standpoint.t_window
     }
 
+    /// Replace the standpoint temporal slice/window and push it to the
+    /// GPU when active.
     pub fn set_temporal_slice(&mut self, t_slice: f32, t_window: f32) {
         self.standpoint = self.standpoint.with_temporal(t_slice, t_window);
         #[cfg(target_arch = "wasm32")]
@@ -727,6 +1111,8 @@ impl QualiaPortal {
         }
     }
 
+    /// Spatially encode a JSON scene, upload the resulting tensor
+    /// buffer, and return the parsed scene record.
     pub fn encode_geometry(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = spatial_encode_wasm(json)?;
         let buf_js = export_tensor_buffer_wasm(json)?;
@@ -743,9 +1129,11 @@ impl QualiaPortal {
     /// — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
     /// empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
     pub fn upload_mesh_asset(&mut self, bytes: &[u8], hint: &str) -> Result<u32, JsValue> {
+        self.hmc_mesh_residency.clear();
         let hint_opt = if hint.is_empty() { None } else { Some(hint) };
-        let mesh = crate::render::assets::import_asset(bytes, hint_opt)
+        let imported = crate::render::assets::import_asset_with_normals(bytes, hint_opt)
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let mesh = imported.mesh;
         let c = mesh.centroid();
         let ext = [
             mesh.max[0] - mesh.min[0],
@@ -765,16 +1153,152 @@ impl QualiaPortal {
             .flat_map(|t| [t[0], t[1], t[2]])
             .collect();
         let tris = match self.gpu {
-            Some(ref mut gpu) => gpu.upload_mesh(&positions, &indices),
+            Some(ref mut gpu) => gpu.upload_mesh_colored_with_frames(
+                &positions,
+                &[],
+                imported.normals.as_deref(),
+                imported.tangents.as_deref(),
+                &indices,
+            ),
             None => 0,
         };
         self.description = format!("{tris} mesh triangles · T2 surface");
         Ok(tris)
     }
 
+    /// Replace the current WebGPU mesh instance stream from caller-owned packed records.
+    /// Each 128-byte record is the native `GpuInstanceRecord` ABI: column-major world transform,
+    /// inverse-transpose normal frame, low/high `u32` semantic identity words, orientation sign,
+    /// and zero padding. Callers may compact by CPU visibility indices before passing this slice.
+    pub fn set_mesh_instances(
+        &mut self,
+        abi_version: u32,
+        packed_records: &[u8],
+    ) -> Result<u32, JsValue> {
+        if abi_version != crate::render::instance_culling::GPU_INSTANCE_RECORD_ABI_VERSION {
+            return Err(JsValue::from_str(
+                "mesh_instance_record_abi_version_unsupported",
+            ));
+        }
+        let record_size = std::mem::size_of::<GpuInstanceRecord>();
+        if packed_records.len() % record_size != 0 {
+            return Err(JsValue::from_str(
+                "mesh_instance_stream_length_not_multiple_of_record_size",
+            ));
+        }
+        let Some(gpu) = self.gpu.as_mut() else {
+            return Err(JsValue::from_str("webgpu_mesh_instance_stream_unavailable"));
+        };
+        gpu.set_mesh_instances_packed(packed_records).map_err(
+            |error: MeshInstanceUploadError| {
+                JsValue::from_str(&format!("mesh_instance_upload_failed:{error:?}"))
+            },
+        )?;
+        u32::try_from(packed_records.len() / record_size)
+            .map_err(|_| JsValue::from_str("mesh_instance_count_exceeds_u32"))
+    }
+
+    /// Select visible source instances without allocating. Bounds use three floats per record,
+    /// transforms use 16 column-major floats, and the view-projection matrix uses 16 floats.
+    /// Invalid bounds fail open; returned indices preserve source order.
+    pub fn cull_mesh_instance_indices(
+        &self,
+        bounds_min: &[f32],
+        bounds_max: &[f32],
+        transforms_column_major: &[f32],
+        view_projection_column_major: &[f32],
+        visible_indices: &mut [u32],
+    ) -> Result<u32, JsValue> {
+        crate::render::instance_culling::select_visible_instances_packed(
+            bounds_min,
+            bounds_max,
+            transforms_column_major,
+            view_projection_column_major,
+            visible_indices,
+        )
+        .and_then(|count| {
+            u32::try_from(count).map_err(|_| {
+                crate::render::instance_culling::VisibilityListError::TooManyInstances { count }
+            })
+        })
+        .map_err(|error| JsValue::from_str(&format!("mesh_instance_cull_failed:{error:?}")))
+    }
+
+    /// Compact ABI-v2 records by stable visible indices into caller-owned bytes, preserving IDs.
+    pub fn compact_mesh_instance_records(
+        &self,
+        source_records: &[u8],
+        visible_indices: &[u32],
+        compacted_output: &mut [u8],
+    ) -> Result<u32, JsValue> {
+        crate::render::instance_culling::compact_visible_packed_records(
+            source_records,
+            visible_indices,
+            compacted_output,
+        )
+        .and_then(|count| {
+            u32::try_from(count).map_err(|_| {
+                crate::render::instance_culling::VisibilityListError::TooManyInstances { count }
+            })
+        })
+        .map_err(|error| JsValue::from_str(&format!("mesh_instance_compact_failed:{error:?}")))
+    }
+
+    /// Build the packed ABI from caller-owned column-major transforms and low/high ID words.
+    /// Output must hold `instance_count * mesh_instance_record_stride()` bytes.
+    pub fn pack_mesh_instance_records(
+        &self,
+        transforms_column_major: &[f32],
+        semantic_id_words: &[u32],
+        packed_output: &mut [u8],
+    ) -> Result<u32, JsValue> {
+        if transforms_column_major.len() % 16 != 0 || semantic_id_words.len() % 2 != 0 {
+            return Err(JsValue::from_str("mesh_instance_pack_input_shape_invalid"));
+        }
+        let count = transforms_column_major.len() / 16;
+        if count > crate::render::instance_culling::MAX_GPU_MESH_INSTANCES {
+            return Err(JsValue::from_str("mesh_instance_count_exceeds_10000"));
+        }
+        if semantic_id_words.len() / 2 != count {
+            return Err(JsValue::from_str(
+                "mesh_instance_pack_identity_count_mismatch",
+            ));
+        }
+        let record_size = std::mem::size_of::<GpuInstanceRecord>();
+        let required = count
+            .checked_mul(record_size)
+            .ok_or_else(|| JsValue::from_str("mesh_instance_pack_size_overflow"))?;
+        if packed_output.len() < required {
+            return Err(JsValue::from_str("mesh_instance_pack_output_too_small"));
+        }
+        for index in 0..count {
+            let matrix_values = &transforms_column_major[index * 16..(index + 1) * 16];
+            let matrix = std::array::from_fn(|column| {
+                std::array::from_fn(|row| matrix_values[column * 4 + row])
+            });
+            let id_words = &semantic_id_words[index * 2..index * 2 + 2];
+            let semantic_id = u64::from(id_words[0]) | (u64::from(id_words[1]) << 32);
+            let record = GpuInstanceRecord::new(matrix, semantic_id);
+            let output = &mut packed_output[index * record_size..(index + 1) * record_size];
+            output.copy_from_slice(bytemuck::bytes_of(&record));
+        }
+        u32::try_from(count).map_err(|_| JsValue::from_str("mesh_instance_count_exceeds_u32"))
+    }
+
+    /// Byte stride of the packed mesh-instance record ABI exposed by `set_mesh_instances`.
+    pub fn mesh_instance_record_stride(&self) -> u32 {
+        std::mem::size_of::<GpuInstanceRecord>() as u32
+    }
+
+    /// Version of the packed ABI accepted by `set_mesh_instances`.
+    pub fn mesh_instance_record_version(&self) -> u32 {
+        crate::render::instance_culling::GPU_INSTANCE_RECORD_ABI_VERSION
+    }
+
     /// P9.2 — Load a `.10d` container asset: parse the section table, extract
-    /// the QuantizedMesh and Tensor10DNodes (provenance) sections, upload the
-    /// mesh to the GPU, and report node/triangle counts.
+    /// the QuantizedMesh, optional SurfaceReading (per-vertex colour), optional
+    /// UV01, optional MAT3/MAT4, Tensor10DNodes (provenance), and mesh frames;
+    /// upload to the GPU. Texture bytes stay in HMC/deps (`load_texture_encoded`).
     ///
     /// **Governance fail-closed:** if the header carries
     /// `FLAG_DEFAULT_DISPOSITION_REFUSE` (bit 0) and no attestation section is
@@ -783,93 +1307,19 @@ impl QualiaPortal {
     ///
     /// Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
     pub fn load_10d(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
-        use crate::container_10d::{
-            self,
-            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
-        };
+        self.hmc_mesh_residency.clear();
+        let decoded = crate::render::portal_load_10d::decode_load_10d(bytes)
+            .map_err(|e| JsValue::from_str(&e))?;
 
-        let mut bytes_mut = bytes.to_vec();
-        let header = Container10dHeader::parse(&bytes_mut)
-            .map_err(|e| JsValue::from_str(&format!("10d header: {e}")))?;
-
-        // Verify whole-file CRC-32C.
-        container_10d::verify_whole_file_crc32c(&mut bytes_mut)
-            .map_err(|e| JsValue::from_str(&format!("10d CRC: {e}")))?;
-
-        let descs = container_10d::parse_section_table(&bytes_mut, &header)
-            .map_err(|e| JsValue::from_str(&format!("10d section table: {e}")))?;
-
-        let mut mesh = None;
-        let mut provenance_mu: f32 = 0.0;
-        let mut has_attestation = false;
-
-        for desc in descs.iter() {
-            let st = container_10d::SectionType::from_u8(desc.section_type)
-                .ok_or_else(|| JsValue::from_str("10d: unknown section type"))?;
-            let off = desc.byte_offset as usize;
-            let len = desc.byte_length as usize;
-            let payload = &bytes_mut[off..off + len];
-
-            match st {
-                container_10d::SectionType::QuantizedMesh => {
-                    mesh = Some(
-                        container_10d::decode_mesh_section(payload)
-                            .map_err(|e| JsValue::from_str(&format!("10d mesh decode: {e}")))?,
-                    );
-                }
-                container_10d::SectionType::Tensor10DNodes => {
-                    if let Ok(t) = container_10d::read_node(payload, 0) {
-                        provenance_mu = t.mu;
-                    }
-                }
-                container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) =
-                        crate::container_10d::provenance_section::decode_provenance_section(payload)
-                    {
-                        if crate::container_10d::provenance_section::validate_provenance(&view)
-                            .is_ok()
-                        {
-                            has_attestation = true;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let mesh = mesh.ok_or_else(|| JsValue::from_str("10d: no mesh section"))?;
-
-        // Governance fail-closed: default-Refuse flag set and no attestation →
-        // mesh is displayable but not citable.
-        let governance_refused =
-            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
-
-        // Centre + scale the mesh to the orbit frame (same as upload_mesh_asset).
-        let c = mesh.centroid();
-        let ext = [
-            mesh.max[0] - mesh.min[0],
-            mesh.max[1] - mesh.min[1],
-            mesh.max[2] - mesh.min[2],
-        ];
-        let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
-        let s = 1.6 / span;
-        let positions: Vec<[f32; 3]> = mesh
-            .positions
-            .iter()
-            .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
-            .collect();
-        let indices: Vec<u32> = mesh
-            .triangles
-            .iter()
-            .flat_map(|t| [t[0], t[1], t[2]])
-            .collect();
-
-        let tri_count = mesh.triangles.len() as u32;
-        let vert_count = mesh.positions.len() as u32;
+        let tri_count = decoded.triangle_count;
+        let vert_count = decoded.vertex_count;
+        let provenance_mu = decoded.provenance_mu;
+        let governance_refused = decoded.governance_refused;
 
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
-            gpu.upload_mesh(&positions, &indices);
+            crate::render::portal_load_10d::upload_load_10d_to_gpu(gpu, &decoded)
+                .map_err(|e| JsValue::from_str(&format!("10d GPU upload: {e}")))?;
             self.tier = 2;
         }
 
@@ -913,6 +1363,390 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
+    /// Inspect physical interpretation and original PCM without applying a
+    /// display or listening conversion. Exact clock integers remain in metadata_tlv_le.
+    pub fn inspect_emf(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        Ok(emf_metadata::inspect(bytes)?.into())
+    }
+
+    /// Field residency: 0 empty, 1 pending WebGPU, 2 uploaded, 3 unavailable.
+    /// Upload is not a claim that a browser frame has presented field pixels.
+    pub fn emf_display_state(&self) -> u8 {
+        self.last_emf.status() as u8
+    }
+
+    /// Admit and retain an explicitly selected actual PCM/STFT entry; no autoplay.
+    pub fn load_qac(&mut self, bytes: &[u8], selected_entry: u32) -> Result<JsValue, JsValue> {
+        let mut limits = crate::render::portal_qac::Limits::default();
+        limits.envelope.file_bytes = 128 << 20;
+        limits.memory_bytes = 192 << 20;
+        if bytes.len() as u64 > limits.envelope.file_bytes {
+            return Err(JsValue::from_str("qac browser source exceeds 128 MiB"));
+        }
+        let mut owned = Vec::new();
+        owned.try_reserve_exact(bytes.len()).map_err(|_|JsValue::from_str("qac source allocation refused"))?;
+        owned.extend_from_slice(bytes);
+        let qac = crate::render::portal_qac::RetainedQac::open(owned.into_boxed_slice(), selected_entry, limits)
+            .map_err(|e|JsValue::from_str(&format!("qac admission: {e:?}")))?;
+        let result = qac_js::metadata(&qac)?;
+        self.last_qac = Some(qac);
+        Ok(result.into())
+    }
+
+    /// Exact little-endian bytes plus layout; decimal index avoids JS Number rounding.
+    pub fn qac_window(&self, start_record_decimal: &str, records: u32, channel: u32) -> Result<JsValue, JsValue> {
+        let start = start_record_decimal.parse::<u64>().map_err(|_|JsValue::from_str("invalid qac record index"))?;
+        let qac = self.last_qac.as_ref().ok_or_else(||JsValue::from_str("no admitted qac source"))?;
+        Ok(qac_js::window(qac, start, records, channel)?.into())
+    }
+
+    pub fn inspect_qac(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        Ok(qac_js::inspect_container(bytes)?.into())
+    }
+
+    pub fn clear_qac(&mut self) { self.last_qac = None; }
+
+    /// Load a current typed field, retaining original bytes independently of display.
+    /// Rendering is a declared electric-field-magnitude derivative in local grid coordinates.
+    pub fn load_emf(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        self.load_emf_selection_impl(bytes, None)
+    }
+
+    /// Select a field explicitly when a recording contains several grids or streams.
+    pub fn load_emf_selected(&mut self, bytes: &[u8], descriptor_id: u32,
+        frame_id: u32, clock_id: u32, stream_id: u32) -> Result<JsValue, JsValue> {
+        self.load_emf_selection_impl(bytes, Some(crate::render::portal_emf_state::DisplaySelection {
+            descriptor_id, frame_id, clock_id, stream_id,
+        }))
+    }
+
+    fn load_emf_selection_impl(&mut self, bytes: &[u8],
+        selection: Option<crate::render::portal_emf_state::DisplaySelection>) -> Result<JsValue, JsValue> {
+        let loaded = crate::render::portal_load_emf::decode_emf_with_selection(bytes, selection,
+            crate::render::portal_load_emf::PortalEmfLimits::default())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        // Prepare all metadata before changing either accepted data or residency.
+        let result = emf_metadata::inspect(bytes)?;
+        let selection = loaded.selection();
+        for (name, id) in [("descriptor_id", selection.descriptor_id), ("frame_id", selection.frame_id),
+            ("clock_id", selection.clock_id), ("stream_id", selection.stream_id)] {
+            Reflect::set(&result, &name.into(), &(id as f64).into())?;
+        }
+        let ticks = js_sys::Array::new();
+        for tick in loaded.time_ticks() { ticks.push(&tick.to_string().into()); }
+        Reflect::set(&result, &"time_ticks_decimal".into(), &ticks)?;
+        Reflect::set(&result, &"temporal".into(), &loaded.is_temporal().into())?;
+        Reflect::set(&result, &"coordinate_scope".into(), &"selected local frame; no implicit world/anatomy registration".into())?;
+        Reflect::set(&result, &"admission".into(), &"current typed profiles and selected grid projection".into())?;
+        Reflect::set(&result, &"display_conversion".into(),
+            &"grayscale = 1-exp(-|E|/(1 V/m)); nearest cell; missing transparent; valid zero opaque; exact source retained".into())?;
+        Reflect::set(&result, &"sonification".into(),
+            &"no automatic EMF sonification".into())?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nx"),
+            &JsValue::from_f64(loaded.nx as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("ny"),
+            &JsValue::from_f64(loaded.ny as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nz"),
+            &JsValue::from_f64(loaded.nz as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nt"),
+            &JsValue::from_f64(loaded.nt as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("cell_count"),
+            &JsValue::from_f64(loaded.cell_count as f64),
+        )?;
+        let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
+        Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
+        let backend = if self.gpu.is_some() {
+            EmfBackend::WebGpu
+        } else if self.anatomy_webgl2.is_some() || self.gpu_init_failed {
+            EmfBackend::Unavailable
+        } else {
+            EmfBackend::Pending
+        };
+        Reflect::set(&result, &"display_status".into(),
+            &backend.accepted_status().as_str().into())?;
+        let gpu = &mut self.gpu;
+        self.last_emf.accept(loaded, backend, |field| {
+            portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
+        }).map_err(|e| JsValue::from_str(&e))?;
+        Ok(result.into())
+    }
+
+    /// Layout an RDF document as a holographic semantic graph and upload it to
+    /// the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
+    ///
+    /// `content_type` is a media type (`text/turtle`) or Qualia format id (`turtle`).
+    /// Scene construction uses the bundled cinema-graph.vibe (Qualia host Scene.*).
+    /// Returns `{ node_count, triple_count, truncated, backend, labels, layout }`.
+    pub fn load_rdf_graph(
+        &mut self,
+        payload: &[u8],
+        content_type: &str,
+    ) -> Result<JsValue, JsValue> {
+        let text = core::str::from_utf8(payload).map_err(|_| JsValue::from_str("rdf_holograph_utf8"))?;
+        self.project_rdf_holograph(text, content_type, "")
+    }
+
+    /// UTF-8 RDF document helper for `load_rdf_graph`.
+    pub fn load_rdf_graph_text(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.project_rdf_holograph(payload, content_type, "")
+    }
+
+    /// Hot-edit theatre: evaluate `vibe_src` (`construct_theatre`) then pack GPU nodes.
+    /// Empty `vibe_src` uses the bundled cinema-graph.vibe.
+    pub fn load_rdf_graph_vibe(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+        vibe_src: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.project_rdf_holograph(payload, content_type, vibe_src)
+    }
+
+    fn project_rdf_holograph(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+        vibe_src: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.rdf_scene.clear();
+        let (cam, layout) = crate::render::rdf_holograph_vibe::layout_rdf_with_vibe_into(
+            content_type,
+            payload,
+            vibe_src,
+            self.rdf_scene.as_mut(),
+        )
+        .map_err(JsValue::from_str)?;
+        if self.rdf_scene.is_empty() {
+            return Err(JsValue::from_str("rdf_holograph_empty_graph"));
+        }
+
+        let mut backend = "none";
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(ref mut gpu) = self.gpu {
+                gpu.upload_holographic_nodes(self.rdf_scene.nodes())
+                    .map_err(|e| JsValue::from_str(&e))?;
+                backend = "webgpu";
+                self.tier = 2;
+            }
+            if backend == "none" {
+                if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                    webgl2.upload_holograph_scene(&self.rdf_scene).map_err(|e| {
+                        let detail = e
+                            .as_string()
+                            .unwrap_or_else(|| "webgl2_holograph_upload_failed".into());
+                        JsValue::from_str(&format!("webgl2_holograph_upload_failed:{detail}"))
+                    })?;
+                    backend = "webgl2";
+                    self.tier = 1;
+                }
+            }
+        }
+        if backend == "none" {
+            return Err(JsValue::from_str(
+                "rdf_holograph_requires_webgl2_or_webgpu",
+            ));
+        }
+
+        self.camera.target = [0.0, 0.0, 0.0];
+        let framed = crate::render::rdf_holograph::framing_zoom(&self.rdf_scene);
+        self.camera.zoom = if cam.zoom > 0.05 { cam.zoom } else { framed };
+        self.camera.pitch = cam.pitch;
+        self.camera.yaw = cam.yaw;
+        self.rdf_holograph_w_angle = 0.0;
+        self.sky_preset = None;
+        self.sky_clear = [0.01, 0.03, 0.07, 1.0];
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_clear_color(0.01, 0.03, 0.07, 1.0);
+            gpu.set_camera_target(
+                self.camera.yaw,
+                self.camera.pitch,
+                self.camera.zoom,
+                0.0,
+                0.0,
+                0.0,
+            );
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.set_clear(self.sky_clear);
+        }
+
+        let labels = Array::new();
+        const LABEL_RECEIPT_CAP: usize = 256;
+        for (i, label) in self
+            .rdf_scene
+            .labels()
+            .iter()
+            .enumerate()
+            .take(LABEL_RECEIPT_CAP)
+        {
+            let obj = js_sys::Object::new();
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("index"),
+                &JsValue::from_f64(i as f64),
+            )?;
+            let display = label.name_str();
+            if display.is_empty() {
+                let mut hex = [0u8; 18];
+                hex[0] = b'0';
+                hex[1] = b'x';
+                let mut v = label.id;
+                let digits = b"0123456789abcdef";
+                let mut k = 16;
+                while k > 0 {
+                    k -= 1;
+                    hex[2 + k] = digits[(v & 0xf) as usize];
+                    v >>= 4;
+                }
+                let hex_str = core::str::from_utf8(&hex).unwrap_or("0x0");
+                Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(hex_str))?;
+            } else {
+                Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(display))?;
+            }
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("name"),
+                &JsValue::from_str(display),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str(label.kind),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("degree"),
+                &JsValue::from_f64(label.degree as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("x"),
+                &JsValue::from_f64(label.position[0] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("y"),
+                &JsValue::from_f64(label.position[1] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("z"),
+                &JsValue::from_f64(label.position[2] as f64),
+            )?;
+            labels.push(&obj);
+        }
+
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("node_count"),
+            &JsValue::from_f64(self.rdf_scene.node_count() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("triple_count"),
+            &JsValue::from_f64(self.rdf_scene.triple_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("truncated"),
+            &JsValue::from_bool(self.rdf_scene.truncated),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("backend"),
+            &JsValue::from_str(backend),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("layout"),
+            &JsValue::from_str(layout),
+        )?;
+        Reflect::set(&result, &JsValue::from_str("labels"), &labels)?;
+        Ok(result.into())
+    }
+
+    /// Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
+    /// residency identity. Replaying the same asset returns the existing receipt without
+    /// rebuilding the GPU mesh; a different digest replaces the resident mesh.
+    pub fn load_hmc_mesh(&mut self, hmc_bytes: &[u8], asset_key: &str) -> Result<JsValue, JsValue> {
+        let source =
+            resolve_hmc_mesh(hmc_bytes, asset_key).map_err(|error| JsValue::from_str(&error))?;
+        if let Some(receipt) = self.hmc_mesh_residency.resident(source.digest) {
+            let result = js_sys::Object::new();
+            Reflect::set(
+                &result,
+                &JsValue::from_str("vertex_count"),
+                &JsValue::from_f64(receipt.vertex_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("triangle_count"),
+                &JsValue::from_f64(receipt.triangle_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("generation"),
+                &JsValue::from_f64(receipt.generation as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("upload_count"),
+                &JsValue::from_f64(receipt.upload_count as f64),
+            )?;
+            return Ok(result.into());
+        }
+
+        let loaded = self.load_10d(source.bytes)?;
+        let vertex_count = Reflect::get(&loaded, &JsValue::from_str("vertex_count"))?
+            .as_f64()
+            .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_vertex_count"))?;
+        let triangle_count = Reflect::get(&loaded, &JsValue::from_str("triangle_count"))?
+            .as_f64()
+            .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_triangle_count"))?;
+        let receipt = self.hmc_mesh_residency.record_upload(
+            source.digest,
+            u32::try_from(vertex_count as u64)
+                .map_err(|_| JsValue::from_str("hmc_mesh_vertex_count_overflow"))?,
+            u32::try_from((triangle_count as u64).saturating_mul(3))
+                .map_err(|_| JsValue::from_str("hmc_mesh_index_count_overflow"))?,
+            u32::try_from(triangle_count as u64)
+                .map_err(|_| JsValue::from_str("hmc_mesh_triangle_count_overflow"))?,
+        );
+        Reflect::set(
+            &loaded,
+            &JsValue::from_str("generation"),
+            &JsValue::from_f64(receipt.generation as f64),
+        )?;
+        Reflect::set(
+            &loaded,
+            &JsValue::from_str("upload_count"),
+            &JsValue::from_f64(receipt.upload_count as f64),
+        )?;
+        Ok(loaded)
+    }
+
     /// S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
     /// RGBA. The host resolves each organ's body-system percept
     /// (`qualia-client-core … AnatomyViewReport::paint_organs`) and passes that system's σ-derived colour
@@ -928,6 +1762,7 @@ impl QualiaPortal {
         b: f32,
         a: f32,
     ) -> Result<JsValue, JsValue> {
+        self.hmc_mesh_residency.clear();
         use crate::container_10d::{
             self,
             header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
@@ -1003,10 +1838,13 @@ impl QualiaPortal {
         let tri_count = mesh.triangles.len() as u32;
         let vert_count = mesh.positions.len() as u32;
 
+        let mut uploaded = false;
         if let Some(ref mut gpu) = self.gpu {
             let colors = vec![[r, g, b, a]; positions.len()];
-            gpu.upload_mesh_colored(&positions, &colors, &indices);
-            self.tier = 2;
+            uploaded = gpu.upload_mesh_colored(&positions, &colors, &indices) > 0;
+            if uploaded {
+                self.tier = 2;
+            }
         }
 
         if governance_refused {
@@ -1015,7 +1853,12 @@ impl QualiaPortal {
             );
         } else {
             self.description = format!(
-                "{tri_count} triangles · {vert_count} vertices · μ={provenance_mu:.3} · coloured · T2"
+                "{tri_count} triangles · {vert_count} vertices · μ={provenance_mu:.3} · coloured · {}",
+                if uploaded {
+                    "T2"
+                } else {
+                    "not uploaded: geometry budget/backend unavailable"
+                }
             );
         }
 
@@ -1062,8 +1905,10 @@ impl QualiaPortal {
     /// per-organ JS `Uint8Array` copy (critical on phones).
     pub fn load_body_organs_colored(&mut self, organs: &Array) -> Result<JsValue, JsValue> {
         let mut accum = BodyMeshAccum::new();
+        let spans = Array::new();
         for i in 0..organs.length() {
             let organ = organs.get(i);
+            let before = accum.positions.len() as u32;
             let bytes_val = Reflect::get(&organ, &JsValue::from_str("bytes"))
                 .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
             // One JS→Rust copy only (no secondary clone for CRC).
@@ -1085,8 +1930,43 @@ impl QualiaPortal {
                 .and_then(|v| v.as_f64())
                 .unwrap_or(1.0) as f32;
             accum.append_organ_10d(&bytes, [r, g, b, a]);
+            let count = accum.positions.len() as u32 - before;
+            if count > 0 {
+                let id = Reflect::get(&organ, &JsValue::from_str("id"))
+                    .ok()
+                    .and_then(|v| v.as_string())
+                    .unwrap_or_default();
+                let span = js_sys::Object::new();
+                Reflect::set(&span, &JsValue::from_str("id"), &JsValue::from_str(&id))?;
+                Reflect::set(
+                    &span,
+                    &JsValue::from_str("vertex_start"),
+                    &JsValue::from_f64(before as f64),
+                )?;
+                Reflect::set(
+                    &span,
+                    &JsValue::from_str("vertex_count"),
+                    &JsValue::from_f64(count as f64),
+                )?;
+                spans.push(&span);
+            }
         }
-        self.finish_body_mesh_upload(accum)
+        let result = self.finish_body_mesh_upload(accum)?;
+        Reflect::set(&result, &JsValue::from_str("parts"), &spans)?;
+        self.present_misses = 0;
+        Ok(result)
+    }
+
+    /// Load a multi-asset scene: `Array<{bytes: .10d, r,g,b,a, id?}>` (QG-20).
+    /// General scene asset loader for environment/game scenes, town layouts,
+    /// vehicles, and user props.
+    pub fn load_assets_colored(&mut self, assets: &Array) -> Result<JsValue, JsValue> {
+        self.load_body_organs_colored(assets)
+    }
+
+    /// Generic scene asset alias for [`Self::load_assets_colored`] (QG-20).
+    pub fn load_scene_assets(&mut self, assets: &Array) -> Result<JsValue, JsValue> {
+        self.load_body_organs_colored(assets)
     }
 
     /// S5.8 (web) — load the whole body directly from a `.hmc` **anatomy pack**
@@ -1225,48 +2105,170 @@ impl QualiaPortal {
         }
     }
 
+    /// Finalise a body-mesh upload accumulated across append calls:
+    /// uploads to the active backend (WebGPU/WebGL2/CPU canvas), updates
+    /// residency accounting, and returns the manifest receipt.
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
-        accum.apply_body_fit(&self.body_fit);
-        accum.normalise_to_orbit_frame();
+        self.adopt_pending_gpu();
+        accum
+            .apply_body_fit(&self.body_fit)
+            .map_err(JsValue::from_str)?;
+        if !self.preserve_authored_frame {
+            accum
+                .normalise_to_orbit_frame()
+                .map_err(JsValue::from_str)?;
+        }
         if accum.positions.is_empty() || accum.indices.is_empty() {
             return Err(JsValue::from_str("anatomy_body_mesh_empty"));
         }
 
+        // Keep a compact, bounded replay mesh for adapter loss and a CPU proof.
+        // It also gives admission refusal a lower-memory retry before degrading
+        // to canvas. The full authoring mesh remains cold-path input only.
+        let reduced = CpuBodyMesh::decimate(
+            &accum.positions,
+            &accum.colors,
+            &accum.indices,
+            &accum.index_spans,
+        );
         let mut renderer = BodyRendererBackend::None;
+        let mut material_pipeline = false;
+        let mut admitted_vertex_count = 0usize;
+        let mut admitted_index_count = 0usize;
+        let mut compact_gpu = true;
         if let Some(ref mut gpu) = self.gpu {
-            gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices);
-            self.tier = 2;
-            renderer = BodyRendererBackend::WebGpu;
-        } else if let Some(ref mut webgl2) = self.anatomy_webgl2 {
-            webgl2.upload_mesh(&accum.positions, &accum.colors, &accum.indices)?;
-            self.tier = 1;
-            renderer = BodyRendererBackend::WebGl2;
+            let pbr_count = if accum.materials.is_empty() || accum.material_ranges.is_empty() {
+                0
+            } else {
+                gpu.upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &accum.positions,
+                    &accum.colors,
+                    Some(&accum.normals),
+                    None,
+                    Some(&accum.uv0),
+                    &accum.indices,
+                    &accum.materials,
+                    &accum.material_ranges,
+                )
+                .unwrap_or(0)
+            };
+            let count = if pbr_count > 0 {
+                material_pipeline = true;
+                pbr_count
+            } else {
+                gpu.upload_mesh_colored(&accum.positions, &accum.colors, &accum.indices)
+            };
+            if count > 0 {
+                compact_gpu = false;
+                renderer = BodyRendererBackend::WebGpu;
+                admitted_vertex_count = accum.positions.len();
+                admitted_index_count = accum.indices.len();
+                self.graphics.apply_environment_to_gpu(gpu);
+            } else if !reduced.indices.is_empty()
+                && gpu.upload_mesh_colored(&reduced.positions, &reduced.colors, &reduced.indices)
+                    > 0
+            {
+                renderer = BodyRendererBackend::WebGpu;
+                admitted_vertex_count = reduced.positions.len();
+                admitted_index_count = reduced.indices.len();
+            }
         }
         if renderer == BodyRendererBackend::None {
-            return Err(JsValue::from_str("anatomy_renderer_unsupported"));
+            if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.set_near_plane(self.camera.near_plane);
+                if webgl2
+                    .upload_mesh(&accum.positions, &accum.colors, &accum.indices)
+                    .is_ok()
+                {
+                    compact_gpu = false;
+                    renderer = BodyRendererBackend::WebGl2;
+                    admitted_vertex_count = accum.positions.len();
+                    admitted_index_count = accum.indices.len();
+                } else if webgl2
+                    .upload_mesh(&reduced.positions, &reduced.colors, &reduced.indices)
+                    .is_ok()
+                {
+                    renderer = BodyRendererBackend::WebGl2;
+                    admitted_vertex_count = reduced.positions.len();
+                    admitted_index_count = reduced.indices.len();
+                }
+            }
+        }
+        self.cpu_body = Some(reduced);
+        self.scene_animation
+            .install(std::mem::take(&mut accum.animation), compact_gpu);
+        if renderer == BodyRendererBackend::None {
+            renderer = BodyRendererBackend::CpuCanvas;
+            self.tier = 0;
+            admitted_vertex_count = self
+                .cpu_body
+                .as_ref()
+                .map_or(0, |body| body.positions.len());
+            admitted_index_count = self.cpu_body.as_ref().map_or(0, |body| body.indices.len());
+            #[cfg(target_arch = "wasm32")]
+            if self.gpu.is_some() || self.anatomy_webgl2.is_some() {
+                // A context-bound GPU canvas cannot become Canvas2D in place.
+                // Ask the host to replace it and walk the VibeScript fallback
+                // policy with the retained reduced mesh.
+                self.graphics_recovery_requested = true;
+            }
+        } else if renderer == BodyRendererBackend::WebGpu {
+            self.tier = 2;
+        } else {
+            self.tier = 1;
         }
 
         self.body_renderer = renderer;
-        self.body_vertex_count = accum.positions.len().min(u32::MAX as usize) as u32;
-        self.body_index_count = accum.indices.len().min(u32::MAX as usize) as u32;
+        self.body_vertex_count = admitted_vertex_count.min(u32::MAX as usize) as u32;
+        self.body_index_count = admitted_index_count.min(u32::MAX as usize) as u32;
         self.body_frames_presented = 0;
+
+        // Semantic nodes embedded in the organs' `Tensor10DNodes` sections become
+        // the pick/projection substrate — already normalised into the same orbit
+        // frame as the uploaded mesh, so hits land on drawn geometry.
+        let semantic_node_count = accum.nodes.len();
+        if !accum.nodes.is_empty() {
+            let need = TENSOR_HEADER_BYTES
+                + accum.nodes.len() * crate::container_10d::node_section::TENSOR10D_SIZE;
+            let mut buf = vec![0u8; need];
+            if write_tensor_buffer(&accum.nodes, &mut buf).is_ok() {
+                let _ = self.upload_tensor_buffer(&buf);
+            }
+        }
+
         self.description = format!(
-            "{} organs · {} triangles · {} refused · coloured · {}",
-            accum.organs_loaded,
+            "{} assets · {} triangles · {} materials · {} refused · {}{}",
+            accum.assets_loaded,
             accum.total_triangles,
-            accum.organs_refused,
-            renderer.as_str()
+            accum.materials.len(),
+            accum.assets_refused,
+            renderer.as_str(),
+            if material_pipeline {
+                " · PBR scene"
+            } else {
+                " · colour fallback"
+            }
         );
         let result = js_sys::Object::new();
         Reflect::set(
             &result,
+            &JsValue::from_str("assets_loaded"),
+            &JsValue::from_f64(accum.assets_loaded as f64),
+        )?;
+        Reflect::set(
+            &result,
             &JsValue::from_str("organs_loaded"),
-            &JsValue::from_f64(accum.organs_loaded as f64),
+            &JsValue::from_f64(accum.organs_loaded() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("assets_refused"),
+            &JsValue::from_f64(accum.assets_refused as f64),
         )?;
         Reflect::set(
             &result,
             &JsValue::from_str("organs_refused"),
-            &JsValue::from_f64(accum.organs_refused as f64),
+            &JsValue::from_f64(accum.organs_refused() as f64),
         )?;
         Reflect::set(
             &result,
@@ -1283,11 +2285,31 @@ impl QualiaPortal {
             &JsValue::from_str("renderer"),
             &JsValue::from_str(renderer.as_str()),
         )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("material_pipeline"),
+            &JsValue::from_bool(material_pipeline),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("materials_loaded"),
+            &JsValue::from_f64(accum.materials.len() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("material_ranges"),
+            &JsValue::from_f64(accum.material_ranges.len() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("semantic_nodes"),
+            &JsValue::from_f64(semantic_node_count as f64),
+        )?;
         Reflect::set(&result, &JsValue::from_str("uploaded"), &JsValue::TRUE)?;
         Ok(result.into())
     }
 
-    /// Cold-path Anatomy lifecycle receipt. Success requires a retained upload
+    /// Cold-path Scene / Anatomy lifecycle receipt. Success requires a retained upload
     /// and at least one presented renderer frame.
     pub fn body_render_receipt(&self) -> Result<JsValue, JsValue> {
         let result = js_sys::Object::new();
@@ -1313,6 +2335,13 @@ impl QualiaPortal {
         )?;
         Reflect::set(
             &result,
+            &JsValue::from_str("uploaded"),
+            &JsValue::from_bool(
+                self.body_renderer != BodyRendererBackend::None && self.body_vertex_count > 0,
+            ),
+        )?;
+        Reflect::set(
+            &result,
             &JsValue::from_str("success"),
             &JsValue::from_bool(
                 self.body_renderer != BodyRendererBackend::None
@@ -1322,6 +2351,11 @@ impl QualiaPortal {
             ),
         )?;
         Ok(result.into())
+    }
+
+    /// Generic scene alias for [`Self::body_render_receipt`] (QG-20).
+    pub fn scene_render_receipt(&self) -> Result<JsValue, JsValue> {
+        self.body_render_receipt()
     }
 
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
@@ -1411,6 +2445,9 @@ impl QualiaPortal {
         out
     }
 
+    /// Upload a packed tensor buffer: stores it, feeds the resident
+    /// substrate and VRAM ledger, forwards to the GPU (promoting the
+    /// tier to 2 on success), and updates the description line.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());
@@ -1439,10 +2476,14 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Spatially encode a JSON scene without uploading —
+    /// [`spatial_encode_wasm`] passthrough.
     pub fn spatial_encode(&self, json: &str) -> Result<JsValue, JsValue> {
         spatial_encode_wasm(json)
     }
 
+    /// Parse a `.q42` (CBOR-LD) payload, stash it as `last_parsed`,
+    /// and return the parsed record.
     pub fn load_q42(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         let parsed = parse_cbor_ld_wasm(bytes);
         self.description = format!("loaded .q42 ({} bytes)", bytes.len());
@@ -1450,6 +2491,8 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Parse a JSON scene payload, stash it as `last_parsed`, and
+    /// return the parsed record.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = parse_json_wasm(json);
         self.description = "loaded JSON scene".to_string();
@@ -1457,14 +2500,19 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Sample browser ambient telemetry (perf/memory probes) as JS.
     pub fn sample_telemetry(&self) -> Result<JsValue, JsValue> {
         sample_browser_telemetry_wasm()
     }
 
+    /// The most recently parsed scene payload, if any.
     pub fn last_parsed(&self) -> Option<JsValue> {
         self.last_parsed.clone()
     }
 
+    /// Mount a minimal qapp document into the DOM element `root_id`:
+    /// clears it, emits a header with the description line, and appends
+    /// the parsed scene (or a "load a scene first" hint).
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
         let document = window
@@ -1503,13 +2551,8 @@ impl QualiaPortal {
         Ok(())
     }
 
-    #[inline]
-    fn sidecar_frame_count(bytes: &[u8]) -> u32 {
-        parse_sidecar_header(bytes)
-            .map(|h| h.frame_count)
-            .unwrap_or(1)
-    }
-
+    /// Pop and apply up to `max` pending ICP control commands;
+    /// returns the count applied (failures are dropped, not fatal).
     fn drain_and_apply_control(&mut self, max: u32) -> u32 {
         let mut applied = 0u32;
         for _ in 0..max {
@@ -1523,6 +2566,10 @@ impl QualiaPortal {
         applied
     }
 
+    /// Dispatch one ICP command by opcode: camera deltas, navigate/
+    /// collapse by node index, standpoint scalar nudges, menu actions,
+    /// sonic-token forwards; `invalid_icp_magic` / `unknown_icp_opcode`
+    /// on malformed input.
     fn apply_control_command(&mut self, cmd: PortalControlCommand) -> Result<(), JsValue> {
         if !cmd.has_icp_magic() {
             return Err(JsValue::from_str("invalid_icp_magic"));
@@ -1604,24 +2651,18 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Assemble the `AcousticUniform` for the AudioWorklet: tensor-node
+    /// params when a tensor is resident, else a telemetry-derived default.
     fn build_acoustic_uniform(&mut self) -> AcousticUniform {
         let enabled = self.acoustic_enabled();
         let node = self.selected_node.unwrap_or(0);
         if let Some(ref tensor) = self.last_tensor {
             if let Ok(t) = read_tensor_at(tensor, node as usize) {
-                let mut u = acoustic_params_from_tensor(&t).to_phenomenal_uniform(
+                let u = acoustic_params_from_tensor(&t).to_phenomenal_uniform(
                     enabled,
                     &t,
                     self.camera.yaw,
                 );
-                if let Some(ref sidecar) = self.acoustic_sidecar {
-                    let frame = self.acoustic_sidecar_frame;
-                    if enrich_preview_from_sidecar(sidecar, frame, &mut u.preview_bins) {
-                        u.stft_frame = frame as f32;
-                    }
-                    self.acoustic_sidecar_frame =
-                        (frame + 1) % Self::sidecar_frame_count(sidecar).max(1);
-                }
                 return u;
             }
         }
@@ -1640,6 +2681,8 @@ impl QualiaPortal {
         ACOUSTIC_UNIFORM_FLOAT_COUNT as u32
     }
 
+    /// 250 ms sonification pulse: emits a sonic token for the selected
+    /// tensor node when acoustics are enabled.
     fn tick_acoustic_plane(&mut self, dt_ms: f32) {
         if !self.acoustic_enabled() {
             return;
@@ -1657,17 +2700,42 @@ impl QualiaPortal {
         }
     }
 
-    pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
-        let mode = global_vram_ledger().mode();
-
+    #[allow(dead_code)]
+    /// Adopt a `PortalGpu`/`AnatomyWebGl2` placed in the pending slots
+    /// by the async init path (called once per frame until consumed).
+    fn adopt_pending_gpu(&mut self) {
         #[cfg(target_arch = "wasm32")]
         {
-            // Async WebGPU init (`portal_init_webgpu`, awaited by JS before the render loop starts)
-            // stashes a ready PortalGpu in PENDING_GPU; adopt it on the first frame. The device is
-            // created asynchronously off the loop because the browser main thread cannot `block_on`.
+            if let Some(ready) = PENDING_GPU_RESULT.with(|p| p.replace(None)) {
+                self.gpu_init_failed = !ready;
+                if !ready && self.gpu.is_none() {
+                    self.last_emf.invalidate(false);
+                }
+            }
             if self.gpu.is_none() && !self.gpu_init_failed {
                 if let Some(mut gpu) = PENDING_GPU.with(|p| p.borrow_mut().take()) {
-                    gpu.set_camera(self.camera.yaw, self.camera.pitch, self.camera.zoom);
+                    gpu.set_camera_target(
+                        self.camera.yaw,
+                        self.camera.pitch,
+                        self.camera.zoom,
+                        self.camera.target[0],
+                        self.camera.target[1],
+                        self.camera.target[2],
+                    );
+                    gpu.set_lighting(
+                        self.camera.sun_dir[0],
+                        self.camera.sun_dir[1],
+                        self.camera.sun_dir[2],
+                        self.camera.sun_intensity,
+                        self.camera.ambient_intensity,
+                    );
+                    gpu.set_atmosphere_preset(self.atmosphere_preset);
+                    let _ = gpu.set_exposure_compensation(self.hdr_exposure_ev);
+                    let _ =
+                        gpu.set_white_balance(self.white_balance_ev[0], self.white_balance_ev[1]);
+                    if let Some(preset) = self.sky_preset {
+                        gpu.set_sky_preset(preset);
+                    }
                     gpu.set_standpoint(self.standpoint);
                     if let Some(ref tensor) = self.last_tensor {
                         if gpu.upload_tensor_buffer(tensor).ok().unwrap_or(0) > 0 {
@@ -1677,12 +2745,88 @@ impl QualiaPortal {
                             );
                         }
                     }
+                    if let Some(ref body) = self.cpu_body {
+                        if self.body_renderer != BodyRendererBackend::WebGpu {
+                            let count = gpu.upload_mesh_colored(
+                                &body.positions,
+                                &body.colors,
+                                &body.indices,
+                            );
+                            if count > 0 {
+                                self.scene_animation.compact_gpu = true;
+                                self.body_renderer = BodyRendererBackend::WebGpu;
+                                self.body_vertex_count =
+                                    body.positions.len().min(u32::MAX as usize) as u32;
+                                self.body_index_count =
+                                    body.indices.len().min(u32::MAX as usize) as u32;
+                                self.description = format!(
+                                    "graphics active · mesh detail · {} indices",
+                                    body.indices.len()
+                                );
+                            }
+                        }
+                    }
+                    self.graphics_recovery_pending = false;
                     self.tier = 2;
+                    gpu.set_tensor_projection_enabled(self.tensor_projection_enabled);
+                    self.graphics.apply_to_gpu(&mut gpu);
+                    if let Err(error) = self.last_emf.replay(|field| portal_emf_state::upload(&mut gpu, field)) {
+                        self.description = format!("EMF retained; field upload unavailable: {error}");
+                    }
                     self.gpu = Some(gpu);
+                    self.etalon_steward.mark_ready();
                 }
             }
+            if self.anatomy_webgl2.is_none() {
+                if let Some(gl) = PENDING_WEBGL2.with(|p| p.borrow_mut().take()) {
+                    self.anatomy_webgl2 = Some(gl);
+                    if self.gpu.is_none() {
+                        self.last_emf.invalidate(false);
+                    }
+                }
+            }
+        }
+    }
 
-            if let Some(ref mut gpu) = self.gpu {
+    /// Paint one frame onto `canvas`: on wasm32 handles device-loss
+    /// early-out, pending-GPU adoption, surface/depth size
+    /// reconciliation, and backend present; falls back to Canvas2D
+    /// painters when no GPU is bound.
+    pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
+        let mode = global_vram_ledger().mode();
+        self.graphics.record_temporal_execution(false);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            if self.note_device_loss() || self.graphics_recovery_requested {
+                self.etalon_steward.notify_device_lost();
+                // JavaScript replaces the old canvas at the next frame boundary;
+                // its WebGPU context cannot be converted into Canvas2D/WebGL2.
+                return Ok(());
+            }
+            self.adopt_pending_gpu();
+
+            enum Present {
+                Lit,
+                Absent,
+                Failed,
+            }
+            let present = if let Some(ref mut gpu) = self.gpu {
+                if self.rdf_scene.node_count() > 0 {
+                    self.camera.yaw =
+                        (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
+                    gpu.set_camera_target(
+                        self.camera.yaw,
+                        self.camera.pitch,
+                        self.camera.zoom,
+                        self.camera.target[0],
+                        self.camera.target[1],
+                        self.camera.target[2],
+                    );
+                    gpu.set_holograph_selected(
+                        self.selected_node.map(|n| n as i32).unwrap_or(-1),
+                    );
+                }
                 // The WebGPU swapchain texture tracks the canvas backing store, but the depth
                 // texture is only re-created on `resize()`. If the canvas was resized after init
                 // (layout settle, DPR, window resize) without a `resize()` call, color and depth
@@ -1690,12 +2834,33 @@ impl QualiaPortal {
                 // Reconcile here so the GPU path self-heals to whatever the canvas actually is.
                 let cw = canvas.width();
                 let ch = canvas.height();
-                if cw > 0 && ch > 0 && gpu.surface_size() != (cw, ch) {
-                    gpu.resize(cw, ch);
+                let resize_refused = cw > 0
+                    && ch > 0
+                    && gpu.surface_size() != (cw, ch)
+                    && gpu.resize(cw, ch).is_err();
+                if resize_refused {
+                    self.gpu = None;
+                    self.last_emf.invalidate(false);
+                    self.gpu_init_failed = true;
+                    self.graphics_recovery_requested = true;
+                    self.graphics_recovery_canvas_only = true;
+                    self.tier = 0;
+                    if self.body_renderer == BodyRendererBackend::WebGpu {
+                        self.body_renderer = BodyRendererBackend::CpuCanvas;
+                    }
+                    self.etalon_steward.notify_device_lost();
+                    return Ok(());
                 }
-                gpu.sync_bloom_targets();
-                match gpu.render(self.time as f32, &self.telemetry) {
-                    Ok(()) => {
+                let temporal_enabled = self.graphics.auto_temporal_enabled;
+                let frame_result = if temporal_enabled {
+                    gpu.render_with_auto_temporal(self.time as f32, &self.telemetry)
+                } else {
+                    gpu.render(self.time as f32, &self.telemetry)
+                        .map(|()| false)
+                };
+                match frame_result {
+                    Ok(temporal_executed) => {
+                        self.graphics.record_temporal_execution(temporal_executed);
                         if self.body_renderer == BodyRendererBackend::WebGpu
                             && self.body_index_count > 0
                         {
@@ -1705,31 +2870,114 @@ impl QualiaPortal {
                         if self.pending_gpu_pick {
                             if let Some(idx) = gpu.poll_pick_readback() {
                                 self.selected_node = Some(idx);
+                                self.selected_semantic_id = None;
+                            } else if let Some(identity) = gpu.poll_semantic_pick_readback() {
+                                self.selected_semantic_id = Some(identity);
+                                self.selected_node = None;
+                            }
+                            if !gpu.pick_readback_pending() {
                                 self.pending_gpu_pick = false;
                             }
                         }
+                        Present::Lit
+                    }
+                    Err(_) => Present::Failed,
+                }
+            } else {
+                Present::Absent
+            };
+            match present {
+                Present::Lit => {
+                    self.present_misses = 0;
+                    self.tier = 2;
+                    if self.body_renderer == BodyRendererBackend::WebGpu
+                        || self.body_index_count == 0
+                    {
                         return Ok(());
                     }
-                    Err(error) if self.body_renderer == BodyRendererBackend::WebGpu => {
-                        return Err(JsValue::from_str(&format!(
-                            "anatomy_webgpu_render_failed: {error}"
-                        )));
-                    }
-                    Err(_) => {}
                 }
+                Present::Failed => {
+                    // No mesh yet, or a transient surface miss: keep the device.
+                    // Proof is the failover after presents keep failing, and it
+                    // is not stamped as the lit look.
+                    if self.body_index_count == 0 || self.present_misses < 30 {
+                        self.present_misses = self.present_misses.saturating_add(1);
+                        return Ok(());
+                    }
+                    self.gpu = None;
+                    self.last_emf.invalidate(false);
+                    self.gpu_init_failed = true;
+                    self.tier = 0;
+                    if self.body_renderer == BodyRendererBackend::WebGpu {
+                        self.body_renderer = BodyRendererBackend::CpuCanvas;
+                    }
+                    self.etalon_steward.notify_device_lost();
+                    if let Ok(fresh) = release_claimed_canvas(canvas) {
+                        return self.paint_cpu_proof(&fresh, mode);
+                    }
+                }
+                Present::Absent => {}
             }
 
             if self.anatomy_webgl2.is_none() {
                 if let Some(webgl2) = PENDING_WEBGL2.with(|p| p.borrow_mut().take()) {
+                    let mut webgl2 = webgl2;
+                    if self.graphics_recovery_pending {
+                        let mut replayed = false;
+                        if let Some(ref body) = self.cpu_body {
+                            if webgl2
+                                .upload_mesh(&body.positions, &body.colors, &body.indices)
+                                .is_ok()
+                            {
+                                replayed = true;
+                                self.body_renderer = BodyRendererBackend::WebGl2;
+                                self.body_vertex_count =
+                                    body.positions.len().min(u32::MAX as usize) as u32;
+                                self.body_index_count =
+                                    body.indices.len().min(u32::MAX as usize) as u32;
+                                self.description = format!(
+                                    "graphics recovered · reduced mesh detail · {} indices",
+                                    self.body_index_count
+                                );
+                            }
+                        }
+                        self.graphics_recovery_pending = false;
+                        if !replayed {
+                            self.graphics_recovery_canvas_only = true;
+                            self.graphics_recovery_requested = true;
+                        }
+                    }
+                    if let Some(preset) = self.sky_preset {
+                        webgl2.set_sky_preset(preset);
+                    } else {
+                        webgl2.set_clear(self.sky_clear);
+                        webgl2.set_atmosphere_preset(self.atmosphere_preset);
+                    }
+                    let _ = webgl2.set_exposure_compensation(self.hdr_exposure_ev);
+                    let _ = webgl2
+                        .set_white_balance(self.white_balance_ev[0], self.white_balance_ev[1]);
                     self.tier = 1;
                     self.anatomy_webgl2 = Some(webgl2);
                 }
             }
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.set_holograph_w_angle(self.rdf_holograph_w_angle);
+                webgl2.set_holograph_selected(
+                    self.selected_node.map(|n| n as i32).unwrap_or(-1),
+                );
+                self.rdf_holograph_w_angle =
+                    (self.rdf_holograph_w_angle + 0.00055) % std::f32::consts::TAU;
+                if self.rdf_scene.node_count() > 0 {
+                    self.camera.yaw = (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
+                }
                 webgl2.render(
                     self.camera.yaw,
                     self.camera.pitch,
                     self.camera.zoom,
+                    self.camera.target,
+                    self.camera.sun_dir,
+                    self.camera.sun_intensity,
+                    self.camera.ambient_intensity,
                     canvas.width(),
                     canvas.height(),
                 )?;
@@ -1740,6 +2988,35 @@ impl QualiaPortal {
             }
         }
 
+        // Authored world: the lit mesh or nothing. Flat proof triangles are a
+        // different picture, and a phone must not wear them as the build.
+        if self.preserve_authored_frame {
+            return self.paint_quiet(canvas);
+        }
+        self.paint_cpu_proof(canvas, mode)
+    }
+
+    /// Dark frame. Used when the lit present has not arrived yet. Not a model
+    /// and not a badge.
+    fn paint_quiet(&self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
+        let ctx = canvas
+            .get_context("2d")?
+            .ok_or_else(|| JsValue::from_str("no 2d context"))?
+            .dyn_into::<CanvasRenderingContext2d>()?;
+        let w = canvas.width() as f64;
+        let h = canvas.height() as f64;
+        ctx.set_fill_style_str("#05070b");
+        ctx.fill_rect(0.0, 0.0, w, h);
+        Ok(())
+    }
+
+    /// Canvas proof tick. Same orbit camera as the lit path, no depth buffer.
+    /// Solid fills are not occlusion and must not be read as the lit look.
+    fn paint_cpu_proof(
+        &mut self,
+        canvas: &HtmlCanvasElement,
+        mode: crate::gpu_context::OperationalMode,
+    ) -> Result<(), JsValue> {
         let ctx = canvas
             .get_context("2d")?
             .ok_or_else(|| JsValue::from_str("no 2d context"))?
@@ -1757,22 +3034,39 @@ impl QualiaPortal {
         let particle_cap = ambient_draw_instances(resident) as usize;
 
         paint_background(&ctx, w, h, self.telemetry.spectral_shift);
-        paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
-
-        if let Some(ref tensor) = self.last_tensor {
-            paint_tensor_projection(
-                &ctx,
-                w,
-                h,
-                tensor,
-                mode,
-                self.display_mode,
-                self.camera.yaw,
-                &self.standpoint,
-            );
+        // An authored world is the picture. The particle field, the tensor
+        // wire, and the engine HUD are the lab reel — they stay for a portal
+        // that has not loaded a mesh, and they stay off the game once the
+        // page has asked to keep the authored frame.
+        let world = self.cpu_body.is_some() && self.preserve_authored_frame;
+        if !world {
+            paint_ambient_field(&ctx, w, h, self.time, particle_cap, &self.telemetry);
+        }
+        if let Some(mesh) = &self.cpu_body {
+            let aspect = if h > 1.0 { (w / h) as f32 } else { 1.0 };
+            paint_cpu_body(&ctx, w, h, mesh, &self.camera, aspect);
+            if self.body_renderer == BodyRendererBackend::CpuCanvas && self.body_index_count > 0 {
+                self.body_frames_presented = self.body_frames_presented.saturating_add(1);
+            }
         }
 
-        paint_hud(&ctx, self, mode);
+        if !world {
+            if self.tensor_projection_enabled {
+                if let Some(ref tensor) = self.last_tensor {
+                    paint_tensor_projection(
+                        &ctx,
+                        w,
+                        h,
+                        tensor,
+                        mode,
+                        self.display_mode,
+                        self.camera.yaw,
+                        &self.standpoint,
+                    );
+                }
+            }
+            paint_hud(&ctx, self, mode);
+        }
         Ok(())
     }
 }
@@ -1781,27 +3075,105 @@ impl QualiaPortal {
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);
+    static PENDING_GPU_RESULT: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
     static PENDING_WEBGL2: std::cell::RefCell<Option<AnatomyWebGl2>> = std::cell::RefCell::new(None);
 }
 
 /// Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
-/// JS calls this **once, awaited**, right after constructing the portal and **before** the render
-/// loop starts — the canvas must still be context-free (no 2d context yet) so the WebGPU surface
+/// JS awaits this before constructing the portal and starting the render loop.
+/// The canvas must still be context-free (no 2d context yet) so the WebGPU surface
 /// can bind to it. Returns `true` if the GPU path is now armed; on `false`/throw the portal keeps
 /// the canvas2d fallback.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     if !has_webgpu() {
+        PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
         return Ok(false);
     }
+    reset_portal_gpu_init_flags();
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
-    match PortalGpu::try_new_async(&canvas, cap).await {
-        Ok(gpu) => {
-            PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
-            Ok(true)
+    // One adapter request inside try_new_async. A second probe doubles the
+    // wait on a phone and is what used to trip the short timeout.
+    let outcome = race_init(async move {
+        if portal_gpu_init_aborted() {
+            return "aborted".to_string();
         }
-        Err(e) => Err(JsValue::from_str(&format!("portal_init_webgpu: {e}"))),
+        match PortalGpu::try_new_async(&canvas, cap).await {
+            Ok(gpu) => {
+                if portal_gpu_init_aborted() {
+                    return "aborted".to_string();
+                }
+                PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
+                "ok".to_string()
+            }
+            Err(e) if e == "aborted" => "aborted".to_string(),
+            Err(e) => format!("err:{e}"),
+        }
+    })
+    .await;
+    let ready = outcome == "ok";
+    PENDING_GPU_RESULT.with(|p| p.set(Some(ready)));
+    if !ready {
+        PENDING_GPU.with(|p| *p.borrow_mut() = None);
+    }
+    match outcome.as_str() {
+        "ok" => Ok(true),
+        "timeout" | "no-adapter" | "aborted" => {
+            // A late device must not be adopted after the page has given up.
+            PENDING_GPU.with(|p| *p.borrow_mut() = None);
+            Ok(false)
+        }
+        other => Err(JsValue::from_str(&format!("portal_init_webgpu: {other}"))),
+    }
+}
+
+/// Page-side timeout. Stops a late surface from being adopted. If the canvas
+/// was already claimed, [`portal_webgpu_canvas_claimed`] is true and the page
+/// must replace that element before the proof tick.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn portal_abort_webgpu() {
+    abort_portal_gpu_init();
+    PENDING_GPU.with(|p| *p.borrow_mut() = None);
+    PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
+}
+
+/// True once WebGPU has called `getContext("webgpu")` on the init canvas.
+/// A 2d tick on that same element cannot paint; replace it.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn portal_webgpu_canvas_claimed() -> bool {
+    portal_gpu_canvas_claimed()
+}
+
+/// Race GPU-init `work` against a 20 s timeout; resolves to the
+/// backend name or `"timeout"` (which also aborts the pending init).
+#[cfg(target_arch = "wasm32")]
+async fn race_init<F>(work: F) -> String
+where
+    F: std::future::Future<Output = String> + 'static,
+{
+    let work_promise =
+        wasm_bindgen_futures::future_to_promise(async move { Ok(JsValue::from_str(&work.await)) });
+    let timeout = js_sys::Promise::new(&mut |resolve, _reject| {
+        let resolve = resolve.clone();
+        let closure = wasm_bindgen::closure::Closure::once(move || {
+            abort_portal_gpu_init();
+            let _ = resolve.call1(&JsValue::NULL, &JsValue::from_str("timeout"));
+        });
+        if let Some(window) = web_sys::window() {
+            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                closure.as_ref().unchecked_ref(),
+                20000,
+            );
+        }
+        closure.forget();
+    });
+    let racers = js_sys::Array::of2(&work_promise, &timeout);
+    match wasm_bindgen_futures::JsFuture::from(js_sys::Promise::race(&racers)).await {
+        Ok(value) => value.as_string().unwrap_or_else(|| "timeout".into()),
+        Err(_) => "timeout".into(),
     }
 }
 
@@ -1816,6 +3188,28 @@ pub fn portal_init_webgl2(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     Ok(true)
 }
 
+/// Replace `canvas` with a fresh element (same id/size/aria-label) —
+/// the only way to release a claimed WebGPU context binding so a
+/// Canvas2D or WebGL2 context can be created.
+fn release_claimed_canvas(canvas: &HtmlCanvasElement) -> Result<HtmlCanvasElement, JsValue> {
+    let doc = canvas
+        .owner_document()
+        .ok_or_else(|| JsValue::from_str("no document"))?;
+    let fresh: HtmlCanvasElement = doc
+        .create_element("canvas")?
+        .dyn_into()
+        .map_err(|_| JsValue::from_str("canvas element"))?;
+    fresh.set_id(&canvas.id());
+    fresh.set_width(canvas.width());
+    fresh.set_height(canvas.height());
+    if let Some(label) = canvas.get_attribute("aria-label") {
+        let _ = fresh.set_attribute("aria-label", &label);
+    }
+    canvas.replace_with_with_node_1(&fresh)?;
+    Ok(fresh)
+}
+
+/// Initial device tier: 1 when `navigator.gpu` exists, else 0.
 fn detect_tier() -> u8 {
     if has_webgpu() {
         1
@@ -1824,6 +3218,8 @@ fn detect_tier() -> u8 {
     }
 }
 
+/// Whether `navigator.gpu` is present (WebGPU capability probe —
+/// presence only, not adapter usability).
 fn has_webgpu() -> bool {
     let Some(window) = web_sys::window() else {
         return false;
@@ -1838,3 +3234,6 @@ fn has_webgpu() -> bool {
 // Phase 0.2a: canvas2d fallback painters.
 mod paint;
 use paint::*;
+
+mod cpu_mesh;
+use cpu_mesh::CpuBodyMesh;

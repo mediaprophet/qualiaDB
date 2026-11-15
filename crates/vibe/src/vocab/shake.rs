@@ -229,6 +229,15 @@ fn walk_expr(expr: &Expr, out: &mut Vec<(String, String, Span)>) {
             walk_expr(to, out);
             walk_expr(over, out);
         }
+        ExprKind::IfElse {
+            cond,
+            then_value,
+            else_value,
+        } => {
+            walk_expr(cond, out);
+            walk_expr(then_value, out);
+            walk_expr(else_value, out);
+        }
         ExprKind::ModalLogic { args, body, .. } => {
             for a in args {
                 walk_expr(a, out);

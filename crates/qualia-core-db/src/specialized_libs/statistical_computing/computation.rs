@@ -210,6 +210,7 @@ pub enum HypothesisType {
 }
 
 impl StatisticalComputationEngine {
+    /// Creates a default `StatisticalComputationEngine`.
     pub fn new() -> Self {
         Self {
             computation_units: Vec::new(),
@@ -219,6 +220,7 @@ impl StatisticalComputationEngine {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.scheduler.initialize()?;
         self.accelerator.initialize()?;

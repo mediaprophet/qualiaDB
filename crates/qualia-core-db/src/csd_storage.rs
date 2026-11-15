@@ -301,6 +301,7 @@ impl CsdManager {
         }
     }
 
+    /// Registers `device`.
     pub fn register_device(&mut self, device: CsdDevice) -> Result<(), CsdError> {
         self.devices.insert(device.device_id.clone(), device);
         Ok(())

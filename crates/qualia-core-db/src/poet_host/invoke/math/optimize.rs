@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::optimization::metaheuristics::hill_climbing;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: hill-climb optimize.
 pub fn hill_climb(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let start = args::rec_f64(args_v, "start").unwrap_or(0.0);
     let target = args::rec_f64(args_v, "target")

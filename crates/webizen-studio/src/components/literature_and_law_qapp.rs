@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `LiteratureAndLawQapp` component.
 pub fn LiteratureAndLawQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Knowledge Universe · QualiaDB</title>
-  <meta name="description" content="Interactive knowledge universe: bundled ontology packs as galaxies, CODATA constants, Chora Yale bright-star shell." />
+  <title>Knowledge Universe &amp; Omni-Scale Coordinate System (OCS) · QualiaDB</title>
+  <meta name="description" content="Interactive knowledge universe: bundled ontology packs as galaxies, CODATA constants, Chora Yale bright-star ICRS shell, and Omni-Scale Coordinate System (OCS) grounding." />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/tailwind-built.css" />
   <link rel="stylesheet" href="css/site-nav.css" />
@@ -59,7 +59,9 @@
 
     #ku-hud {
       position: absolute; top: 3.4rem; left: 0.9rem; z-index: 15;
-      max-width: min(22rem, calc(100vw - 1.8rem));
+      max-width: min(23.5rem, calc(100vw - 1.8rem));
+      max-height: calc(100vh - 7.5rem);
+      overflow-y: auto;
       display: flex; flex-direction: column; gap: 0.55rem;
     }
     .card {
@@ -74,6 +76,10 @@
       letter-spacing: -0.02em; color: #fff;
     }
     h1 span { font-weight: 400; color: var(--muted); }
+    h2.ocs-title {
+      margin: 0 0 0.3rem; font-size: 0.84rem; font-weight: 650;
+      color: #67e8f9; letter-spacing: -0.01em;
+    }
     p { margin: 0; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
     #ku-info-title { color: #f8fafc; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
     #ku-info-body { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
@@ -134,6 +140,12 @@
     }
     .ku-links a { color: #67e8f9; text-decoration: none; margin-right: 0.65rem; }
     .ku-links a:hover { text-decoration: underline; }
+    .ocs-spec {
+      margin-top: 0.4rem; font-size: 0.7rem; color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.45;
+    }
+    .ocs-spec code { color: #34d399; }
 
     @media (max-width: 720px) {
       #dynamic-nav { display: none !important; }
@@ -158,9 +170,9 @@
 
   <div id="ku-hud">
     <div class="card">
-      <h1>Knowledge <span>Universe</span></h1>
+      <h1>Knowledge <span>Universe · OCS</span></h1>
       <p>
-        Ontology packs as galaxies · mass ∝ pack size · outer shell is the Chora Yale bright-star catalog · science hub from CODATA constants.
+        Ontology packs as galaxies · mass ∝ pack size · outer shell is the Chora Yale bright-star catalog anchored in <strong>ICRS / J2000.0</strong> · science hub from CODATA constants.
         Drag to orbit · scroll to zoom · click a cluster.
       </p>
       <div class="row">
@@ -175,20 +187,33 @@
         <button type="button" class="ku-layer active" id="ku-layer-dust">Dust</button>
       </div>
       <div class="ku-links">
-        <a href="spatial.html"><i class="fas fa-cube"></i> Spatial / GeoSPARQL</a>
+        <a href="spatial.html#ocs"><i class="fas fa-compass"></i> OCS / Spatial</a>
         <a href="ontology.html"><i class="fas fa-project-diagram"></i> Ontology demo</a>
-        <a href="science-playground.html"><i class="fas fa-atom"></i> Sciences</a>
+        <a href="scientific-computing.html"><i class="fas fa-atom"></i> Sciences</a>
       </div>
     </div>
+
     <div class="card dim" id="ku-info">
       <div id="ku-info-title">Explore the knowledge universe</div>
       <div id="ku-info-body">Loading manifest…</div>
       <div id="ku-info-meta"></div>
       <a id="ku-info-link" hidden href="#">Open →</a>
     </div>
+
+    <div class="card dim" id="ku-ocs-grounding">
+      <h2 class="ocs-title"><i class="fas fa-satellite-dish"></i> Omni-Scale Coordinate System (OCS-10–OCS-12)</h2>
+      <p>
+        Every star, orbital frame, and semantic galaxy cluster maps to a canonical <code>USRI</code> (<code>urn:omni:v1:...</code>) and 64-bit <code>CB-USRI</code> context token on <code>Plane::SpatiotemporalHandle</code>.
+      </p>
+      <div class="ocs-spec">
+        • <code>CB-USRI</code>: <code>context &amp; (1 &lt;&lt; 63) == 0</code> (MSB=0; disjoint from <code>did:q42:</code> MSB=1 pointers)<br/>
+        • <strong>Astrometry (OCS-12):</strong> ICRS/J2000 → ITRS via IAU 2006 P03 Fukushima–Williams 4-angle precession ($\gamma_B,\phi_B,\psi_B,\epsilon_A$), 8-term IAU 2000B nutation ($\Delta\psi,\Delta\epsilon$), ERA &amp; polar motion<br/>
+        • <strong>Cosmology (OCS-12):</strong> Flat $\Lambda\text{CDM}$ FLRW comoving &amp; luminosity horizons via 15-pt Gauss–Kronrod ($G_7/K_{15}$) &amp; Etherington reciprocity $D_L = (1+z)D_M = (1+z)^2 D_A$
+      </div>
+    </div>
   </div>
 
-  <div class="ku-hint">Real data under <code>docs/data/</code> · no WASM required</div>
+  <div class="ku-hint">Real data under <code>docs/data/</code> · OCS ICRS/J2000 &amp; ΛCDM grounded · no WASM required</div>
   <div id="ku-chips" aria-label="Galaxy selectors"></div>
 
   <script type="module">

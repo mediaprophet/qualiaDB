@@ -15,7 +15,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use wellfare_core::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
 
 use crate::agency_domain::is_consequential;
 use crate::authority_type::AuthorityProfile;
@@ -111,6 +111,7 @@ pub struct AgencyDelegation {
 }
 
 impl AgencyDelegation {
+    /// Creates a new instance.
     pub fn new(
         principal_did: impl Into<String>,
         domain: impl Into<TermId>,
@@ -142,10 +143,12 @@ impl AgencyDelegation {
     }
 }
 
+/// `agency-delegation-record` ID.
 pub fn agency_delegation_record_id(uuid: &str) -> String {
     format!("urn:qualia:agency-delegation:{uuid}")
 }
 
+/// Builds agency-delegation-envelope.
 pub fn build_agency_delegation_envelope(
     delegation: &AgencyDelegation,
     owner_did: &str,
@@ -172,6 +175,7 @@ pub fn build_agency_delegation_envelope(
     }
 }
 
+/// Agency-delegation summary.
 pub fn agency_delegation_summary(delegation: &AgencyDelegation) -> String {
     serde_json::json!({
         "id": delegation.id,
@@ -233,6 +237,7 @@ pub enum AccessDecision {
 }
 
 impl AccessDecision {
+    /// `true` when permit.
     pub fn is_permit(&self) -> bool {
         matches!(self, AccessDecision::Permit)
     }

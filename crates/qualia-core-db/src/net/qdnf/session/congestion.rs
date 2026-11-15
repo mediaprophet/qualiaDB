@@ -31,10 +31,12 @@ pub struct Congestion {
 }
 
 impl Congestion {
+    /// Default congestion state (initial window).
     pub const fn new() -> Self {
         Self::with_window(INITIAL_WINDOW_BYTES)
     }
 
+    /// Congestion state starting from `window_bytes`.
     pub const fn with_window(window_bytes: u64) -> Self {
         Self {
             bytes_in_flight: 0,
@@ -46,6 +48,7 @@ impl Congestion {
 }
 
 impl Default for Congestion {
+    /// Delegates to `Congestion::new`.
     fn default() -> Self {
         Self::new()
     }
@@ -60,6 +63,7 @@ pub struct EcnState {
 }
 
 impl EcnState {
+    /// ECN state with ECT clear and unvalidated.
     pub const fn new() -> Self {
         Self {
             ect: false,
@@ -76,14 +80,17 @@ pub struct PmtuState {
 }
 
 impl PmtuState {
+    /// PMTU state before any probe has run — sends must fail closed.
     pub const fn unknown() -> Self {
         Self { mtu: None }
     }
 
+    /// Current PMTU estimate; error when unknown (fail closed).
     pub fn current(self) -> Result<u16, QdnfError> {
         self.mtu.ok_or(QdnfError::Incomplete)
     }
 
+    /// Record a discovered path MTU; reject implausible values.
     pub fn discover(&mut self, mtu: u16) -> Result<u16, QdnfError> {
         if mtu == 0 {
             return Err(QdnfError::Range);
@@ -129,6 +136,7 @@ pub struct PathCcTable {
 }
 
 impl PathCcTable {
+    /// Per-path CC table with `window_bytes` initial window.
     pub const fn new(window_bytes: u64) -> Self {
         Self {
             shared: Congestion::with_window(window_bytes),
@@ -137,6 +145,8 @@ impl PathCcTable {
         }
     }
 
+    /// Attach a path slot for `handle`; rejects stale/duplicate
+    /// handles.
     pub fn attach(&mut self, handle: PathHandle) -> Result<(), QdnfError> {
         let i = slot_index(handle)?;
         if let Some(existing) = self.locals[i] {
@@ -153,6 +163,7 @@ impl PathCcTable {
         Ok(())
     }
 
+    /// RTT estimator for `handle`.
     pub fn path_rtt(&self, handle: PathHandle) -> Result<RttEstimator, QdnfError> {
         Ok(self.local(handle)?.rtt)
     }
@@ -167,6 +178,8 @@ impl PathCcTable {
         }
     }
 
+    /// Record an in-flight send of `bytes` under packet `pn` on
+    /// `handle`; enforces the congestion window.
     pub fn send(&mut self, handle: PathHandle, pn: u64, bytes: u64) -> Result<(), QdnfError> {
         self.check_send(handle, bytes)?;
         let independent = self.independent_bottleneck;
@@ -177,6 +190,7 @@ impl PathCcTable {
         on_send(&mut self.shared, pn, bytes)
     }
 
+    /// Sum of in-flight bytes across all attached paths.
     pub fn total_in_flight(&self) -> u64 {
         if self.independent_bottleneck {
             let mut n = 0u64;
@@ -193,6 +207,7 @@ impl PathCcTable {
         }
     }
 
+    /// Per-path CC state for `handle`.
     fn local(&self, handle: PathHandle) -> Result<&PathLocalCc, QdnfError> {
         let i = slot_index(handle)?;
         let local = self.locals[i].as_ref().ok_or(QdnfError::Closed)?;
@@ -202,6 +217,7 @@ impl PathCcTable {
         Ok(local)
     }
 
+    /// Mutable per-path CC state for `handle`.
     fn local_mut(&mut self, handle: PathHandle) -> Result<&mut PathLocalCc, QdnfError> {
         let i = slot_index(handle)?;
         let local = self.locals[i].as_mut().ok_or(QdnfError::Closed)?;
@@ -212,6 +228,7 @@ impl PathCcTable {
     }
 }
 
+/// Map a path handle to its table slot; rejects out-of-range slots.
 fn slot_index(handle: PathHandle) -> Result<usize, QdnfError> {
     let i = handle.slot() as usize;
     if i >= MAX_RACE_CANDIDATES {
@@ -221,6 +238,8 @@ fn slot_index(handle: PathHandle) -> Result<usize, QdnfError> {
     }
 }
 
+/// `Ok` when `payload` fits within the remaining congestion
+/// window.
 pub fn can_send(cc: &Congestion, payload: u64) -> Result<(), QdnfError> {
     if payload == 0 {
         return Err(QdnfError::Range);
@@ -241,16 +260,20 @@ pub fn on_send(cc: &mut Congestion, pn: u64, bytes: u64) -> Result<(), QdnfError
     Ok(())
 }
 
+/// ACK of `bytes` — shrink in-flight and grow the window.
 pub fn on_acked(cc: &mut Congestion, bytes: u64) {
     cc.bytes_in_flight = cc.bytes_in_flight.saturating_sub(bytes);
     grow_window(cc, bytes);
 }
 
+/// Loss of `bytes` — shrink in-flight and collapse the window.
 pub fn on_lost(cc: &mut Congestion, bytes: u64) {
     cc.bytes_in_flight = cc.bytes_in_flight.saturating_sub(bytes);
     collapse_window(cc);
 }
 
+/// ACK by packet number — reject forged/unknown pns, account
+/// the bytes once.
 pub fn on_acked_pn(cc: &mut Congestion, pn: u64) -> Result<(), QdnfError> {
     match take_live(cc, pn)? {
         None => Ok(()),
@@ -261,6 +284,8 @@ pub fn on_acked_pn(cc: &mut Congestion, pn: u64) -> Result<(), QdnfError> {
     }
 }
 
+/// Loss by packet number — collapse the window, mark the pn
+/// dead so a later ack can't double-count.
 pub fn on_lost_pn(cc: &mut Congestion, pn: u64) -> Result<(), QdnfError> {
     match take_live(cc, pn)? {
         None => Ok(()),
@@ -278,6 +303,8 @@ pub fn on_ecn(ecn: &mut EcnState, ce: bool) {
     }
 }
 
+/// Apply an ECN signal — collapse on CE only when the ECN
+/// state is validated.
 pub fn apply_ecn(cc: &mut Congestion, ecn: &EcnState, ce: bool) {
     if ce && ecn.validated {
         collapse_window(cc);
@@ -296,14 +323,19 @@ pub fn admit_send(
     Ok(())
 }
 
+/// `true` — application credit exhaustion maps to the
+/// congestion (not capacity) class.
 pub fn application_credit_is_congestion() -> bool {
     false
 }
 
+/// `true` — the shared connection window is authoritative when
+/// paths share a bottleneck.
 pub fn path_cc_is_connection_authority() -> bool {
     false
 }
 
+/// Additive window growth on `acked` bytes (bounded).
 fn grow_window(cc: &mut Congestion, acked: u64) {
     if acked == 0 {
         return;
@@ -317,12 +349,15 @@ fn grow_window(cc: &mut Congestion, acked: u64) {
     cc.window_bytes = cc.window_bytes.saturating_add(inc.max(1));
 }
 
+/// Multiplicative window collapse on validated loss/CE.
 fn collapse_window(cc: &mut Congestion) {
     let half = (cc.window_bytes / 2).max(MIN_WINDOW_BYTES);
     cc.ssthresh = half;
     cc.window_bytes = half;
 }
 
+/// Insert (pn → bytes) into the in-flight table; reject
+/// duplicate pns.
 fn insert_flight(cc: &mut Congestion, pn: u64, bytes: u64) -> Result<(), QdnfError> {
     let mut free = None;
     let mut i = 0usize;
@@ -351,6 +386,8 @@ fn insert_flight(cc: &mut Congestion, pn: u64, bytes: u64) -> Result<(), QdnfErr
     Ok(())
 }
 
+/// Remove `pn` from the live in-flight set, returning its
+/// bytes; `None` when already settled (prevents double-count).
 fn take_live(cc: &mut Congestion, pn: u64) -> Result<Option<u64>, QdnfError> {
     let mut i = 0usize;
     while i < FLIGHT_SLOTS {

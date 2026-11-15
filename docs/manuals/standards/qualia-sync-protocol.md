@@ -11,7 +11,7 @@ Ecosystem.
 The Qualia sync protocol is the peer-to-peer graph synchronization layer that
 sits between:
 
-- the unified v3 `q42` storage and artifact family (see
+- the unified v3/v4 `q42` storage and artifact family (see
   [q42-format-internal-draft.md](./q42-format-internal-draft.md))
 - identifier-bearing peer coordination
 - higher-level Webizen governance and agency logic
@@ -247,7 +247,7 @@ collapsed into this protocol draft.
 They are related, but distinct:
 
 - daemon chat relay over loopback HTTP
-- WebTorrent unified v3 `.q42` web-seeding (fail-closed unless
+- WebTorrent unified v3/v4 `.q42` web-seeding (fail-closed unless
   `FLAG_PERMISSIVE_COMMONS`; leftover `.c.q42` seeds are not minted)
 - qapp loopback serving
 - future WebRTC or GUN-oriented coordination language elsewhere in the repo
@@ -326,7 +326,7 @@ The previous contradictions have been resolved through the implementation of CBO
 
 1. **✅ CBOR-LD Semantic Payloads**: Implemented with Q42 lexicon resolution
    - Current implementation uses CBOR-LD semantic payloads throughout
-   - Q42 lexicon embedded in v3 volumes eliminates external dependencies
+   - Q42 lexicon embedded in v3/v4 volumes eliminates external dependencies
    - Zero-allocation parsing maintains performance constraints
 
 2. **✅ Semantic Handshake Structure**: Replaced binary buffer with typed CBOR-LD
@@ -342,10 +342,10 @@ The previous contradictions have been resolved through the implementation of CBO
      follow-up (tracked in the standards backlog).
    - Term-compacted CBOR-LD keeps the payload smaller than JSON-LD; no external schema fetch
 
-4. **✅ Stable Block Transfer**: Defined in unified v3 `.q42` format
-   - Block transfer grammar tied to v3 volume specification
-   - CBOR-LD payloads reference v3 volume structures
-   - Leftover `.c.q42` may still decode; new seeds are unified v3 `.q42` only
+4. **✅ Stable Block Transfer**: Defined in unified v3/v4 `.q42` format
+   - Block transfer grammar tied to the unified volume specification
+   - CBOR-LD payloads reference unified volume structures
+   - Leftover `.c.q42` may still decode; new seeds are unified `.q42` only
 
 5. **✅ Trust Logic Enhancement**: Semantic validation with Q42 lexicon
    - Trust conditions now use semantic term resolution

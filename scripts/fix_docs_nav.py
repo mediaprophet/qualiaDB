@@ -11,6 +11,7 @@ NAV_REPL = r'\1class="relative flex items-center text-sm"'
 
 
 def main():
+    """CLI entry point."""
     fixed_nav = 0
     for path in DOCS.rglob("*.html"):
         if "init-draft-standards" in str(path):

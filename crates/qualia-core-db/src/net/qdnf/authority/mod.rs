@@ -1,5 +1,7 @@
 //! Verified authority types. Trusted constructors stay crate-private.
 
+mod current_guard;
+pub use current_guard::CurrentAuthorityGuard;
 mod decoded;
 mod digest_bind;
 mod owner;

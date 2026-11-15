@@ -9,6 +9,7 @@ use super::errors::CryptoError;
 
 type HmacSha384 = Hmac<Sha384>;
 
+/// HKDF-SHA384 extract+expand over `ikm`/`salt`/`info` into caller buffer.
 pub fn hkdf_sha384(
     salt: Option<&[u8]>,
     ikm: &[u8],
@@ -22,6 +23,7 @@ pub fn hkdf_sha384(
     hk.expand(info, okm).map_err(|_| CryptoError::CryptoFailure)
 }
 
+/// HMAC-SHA384 of `data` under `key` into `out`.
 pub fn hmac_sha384(key: &[u8], data: &[u8], out: &mut [u8; 48]) -> Result<(), CryptoError> {
     let mut mac = HmacSha384::new_from_slice(key).map_err(|_| CryptoError::CryptoFailure)?;
     mac.update(data);

@@ -76,6 +76,7 @@ pub struct QuboFormulation {
 }
 
 impl QuboFormulation {
+    /// Creates an empty QUBO formulation with `num_variables`.
     pub fn new(num_variables: u32) -> Self {
         Self {
             num_variables,
@@ -85,14 +86,44 @@ impl QuboFormulation {
         }
     }
 
+    /// Adds a linear coefficient for `variable`.
     pub fn add_linear_term(&mut self, variable: u32, coefficient: f64) {
         self.linear_terms.push((variable, coefficient));
     }
 
+    /// Adds a quadratic coupler `(var_a, var_b)`.
     pub fn add_quadratic_term(&mut self, var_a: u32, var_b: u32, coefficient: f64) {
         self.quadratic_terms.push((var_a, var_b, coefficient));
     }
 
+    /// Evaluate the QUBO energy `E(x)` at a binary assignment `bits` (`0` or `1` per variable).
+    pub fn evaluate_binary(&self, bits: &[u8]) -> f64 {
+        let mut energy = self.offset;
+        for &(v, c) in &self.linear_terms {
+            let x = if bits.get(v as usize).copied().unwrap_or(0) != 0 {
+                1.0
+            } else {
+                0.0
+            };
+            energy += c * x;
+        }
+        for &(a, b, c) in &self.quadratic_terms {
+            let xa = if bits.get(a as usize).copied().unwrap_or(0) != 0 {
+                1.0
+            } else {
+                0.0
+            };
+            let xb = if bits.get(b as usize).copied().unwrap_or(0) != 0 {
+                1.0
+            } else {
+                0.0
+            };
+            energy += c * xa * xb;
+        }
+        energy
+    }
+
+    /// Serializes the formulation into QPU `JobParameters`.
     pub fn to_job_parameters(&self) -> JobParameters {
         JobParameters {
             num_qubits: self.num_variables,
@@ -152,6 +183,7 @@ pub enum MeasurementBasis {
 }
 
 impl CircuitFormulation {
+    /// Creates an empty gate-model formulation with `num_qubits`.
     pub fn new(num_qubits: u32) -> Self {
         Self {
             num_qubits,
@@ -160,14 +192,17 @@ impl CircuitFormulation {
         }
     }
 
+    /// Appends a gate to the circuit.
     pub fn add_gate(&mut self, gate: Gate) {
         self.gates.push(gate);
     }
 
+    /// Appends a measurement.
     pub fn add_measurement(&mut self, m: Measurement) {
         self.measurements.push(m);
     }
 
+    /// Serializes the circuit into QPU `JobParameters`.
     pub fn to_job_parameters(&self) -> JobParameters {
         JobParameters {
             num_qubits: self.num_qubits,
@@ -180,6 +215,87 @@ impl CircuitFormulation {
     }
 }
 
+// ── QUBO Penalty Sufficiency Theorem (Q42-08 / §6.2.3) ────────────────────────
+
+/// Bounds for enforcing the QUBO Penalty Sufficiency Theorem (`P * delta > U - L`)
+/// on a penalized Hamiltonian `E(x) = f(x) + P * g(x)`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct QuboPenaltyBounds {
+    /// Global lower bound `L <= min_x f(x)` over all binary states (including infeasible).
+    pub objective_lower_bound: f64,
+    /// Upper bound `U >= min_{x feasible} f(x)` on at least one known feasible state.
+    pub feasible_upper_bound: f64,
+    /// Minimum positive constraint violation gap `delta <= min_{x infeasible} g(x)`.
+    pub min_violation_delta: f64,
+    /// Penalty multiplier `P` applied to `g(x)`.
+    pub penalty_weight: f64,
+}
+
+/// Enforce the **QUBO Penalty Sufficiency Theorem**:
+/// For `E(x) = f(x) + P * g(x)` with `g(x) = 0` on feasible states and `g(x) >= delta > 0`
+/// on infeasible states, `P * delta > U - L` guarantees every global ground state of `E(x)`
+/// is feasible.
+pub fn verify_qubo_penalty_sufficiency(bounds: &QuboPenaltyBounds) -> Result<(), QpuError> {
+    if !bounds.objective_lower_bound.is_finite()
+        || !bounds.feasible_upper_bound.is_finite()
+        || !bounds.min_violation_delta.is_finite()
+        || !bounds.penalty_weight.is_finite()
+    {
+        return Err(QpuError::Api(
+            "QUBO penalty bounds must be finite real numbers".to_string(),
+        ));
+    }
+    if bounds.min_violation_delta <= 0.0 {
+        return Err(QpuError::Api(format!(
+            "QUBO minimum violation gap delta must be > 0, got {}",
+            bounds.min_violation_delta
+        )));
+    }
+    if bounds.feasible_upper_bound < bounds.objective_lower_bound {
+        return Err(QpuError::Api(format!(
+            "QUBO feasible upper bound U ({}) < objective lower bound L ({})",
+            bounds.feasible_upper_bound, bounds.objective_lower_bound
+        )));
+    }
+    let span = bounds.feasible_upper_bound - bounds.objective_lower_bound;
+    let penalty_gap = bounds.penalty_weight * bounds.min_violation_delta;
+    if !(penalty_gap > span) {
+        return Err(QpuError::Api(format!(
+            "QUBO Penalty Sufficiency Theorem violated: P * delta ({} * {} = {}) must be strictly > U - L ({})",
+            bounds.penalty_weight, bounds.min_violation_delta, penalty_gap, span
+        )));
+    }
+    Ok(())
+}
+
+/// Compute a sufficient penalty weight `P = (U - L) / delta + safety_margin` (`safety_margin > 0`).
+pub fn minimum_sufficient_penalty(
+    objective_lower_bound: f64,
+    feasible_upper_bound: f64,
+    min_violation_delta: f64,
+    safety_margin: f64,
+) -> Result<f64, QpuError> {
+    if !safety_margin.is_finite() || safety_margin <= 0.0 {
+        return Err(QpuError::Api(
+            "QUBO penalty safety_margin must be finite and > 0".to_string(),
+        ));
+    }
+    if !min_violation_delta.is_finite() || min_violation_delta <= 0.0 {
+        return Err(QpuError::Api(
+            "QUBO min_violation_delta must be finite and > 0".to_string(),
+        ));
+    }
+    if !objective_lower_bound.is_finite()
+        || !feasible_upper_bound.is_finite()
+        || feasible_upper_bound < objective_lower_bound
+    {
+        return Err(QpuError::Api(
+            "QUBO objective bounds must be finite with U >= L".to_string(),
+        ));
+    }
+    Ok((feasible_upper_bound - objective_lower_bound) / min_violation_delta + safety_margin)
+}
+
 // ── Pre-solver ────────────────────────────────────────────────────────────────
 
 pub struct PreSolver {
@@ -187,18 +303,31 @@ pub struct PreSolver {
 }
 
 impl PreSolver {
+    /// Creates a pre-solver with the default formulation strategy.
     pub fn new() -> Self {
         Self {
             variable_map: HashMap::new(),
         }
     }
 
+    /// Formulates `problem` into executable `JobParameters`; `QpuError` on unsupported problem kinds.
     pub fn formulate(&mut self, problem: &ProblemDescription) -> Result<JobParameters, QpuError> {
         match problem.problem_type {
             ProblemType::Annealing => self.formulate_qubo(problem),
             ProblemType::GateModel => self.formulate_circuit(problem),
             ProblemType::Vqe | ProblemType::Qaoa => self.formulate_circuit(problem),
         }
+    }
+
+    /// Formulate a constrained QUBO only after verifying the QUBO Penalty Sufficiency Theorem
+    /// (`P * delta > U - L`).
+    pub fn formulate_penalized_qubo(
+        &mut self,
+        problem: &ProblemDescription,
+        bounds: &QuboPenaltyBounds,
+    ) -> Result<JobParameters, QpuError> {
+        verify_qubo_penalty_sufficiency(bounds)?;
+        self.formulate_qubo(problem)
     }
 
     fn formulate_qubo(&mut self, problem: &ProblemDescription) -> Result<JobParameters, QpuError> {
@@ -405,5 +534,55 @@ mod tests {
         q.add_quadratic_term(0, 1, 0.5);
         assert_eq!(q.linear_terms.len(), 2);
         assert_eq!(q.quadratic_terms.len(), 1);
+    }
+
+    #[test]
+    fn qubo_penalty_sufficiency_theorem_enforces_feasible_ground_state() {
+        // Minimize f(x0, x1) = -3*x0 - 3*x1 subject to x0 + x1 <= 1 (g(x0, x1) = x0 * x1, delta = 1).
+        // Feasible states: (0,0)->0, (1,0)->-3, (0,1)->-3 => U = -3.
+        // Infeasible state: (1,1) has f(1,1) = -6 => L = -6, so U - L = 3.
+        let insufficient = QuboPenaltyBounds {
+            objective_lower_bound: -6.0,
+            feasible_upper_bound: -3.0,
+            min_violation_delta: 1.0,
+            penalty_weight: 2.0, // P * delta = 2 <= U - L = 3 (under-penalized!)
+        };
+        assert!(verify_qubo_penalty_sufficiency(&insufficient).is_err());
+
+        let mut solver = PreSolver::new();
+        assert!(solver
+            .formulate_penalized_qubo(&two_var_problem(ProblemType::Annealing), &insufficient)
+            .is_err());
+
+        // Demonstrate that under P = 2.0, infeasible (1,1) has lower energy (-4) than feasible (1,0) (-3):
+        let mut bad_qubo = QuboFormulation::new(2);
+        bad_qubo.add_linear_term(0, -3.0);
+        bad_qubo.add_linear_term(1, -3.0);
+        bad_qubo.add_quadratic_term(0, 1, 2.0);
+        assert!(bad_qubo.evaluate_binary(&[1, 1]) < bad_qubo.evaluate_binary(&[1, 0]));
+
+        // Compute sufficient penalty P > (U - L) / delta = 3.0:
+        let p_suff = minimum_sufficient_penalty(-6.0, -3.0, 1.0, 1.0).unwrap();
+        assert!((p_suff - 4.0).abs() < 1e-12);
+        let sufficient = QuboPenaltyBounds {
+            objective_lower_bound: -6.0,
+            feasible_upper_bound: -3.0,
+            min_violation_delta: 1.0,
+            penalty_weight: p_suff,
+        };
+        assert!(verify_qubo_penalty_sufficiency(&sufficient).is_ok());
+        assert!(solver
+            .formulate_penalized_qubo(&two_var_problem(ProblemType::Annealing), &sufficient)
+            .is_ok());
+
+        // Under P = 4.0, infeasible (1,1) has energy -2 > feasible ground state energy -3:
+        let mut good_qubo = QuboFormulation::new(2);
+        good_qubo.add_linear_term(0, -3.0);
+        good_qubo.add_linear_term(1, -3.0);
+        good_qubo.add_quadratic_term(0, 1, p_suff);
+        assert_eq!(good_qubo.evaluate_binary(&[1, 0]), -3.0);
+        assert_eq!(good_qubo.evaluate_binary(&[0, 1]), -3.0);
+        assert_eq!(good_qubo.evaluate_binary(&[1, 1]), -2.0);
+        assert!(good_qubo.evaluate_binary(&[1, 1]) > good_qubo.evaluate_binary(&[1, 0]));
     }
 }

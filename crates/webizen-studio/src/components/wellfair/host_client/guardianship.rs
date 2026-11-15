@@ -26,6 +26,7 @@ pub struct GuardianshipProposalDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn propose_proxy_condition(proxy_did: &str, label: &str) -> Result<String, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -48,11 +49,13 @@ pub async fn propose_proxy_condition(proxy_did: &str, label: &str) -> Result<Str
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn propose_proxy_condition(_proxy_did: &str, _label: &str) -> Result<String, String> {
     Err("Guardianship requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches guardianship-proposals.
 pub async fn fetch_guardianship_proposals(
     limit: usize,
 ) -> Result<Vec<GuardianshipProposalDto>, String> {
@@ -73,6 +76,7 @@ pub async fn fetch_guardianship_proposals(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches guardianship-proposals.
 pub async fn fetch_guardianship_proposals(
     _limit: usize,
 ) -> Result<Vec<GuardianshipProposalDto>, String> {
@@ -80,6 +84,7 @@ pub async fn fetch_guardianship_proposals(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn vote_guardianship_proposal(
     proposal_id: &str,
     guardian_did: &str,
@@ -119,6 +124,7 @@ pub async fn vote_guardianship_proposal(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn vote_guardianship_proposal(
     _proposal_id: &str,
     _guardian_did: &str,
@@ -129,6 +135,7 @@ pub async fn vote_guardianship_proposal(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds assistance-need.
 pub async fn add_assistance_need(
     category: &str,
     description: &str,
@@ -163,6 +170,7 @@ pub async fn add_assistance_need(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds assistance-need.
 pub async fn add_assistance_need(
     _category: &str,
     _description: &str,
@@ -172,6 +180,7 @@ pub async fn add_assistance_need(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds welfare-stream.
 pub async fn add_welfare_stream(
     program_name: &str,
     reference: Option<&str>,
@@ -208,6 +217,7 @@ pub async fn add_welfare_stream(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds welfare-stream.
 pub async fn add_welfare_stream(
     _program_name: &str,
     _reference: Option<&str>,
@@ -217,6 +227,7 @@ pub async fn add_welfare_stream(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds government-letter.
 pub async fn add_government_letter(
     sender: &str,
     subject: &str,
@@ -251,6 +262,7 @@ pub async fn add_government_letter(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds government-letter.
 pub async fn add_government_letter(
     _sender: &str,
     _subject: &str,
@@ -260,6 +272,7 @@ pub async fn add_government_letter(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds government-letter-attachment-from-path.
 pub async fn add_government_letter_attachment_from_path(
     sender: &str,
     subject: &str,
@@ -304,6 +317,7 @@ pub async fn add_government_letter_attachment_from_path(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds government-letter-attachment-from-path.
 pub async fn add_government_letter_attachment_from_path(
     _sender: &str,
     _subject: &str,
@@ -337,6 +351,7 @@ pub struct SyncInboxRecordDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches sync-inbox.
 pub async fn fetch_sync_inbox(limit: usize) -> Result<Vec<SyncInboxRecordDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -355,6 +370,7 @@ pub async fn fetch_sync_inbox(limit: usize) -> Result<Vec<SyncInboxRecordDto>, S
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches sync-inbox.
 pub async fn fetch_sync_inbox(_limit: usize) -> Result<Vec<SyncInboxRecordDto>, String> {
     Ok(vec![])
 }
@@ -381,6 +397,7 @@ struct SanctuaryVaultConfiguredDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn sanctuary_vault_configured() -> Result<bool, String> {
     let js = tauri_invoke(
         "wellfair_sanctuary_vault_configured",
@@ -397,11 +414,13 @@ pub async fn sanctuary_vault_configured() -> Result<bool, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — returns an empty/default result (see STUBS.md).
 pub async fn sanctuary_vault_configured() -> Result<bool, String> {
     Ok(false)
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -423,6 +442,7 @@ pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn setup_sanctuary_vault(_real_pin: &str, _decoy_pin: &str) -> Result<(), String> {
     Err("Sanctuary vault requires the Tauri desktop host".into())
 }

@@ -1,10 +1,10 @@
 # ADR 005: DNS Frontdoor and HCAI Agreements
 
 ## Status
-Accepted (v0.0.33)
+Accepted (v0.0.40)
 
 ## Context
-Qualia-DB is an offline-first, zero-telemetry sovereign vault. However, for a user (Principal) to establish a connection with another user or organisation, they must be globally discoverable without leaking their raw `.q42` data or exposing themselves to unauthenticated network probing.
+Qualia-DB is an offline-first, zero-telemetry private Sanctuary vault. However, for a user (Principal) to establish a connection with another user or organisation, they must be globally discoverable without leaking their raw `.q42` data or exposing themselves to unauthenticated network probing.
 
 ## Decision
 We implement a "DNS Frontdoor" utilizing W3C `did:web` standards. 

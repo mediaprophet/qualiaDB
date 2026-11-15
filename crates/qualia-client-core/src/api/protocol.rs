@@ -4,14 +4,17 @@
 
 use std::path::Path;
 
+/// Seeds bundled qapps.
 pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
     crate::bundled_qapps::seed_bundled_qapps()
 }
 
+/// Seeds bundled ontologies.
 pub fn seed_bundled_ontologies() -> Result<Vec<String>, String> {
     crate::bundled_ontologies::seed_bundled_ontologies()
 }
 
+/// Installed qapp version.
 pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String> {
     let state = crate::state::APP_STATE
         .get()
@@ -28,6 +31,7 @@ pub fn installed_qapp_version(qapp_name: &str) -> Result<Option<String>, String>
     ))
 }
 
+/// Checks qapp-update.
 pub fn check_qapp_update(qapp_name: String) -> Result<String, String> {
     let state = crate::state::APP_STATE
         .get()
@@ -42,6 +46,7 @@ pub fn check_qapp_update(qapp_name: String) -> Result<String, String> {
     serde_json::to_string(&status).map_err(|e| e.to_string())
 }
 
+/// Checks qapp-update-from-path.
 pub fn check_qapp_update_from_path(
     qapp_name: String,
     source_path: String,
@@ -63,6 +68,7 @@ pub fn check_qapp_update_from_path(
     serde_json::to_string(&status).map_err(|e| e.to_string())
 }
 
+/// Lists qapp update offers.
 pub fn list_qapp_update_offers() -> Result<String, String> {
     let state = crate::state::APP_STATE
         .get()
@@ -77,6 +83,7 @@ pub fn list_qapp_update_offers() -> Result<String, String> {
     serde_json::to_string(&offers).map_err(|e| e.to_string())
 }
 
+/// Applies qapp-update.
 pub fn apply_qapp_update(qapp_name: String) -> Result<String, String> {
     let state = crate::state::APP_STATE
         .get()
@@ -90,6 +97,7 @@ pub fn apply_qapp_update(qapp_name: String) -> Result<String, String> {
     crate::bundled_qapps::apply_bundled_qapp_update(Path::new(&storage), &qapp_name)
 }
 
+/// Applies qapp-update-from-path.
 pub fn apply_qapp_update_from_path(
     qapp_name: String,
     source_path: String,
@@ -110,18 +118,22 @@ pub fn apply_qapp_update_from_path(
     )
 }
 
+/// Starts the `qualia://` protocol.
 pub fn start_qualia_protocol() -> Result<u16, String> {
     crate::qapps_protocol::start_qualia_protocol()
 }
 
+/// `qualia://` protocol port.
 pub fn qualia_protocol_port() -> u16 {
     crate::qapps_protocol::qualia_protocol_port()
 }
 
+/// Downloads and installs an update.
 pub async fn download_and_install_update(url: String) -> Result<(), String> {
     crate::update_installer::download_and_install_update(url).await
 }
 
+/// Registers the `qualia://` URI handler.
 pub fn register_qualia_uri_handler(exe_path: String) -> Result<(), String> {
     crate::qapps_protocol::register_qualia_uri_handler(&exe_path)
 }

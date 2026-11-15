@@ -4,6 +4,7 @@ use crate::cli::{
 };
 use crate::science;
 
+/// Handles the subcommand action.
 pub fn handle(action: &ScienceAction) {
     match action {
         ScienceAction::Chem { action } => match action {

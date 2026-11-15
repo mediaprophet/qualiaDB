@@ -1,0 +1,11 @@
+
+running 6 tests
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_all_32_layers_and_reset_are_reproducible ... ok
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_attention_failure_cannot_count_ffn_or_emit_logits ... ok
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_metadata_requires_exact_partial_rope_and_unique_fields ... ok
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_missing_role_duplicate_and_budget_fail_cold ... ok
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_recurrent_geometry_and_tiled_heads ... ok
+test gguf_bridge::qwen35::gguf::tests::dense_gguf_wrong_position_directory_and_source_are_refused ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 10378 filtered out; finished in 69.86s
+

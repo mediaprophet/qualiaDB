@@ -316,6 +316,7 @@ pub fn design_to_quins(doc: &DesignDocument) -> Result<Vec<NQuin>, DesignEncodeE
     Ok(quins)
 }
 
+/// Design-context hash.
 pub fn design_context_hash(doc: &DesignDocument) -> u64 {
     if doc.title.is_empty() {
         q_hash(&doc.prompt)

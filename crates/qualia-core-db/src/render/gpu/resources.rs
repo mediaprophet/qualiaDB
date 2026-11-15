@@ -1,149 +1,107 @@
 //! GPU resource builders — depth/picking textures, bind-group layouts/groups, target states.
 use super::*;
 
-pub(super) fn create_offscreen_texture(
-    device: &wgpu::Device,
-    format: wgpu::TextureFormat,
+#[cfg(test)]
+mod tests {
+    use super::{checked_padded_bytes_per_row, frame_target_vram_bytes, readback_buffer_bytes};
+
+    #[test]
+    fn portal_target_estimate_counts_depth_picking_and_offscreen_color() {
+        assert_eq!(frame_target_vram_bytes(1920, 1080, false), Some(16_588_800));
+        assert_eq!(frame_target_vram_bytes(1920, 1080, true), Some(24_883_200));
+        assert_eq!(frame_target_vram_bytes(u32::MAX, u32::MAX, true), None);
+    }
+
+    #[test]
+    fn readback_staging_size_uses_checked_row_pitch_and_height() {
+        assert_eq!(checked_padded_bytes_per_row(1), Some(256));
+        assert_eq!(readback_buffer_bytes(1920, 1080), Some(8_294_400));
+        assert_eq!(readback_buffer_bytes(u32::MAX, u32::MAX), None);
+    }
+}
+
+/// Logical residency estimate for the portal's persistent depth and picking
+/// targets, plus its RGBA8 offscreen target when present. Surface swapchain
+/// colour storage is driver-owned and is not included here.
+pub(super) fn frame_target_vram_bytes(width: u32, height: u32, offscreen: bool) -> Option<u64> {
+    let pixels = u64::from(width.max(1)).checked_mul(u64::from(height.max(1)))?;
+    pixels.checked_mul(if offscreen { 12 } else { 8 })
+}
+
+/// `reserve_view_resources`.
+pub(super) fn reserve_view_resources(
     width: u32,
     height: u32,
-) -> wgpu::Texture {
-    device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("qualia-render-offscreen"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    })
-}
-
-pub(super) fn padded_bytes_per_row(width: u32) -> u32 {
-    let tight = width.max(1).saturating_mul(4);
-    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    tight.div_ceil(align) * align
-}
-
-pub(super) fn create_readback_buffer(
-    device: &wgpu::Device,
-    padded_bytes_per_row: u32,
-    height: u32,
-) -> wgpu::Buffer {
-    device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("qualia-render-readback"),
-        size: padded_bytes_per_row as u64 * height.max(1) as u64,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    })
-}
-
-pub(super) fn create_picking_texture(
-    device: &wgpu::Device,
-    width: u32,
-    height: u32,
-) -> (wgpu::Texture, wgpu::TextureView) {
-    let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("portal-picking"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::R32Uint,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    (texture, view)
-}
-
-pub(super) fn picking_color_target_state() -> wgpu::ColorTargetState {
-    wgpu::ColorTargetState {
-        format: wgpu::TextureFormat::R32Uint,
-        blend: None,
-        write_mask: wgpu::ColorWrites::ALL,
+    offscreen: bool,
+) -> Result<
+    (
+        u32,
+        u32,
+        crate::gpu_context::VramReservation<'static>,
+        Option<crate::gpu_context::VramReservation<'static>>,
+    ),
+    String,
+> {
+    let (mut width, mut height) = (width.max(1), height.max(1));
+    let requested = (width, height);
+    for _ in 0..33 {
+        if let Some(bytes) = frame_target_vram_bytes(width, height, offscreen) {
+            if let Ok(reservation) = crate::gpu_context::global_vram_ledger()
+                .try_reserve_graphics(crate::gpu_context::VramResourceClass::FrameTarget, bytes)
+            {
+                let readback_reservation = if offscreen {
+                    let Some(readback_bytes) = readback_buffer_bytes(width, height) else {
+                        if width == 1 && height == 1 {
+                            break;
+                        }
+                        width = width.div_ceil(2);
+                        height = height.div_ceil(2);
+                        continue;
+                    };
+                    let Ok(staging) = crate::gpu_context::global_vram_ledger()
+                        .try_reserve_graphics(
+                            crate::gpu_context::VramResourceClass::UploadStaging,
+                            readback_bytes,
+                        )
+                    else {
+                        if width == 1 && height == 1 {
+                            break;
+                        }
+                        width = width.div_ceil(2);
+                        height = height.div_ceil(2);
+                        continue;
+                    };
+                    Some(staging)
+                } else {
+                    None
+                };
+                return Ok((width, height, reservation, readback_reservation));
+            }
+        }
+        if !offscreen || (width == 1 && height == 1) {
+            break;
+        }
+        width = width.div_ceil(2);
+        height = height.div_ceil(2);
     }
+    Err(format!(
+        "frame targets refused by graphics budget for requested extent {}x{}",
+        requested.0, requested.1
+    ))
 }
 
-pub(super) fn create_depth_texture(
-    device: &wgpu::Device,
-    width: u32,
-    height: u32,
-) -> (wgpu::Texture, wgpu::TextureView) {
-    let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("portal-depth"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Depth32Float,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    (texture, view)
-}
+pub(super) use etalon_render::targets::*;
 
-pub(super) fn depth_stencil_state(format: wgpu::TextureFormat) -> wgpu::DepthStencilState {
-    wgpu::DepthStencilState {
-        format,
-        depth_write_enabled: Some(true),
-        depth_compare: Some(wgpu::CompareFunction::Less),
-        stencil: wgpu::StencilState::default(),
-        bias: wgpu::DepthBiasState::default(),
-    }
-}
-
-pub(super) fn depth_stencil_state_read_only() -> wgpu::DepthStencilState {
-    wgpu::DepthStencilState {
-        format: wgpu::TextureFormat::Depth32Float,
-        depth_write_enabled: Some(false),
-        depth_compare: Some(wgpu::CompareFunction::Less),
-        stencil: wgpu::StencilState::default(),
-        bias: wgpu::DepthBiasState::default(),
-    }
-}
-
-pub(super) fn color_target_state(format: wgpu::TextureFormat) -> wgpu::ColorTargetState {
-    wgpu::ColorTargetState {
-        format,
-        blend: Some(wgpu::BlendState {
-            color: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::SrcAlpha,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
-            },
-            alpha: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::One,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
-            },
-        }),
-        write_mask: wgpu::ColorWrites::ALL,
-    }
-}
-
+/// `uniform_128_bind_entry`.
 pub(super) fn uniform_128_bind_entry(
     binding: u32,
-    stages: wgpu::ShaderStages,
-) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+    stages: etalon::ShaderStages,
+) -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding,
         visibility: stages,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Uniform,
             has_dynamic_offset: false,
             min_binding_size: std::num::NonZeroU64::new(128),
         },
@@ -151,12 +109,13 @@ pub(super) fn uniform_128_bind_entry(
     }
 }
 
-pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+/// `tensor_storage_bind_entry`.
+pub(super) fn tensor_storage_bind_entry() -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding: 0,
-        visibility: wgpu::ShaderStages::VERTEX,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
+        visibility: etalon::ShaderStages::VERTEX,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Storage { read_only: true },
             has_dynamic_offset: false,
             min_binding_size: None,
         },
@@ -164,73 +123,75 @@ pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-pub(super) fn ambient_bind_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
+/// `ambient_bind_entries`.
+pub(super) fn ambient_bind_entries() -> [etalon::BindGroupLayoutEntry; 5] {
     [
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
+            visibility: etalon::ShaderStages::VERTEX_FRAGMENT,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Uniform,
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 1,
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
+            visibility: etalon::ShaderStages::VERTEX_FRAGMENT,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Uniform,
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 2,
-            visibility: wgpu::ShaderStages::VERTEX,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
+            visibility: etalon::ShaderStages::VERTEX,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Storage { read_only: true },
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        uniform_128_bind_entry(3, wgpu::ShaderStages::VERTEX),
-        uniform_128_bind_entry(4, wgpu::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(3, etalon::ShaderStages::VERTEX),
+        uniform_128_bind_entry(4, etalon::ShaderStages::VERTEX_FRAGMENT),
     ]
 }
 
+/// Makes `ambient-bind-group`.
 pub(super) fn make_ambient_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    uniform_buf: &wgpu::Buffer,
-    telemetry_buf: &wgpu::Buffer,
-    camera_buf: &wgpu::Buffer,
-    observer_buf: &wgpu::Buffer,
-    particle_buf: &wgpu::Buffer,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    uniform_buf: &etalon::Buffer,
+    telemetry_buf: &etalon::Buffer,
+    camera_buf: &etalon::Buffer,
+    observer_buf: &etalon::Buffer,
+    particle_buf: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("portal-ambient-bind"),
         layout,
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: uniform_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: telemetry_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
                 resource: particle_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 3,
                 resource: camera_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 4,
                 resource: observer_buf.as_entire_binding(),
             },
@@ -238,23 +199,24 @@ pub(super) fn make_ambient_bind_group(
     })
 }
 
+/// Makes `projector-tensor-bind-group`.
 pub(super) fn make_projector_tensor_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    tensor_raw_buf: &wgpu::Buffer,
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    tensor_raw_buf: &etalon::Buffer,
     node_count: u32,
-) -> Result<wgpu::BindGroup, String> {
+) -> Result<etalon::BindGroup, String> {
     let body_bytes = (node_count as u64)
         .checked_mul(TENSOR_STRIDE as u64)
         .ok_or_else(|| "tensor body size overflow".to_string())?;
     let size =
         std::num::NonZeroU64::new(body_bytes).ok_or_else(|| "empty tensor body".to_string())?;
-    Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
+    Ok(device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("portal-projector-tensor-bind"),
         layout,
-        entries: &[wgpu::BindGroupEntry {
+        entries: &[etalon::BindGroupEntry {
             binding: 0,
-            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            resource: etalon::BindingResource::Buffer(etalon::BufferBinding {
                 buffer: tensor_raw_buf,
                 // Buffer already starts at the first record (header stripped at upload); offset 0
                 // satisfies the 256-byte minStorageBufferOffsetAlignment that Dawn enforces.

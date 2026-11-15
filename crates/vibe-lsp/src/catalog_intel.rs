@@ -57,6 +57,7 @@ const KEYWORDS: &[(&str, &str)] = &[
     ("until", "LTL until"),
 ];
 
+/// Completions at a position.
 pub fn completions_at(src: &str, line: usize, character: usize) -> Vec<Value> {
     let offset = position_to_offset(src, line, character);
     let prefix = &src[..offset.min(src.len())];
@@ -104,6 +105,7 @@ pub fn completions_at(src: &str, line: usize, character: usize) -> Vec<Value> {
     out
 }
 
+/// Hover info at a position.
 pub fn hover_at(src: &str, line: usize, character: usize) -> String {
     let offset = position_to_offset(src, line, character);
     let token = ident_path_at(src, offset);
@@ -127,6 +129,7 @@ pub fn hover_at(src: &str, line: usize, character: usize) -> String {
     format!("**`{token}`**\n\n{}", describe(&token))
 }
 
+/// Workspace edit for a fix.
 pub fn workspace_edit_for_fix(uri: &str, diagnostic: &Value, src: &str) -> Option<Value> {
     let fix = diagnostic
         .pointer("/data/suggested_fix")
@@ -220,6 +223,7 @@ fn ident_path_at(src: &str, offset: usize) -> String {
     src[start..end].to_string()
 }
 
+/// Position to byte offset.
 pub fn position_to_offset(src: &str, line: usize, character: usize) -> usize {
     let mut cur_line = 0;
     let mut cur_char = 0;

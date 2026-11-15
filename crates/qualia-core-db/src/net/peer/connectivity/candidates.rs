@@ -32,14 +32,17 @@ pub struct Candidate {
 }
 
 impl Candidate {
+    /// Host candidate for `family`/`foundation`.
     pub fn host(family: AddrFamily, foundation: u32) -> Self {
         Self::new(CandidateKind::Host, family, foundation)
     }
 
+    /// Relayed candidate.
     pub fn relayed(family: AddrFamily, foundation: u32) -> Self {
         Self::new(CandidateKind::Relayed, family, foundation)
     }
 
+    /// Server-reflexive candidate.
     pub fn srflx(family: AddrFamily, foundation: u32) -> Self {
         Self::new(CandidateKind::ServerReflexive, family, foundation)
     }
@@ -98,6 +101,7 @@ pub struct CandidateTables {
 }
 
 impl CandidateTables {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             local: [None; MAX_LOCAL],
@@ -109,6 +113,7 @@ impl CandidateTables {
         }
     }
 
+    /// Pushes a local candidate; `Err(())` at capacity.
     pub fn push_local(&mut self, c: Candidate) -> Result<usize, ()> {
         if self.local_len >= MAX_LOCAL {
             return Err(());
@@ -119,6 +124,7 @@ impl CandidateTables {
         Ok(i)
     }
 
+    /// Pushes a remote candidate.
     pub fn push_remote(&mut self, c: Candidate) -> Result<usize, ()> {
         if self.remote_len >= MAX_REMOTE {
             return Err(());

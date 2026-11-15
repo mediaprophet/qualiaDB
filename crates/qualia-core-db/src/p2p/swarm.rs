@@ -14,6 +14,7 @@ pub struct QualiaBehaviour {
     pub request_response: request_response::Behaviour<QualiaSyncCodec>,
 }
 
+/// Builds `behaviour`.
 pub fn build_behaviour(local_peer_id: libp2p::PeerId) -> QualiaBehaviour {
     let mdns = Mdns::new(libp2p::mdns::Config::default(), local_peer_id).unwrap();
     let store = MemoryStore::new(local_peer_id);

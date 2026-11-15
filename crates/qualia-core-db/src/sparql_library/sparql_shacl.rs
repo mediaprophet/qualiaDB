@@ -69,6 +69,7 @@ pub struct ShaclValidator<'a> {
 }
 
 impl<'a> ShaclValidator<'a> {
+    /// Creates a default `ShaclValidator`.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,

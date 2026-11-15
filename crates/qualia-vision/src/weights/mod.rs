@@ -58,6 +58,7 @@ pub struct VisionWeightBundle {
 }
 
 impl VisionWeightBundle {
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.content_hash
     }
@@ -123,6 +124,7 @@ impl VisionWeightBundle {
         out
     }
 
+    /// Saves path.
     pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
         if let Some(p) = path.parent() {
             std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
@@ -130,6 +132,7 @@ impl VisionWeightBundle {
         std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
     }
 
+    /// Loads path.
     pub fn load_path(path: &std::path::Path, class_iris: &[&str]) -> Result<Self, String> {
         let b = std::fs::read(path).map_err(|e| e.to_string())?;
         Self::from_bytes(&b, class_iris).map_err(|e| format!("{e:?}"))
@@ -221,6 +224,7 @@ pub struct ProductionVision {
 }
 
 impl ProductionVision {
+    /// Creates a new instance.
     pub fn new(bundle: VisionWeightBundle) -> Self {
         Self {
             bundle,
@@ -229,6 +233,7 @@ impl ProductionVision {
         }
     }
 
+    /// `backend` kind.
     pub fn backend_kind(&self) -> VisionBackendKind {
         VisionBackendKind::ProductionWeights
     }

@@ -31,6 +31,7 @@ pub struct ResearchEnquiry {
 }
 
 impl ResearchEnquiry {
+    /// Creates an enquiry with `id` and `purpose`.
     pub fn new(id: &str, purpose: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -42,22 +43,27 @@ impl ResearchEnquiry {
         }
     }
 
+    /// Updates the enquiry purpose.
     pub fn set_purpose(&mut self, purpose: &str) {
         self.purpose = purpose.to_string();
     }
 
+    /// Sets the topical scope.
     pub fn define_scope(&mut self, scope: Vec<String>) {
         self.scope = scope;
     }
 
+    /// Adds a research constraint.
     pub fn add_constraint(&mut self, constraint: ResearchConstraint) {
         self.constraints.push(constraint);
     }
 
+    /// Adds a research question.
     pub fn add_question(&mut self, question: ResearchQuestion) {
         self.questions.push(question);
     }
 
+    /// Links `q1`→`q2` as related.
     pub fn link_questions(&mut self, q1: &str, q2: &str) {
         for q in &mut self.questions {
             if q.id == q1 && !q.linked_questions.contains(&q2.to_string()) {
@@ -69,10 +75,12 @@ impl ResearchEnquiry {
         }
     }
 
+    /// Total questions.
     pub fn question_count(&self) -> usize {
         self.questions.len()
     }
 
+    /// Questions with recorded answers.
     pub fn answered_count(&self) -> usize {
         self.questions.iter().filter(|q| q.answered).count()
     }

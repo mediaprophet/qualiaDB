@@ -1,6 +1,6 @@
 # Qualia-DB Developer Guide
 
-_Branch: `0.0.38` | Last updated: 2026-09-08_
+_Branch: `0.0.40` | Last updated: 2026-09-08_
 
 Qualia-DB is a bare-metal semantic graph database designed specifically for constrained personal environments (mobile devices, IoT, browsers). It enforces a strict 512 MB RAM floor and operates with absolute zero dynamic heap allocation during execution, making garbage-collection pauses mathematically impossible.
 
@@ -127,11 +127,11 @@ QCHK (`.qchk`) binary bundles declare the allowed engine operations and ontology
 
 ## Webizen Studio (Desktop App)
 
-The `crates/webizen-studio/` package is the new primary desktop application (Windows, macOS, Linux) built using native Rust, Dioxus 0.5, and Shoelace web components. It entirely bypasses legacy Node.js/React and Flutter overhead.
+The `crates/webizen-studio/` package is the new primary desktop application (Windows, macOS, Linux) built using native Rust, Aether 0.5, and Shoelace web components. It entirely bypasses legacy Node.js/React and Flutter overhead.
 
 ### Architecture
 
-Webizen Studio employs a pane-based architecture managed via a central `PaneRegistry`. UI components are harvested from Shoelace into native Rust Dioxus components using the `webizen-component-harvester`.
+Webizen Studio employs a pane-based architecture managed via a central `PaneRegistry`. UI components are harvested from Shoelace into native Rust Aether components using the `webizen-component-harvester`.
 
 ```text
 crates/webizen-studio/
@@ -139,7 +139,7 @@ crates/webizen-studio/
   ├── src/pane_registry.rs       ← Registry of available panes
   ├── src/studio_canvas.rs       ← Main workspace managing active panes
   ├── src/components/            ← Custom panes and UI wrappers
-  │     ├── shoelace.rs          ← Generated Dioxus wrappers for Shoelace components
+  │     ├── shoelace.rs          ← Generated Aether wrappers for Shoelace components
   │     ├── chat_graph.rs        ← Neuro-Symbolic Chat pane
   │     ├── health_monitor.rs    ← Vital Monitor pane
   │     ├── llm_harness.rs       ← LLM Engine harness pane

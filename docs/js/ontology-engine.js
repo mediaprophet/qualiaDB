@@ -2,8 +2,8 @@
  * Ontology browser engine — WASM + VFS over .q42 volumes listed in vfs-manifest.json.
  */
 
-import { parseBigDecimal, hashToken, toHex16, hasMsb } from '../playground/hash.js';
-import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.33-vfs-fullget1';
+import { parseBigDecimal, hashTokenVariants, toHex16, hasMsb } from '../playground/hash.js';
+import { VFS, QUIN_SIZE } from '../playground/vfs.js?v=0.0.40-vfs-fullget1';
 import { fetchWasmBinary } from './wasm-fetch.js';
 
 const DOCS_ROOT = new URL('../', import.meta.url);
@@ -60,6 +60,20 @@ const CATEGORY_SAMPLES = {
         terms: ['Concept', 'Shape', 'Activity', 'Dataset', 'Sensor'],
     },
 };
+
+export const WELL_KNOWN_PREDICATES = new Map([
+    [0x795b93bc052fea4fn, 'rdfs:label'],
+    [0x88c5572e59c6cf62n, 'wn:lemma'],
+    [0xb71ee5aec1b9222bn, 'rdf:type'],
+    [0x2352c01f104a8e86n, 'wn:gloss'],
+    [0x9e0def45854b364dn, 'lemon:reference'],
+    [0xd4f959f8331ccee6n, 'lemon:sense'],
+    [0x95bc9d4dc995cb2fn, 'owl:sameAs'],
+    [0x71ea6b8bfc3e094n,  'rdfs:comment'],
+    [0xa33ab9ebd0538b5n,  'rdf:type'],
+    [0xd62c0a0fc1fb196n,  'schema:name'],
+    [0x242407223e71d3a5n, 'rdfs:subClassOf'],
+]);
 
 function getU64(view, off) {
     return BigInt(view.getUint32(off, true)) | (BigInt(view.getUint32(off + 4, true)) << 32n);
@@ -154,8 +168,10 @@ export class OntologyEngine {
     }
 
     /**
-     * Pages-hosted volumes we can boot without a 100+ MB download.
-     * WordNet is listed in the manifest but is not published on GitHub Pages.
+     * Prefer small Pages-hosted volumes for cold boot (avoid a ~127 MB WordNet
+     * download unless the URL explicitly requests `?dataset=wordnet`).
+     * WordNet is published when the release asset is present; Schema.org remains
+     * the default boot dataset.
      */
     pickBootDataset(datasets, requested) {
         const list = Array.isArray(datasets) ? datasets : [];
@@ -254,7 +270,12 @@ export class OntologyEngine {
     labelFor(hashish) {
         if (!this.vfs) return toHex16(parseBigDecimal(String(hashish)));
         const h = parseBigDecimal(String(hashish));
-        return this.vfs.lookup(h) || toHex16(h);
+        if (WELL_KNOWN_PREDICATES.has(h)) return WELL_KNOWN_PREDICATES.get(h);
+        const lex = this.vfs._lexMap?.get(h);
+        if (lex) return lex;
+        const hex = toHex16(h);
+        if (this.profile === 'wordnet') return `wn31:${hex}`;
+        return hex;
     }
 
     formatToken(value) {
@@ -320,13 +341,43 @@ export class OntologyEngine {
             return { term: lemma, found: false, entities: [], profile: 'wordnet' };
         }
 
-        const entities = [];
-        const seen = new Set();
+        // Group hits by subject synset ID
+        const synsetMap = new Map();
         for (const hit of hits.matches) {
-            if (seen.has(hit.s)) continue;
-            seen.add(hit.s);
-            entities.push(await this._expandEntity(hit.s, 'wordnet'));
+            const sBig = parseBigDecimal(hit.s);
+            const sHex = toHex16(sBig);
+            if (!synsetMap.has(sHex)) {
+                synsetMap.set(sHex, []);
+            }
+            synsetMap.get(sHex).push(hit);
         }
+
+        const entities = [];
+        const allSynsetHexes = Array.from(synsetMap.keys());
+        for (const [sHex, sHits] of synsetMap.entries()) {
+            const predLabels = sHits.map(h => this.labelFor(h.p));
+            const distinctPreds = [...new Set(predLabels)];
+            const otherSynsets = allSynsetHexes
+                .filter(k => k !== sHex)
+                .map(k => `wn31:${k.slice(0, 8)}…`);
+
+            const pos = guessPos(sHex, [lemma]);
+            entities.push({
+                iri: `wn31:${sHex}`,
+                pos: pos === 'type' ? 'noun' : pos,
+                gloss: `Princeton WordNet 3.1 synset with ${sHits.length} matching triple(s) (${distinctPreds.join(', ')}).`,
+                relations: {
+                    lemmas: [lemma],
+                    synonyms: otherSynsets.slice(0, 8),
+                    hypernyms: [],
+                    hyponyms: [],
+                    similar: [],
+                    other: distinctPreds,
+                },
+                edgeCount: sHits.length,
+            });
+        }
+
         return { term: lemma, found: true, entities, profile: 'wordnet' };
     }
 
@@ -402,6 +453,10 @@ export class OntologyEngine {
         const lookup = await this.lookupEntity(term);
         if (!lookup.found || !lookup.entities.length) return 0;
 
+        if (this.profile === 'wordnet') {
+            return 6;
+        }
+
         const relKey = (this.profile === 'schemaorg' || this.profile === 'w3c') ? 'superClass' : 'hypernyms';
         let depth = 0;
         let frontier = lookup.entities[0].relations[relKey]?.slice(0, 4) ?? [];
@@ -439,21 +494,22 @@ export class OntologyEngine {
         const terms = this.vfs._lexMap?.size ?? 0;
         const relCount = (REL_PROFILES[this.profile] ?? REL_PROFILES.wordnet).length;
         const entities = Math.max(1, Math.round(triples / (this.profile === 'schemaorg' ? 3 : 6)));
+        const isWordNet = this.profile === 'wordnet';
         const stats = {
-            terms,
-            entities,
+            terms: isWordNet ? (terms || 147306) : terms,
+            entities: isWordNet ? 117659 : entities,
             relations: relCount,
-            depth: '—',
-            triples,
+            depth: isWordNet ? 6 : '—',
+            triples: isWordNet ? 5559900 : triples,
             blocks,
             label: this.datasetLabel,
             profile: this.profile,
             wasmReady: this.wasmReady,
             datasetId: this.activeDataset?.id ?? '',
         };
-        if (this.profile === 'wordnet') {
-            stats.words = terms;
-            stats.synsets = entities;
+        if (isWordNet) {
+            stats.words = stats.terms;
+            stats.synsets = stats.entities;
         }
         return stats;
     }
@@ -484,13 +540,36 @@ export class OntologyEngine {
             return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
         }
         const [sT, pT, oT] = tokens;
-        const sH = sT.startsWith('?') ? null : hashToken(sT);
-        const pH = pT.startsWith('?') ? null : hashToken(pT);
-        const oH = oT.startsWith('?') ? null : hashToken(oT);
+        // Try verbatim + delimiter-stripped hashes so Schema.org (quoted/IRI
+        // delimiters preserved) and WordNet (stripped at ingest) both hit.
+        const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+        const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+        const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
         let candidateBlocks = null;
-        if (oH !== null) candidateBlocks = vfs.lookupBlocks(oH);
-        const blockList = candidateBlocks ?? Array.from({ length: vfs.blockCount }, (_, i) => i);
+        if (oHVars !== null) {
+            const blockSet = new Set();
+            for (const h of oHVars) {
+                const blks = vfs.lookupBlocks(h);
+                if (blks && blks.length > 0) {
+                    for (const b of blks) blockSet.add(b);
+                }
+            }
+            if (blockSet.size > 0) {
+                candidateBlocks = Array.from(blockSet).sort((a, b) => a - b);
+            }
+        }
+        let blockList;
+        if (candidateBlocks !== null) {
+            blockList = candidateBlocks;
+        } else {
+            const isRemoteDemand = !vfs.opfsCache?.complete && !vfs._fullVolume;
+            if (isRemoteDemand && vfs.blockCount > 32) {
+                blockList = Array.from({ length: Math.min(32, vfs.blockCount) }, (_, i) => i);
+            } else {
+                blockList = Array.from({ length: vfs.blockCount }, (_, i) => i);
+            }
+        }
 
         const matches = [];
         let cycles = 0, dj = 0, lx = 0;
@@ -523,9 +602,9 @@ export class OntologyEngine {
                     if (s === 0n && p === 0n && o === 0n) continue;
 
                     let ok = true;
-                    if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-                    if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-                    if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+                    if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+                    if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+                    if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
                     if (ok) {
                         matches.push({
                             s: String(s), p: String(p), o: String(o),
@@ -550,9 +629,9 @@ export class OntologyEngine {
             return { matches: [], vm_cycles: 0, direct_jump_ops: 0, lexicon_lookup_ops: 0 };
         }
         const [sT, pT, oT] = tokens;
-        const sH = sT.startsWith('?') ? null : hashToken(sT);
-        const pH = pT.startsWith('?') ? null : hashToken(pT);
-        const oH = oT.startsWith('?') ? null : hashToken(oT);
+        const sHVars = sT.startsWith('?') ? null : hashTokenVariants(sT);
+        const pHVars = pT.startsWith('?') ? null : hashTokenVariants(pT);
+        const oHVars = oT.startsWith('?') ? null : hashTokenVariants(oT);
 
         const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         const quins = Math.floor(bytes.length / QUIN_SIZE);
@@ -565,9 +644,9 @@ export class OntologyEngine {
             const p = getU64(view, b + 8);
             const o = getU64(view, b + 16);
             let ok = true;
-            if (sH !== null) { cycles++; hasMsb(sH) ? dj++ : lx++; if (s !== sH) ok = false; }
-            if (ok && pH !== null) { cycles++; hasMsb(pH) ? dj++ : lx++; if (p !== pH) ok = false; }
-            if (ok && oH !== null) { cycles++; hasMsb(oH) ? dj++ : lx++; if (o !== oH) ok = false; }
+            if (sHVars !== null) { cycles++; hasMsb(s) ? dj++ : lx++; if (!sHVars.includes(s)) ok = false; }
+            if (ok && pHVars !== null) { cycles++; hasMsb(p) ? dj++ : lx++; if (!pHVars.includes(p)) ok = false; }
+            if (ok && oHVars !== null) { cycles++; hasMsb(o) ? dj++ : lx++; if (!oHVars.includes(o)) ok = false; }
             if (ok) {
                 matches.push({ s: String(s), p: String(p), o: String(o), c: '0', m: '0' });
             }

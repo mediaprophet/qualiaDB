@@ -135,6 +135,7 @@ pub struct EvidenceStore {
 }
 
 impl EvidenceStore {
+    /// Creates an empty fixed-slot evidence store.
     pub fn new() -> Self {
         Self {
             slots: core::array::from_fn(|_| Slot::EMPTY),
@@ -144,14 +145,17 @@ impl EvidenceStore {
         }
     }
 
+    /// Marks whether durable storage is reachable (promotion gates on it).
     pub fn set_storage_available(&mut self, available: bool) {
         self.storage_available = available;
     }
 
+    /// Latest Lamport clock observed.
     pub fn last_clock(&self) -> u64 {
         self.last_clock
     }
 
+    /// Occupied evidence slots.
     pub fn count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -164,6 +168,7 @@ impl EvidenceStore {
         n
     }
 
+    /// Slot index of `digest`, or `None`.
     pub(crate) fn find(&self, digest: StrongDigest) -> Option<usize> {
         let mut i = 0usize;
         while i < MAX_EVIDENCE {
@@ -175,6 +180,7 @@ impl EvidenceStore {
         None
     }
 
+    /// First free slot index, or `None` when full.
     pub(crate) fn find_free(&self) -> Option<usize> {
         let mut i = 0usize;
         while i < MAX_EVIDENCE {
@@ -186,6 +192,7 @@ impl EvidenceStore {
         None
     }
 
+    /// Evidence record for `digest`, or `None`.
     pub fn record(&self, digest: StrongDigest) -> Option<&EvidenceRecord> {
         self.find(digest).map(|i| &self.slots[i].record)
     }
@@ -196,6 +203,7 @@ pub fn hash_preserves_content() -> bool {
     false
 }
 
+/// `EvidenceStore::admit_clock`.
 pub(crate) fn admit_clock(store: &mut EvidenceStore, now: u64) -> Result<(), QdnfError> {
     if now == 0 {
         return Err(QdnfError::Conflict);

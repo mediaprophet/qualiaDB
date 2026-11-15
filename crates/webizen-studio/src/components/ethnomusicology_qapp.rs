@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `EthnomusicologyQapp` component.
 pub fn EthnomusicologyQapp() -> Element {
     rsx! {
         QAppEngine {

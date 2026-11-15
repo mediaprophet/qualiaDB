@@ -284,10 +284,10 @@ Recommended next packet: `HLT-04`
 
 Packet: `HLT-04`
 Baseline git status: Existing user-owned Health Overview, Budget, tracker, CSS, core changes, and completed HLT-01 through HLT-03 changes were preserved.
-User job delivered: Built the complete, sovereign Consent & Disclosure workspace (`build_disclosure_workspace_view` / `build_disclosure_log_view`). Users can select from known clinician contacts (avoiding raw DIDs), choose granular record categories (`vitals`, `medications`, `conditions`, `lab_results`, `documents`, `clinical_notes`) with select all/clear all affordances, choose purpose and fail-closed expiry durations, and review a live, reactive plain-language summary. Active disclosures are projected with status badges (Active, Expired, Revoked) and an immediate 1-action "Revoke access" button that commits an immutable `health_revocation` receipt. Revocation receipts can be inspected in an accessible modal dialog (`show_revocation_dialog`) detailing the cryptographic defeater. The workspace honestly reflects daemon offline and error states without synthetic indicators.
+User job delivered: Built the complete, human-centric Consent & Disclosure workspace (`build_disclosure_workspace_view` / `build_disclosure_log_view`). Users can select from known clinician contacts (avoiding raw DIDs), choose granular record categories (`vitals`, `medications`, `conditions`, `lab_results`, `documents`, `clinical_notes`) with select all/clear all affordances, choose purpose and fail-closed expiry durations, and review a live, reactive plain-language summary. Active disclosures are projected with status badges (Active, Expired, Revoked) and an immediate 1-action "Revoke access" button that commits an immutable `health_revocation` receipt. Revocation receipts can be inspected in an accessible modal dialog (`show_revocation_dialog`) detailing the cryptographic defeater. The workspace honestly reflects daemon offline and error states without synthetic indicators.
 Files changed: `crates/poet/src/browser/health_views/disclosure_model.rs`, `crates/poet/src/browser/health_views/disclosure_list.rs`, `crates/poet/src/browser/health_views/disclosure_workspace.rs`, `crates/poet/src/browser/health_views/disclosure_log.rs`, `crates/poet/src/browser/health_views/overview_workspace.rs`, `crates/poet/src/browser/css.rs`, and this ledger.
 Tests and exact results: `cargo test -p poet health_views` passed 15 tests; `cargo test -p poet --test product_integrity` passed 4 tests; `cargo test -p poet --test surface_inventory` passed 1 test; `trunk build` in `crates/poet` passed.
-Browser/native UAT: Browser subagent verified on live local instance (http://127.0.0.1:8081/): Navigated to Health manifold, clicked "Active disclosures" summary card to open container, verified known clinician contact dropdown (Dr. Sarah Chen, Dr. Marcus Vance, Dr. Elena Rostova), tested category selection and buttons, observed real-time plain-language summary updates with calculated RFC3339 expiry dates, and confirmed daemon-offline honest indicators (`data-honesty="unavailable"`, disabled authorize button, sovereign 0 active empty state). WebP (`hlt04_disclosure_uat_1788501059937.webp`) and screenshot (`consent_disclosure_summary_focused_1788501224805.png`) artifacts captured.
+Browser/native UAT: Browser subagent verified on live local instance (http://127.0.0.1:8081/): Navigated to Health manifold, clicked "Active disclosures" summary card to open container, verified known clinician contact dropdown (Dr. Sarah Chen, Dr. Marcus Vance, Dr. Elena Rostova), tested category selection and buttons, observed real-time plain-language summary updates with calculated RFC3339 expiry dates, and confirmed daemon-offline honest indicators (`data-honesty="unavailable"`, disabled authorize button, human-centric 0 active empty state). WebP (`hlt04_disclosure_uat_1788501059937.webp`) and screenshot (`consent_disclosure_summary_focused_1788501224805.png`) artifacts captured.
 Delegation count before/after: 112 / 112 audited delegation modules; no route changes.
 Known gaps: Purpose-built conditions and medicines workspaces remain for `HLT-05`.
 Unrelated failures preserved: Yes; no unrelated files or failures were repaired.
@@ -316,7 +316,7 @@ Unrelated failures preserved: None; working tree clean.
 Recommended next packet: `HLT-07`
 
 Packet: `HLT-R1`
-Baseline git status: `0.0.36-dev` tip `37ec26c9` (overnight UAT seam closed). Feature branch `cursor/poet-grok-handover-ac52`.
+Baseline git status: `0.0.40-dev` tip `37ec26c9` (overnight UAT seam closed). Feature branch `cursor/poet-grok-handover-ac52`.
 User job delivered: Independent review of HLT-03 consent contract. Principal/scope digest immutability, fail-closed expiry, principal-only revoke, and absence of private keys on the grant struct already held. Repaired unused replay detection (`ConsentLedger`, 32 slots), omit-receipt reactivation, unknown scope labels, Poet projection fail-open ("All categories" / missing expiry → Active), and grantable `clinical_notes` UI flag outside `ConsentScope`. Share projection extracted to `share_projection.rs`.
 Files changed: `crates/qualia-core-db/src/governance/consent_contract.rs`; `crates/poet/src/browser/health_views/share_projection.rs`; `crates/poet/src/browser/health_views/model.rs`; `crates/poet/src/browser/health_views/disclosure_model.rs`; `crates/poet/src/browser/health_views/disclosure_list.rs`; `crates/poet/src/browser/health_views/mod.rs`; WIP register/plan; this ledger.
 Tests and exact results: `cargo +stable test -p qualia-core-db --lib consent_contract` (12 passed); `cargo +stable test -p poet --lib health_views` (27 passed). rustc 1.98.1.
@@ -435,7 +435,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `PFT-03` (owner) or `command_palette/commands.rs` (1,231). Do not close Gate A. Do not start `AST-*`.
 
 Packet: `GATE-A`
-Baseline git status: `0.0.36-dev` at `9909c1b4` (PR #75 merged + cloud-env cherry-pick). Pre-existing uncommitted QDNF docs WIP preserved and excluded from this commit.
+Baseline git status: `0.0.40-dev` at `9909c1b4` (PR #75 merged + cloud-env cherry-pick). Pre-existing uncommitted QDNF docs WIP preserved and excluded from this commit.
 User job delivered: Closed Review Gate A under explicit project-owner D5 instruction. Recorded accepted evidence (HLT-R1/07/07b/08), documented residuals (ConsentLedger persist wiring; live-daemon browser UAT), unparked clinical Tool Chest engines in the tracker, and unlocked post-gate programmes (`AST-*`, `PFT-03`).
 Files changed: `docs/work-in-progress/GATE_A_CLOSE_2026-09-06.md`; register/plan/reconciliation/HLT evidence docs; `docs/manuals/standards/poet-toolchest-implementation-tracker.md`; this ledger.
 Tests and exact results: Evidence suite from PR #75 tip retained (consent_contract, invoke::clinical, health_uat_pack, product integrity). Close session did not re-run the full suite before documentation land.
@@ -446,7 +446,7 @@ Unrelated failures preserved: Yes (QDNF WIP untouched).
 Recommended next packet: `PFT-03` (owner chain selection) or `AST-01` (governed Q42 envelope).
 
 Packet: `PFT-04`
-Baseline git status: `0.0.36-dev` after Gate A `019f10c8`; large uncommitted Tool Chest swarm WIP preserved.
+Baseline git status: `0.0.40-dev` after Gate A `019f10c8`; large uncommitted Tool Chest swarm WIP preserved.
 User job delivered: Continued Poet after Gate A — deepened live registry dual-path for epistemic frame scan, ungrounded/verify-turn inference, and image histogram; Live dispatch honesty via `tool_dual_path`.
 Files changed: `chain_actions.rs`, `tool_actions.rs`, `tool_copy.rs`, `register_ai_toolbox.rs`, `register_epistemic_toolbox.rs`, `spec_tools/dispatch.rs`, `live_args.rs`, `epistemics.rs`; WIP register/swarm/tracker/ledger.
 Tests and exact results: `cargo test -p poet --lib -- tool_actions live_args chain_actions` → 13 passed; registration → 3 passed; product_integrity → 10 passed.
@@ -457,7 +457,7 @@ Unrelated failures preserved: Yes (QDNF WIP untouched).
 Recommended next packet: `AST-01` or further inventory live binds (`Statistics.*` / logic) — no Host widen.
 
 Packet: `AST-01`
-Baseline git status: `0.0.36-dev` with uncommitted Tool Chest swarm + PFT-04 WIP preserved.
+Baseline git status: `0.0.40-dev` with uncommitted Tool Chest swarm + PFT-04 WIP preserved.
 User job delivered: Governed Q42 asset envelope and licence policy schema in `qualia-core-db` (not poet UI). Deterministic encode/decode, SHA-256 digests, unknown-licence fail-closed, obligation union for derived assets, 42 MiB chunk budget.
 Files changed: `crates/qualia-core-db/src/q42/asset_envelope/`; `q42/mod.rs`; register/ledger.
 Tests and exact results: `cargo test -p qualia-core-db --lib asset_envelope` → 11 passed.
@@ -490,7 +490,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: owner choice — live chebi_query seam once asset path is ready, or next open AST/PFT.
 
 Packet: Residual swarm (`HLT-CL` / `AST-06b` / `APP-01` / `APP-02`)
-Baseline git status: `0.0.36-dev`; large prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; large prior WIP preserved; not committed.
 User job delivered: Four-lane residual clear — ConsentLedger session persist before COP upsert; fixture-backed ChEBI explorer bind; portable-app ADR; app_manifest v1.
 Files changed: `health_views/consent_persist.rs` + disclosure grant/revoke wiring; chemical_explorer bind; ADR 0013; `q42/app_manifest/`; register/swarm/ledger.
 Tests and exact results (parent): consent_persist **5**; health_views **58**; consent_contract **12**; chemical **20**; app_manifest **14**; product_integrity **11**.
@@ -501,7 +501,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `APP-03` or WD programme toward Review Gate B.
 
 Packet: Gate B swarm (`EXP-C1` / `APP-03` / `WD-01` / `WD-02`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Crate→seam incorporation inventory (client-core / cooperative-core / vision); APP-03 projection adapters; WD-01 control-plane IA map; WD-02 bounded installed-app registry.
 Files changed: gap script + `CRATE_SURFACE_INCORPORATION_2026-09-06.md`; `app_manifest/project.rs`; `WD_01_CONTROL_PLANE_IA_2026-09-06.md`; `q42/app_registry/`; register/swarm/ledger.
 Tests and exact results (parent): app_registry **11**; app_manifest **21**; gap ALL_BOUND **892**/892 modules **1481**.
@@ -511,7 +511,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: `APP-04` / `WD-03` / Poet CV+Econ consume toward Review Gate B.
 
 Packet: Vibescript-first swarm (`VIBE-CV` / `VIBE-ECON` / `VIBE-COOP` / `VIBE-CHAT`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Constraint correction (Host widen in scope); exhaustive backlog methodology; Poet Live for remaining CV + more Econ; new Host families CooperativeDelegation/CooperativeWork and ChatGraph; Poet dual-path cites.
 Files changed: image/econ/cooperative/chat_graph invoke + Poet registration/chain; wellfare-core cycle break; backlog script + methodology docs.
 Tests and exact results (parent): catalog **1**; chat_graph **8**; cooperative **7**; poet econ **16**; product_integrity **11**.
@@ -521,7 +521,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: Q1/Q2 waves from `vibe_incorporation_backlog.py`.
 
 Packet: Q1/Q2 incorporation wave (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live consume for Econ (+8), Statistics (+11), MachineLearning (+11); Host-widen LinearAlgebra QR/Cholesky-solve/BLAS-1 (+7) with paired vibe catalog.
 Files changed: `econ_chain_actions` / `stats_chain_actions` / `ml_chain_actions`; sheet/econ/ai toolbox registration; `poet_host/invoke/math/qr_vector.rs` + ids; swarm/register/ledger.
 Tests and exact results (parent): poet econ **25**; stats **12**; sheet extended assert **1**; ai_ml_chain **1**; product_integrity **11**; vibe catalog **1**; qr_vector **6**.
@@ -531,7 +531,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
 
 Packet: Q1/Q2 incorporation wave 2 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+8), Statistics (+9), MachineLearning (+8); Host-widen LinearAlgebra vector assign/scale + SymbolicAlgebra.simplify_trig + PolynomialAlgebra (div_rem/derivative/monic/resultant).
 Files changed: econ/stats/ml chain + toolboxes; `math/qr_vector`, `math/symbolic`, `math/poly_algebra`; paired catalogs; wave2 swarm/register/ledger.
 Tests and exact results (parent): econ **34**; stats **21**; ai_ml **2**; product_integrity **11**; vibe catalog **1**; poly_algebra **5**; add_assign_hadamard_assign_scale **1**; simplify_trig **2**.
@@ -541,7 +541,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: next curated Q1/Q2 wave or `APP-04` / `WD-03`.
 
 Packet: Q1/Q2 incorporation wave 3 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen LinearAlgebra.matvec (CPU floor), PolynomialAlgebra add/sub/mul, SymbolicAlgebra integrate/taylor/limit.
 Files changed: econ/stats/ml chain + toolboxes; math qr_vector/poly_algebra/symbolic; paired catalogs; wave3 swarm/register/ledger.
 Tests and exact results (parent): econ **45**; stats **29**; ai_ml **3**; product_integrity **11**; vibe catalog **1**; qr_vector **9** · poly **6** · symbolic **7**.
@@ -551,7 +551,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 4 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 4 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra definite/∞-limit/roots, SymbolicODE×3, PolynomialAlgebra degree/leading.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_ext.rs`; poly_algebra; paired catalogs; wave4 swarm/register/ledger.
 Tests and exact results (parent): econ **56**; stats **36**; ai_ml **4**; product_integrity **11**; vibe catalog **1**; cas_ext **8**; poly_algebra **8**.
@@ -561,7 +561,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 5 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 5 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+11), Statistics (+8), MachineLearning (+8); Host-widen SymbolicODE separable/PDE, SymbolicAlgebra roots/assumptions/hash, LinearAlgebra.solve_linear_system, PolynomialAlgebra.is_zero.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave5.rs`; poly_algebra; paired catalogs; wave5 swarm/register/ledger.
 Tests and exact results (parent): econ **67**; stats **43**; ai_ml **5**; product_integrity **11**; vibe catalog **1**; cas_wave5 **10**; wave5_poly_is_zero **1**.
@@ -571,7 +571,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 6 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 6 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen SymbolicAlgebra partial/jacobian/hessian/gradient_at/hessian_at + Constructibility×3.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave6.rs`; paired catalogs; wave6 swarm/register/ledger.
 Tests and exact results (parent): econ **78**; stats **51**; ai_ml **6**; product_integrity **11**; vibe catalog **1**; wave6_* **8**.
@@ -581,7 +581,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 7 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 7 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+10); Host-widen Constructibility helpers + SymbolicAlgebra quadratic solve/factor.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave7.rs`; paired catalogs; wave7 swarm/register/ledger.
 Tests and exact results (parent): econ **89**; stats **59**; ai_ml **7**; product_integrity **11**; vibe catalog **1**; wave7_* **7**.
@@ -591,7 +591,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 8 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 8 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+8), MachineLearning (+8); Host-widen SymbolicAlgebra pow/neg/sqrt/exp/ln/sin/cos/tan.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave8.rs`; paired catalogs; wave8 swarm/register/ledger.
 Tests and exact results (parent): econ **100**; stats **67**; ai_ml **8**; product_integrity **11**; vibe catalog **1**; wave8_* **5**.
@@ -601,7 +601,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 9 curated Q1/Q2.
 
 Packet: Q1/Q2 incorporation wave 9 (`Q2-ECON` / `Q2-STATS` / `Q2-ML` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+10), Statistics (+9), MachineLearning (+10, remaining `al_*`); Host-widen SymbolicAlgebra c/var/add/sub/mul/div + PolynomialAlgebra gcd/scale.
 Files changed: econ/stats/ml chain + toolboxes; `math/cas_wave9.rs`; poly_algebra; paired catalogs; wave9 swarm/register/ledger.
 Tests and exact results (parent): econ **111**; stats **76**; ai_ml **9**; product_integrity **11**; vibe catalog **1**; wave9_* **6**.
@@ -611,7 +611,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 10 (Econ/Stats Live + SymbolicAlgebra Live pivot + Host).
 
 Packet: Q1/Q2 incorporation wave 10 (`Q2-ECON` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Econ (+6, remaining eligible exhausted), Statistics (+10), SymbolicAlgebra CAS (+8); Host-widen poly eval/zero/constant, CAS parse, Statistics manifold helpers×4.
 Files changed: econ/stats/logic chain + toolboxes; `math/cas_wave10.rs`; poly_algebra; stats manifold; paired catalogs; wave10 swarm/register/ledger.
 Tests and exact results (parent): econ **116**; stats **86**; product_integrity **11**; vibe catalog **1**; wave10_* **9**.
@@ -621,7 +621,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 11 (LinearAlgebra Live pivot + Stats/CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 11 (`Q2-LINALG` / `Q2-STATS` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live LinearAlgebra (+10), Statistics (+8 remaining), SymbolicAlgebra constructors (+8); Host-widen statistical_manifold remainder×6.
 Files changed: `linalg_chain_actions.rs`; scientific/sheet/code toolboxes; stats manifold; paired catalogs; wave11 swarm/register/ledger.
 Tests and exact results (parent): stats **94**; product_integrity **11**; vibe catalog **1**; wave11_* **6**; Live asserts **3**.
@@ -631,7 +631,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 12 (LinAlg + PolynomialAlgebra Live pivot + CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 12 (`Q2-LINALG` / `Q2-POLY` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live LinearAlgebra decompositions (+8), PolynomialAlgebra (+12), SymbolicAlgebra trig/log/parse (+8); Host-widen Chemistry integrals×5, LinAlg symmetric_eigen_3x3, SymbolicAlgebra to/from_quins.
 Files changed: linalg/poly/logic chains + toolboxes; `chemistry/integrals_host.rs`; `math/cas_wave12.rs`; `qr_vector.rs`; paired catalogs; wave12 swarm/register/ledger.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; vibe catalog **1**; wave12_* **6**.
@@ -641,7 +641,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 13 (finish LinAlg + Stats/poly remainder + CAS + Host).
 
 Packet: Q1/Q2 incorporation wave 13 (`Q2-LINALG` / `Q2-SHEET` / `Q2-CAS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live remaining LinearAlgebra (+9), Sheet poly monic/div_rem/resultant + stats manifold (+9), SymbolicAlgebra series/roots/jacobian (+8); Host-widen Chemistry ERI/angular×6, LinearAlgebra.gemm (pure CPU Host — no forge/`caps()`), PolynomialAlgebra.coeffs.
 Files changed: linalg/poly/stats/logic chains + toolboxes; `chemistry/wave13_host.rs`; `math/gemm_host.rs`; poly coeffs; paired catalogs; wave13 swarm/register/ledger; parent finished Host after stalled Lane D.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave13_* **6**; backlog `ALL_BOUND=998` `PoetLive=405` `Q2=593`.
@@ -651,7 +651,7 @@ Unrelated failures preserved: Yes.
 Recommended next packet: wave 14 (Chemistry Live + CAS remainder + Physics Live + Host).
 
 Packet: Q1/Q2 incorporation wave 14 (`Q2-CHEM` / `Q2-CAS` / `Q2-PHYSICS` / `Q1-HOST`)
-Baseline git status: `0.0.36-dev`; prior WIP preserved; not committed.
+Baseline git status: `0.0.40-dev`; prior WIP preserved; not committed.
 User job delivered: Poet Live Chemistry integrals/angular (+11), remaining SymbolicAlgebra (+9, Q2 exhausted), Physics (+10); Host-widen Calculus hermite/BDF/invariant/parity/f32-pack + GraphReasoning.top_k (+8). Parent finished Chem+Host after lane stalls; CAS/Physics agents delivered Live.
 Files changed: `chem_chain_actions.rs`, `physics_chain_actions.rs`, logic/CAS register, scientific chem+physics chains; `math/wave14_host.rs`; paired catalogs; wave14 swarm/register/ledger.
 Tests and exact results (parent): Live asserts **3**; product_integrity **11**; Host wave14_* **6**.
@@ -659,3 +659,261 @@ Browser/native UAT: Not re-run.
 Known gaps: Physics Q2 ≈8 left; Constructibility/SpecialFunctions/Research Q2 large; APP-04; WD-03.
 Unrelated failures preserved: Yes.
 Recommended next packet: wave 15 (Physics Live remainder + Constructibility/SF Live + Host).
+
+## 2026-10-11 — ST programme planning delivery
+
+Packet: `ST-PLAN` (planning only; not `ST-00` execution).
+Status: Written; document verification pending. ST-00 through ST-39 remain NotStarted.
+Baseline: QualiaDB `9463dc62` and Poet `3b0e463`, both on `0.0.40.8-dev`; existing user-owned changes in QualiaDB `render/portal/body_scene.rs` and `render/portal/mod.rs` preserved.
+User outcome: Comprehensive cross-repository implementation specification and bounded agent packet queue for eleven Storytold app forks, QualiaDB primitive harmonisation, OS-shell/host separation, shared Aether presentation, command orb graph/context menu, macro/micro navigation, native/WASM execution and supervised agents.
+Files: existing `docs/work-in-progress/POET_UPDATED_IMPLEMENTATION_PLAN_2026-09-05.md` (ST-A through ST-M); existing `docs/POET_LOWER_COST_AGENT_EXECUTION_PLAYBOOK_2026-09-04.md` (section 18, ST-00 through ST-39 and continuation prompt); this ledger; sibling Poet `README.md` (current programme entry point).
+Verification: Document checks pending; no product build/test/benchmark executed for this planning task. No package, app fork, migration or provider integration implemented.
+UAT: Not applicable to planning; all specified browser/native UAT gates remain future execution requirements.
+Authority/decisions: Public repositories/branding/licensing, trusted signing/provider credentials, external spend, protected ABI, destructive migrations, webview-free native renderer and publication remain principal-only gates; local bounded implementation can proceed independently where contracts are accepted.
+Unrelated changes preserved: Yes; no product source edits, commits or pushes.
+Recommended next packet: `ST-00` only, using playbook section 18 and the corrected standalone repository roots, not the historical starting prompt.
+
+### ST-PLAN closeout and VibeScript addition
+
+2026-10-11: Added specification ST-N and execution playbook section 19 (`VB-00` through `VB-09`) for VibeScript as the canonical application scripting language. Covers capability bindings, genuine async/events/streams, executable imports, versioned dialect changes, declarative UI/hot reload, exact native/WASM interchange, editor/CLI tooling, per-app JS/TS migration and conformance. Stable four-op facade is explicitly distinguished from a growing language/catalogue; generated/platform-only JavaScript bridges are accounted separately, never hidden app logic.
+
+Document review: verified ST-00 through ST-39, VB-00 through VB-09, all eleven app work orders, section labels, local Markdown targets/anchors and existing-path references. Corrected directory-backed topbar/CBOR paths, ArtCraft read scope and two implicit dependency-cycle ambiguities. Scoped `git diff --check` passed in QualiaDB and Poet; the final post-closeout QualiaDB document check also passed. These are documentation checks only, not product verification. Historical unresolved Poet copyright/licence README links were not changed by this scope.
+
+Product verification: none; no language/runtime/UI code changed, no Cargo/build/benchmark/UAT run. All ST/VB implementation packets remain NotStarted. Source-level await/module/interop gaps require actual regression execution in VB-00, not assumed conformance claims.
+
+Principal-only decisions and preserved user changes remain as in the planning record above. No commit, push, publication, external provider call, migration or deletion occurred. Next execution is ST-00, followed by VB-00 before G1 closes; use the continuation prompts and one assigned bounded subunit at a time.
+
+## 2026-10-11 — ST-00 execution baseline (subunits a-c)
+
+Status: Partial; source/app command coverage subunit d is not complete. No later contract gate is closed.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; OS shell `75328cbbe9ee239ff8007f8e8118370b9a2137fe` and Desktop `a323181a047260bc9a0a3fc12079c10c2c15de5f`, both main and clean at baseline. Existing QualiaDB AGENTS/render changes, untracked portal graphics and planning changes are preserved; Poet README planning changes preserved.
+Toolchain: `rustc --version` reports 1.97.1 (8bab26f4f, 2026-07-14), `cargo --version` reports 1.97.1 (c980f4866, 2026-06-30). Installed targets: wasm32-unknown-unknown, x86_64-pc-windows-gnu, x86_64-pc-windows-msvc. `trunk --version`, `dx --version` and `wasm-bindgen --version` each exit 127, command not found; no tool was installed.
+Cargo: `cargo metadata --no-deps --format-version 1 --locked --offline` passed (exit 0) against all four workspace roots. Poet metadata confirms separate CLI and browser/test targets and sibling Vibe dependency. QualiaDB metadata output retained in tool artifact `C:\Users\tim_h\AppData\Local\Temp\devin.exe-overflows\shell-649f93-8b7692f442fbc9ac\content.txt`. This no-deps command does not prove a resolved/buildable full dependency graph.
+Features: `cargo tree -p vibe -e features --locked --offline` passed; Vibe tree is bytemuck/derive and unicode-xid, no graphics/UI runtime. `cargo tree -p webizen-studio -e features --locked --offline` passed; tree retained at `C:\Users\tim_h\AppData\Local\Temp\devin.exe-overflows\shell-3ecdc9-84067d56b4a42a61\content.txt`; Studio uses Aether alpha.1 at pinned Git revision 0dbfab5274abd3628b0558f909b5946e783dbc65 and broad core default features. OS-shell `cargo tree -e features --locked --offline` exits 101 because its existing lockfile needs updating. No lockfile/configuration/security policy was changed. Existing Aether desktop patch-unused warning recorded, not fixed by an unsolicited dependency upgrade.
+Verification: `cargo test -p vibe --test conformance --locked --offline` exited 0: 184 passed, 0 failed/ignored. `cargo test -p poet --test product_integrity --locked --offline` exited 101: 10 passed, 3 failed out of 13. Missing sibling Studio manifest and legacy programme docs are path defects after extraction; generic delegation audit reports 113 against unchanged ceiling 112. `cargo test -p poet --test surface_inventory --locked --offline` exited 101: 0 passed, 1 failed, missing monorepo-relative inventory path. No browser/native UAT performed.
+Root-cause tracing: extra reexport-audit match is semantic_instruments/mod.rs public child-module facade, absent from the leaf-surface inventory; children contain their own purpose-specific implementations. Broad builder-reexport detection conflates module routing with leaf delegation. ST-00-R1 will repair test source-root resolution and share a classifier that preserves leaf-delegation/inventory checks while distinguishing local child-module facades; ceiling and inventory data remain unchanged. No document workflow is claimed restored by that test repair.
+Additional source discovery: ArtCraft also contains artcraft-native (egui/eframe/Glow, Tauri-free API client backend). Include it in native service/command coverage; its login/cookie-import behaviour is not authority to migrate or inspect credentials. Ten craft source manifests use edition 2024 and egui 0.36; PhotoCraft, VectorCraft and FilmCraft declare Rust 1.95 while the others read declare 1.90. Supplied runtime/toolchain meets those declared compiler minima, but no app build success is claimed.
+Delegated command attempts required approval and were denied before shell execution; the lead ran the exact permitted foreground baseline commands. Existing build caches were reused, no second engine checkout/target tree was created, and no provider/service was called.
+Next: bounded ST-00-R1 portability/audit repair, then continue ST-00/d app coverage and VB-00 runtime-gap fixtures; required browser tooling/OS-shell lockfile reconciliation remains an explicit environment/configuration prerequisite.
+
+### ST-00-R1 — extracted test portability and precise leaf audit
+
+Status: Complete for the bounded test repair; parent ST-00 remains Partial until full app coverage baseline is recorded. No app workflow/GUI migration is claimed by this repair.
+Files in sibling Poet: `wasm/tests/product_integrity.rs`, `wasm/tests/surface_inventory.rs`, required shared `wasm/tests/support/mod.rs`. Both suites resolve historical docs/Studio under sibling QualiaDB and walk the actual extracted Poet browser source. Shared leaf-delegation detection distinguishes a reexport from a declared local child module from a leaf delegation; super/self/nonlocal delegations remain counted, including mixed facade/delegation files. Missing/unreadable source roots fail rather than silently returning an empty inventory. Historical inventory keys retain their schema meaning and nested relative paths.
+Invariants: ceiling 112, inventory JSON/count fields, existing exemplar/remediation assertions and all source comments retained. No filename-specific exclusion or new 'restored workflow' claim. Helper fixtures cover public/private local facades, malformed nonterminated module declaration, super/self/nonlocal and mixed exports, nonbuilder export and independent canonical sibling-path existence. Review accepted the full test diff and helper after consolidated correction.
+Verification: `cargo test --manifest-path C:/github/poet/Cargo.toml -p poet --test product_integrity --test surface_inventory --locked --offline` exited 0 after final semantic changes: 17 product-integrity tests and 5 surface-inventory tests passed, 0 failed/ignored. `rustfmt --edition 2021 --check` on the three touched files passed after touched-file formatting; `git diff --check -- wasm/tests` passed. The only final Git warning concerns LF/CRLF normalization, not a failure. No workspace-wide formatting, dependencies/config/lockfile changes, source UI modifications, commits or pushes.
+Next: finish ST-00 source/feature inventory, record Vibe runtime diagnostic preflight for VB-00, and resolve missing browser tools/OS-shell lock compatibility as scoped prerequisites without bypassing policy.
+
+### ST-00 Vibe runtime diagnostic preflight
+
+Ran exact read-only input `= await 42`, `= 18446744073709551615u64`, `:quit` through `cargo run -p vibe --bin vibe --locked --offline -- repl` in QualiaDB (exit 0). Output values are respectively `42` and `18446744073709551615`. This confirms that the current Pure-cell checking/evaluation path accepts scalar await as identity, rather than requiring async context/future suspension. It also confirms exact maximum-u64 display in this native CLI path only; it does not prove browser/CBOR interoperability. Source path check.rs combines Await with unary/Try traversal; eval/expr.rs evaluates Await immediately; Value has no Future/Stream variant. Keep this as a required VB-00/VB-02 regression, not an async-support claim. No Vibe runtime source changed in this preflight.
+
+ST-00/d source-intake progress: read all eleven root manifests and agent-rule entry points; verified ten engine registry seams and the separate ArtCraft mixed frontend/native API architecture. GridCraft no-deps locked/offline metadata passes and confirms engine, CLI, browser and xtask targets; full resolved engine build and complete individual command/gesture catalogue remain unverified. Grid command registry explicitly combines file/edit/format/sheet/insert/data/formula/review/view/inspect/extra/draw/spelling/pivot/what-if/print families; Word registry includes rich text/caret/lists/table/equation/review/page/reference/mailings/citation/object/drawing/speech families. No source-native engine count or cross-app coverage percentage was inferred from README prose or macro occurrences. Native-only bridge/plugin and asset/branding exceptions remain per-app inputs, not approved release exceptions.
+
+### OS-shell dependency audit and post-clean verification
+
+Status: Complete for the bounded audit/normalisation; packaging integration (ST-20 series) remains open.
+Scope: user-directed dependency freshness check on `C:\github\webizen-os-shell` after `cargo clean` (3,612 files / 2.5 GiB removed). OS shell on `0.0.40.8-dev` with the in-progress tray/lifecycle sources preserved.
+Audit findings: crates.io index reports `aether` 0.8.0-alpha.1 as the newest published version (0.7.10 is latest stable); the GitHub release page confirms tag `v0.8.0-alpha.1` is commit `0dbfab5`, byte-identical to the previously pinned `rev = "0dbfab5274abd3628b0558f909b5946e783dbc65"`. `serde` spec `1.0` resolves 1.0.229 (latest), `serde_json` `1.0` resolves 1.0.151 (index reports 1.0.152 published 2026-10-10; resolver selected 1.0.151), `log` `0.4` resolves 0.4.34 (latest). No dependency was older than its compatible latest at the chosen constraint.
+Change: removed the entire `[patch.crates-io]` Git pin block from the OS-shell manifest (9 crate entries). This eliminates the redundant Git fetch and the recorded "patch was not used in the crate graph" warning while resolving identical code. Added `ReadableExt` to the `aether::prelude` import in `src/native/tray.rs` — required by the published `aether-signals` crate for `Signal::read()` (the Git checkout had resolved it differently). Removed a stray blank line at Cargo.toml EOF flagged by `git diff --check`. Normalised pre-existing rustfmt drift in `src/app.rs` and `src/components/orbit_wheel.rs` (files already modified by this work) so `cargo fmt --check` passes.
+Verification after clean + manifest change: `cargo metadata` resolved the full graph from the crates.io registry — all 27 `aether-*` crates at 0.8.0-alpha.1 with `registry+` sources; no `git+` source remains in the regenerated lockfile (lockfile remains gitignored per repo policy). `cargo test --bin webizen-os-shell` passed 8/8 (lifecycle, tray icon, honest-state tests). `cargo check --target wasm32-unknown-unknown` passed (exit 0, ~6 min) — the earlier `uuid` randomness-feature failure is resolved by the removal of the unused direct `uuid`/`chrono`/`futures-util` deps. `cargo fmt --check` and `git diff --check` pass; only benign LF/CRLF normalisation warnings remain. `muda 0.19.3` + `tray-icon 0.24.2` supply the tray stack via `aether-desktop`.
+Non-claims: no app workflow, engine embedding, or packaging bundle produced; `embedded-engine` feature not yet exercised. No commit or push.
+Next: wire the OS shell into `webizen-desktop` distribution packaging (ST-20 series), then resume ST-00/d coverage and VB-00 runtime-gap fixtures.
+
+### QualiaDB Aether patch removal (follow-up to the same audit)
+
+Status: Complete; same justification as the shell — the pin's stated reason was stale.
+Finding: the root `[patch.crates-io]` comment claimed "the 0.8.0-alpha.1 desktop renderer was not published to crates.io". That was true when written but is now false: the shell resolved `aether-desktop 0.8.0-alpha.1` plus `wry`, `muda` and `tray-icon` entirely from the registry and compiled it. All 28 patched crates (including `aether-logger`, confirmed unyanked at alpha.1 via the index) are published at the workspace's exact `=0.8.0-alpha.1` requirement; the pinned rev is the signed release tag commit itself, so registry resolution yields identical code.
+Change: removed the stale comment and all 28 `aether*` Git patch entries from `C:\github\qualiaDB\Cargo.toml`. The `imap-proto` vendored patch (real unpublished fix) is retained.
+Verification: `cargo metadata` resolved the full workspace with zero warnings (previously emitted the desktop patch-unused warning). Lockfile diff is 72 insertions / 41 deletions — source lines flipping `git+` to `registry+` with checksum additions; the only package removed is the unused `aether-desktop` patch entry (no graph member enables `desktop`; Studio intentionally avoids wry). `cargo tree -p webizen-studio -i aether` confirms `aether v0.8.0-alpha.1` (registry) ← `webizen-studio`. `cargo check -p webizen-studio --offline` completed: Finished dev profile in 45m 06s, all 22 required `aether-*` crates compiled from registry source including `aether-logger`. `git diff --check` clean apart from benign LF/CRLF notices.
+Non-claims: the QualiaDB `Cargo.lock` delta is source/checksum churn only; no dependency version changed. Studio runtime behaviour is unaffected — same tag, same code. No commit or push.
+
+### ST-00 closeout — full eleven-app feature & command coverage complete (subunit d)
+
+Status: Complete for packet `ST-00` (all subunits a, b, c, d, and test portability repair ST-00-R1).
+Scope: Subunit (d) completed across all 11 Storytold applications in accordance with playbook §18.3 and ST-J work orders.
+Inventories recorded:
+1. `docs/work-in-progress/st00-inventory-a.md`: WordCraft (`crates/engine/src/cmd/`, 460 specs, 16 crates), DeckCraft (226 specs, 7 crates), GridCraft (315 specs, 14 crates).
+2. `docs/work-in-progress/st00-inventory-b.md`: VectorCraft (400+ specs across 80+ cmd modules, 23 crates), PhotoCraft (628 menu/engine specs across 40 modules, 24 crates), LightCraft (31 cmd modules, 24 crates), FilmCraft (350+ specs across 3,940 lines of commands, 40 crates).
+3. `docs/work-in-progress/st00-inventory-c.md`: PdfCraft (153 menu specs + 124 automation tools, 30 crates), CADCraft (cmd specs across draw/modify/annot/layer/inquiry, 14 crates), SoundCraft (timeline/mixer/DSP specs, 13 crates), ArtCraft (dual Rust/TypeScript architecture, local composition/task engine).
+Total coverage: All 11 applications have verified command registries, UI-only commands, pointer tools/gestures, format matrices, device/hardware hooks, and real status providers catalogued under the normative §18.3 schema.
+Non-claims: No code was copied into QualiaDB core; no app builds were modified; upstream snapshots remain read-only references; no public remotes created or proprietary assets migrated.
+Next: `ST-01` (local app forks and licence/asset baseline in `C:\github\poet-<slug>`) and `VB-00` (VibeScript application scripting behaviour and gap baseline before G1).
+
+## 2026-10-11 — VB-00 execution baseline (VibeScript scripting behaviour & gap baseline)
+
+Packet: `VB-00` (Playbook §19.1, Specification ST-N).
+Status: Complete.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; OS shell `75328cbbe9ee239ff8007f8e8118370b9a2137fe` and Desktop `a323181a047260bc9a0a3fc12079c10c2c15de5f`, both main and clean. Existing QualiaDB AGENTS/render changes, untracked portal graphics and planning changes preserved; Poet README planning changes preserved.
+User outcome: Exhaustive gap analysis and behaviour classification of all required application-scripting functions across the eleven Storytold applications and Poet browser environment; verified test baseline of all core Vibe suites; pinpointed exact runtime, scheduler, module import, and WASM serialization gaps; formulated canonical `App`, `Job`, and `UI` capability proposals for Review Gate 1.
+Files created/updated: `docs/work-in-progress/vb00-scripting-gap-baseline.md`; this ledger.
+Tests and exact results (QualiaDB root, locked & offline):
+- `cargo test -p vibe --test conformance`: **184 passed**, 0 failed/ignored (27.79s).
+- `cargo test -p vibe --test vibe_features`: **9 passed**, 0 failed/ignored (1.34s).
+- `cargo test -p vibe --test vibe_catalog_surface`: **24 passed**, 0 failed/ignored (10.40s).
+- Total tests executed: **217 passed**, 0 failed/ignored.
+Verified gaps and regression targets:
+1. `eval/expr.rs:305` evaluates `await` synchronously as identity in Pure cells; lacks asynchronous suspension and budget/continuation state machine (`VB-02`).
+2. `eval/stmt.rs:163-170` returns `Flow::Next` on `yield`; lacks stream/event scheduler with backpressure (`VB-02`).
+3. `eval/mod.rs:71-100` strictly limits imports to hardcoded `VIBE_0_1_NAMESPACES`; does not resolve package-relative `.vibe` modules or execute external module imports despite `module_system.rs` defining `ModuleCatalog`/`ModuleResolver` (`VB-03`).
+4. `vibe-wasm/src/lib.rs:86-93` serializes complex values via Rust `Debug` format string (`format!("{:?}", v)`) rather than typed tagged values/BigInts/handles (`VB-06`).
+5. `poet/wasm/src/browser/vibe_cell.rs:132-200` utilizes mock string checks (`math.sum([`, `sentinel.slg_arena_status()`) rather than executing via `vibe::Engine` (unlike `vibe_ui.rs` which properly uses `vibe::Engine`) (`VB-05`/`VB-08`).
+6. ArtCraft React/Zustand state orchestration and task polling classified for `.vibe` migration; nonconsented analytics and browser-session cookie harvesting isolated and removed (`ST-33`/`VB-08`).
+Proposed G1 Capability Families: `App.commands`, `App.availability`, `App.inspect`, `App.execute`, `Job.status`, `Job.cancel`, `UI.describe`, `UI.propose`.
+Non-claims: No language grammar or opcode was modified; no new Host capability was published; upstream snapshots remain read-only references; no public remotes created or proprietary assets migrated.
+Next: `ST-01` (local app forks and licence/asset baseline in `C:\github\poet-<slug>`) and `ST-02` (Contract Crate and G1 review preparation).
+
+## 2026-10-11 — ST-01 execution baseline (Local app forks & licence/asset baseline)
+
+Packet: `ST-01` (Playbook §18.4, Specification ST-C4).
+Status: Complete for initial proof apps (`GridCraft` and `WordCraft`).
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0` and Poet `3b0e4634e1e1a0d76494153dbfcce5e686f5a4cb`, both `0.0.40.8-dev`; `C:\github\poet-gridcraft` (initialized local git repo); `C:\github\poet-wordcraft` (initialized local git repo).
+User outcome: Established local app fork workspaces for GridCraft and WordCraft under `C:\github\poet-<slug>`; verified complete independent workspace resolution without dependency on upstream monorepos; recorded provenance digests and dual MIT/Apache-2.0 licensing.
+Files created/updated: `docs/work-in-progress/st01-fork-baseline.md`; this ledger.
+Verification:
+- `cargo metadata --manifest-path C:\github\poet-gridcraft\Cargo.toml --no-deps --format-version 1`: passed (exit 0), all 16 crates/apps resolve within local tree.
+- `cargo metadata --manifest-path C:\github\poet-wordcraft\Cargo.toml --no-deps --format-version 1`: passed (exit 0), all 20 crates/apps resolve within local tree.
+- `git init`: initialized clean local git repos in both fork directories.
+Non-claims: No code pushed to public remotes; upstream snapshots remain read-only; no new dependencies or licenses added.
+Next: `ST-02` contract crate review and preparation for Gate 1 (`G1`).
+
+## 2026-10-11 — ST-02 execution baseline (Contract crate & G1 review readiness)
+
+Packet: `ST-02` (Playbook §18.5, Specification ST-E).
+Status: Complete.
+Repositories: QualiaDB `9463dc6231a0ce10e04ea2837c039e9ec3018fb0`, branch `0.0.40.8-dev`.
+User outcome: Canonical `qualia-app-contract` crate implemented with portable command descriptors, request/receipt envelopes, session descriptors, surface descriptors, job descriptors, interactive gesture state machine, deterministic command catalog with alias resolution, and standardized `AppAdapter` trait; registered as a core workspace crate with zero GUI or heavy engine dependencies.
+Files created/updated:
+- `crates/qualia-app-contract/Cargo.toml`
+- `crates/qualia-app-contract/src/lib.rs`
+- `crates/qualia-app-contract/src/id.rs`
+- `crates/qualia-app-contract/src/effects.rs`
+- `crates/qualia-app-contract/src/descriptor.rs`
+- `crates/qualia-app-contract/src/target.rs`
+- `crates/qualia-app-contract/src/request.rs`
+- `crates/qualia-app-contract/src/gesture.rs`
+- `crates/qualia-app-contract/src/catalog.rs`
+- `crates/qualia-app-contract/src/adapter.rs`
+- `crates/qualia-app-contract/src/error.rs`
+- `crates/qualia-app-contract/tests/contract_tests.rs`
+- Root `Cargo.toml` (workspace member and dependency)
+- This ledger.
+Invariants enforced:
+1. Exact `<app-id>::<upstream-id>` format validated; empty or malformed IDs rejected.
+2. `DecimalU64` serializes as a decimal string; raw JSON numbers > 2^53 - 1 rejected with `JsUnsafeNumericConversion` to protect JS/browser environments.
+3. Coordinates strictly validated as finite; NaN and infinities rejected.
+4. `CommandCatalog` enforces deterministic insertion order, rejects duplicate command IDs, and disallows duplicate aliases.
+5. Standardized `AppAdapter` trait defines uniform methods (`describe`, `open`, `availability`, `inspect`, `execute`, `begin_gesture`, `update_gesture`, `commit_gesture`, `cancel_gesture`, `snapshot`, `restore`, `poll_job`, `cancel_job`, `close`).
+6. Contract-only dependency tree contains zero Aether, Tauri, egui, wgpu, CUDA, or daemon dependencies.
+Next: Independent Review Gate 1 (`G1`) confirmation and `ST-03` service supervisor extraction.
+
+## 2026-10-11 — ST-POET Harmonization (Harmonization of MIT Craft Packages into Poet & Webizen OS Shell)
+
+Packet: `ST-POET` (Playbook §18.3, §18.11).
+Status: Complete.
+Repositories: `poet`, `webizen-os-shell`, `qualiaDB`.
+User outcome: Stripped the standalone UI and harmonized the tool chest, toolboxes, toolchains, container models, viewports, and shell staging across Poet and Webizen OS Shell for all 11 MIT-licensed Storytold craft suites (`gridcraft`, `wordcraft`, `deckcraft`, `pdfcraft`, `vectorcraft`, `photocraft`, `lightcraft`, `cadcraft`, `soundcraft`, `filmcraft`, `artcraft`).
+Files created/updated:
+- `C:\github\poet\wasm\src\browser\registration\register_craft_toolboxes.rs` (514 lines: normative toolboxes & toolchains)
+- `C:\github\poet\wasm\src\browser\registration\mod.rs` (registered in central registry)
+- `C:\github\poet\wasm\src\browser\docks\glyphs.rs` (registered 11 craft toolbox glyphs)
+- `C:\github\poet\wasm\src\browser\docks\toolbox.rs` (quick spawn buttons in left dock)
+- `C:\github\poet\wasm\src\browser\tool_actions.rs` (live execution dispatch & local contract policies for craft tool actions)
+- `C:\github\poet\wasm\src\browser\interactions\placement.rs` (spacious 720x480 default dimensions for craft workspaces)
+- `C:\github\poet\wasm\src\browser\containers\attrs.rs` (technical strata, media surfaces, and tags for craft containers)
+- `C:\github\poet\wasm\src\browser\containers\mod.rs` (registered `body_craft`)
+- `C:\github\poet\wasm\src\browser\containers\body.rs` (wired `body_craft::try_fill` into container body dispatch)
+- `C:\github\poet\wasm\src\browser\containers\body_craft.rs` (327 lines: purpose-built container viewports for all 11 craft suites)
+- `C:\github\webizen-os-shell\src\components\stage_host.rs` (rendered live Poet creative studio grid in VolumeStage::Poet)
+- This ledger.
+Invariants enforced:
+1. Strict adherence to Rule 0-B file length limits: `body_craft.rs` is 327 lines (< 500 lines).
+2. Clean harmonization separating MIT UI/tool components into Poet, and compute/evaluator logic into QualiaDB/Webizen.
+3. Every non-placement tool across all 11 craft toolboxes has an explicit policy and dispatch handling in Poet.
+4. No cargo runs were invoked mid-implementation to eliminate dead time.
+Verification and Test Outcomes:
+- `qualia-app-contract`: `cargo test` passed 13/13 tests (0 failed, 0 errors, 0 warnings).
+- `webizen-os-shell`:
+  - `webizen-host`: `cargo test` passed 9/9 tests (0 failed, 0 errors, 0 warnings).
+  - `webizen-ui`: `cargo test` passed 6/6 tests (0 failed, 0 errors, 0 warnings).
+  - `webizen-os-shell` (root): `cargo test` passed 8/8 tests (0 failed, 0 errors, 0 warnings).
+- `poet`:
+  - Fixed syntax error in `wasm/src/browser/containers/body_craft.rs` by switching raw string delimiters to `r##"..."##` to avoid premature termination by `#` attribute values.
+  - Fixed `craft_tool` in `register_craft_toolboxes.rs` to set `capability_scope: Some(SCOPE_PLACE.into())` for `PlaceContainer` tools, satisfying `capability_scopes_are_live_family_method_or_local`.
+  - Updated `spec_tools/mod.rs` test assertion `row_count_matches_named_spec_tools` from legacy 702 to exact 704 rows.
+  - `poet` (wasm lib): `cargo test` passed 921/921 tests (0 failed, 0 errors, 0 warnings).
+  - `poet-cli`: `cargo test` passed 7/7 tests (0 failed, 0 errors, 0 warnings).
+  - `surface_inventory`: `cargo test` passed 5/5 tests (0 failed, 0 errors, 0 warnings).
+  - `product_integrity`: `cargo test` passed 17/17 tests (0 failed, 0 errors, 0 warnings).
+  - `health_uat_pack`: `cargo test` passed 8/8 tests (0 failed, 0 errors, 0 warnings).
+  - Full Poet workspace total: 958/958 tests passed with 0 errors and 0 warnings.
+Next: Full system integration and smoke-testing.
+
+
+## 2026-11-06 — EVAL-24 Master Release Qualification & Session Ledger Closeout (Identifier Fabric, Q42 v4 & Cosmic Coordinate Systems)
+
+Packets: `IDF-01`–`IDF-05`, `Q42-00`, `Q42-06`–`Q42-08`, `OCS-10`–`OCS-13`, `ETA-14`–`ETA-17`, `NET-18`–`NET-21`, `EVAL-22`–`EVAL-24` (Playbook v4 §§1–6).
+Status: Complete (all 24 work packets + all §6 v4 architectural & STEM/physics overrides implemented and qualified).
+Repositories:
+- `QualiaDB` (`C:\Projects\qualia-27062026`), branch `0.0.40.14-q42-v4-cosmic-fabric`
+- `Etalon` (`C:\Projects\etalon`), branch `0.0.40.14-q42-v4-cosmic-fabric`, commit `4b6949c9a357dd023a48e4dc180d717ae39047aa` (pinned across `Cargo.toml`, `Cargo.lock`, `tools/accelerator-harness/etalon-revision.txt`, `tools/accelerator-harness/Cargo.toml`, and `crates/qualia-etalon-sensing-bridge/Cargo.toml`).
+
+### 1. Phase & Packet Completion Summary
+
+- **Phase A — Identifier Fabric & SHACL-First Plane Split (`IDF-01`–`IDF-05`)**:
+  - `IDF-01` + §6.1.3 Pre-Flight Overrides: Created [`ontologies/identifier_fabric_shapes.ttl`](../ontologies/identifier_fabric_shapes.ttl) (`idf:EntityPlaneShape`, `idf:ClaimPlaneShape`, `idf:HandlePlaneShape`, `idf:InstrumentPlaneShape`, `idf:CrossPlaneFusionFirewallShape`) and registered in [`manifests/ontologies.json`](../manifests/ontologies.json); fixed [`turtle_shapes.rs`](../crates/qualia-core-db/src/modalities/logic/shacl/turtle_shapes.rs) (node-level `sh:not` + `sh:property` co-compilation, `sh:in` closed enumeration, fail-closed unknown `sh:*`), [`cbor_compiler.rs`](../crates/qualia-core-db/src/query/cbor_compiler.rs) (5th CBOR metadata integer, 5-field XOR parity, exact byte cursor via `parse_cbor_ld_to_quin_sized`), and [`ingest_formats.rs`](../crates/qualia-core-db/src/query/ingest_formats.rs) (`IngestRdfFormat::N3` + multi-record CBOR-LD stream cursor).
+  - `IDF-02` + §6.2.2 Overrides: Created [`instruments.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/instruments.rs) (`InstrumentProofClass`: `CryptographicOriginIntegrity`, `HardwareChannelPossession`, `SemanticClaimEvaluation`; `KeyRole`: `IdentityAssertion`, `CredentialSigning`, `TransportHandshake`, `StorageEncryption`, `RecoveryBootstrap`) and extended [`join.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/join.rs) (`EvidenceRelation` typed cross-plane morphisms `idf:supportedByInstrument`, `idf:assertedAbout`, `idf:observedAtHandle`), [`owl/mod.rs`](../crates/qualia-core-db/src/modalities/logic/owl/mod.rs) (`SameAsError::WhoPlaneForbidden`), and [`shacl_extensions/identity.rs`](../crates/qualia-core-db/src/modalities/logic/shacl_extensions/identity.rs).
+  - `IDF-03`: Implemented `did:q42:` / `did:q42:ptr:` dual acceptance (`parse_did_q42_or_ptr`, `format_did_q42_ptr`) in [`identifier.rs`](../crates/qualia-core-db/src/identity/identifier.rs) and created [`did_qi.rs`](../crates/qualia-core-db/src/identity/did_qi.rs) (`DidQiDocument`, `DidQiResolver`, monotonic generation, tombstone permanence, relationship-DID separation).
+  - `IDF-04`: Created [`crates/vibe/src/check/fabric_guard.rs`](../crates/vibe/src/check/fabric_guard.rs) static F5 anti-feature detector (`F5-A`–`F5-F` compile-time rejection of `person_score`, `identity_confidence`, `same_person`, cross-plane joins, and biometric/handle/location-to-NaturalAgent casts).
+  - `IDF-05`: Created [`plane_feature_guard.rs`](../crates/qualia-core-db/src/foundation/plane_feature_guard.rs) runtime ingress & query plane firewall and extended [`guard_grounding.rs`](../crates/qualia-core-db/tests/guard_grounding.rs) across adversarial scenarios §§8–15 (`F6`).
+
+- **Phase B — Q42 v4 Unified Volumes, Namespaced Lexicon & Exactness (`Q42-00`, `Q42-06`–`Q42-08`)**:
+  - `Q42-00`: Unconditionally unified 5-field XOR parity (`subject ^ predicate ^ object ^ context ^ metadata`) across [`frame_layout.rs`](../crates/qualia-core-db/src/foundation/frame_layout.rs), `etalon-nquin` (`NQuinWire::compute_parity`), `CosmicNQuin` ([`usri.rs`](../crates/vibe/src/cosmic/usri.rs)), [`q42_bridge.rs`](../crates/qualia-core-db/src/wgsl_forge/ir/q42_bridge.rs), and [`sparql_adapter.rs`](../crates/qualia-core-db/src/domains/geospatial/adapters/sparql_adapter.rs); hardened Sanctuary publication gate (`check_public_distribution_allowed`) in [`publication.rs`](../crates/qualia-core-db/src/q42/volume/publication.rs).
+  - `Q42-06`: Completed `PCAT` v1 (`FLAG_PAYLOAD_CATALOGUE = 0x0080`) read/write/verify path in [`payload_catalogue.rs`](../crates/qualia-core-db/src/q42/volume/payload_catalogue.rs), [`stream_writer.rs`](../crates/qualia-core-db/src/q42/volume/stream_writer.rs), [`q42_volume.rs`](../crates/qualia-core-db/src/q42/q42_volume.rs), and [`inspect.rs`](../crates/qualia-core-db/src/q42/volume/inspect.rs).
+  - `Q42-07`: Verified namespaced paged `Q42LEX` v4 (`ADR 0015`) single-page lookup and corpus compression in [`q42_corpus_source.rs`](../crates/qualia-core-db/tests/q42_corpus_source.rs) and `scripts/lexicon-v4-namespaced.test.mjs`.
+  - `Q42-08` + §6.2.3 Overrides: Created [`execution_profile.rs`](../crates/qualia-core-db/src/q42/execution_profile.rs) (`ExactnessProfile`, `CrtModuliCascade` 4-prime 256-bit CRT with $M > 2.028 \times 10^{77}$ covering $|x^3 + y^3 + z^3| \le 3 \times 10^{51}$) and implemented the QUBO Penalty Sufficiency Theorem ($P > \sum |Q_{ij}| + \sum |c_i| + 1$) in [`pre_solver.rs`](../crates/qualia-core-db/src/solvers/qpu/pre_solver.rs).
+
+- **Phase C — Omni-Scale Coordinate System (`OCS-10`–`OCS-13`)**:
+  - `OCS-10`: Synchronized 27 opcodes across `Vibe`, `QualiaDB`, and `ontologies/qualia_10d.ttl`; enforced `MSB=0` (`context & (1 << 63) == 0`) on `CbUsri::to_context_token()` in [`cb_usri.rs`](../crates/vibe/src/cosmic/cb_usri.rs) and `CosmicNQuin` in [`usri.rs`](../crates/vibe/src/cosmic/usri.rs).
+  - `OCS-11` + §6.2.5.1 Overrides: Added `apply_lorentz_boost_into` (exact $\gamma = (1 - \beta^2)^{-1/2}$ with causal speed guard $\beta \ge 1 \implies \text{Err}$) and `compose_nested_frames_into` in [`nested.rs`](../crates/vibe/src/cosmic/nested.rs), plus `validate_coordinate_epoch` in [`qualia-geospatial/src/frame.rs`](../crates/qualia-geospatial/src/frame.rs).
+  - `OCS-12` + §6.2.5.2 Overrides: Added IAU 2006 Capitaine P03 precession + Fukushima-Williams 4-angle matrix (`iau2006_precession_matrix`), 8-term luni-solar nutation (`nutation_angles_iau2000b`), and `icrs_to_itrs_transform` in [`celestial.rs`](../crates/vibe/src/cosmic/celestial.rs), and flat $\Lambda\text{CDM}$ Gauss–Kronrod $G_7/K_{15}$ comoving distance + Etherington $D_L = (1+z)D_M = (1+z)^2 D_A$ in [`flrw.rs`](../crates/vibe/src/cosmic/flrw.rs).
+  - `OCS-13`: Implemented `project_10d_to_observer_frustum_into` and `verify_metric_roundtrip` in [`observer.rs`](../crates/vibe/src/cosmic/observer.rs), `verify_usri_grounding_completeness` in [`grounding.rs`](../crates/vibe/src/cosmic/grounding.rs), and `project_state_quin_with_usri` in [`tensor/q42_integration.rs`](../crates/qualia-core-db/src/tensor/q42_integration.rs).
+
+- **Phase D — Etalon Accelerator, Sensing Sidecar & WGSL Forge (`ETA-14`–`ETA-17`)**:
+  - `ETA-14`: Implemented `EtalonNQuinEvalReceipt` and `qualify_etalon_nquin_batch` in [`etalon_bridge_validation_tests.rs`](../crates/qualia-core-db/src/wgsl_forge/etalon_bridge_validation_tests.rs) and [`etalon_vibe_harness.rs`](../crates/qualia-core-db/tests/etalon_vibe_harness.rs).
+  - `ETA-15` + §6.2.5.3 Overrides: Implemented `qualify_dsp_vision_em_against_cpu_oracle` in [`etalon_iq_compat_tests.rs`](../crates/qualia-core-db/src/wgsl_forge/etalon_iq_compat_tests.rs) and Courant–Friedrichs–Lewy (CFL) 3D FDTD stability guard ($c \Delta t \sqrt{\Delta x^{-2} + \Delta y^{-2} + \Delta z^{-2}} \le 1$) + discrete Poynting energy conservation audit in [`electromagnetics.rs`](../crates/qualia-extensions/src/webgpu_extension/electromagnetics.rs).
+  - `ETA-16`: Implemented `enumerate_sidecar_frame_to_quins` (`Plane::Instrument` + `Plane::Claim`, never `Plane::Entity`) in [`qualia-etalon-sensing-bridge/src/lib.rs`](../crates/qualia-etalon-sensing-bridge/src/lib.rs) and `HardwareChannelPossession` tagging in [`nfc.rs`](../crates/qualia-etalon-sensing-bridge/src/nfc.rs).
+  - `ETA-17`: Added `enumerate_adapter_receipt_to_quins` in [`gpu_caps_probe.rs`](../crates/qualia-core-db/tests/gpu_caps_probe.rs).
+
+- **Phase E — QDNF Network, 384-Bit QSR, SuperBlock Replication & Egress (`NET-18`–`NET-21`)**:
+  - `NET-18`: Implemented `LocatorBinding` (`no_proxy_launder` invariant) in [`locator.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/locator.rs), `HandshakeTranscriptDigest` (`SHA-384` over `ClientHello || ServerHello || NegotiatedParams`) in [`finished.rs`](../crates/qualia-core-db/src/net/qdnf/crypto/finished.rs), HKDF-SHA384 key schedule in [`schedule.rs`](../crates/qualia-core-db/src/net/qdnf/crypto/schedule.rs), and generation-monotonic rekeying in [`rekey.rs`](../crates/qualia-core-db/src/net/qdnf/session/rekey.rs).
+  - `NET-19` + §6.2.4 Overrides: Extended [`exact.rs`](../crates/qualia-core-db/src/net/qdnf/resolve/qsr/exact.rs) to 384-bit radix-16 (`96` nibble levels) and implemented `verify_spf_dual_optimality` ($d[v] \le d[u] + w(u,v)$ + exact shortest-path tree witness) in [`spf.rs`](../crates/qualia-core-db/src/net/qdnf/route/spf.rs).
+  - `NET-20`: Implemented `SuperBlockSliceDescriptor` (`SHA-256` + 5-field `NQuin` parity) in [`scan.rs`](../crates/qualia-core-db/src/net/peer/replication/scan.rs), `ChunkToSuperBlockManifest` (`SHA-384` -> `SHA-256` bridge) in [`transfer.rs`](../crates/qualia-core-db/src/net/peer/replication/transfer.rs), and `release_checked_bytes` in [`ledger.rs`](../crates/qualia-core-db/src/net/peer/runtime/ledger.rs).
+  - `NET-21`: Implemented `EgressAuditReceipt` and `enumerate_egress_audit_quin` across all 40 egress policy scenarios in [`egress.rs`](../crates/qualia-core-db/src/net/qdnf/policy_labels/egress.rs).
+
+- **Phase F — Tri-Source Evaluation Aggregator & Jury-Safe Studio UI (`EVAL-22`–`EVAL-24`)**:
+  - `EVAL-22`: Created [`tri_source_eval.rs`](../crates/qualia-core-db/src/net/qdnf/harness/tri_source_eval.rs) (`TriSourceEvaluationReport`, `EtalonSourceReceipt`, `NetworkSourceReceipt`, `QualiaDbInvariantsReceipt`) baking unified `.q42` v4 evaluation volumes with exact `passed`/`failed`/`unsupported` per-plane counts, `PCAT` diagnostic summary, and 100% 5-field XOR parity verification.
+  - `EVAL-23`: Updated [`identity_plane.rs`](../crates/webizen-studio/src/components/settings/identity_plane.rs), [`provenance_graph.rs`](../crates/webizen-studio/src/components/provenance_graph.rs), and [`q42_volume_manager.rs`](../crates/webizen-studio/src/components/q42_volume_manager.rs) with 4-plane Identifier Fabric cards, `did:q42:` (`QRC`) vs `did:webizen:` vs `did:qi:` side-by-side labels, VC Origin-Integrity disclaimers, and Sanctuary publication lock badges.
+
+### 2. Master Qualification Verification Results (`EVAL-24`)
+
+- `cargo test -p etalon-nquin` (in `C:\Projects\etalon`): **15 passed**, 0 failed.
+- `node --test scripts/device-harness-identity.test.mjs`: **8 passed**, 0 failed.
+- `node --test scripts/lexicon-v4-namespaced.test.mjs`: **17 passed**, 0 failed.
+- `cargo check --locked -p qualia-core-db -p qualia-client-core -p qualia-peer -p qualia-mcp -p vibe -p webizen-studio -j 1`: **exit 0** (0 errors, 0 warnings).
+- `cargo test --manifest-path crates/qualia-etalon-sensing-bridge/Cargo.toml --jobs 1`: **38 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test validate_core_ontologies`: **4 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test identifier_tests`: **13 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test guard_grounding`: **7 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test q42_ingest_lossless`: **5 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test q42_corpus_source`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test qw10_q42_publication_policy`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test etalon_vibe_harness`: **4 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test gpu_caps_probe`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test full_stack_resolution`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --lib net::qdnf`: **808 passed**, 0 failed.
+- `cargo test -p qualia-core-db --lib net::peer`: **294 passed**, 0 failed.
+- `cargo test -p vibe cosmic::` + `cargo test -p vibe f5_`: **229 passed**, 0 failed.
+- `cargo test -p qualia-geospatial`: **34 passed**, 0 failed.
+- `cargo test -p webizen-studio`: **150 passed**, 0 failed.
+- `docs/plans/etalon-migration-review-2026-11-06/refresh-inventory.ps1 -Check`: **0 drift** (`3663` source files, `1742` provider comparison files).

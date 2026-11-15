@@ -44,6 +44,7 @@ pub struct Stalk {
 }
 
 impl Stalk {
+    /// Creates a new `Stalk`.
     pub fn new(
         snapshot_id: u64,
         capability_lease_id: u64,
@@ -126,6 +127,7 @@ pub struct SheafCondition {
 }
 
 impl SheafCondition {
+    /// Creates a new `SheafCondition`.
     pub fn new(name: &str, predicate_name: &str, required: bool) -> Self {
         Self {
             name: name.to_string(),
@@ -134,6 +136,7 @@ impl SheafCondition {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
@@ -177,6 +180,7 @@ pub struct Simplex {
 }
 
 impl Simplex {
+    /// Creates a new `Simplex`.
     pub fn new(name: &str, dimension: u8, members: Vec<u64>) -> Self {
         Self {
             name: name.to_string(),
@@ -196,6 +200,7 @@ impl Simplex {
         None
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
@@ -235,6 +240,7 @@ pub struct TopologicalTear {
 }
 
 impl TopologicalTear {
+    /// Creates a new `TopologicalTear`.
     pub fn new(diagnostic: &str, mu: f64, lambda: f64, stalk_id: u64, span: Span) -> Self {
         Self {
             diagnostic: diagnostic.to_string(),
@@ -269,6 +275,7 @@ pub struct LocalSection {
 }
 
 impl LocalSection {
+    /// Creates a new `LocalSection`.
     pub fn new(open_set_id: u64, values: BTreeMap<String, Value>) -> Self {
         Self {
             open_set_id,
@@ -295,10 +302,12 @@ pub struct CechCover {
 }
 
 impl CechCover {
+    /// Creates a new `CechCover`.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Adds section.
     pub fn add_section(&mut self, s: LocalSection) {
         self.sections.push(s);
     }

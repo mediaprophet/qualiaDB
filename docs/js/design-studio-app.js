@@ -278,13 +278,14 @@ async function initQualiaPortalLayer() {
   ensureCrossOriginIsolation({ quiet: true })
     .then((ok) => debugLog("COI ensure", { crossOriginIsolated: ok }))
     .catch((e) => debugWarn("COI ensure failed", e));
-  const canvas = $("design-canvas");
+  let canvas = $("design-canvas");
   const wrap = $("design-canvas-wrap");
   if (!canvas) throw new Error("canvas missing");
   ensureCanvasBackingStore(canvas, wrap?.clientWidth || 640, wrap?.clientHeight || 420);
 
   const t = debugTime("initQualiaPortalLayer");
-  const { portal, mod, source, portalError } = await loadQualiaPortal(canvas);
+  const { portal, mod, source, portalError, canvas: activeCanvas } = await loadQualiaPortal(canvas);
+  canvas = activeCanvas || canvas;
   wasm = mod;
   wasmSource = source;
   qualiaPortal = portal;
@@ -305,7 +306,10 @@ async function initQualiaPortalLayer() {
     portal.resize(canvas, w, h);
   });
   ro.observe(wrap || canvas);
-  startPortalLoop(canvas, () => updateHud());
+  startPortalLoop(canvas, () => updateHud(), (nextCanvas) => {
+    canvas = nextCanvas;
+    bindPortalPick(portal, canvas);
+  });
   bindPortalPick(portal, canvas);
   portalReady = true;
   updateWasmBadge();

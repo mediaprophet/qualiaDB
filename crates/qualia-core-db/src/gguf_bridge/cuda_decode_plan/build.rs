@@ -10,6 +10,7 @@ use crate::inference::cuda_lane::{
 };
 
 impl CudaDecodePlan {
+    /// Builds.
     pub(super) fn build(
         engine: &crate::gguf_bridge::QTensorEngine,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -33,7 +34,7 @@ impl CudaDecodePlan {
         ) {
             return None;
         }
-        let mmap = engine.gguf_mmap.clone()?;
+        let mmap = engine.clone_model_bytes()?;
         let tensor_data_start = index.tensor_data_start;
         let mut layers = Vec::with_capacity(n_layer as usize);
         let mut weight_layout = None;

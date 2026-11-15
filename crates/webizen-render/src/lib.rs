@@ -11,6 +11,7 @@
 //! - Epistemic Level of Detail (DoXastic LoD)
 
 pub mod audio_contract;
+pub mod geo_viewport;
 pub mod math;
 pub mod pipeline;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
@@ -18,28 +19,83 @@ pub mod poet_preview;
 pub mod scene_contract;
 pub mod shaders;
 pub mod telemetry;
-#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub mod ui;
+pub mod ui_layout;
+pub mod ui_msdf_text;
+#[cfg(feature = "qualia")]
 pub mod volumetric;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+mod volumetric_native_preview;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+mod volumetric_shot;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub use volumetric_shot::{NativeShot, ShotProbe};
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub use volumetric_native_preview::{ReviewGeometry, ReviewView, REVIEW_VIEWS};
+#[cfg(feature = "qualia")]
+pub mod volumetric_hmc;
+#[cfg(feature = "qualia")]
+mod volumetric_texture;
 pub mod wgpu_renderer;
 pub mod zero_copy_views;
 
 // Re-export main types for convenience
 pub use math::{AlignedBufferF32, Motor, MotorEncoder, RenderQuin};
+#[cfg(feature = "qualia")]
+pub use pipeline::{WebizenFramePlan, WebizenFrameScheduleError, WebizenFrameScheduler};
+pub use pipeline::{
+    admit_capabilities, FrameExtent, HistoryPublication, LinearDepthView, MotionVectorsView,
+    ReactiveMaskView, TemporalAdmission, TemporalCapabilityRefusal, TemporalContractError,
+    TemporalFrameContract, TemporalHistoryContract, TemporalProducerCapabilities,
+    TemporalProducerContract, TemporalResource,
+};
 pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
 pub use telemetry::SystemTelemetry;
+pub use ui::{
+    Color4f, NodeWire, Rect2D, UiWidget, WidgetKind, ZeroHeapUiCanvas, MAX_UI_TEXT_QUADS,
+    MAX_UI_WIDGETS, MAX_UI_WIRES,
+};
+pub use ui_layout::{
+    AlignItems, ComputedUiRect, Edges, FlexDirection, JustifyContent, Margin, Padding, SizeRule,
+    UiLayoutNode, UiLayoutStyle, ZeroHeapUiLayoutTree, MAX_UI_LAYOUT_NODES, NO_UI_NODE,
+};
+pub use ui_msdf_text::{
+    generate_procedural_msdf_atlas_into, glyph_metrics_for_char, glyph_slot_for_char,
+    kerning_advance_em, msdf_median_of_three, shape_text_zero_heap, MsdfGlyphMetrics,
+    MsdfTextQuad, ShapedTextRunMetrics, MAX_MSDF_TEXT_QUADS, MSDF_ATLAS_COLS,
+    MSDF_ATLAS_GLYPH_COUNT, MSDF_ATLAS_HEIGHT, MSDF_ATLAS_ROWS, MSDF_ATLAS_WIDTH, MSDF_CELL_PX,
+    MSDF_PIXEL_RANGE, MSDF_TEXT_WGSL,
+};
+#[cfg(feature = "qualia")]
+pub use volumetric::{HmcTextureAdmissionReport, HmcTextureStreamRequest, VolumetricRenderer};
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric::{
-    render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into, VolumetricRenderer,
+    render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use wgpu_renderer::{
     render_preview_data_uri, render_preview_png, render_scene_data_uri, render_scene_png,
     render_scene_png_with_time,
 };
-pub use wgpu_renderer::{Camera, ScreenPoint, Vec3, WgpuRenderer};
+pub use wgpu_renderer::{
+    pixel_receipt_from_rgba8, probe_webgpu_capabilities, Camera, PixelFormat, PixelReadback,
+    PixelReceipt,
+    PixelReceiptStatus, ScreenPoint, Vec3, WebGpuAdapterReport, WebGpuCapabilityReport,
+    WebGpuFeatureReport, WebGpuLimitReport, WebGpuRuntimeReceipt, WebGpuStatus, WgpuRenderer,
+    MAX_OFFSCREEN_DIMENSION, MAX_PIXEL_READBACK_BYTES,
+};
 pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
+
+// Decoupled volumetric/holographic and EMF pipelines from etalon-render
+pub use etalon_render;
+pub use etalon_render::{
+    EmfFieldCell, EmfPipeline, EmfPipelineDesc, EmfSliceUniform, FrameCameraPod,
+    HolographicNodeGpu as EtalonHolographicNodeGpu, ManifoldProjectionPod,
+    ObserverStandpointUniform as EtalonObserverStandpointUniform,
+    VolumetricPipeline as EtalonVolumetricPipeline, EMF_VOLUMETRIC_WGSL, HOLOGRAPHIC_WGSL,
+};
 
 #[cfg(test)]
 mod tests {
@@ -85,9 +141,18 @@ mod tests {
         assert!(!EPISTEMIC_WGSL.is_empty());
     }
 
+    #[test]
+    fn test_etalon_render_reexports() {
+        assert!(!EMF_VOLUMETRIC_WGSL.is_empty());
+        assert!(!HOLOGRAPHIC_WGSL.is_empty());
+        assert_eq!(std::mem::size_of::<FrameCameraPod>(), 160);
+        assert_eq!(std::mem::size_of::<ManifoldProjectionPod>(), 48);
+    }
+
     /// End-to-end headless render: build an offscreen renderer, clear to red,
     /// and read the pixels back. Skips gracefully when no GPU adapter is present
     /// (e.g. a headless CI box without a software fallback).
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn offscreen_clear_reads_back_solid_color() {
         let renderer = match pollster::block_on(WgpuRenderer::new_offscreen(64, 64)) {
@@ -126,6 +191,7 @@ mod tests {
     /// Locks in the linear (non-sRGB) offscreen target: a mid-tone CSS color must
     /// read back byte-for-byte. An sRGB target would re-encode 128 (~0.50) up to
     /// ~188, so this test fails if the format regresses to `Rgba8UnormSrgb`.
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn offscreen_midtone_passthrough_is_linear() {
         let renderer = match pollster::block_on(WgpuRenderer::new_offscreen(64, 64)) {

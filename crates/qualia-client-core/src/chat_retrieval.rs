@@ -31,6 +31,7 @@ pub struct RetrievalBundle {
     pub daemon_match_count: u64,
 }
 
+/// Retrieves graph context for a prompt.
 pub fn retrieve_graph_context(
     storage: &Path,
     env: &ChatEnvironment,

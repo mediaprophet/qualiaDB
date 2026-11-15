@@ -45,10 +45,12 @@ pub struct AdaptiveOdeResult {
     pub last_step: f64,
 }
 
+/// `Default::dopri5_workspace_len`.
 pub const fn dopri5_workspace_len(dimension: usize) -> Option<usize> {
     dimension.checked_mul(8)
 }
 
+/// Dormand-Prince 5 adaptive integration.
 pub fn integrate_dopri5<F>(
     derivative: F,
     state: &mut [f64],

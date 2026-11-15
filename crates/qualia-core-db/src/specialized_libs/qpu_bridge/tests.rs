@@ -109,6 +109,7 @@ pub mod problem {
     }
 
     impl QuboFormulation {
+        /// Creates a default `?`.
         pub fn new(num_variables: u32) -> Self {
             Self {
                 num_variables,
@@ -118,10 +119,12 @@ pub mod problem {
             }
         }
 
+        /// Adds `linear`.
         pub fn add_linear(&mut self, variable: u32, coefficient: f64) {
             self.linear_terms.push((variable, coefficient));
         }
 
+        /// Adds `quadratic`.
         pub fn add_quadratic(&mut self, var_a: u32, var_b: u32, coefficient: f64) {
             self.quadratic_terms.push((var_a, var_b, coefficient));
         }
@@ -174,6 +177,7 @@ pub mod problem {
     }
 
     impl CircuitFormulation {
+        /// Creates a default `?`.
         pub fn new(num_qubits: u32) -> Self {
             Self {
                 num_qubits,
@@ -182,10 +186,12 @@ pub mod problem {
             }
         }
 
+        /// Adds `gate`.
         pub fn add_gate(&mut self, gate: CircuitGate) {
             self.gates.push(gate);
         }
 
+        /// Adds `measurement`.
         pub fn add_measurement(&mut self, m: QubitMeasurement) {
             self.measurements.push(m);
         }
@@ -215,6 +221,7 @@ pub mod problem {
     }
 
     impl PreSolver {
+        /// Creates a default `?`.
         pub fn new() -> Self {
             Self {
                 variable_map: HashMap::new(),

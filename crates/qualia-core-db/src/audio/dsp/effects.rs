@@ -12,6 +12,8 @@ pub struct Delay {
 }
 
 impl Delay {
+    /// Create a delay line of `max_samples`; `feedback` is clamped to
+    /// `[0, 0.999]` and `mix` to `[0, 1]`.
     pub fn new(max_samples: usize, feedback: f64, mix: f64) -> Self {
         Self {
             buffer: vec![0.0; max_samples.max(1)],
@@ -30,6 +32,8 @@ impl Delay {
         }
     }
 
+    /// Advance one sample: reads the delayed value, writes `input + delayed
+    /// × feedback`, and returns `input + delayed × mix`.
     pub fn tick(&mut self, input: f64) -> f64 {
         let delayed = self.buffer[self.write_pos];
         let output = input + delayed * self.mix;
@@ -38,6 +42,7 @@ impl Delay {
         output
     }
 
+    /// Apply the delay to `input`, writing up to `output.len()` samples.
     pub fn process(&mut self, input: &[f64], output: &mut [f64]) {
         for (i, &s) in input.iter().enumerate() {
             if i < output.len() {
@@ -46,6 +51,7 @@ impl Delay {
         }
     }
 
+    /// Clear the delay line and rewind the write cursor.
     pub fn reset(&mut self) {
         self.buffer.fill(0.0);
         self.write_pos = 0;
@@ -62,6 +68,8 @@ pub struct Reverb {
 }
 
 impl Reverb {
+    /// Build the 4-delay feedback network (prime-ms lengths for a dense
+    /// tail); `room_size`, `damping`, and `mix` are clamped to `[0, 1]`.
     pub fn new(sample_rate: f64, room_size: f64, damping: f64, mix: f64) -> Self {
         // Four parallel delay lines with prime-number lengths for a dense tail.
         let prime_ms = [29.0, 37.0, 41.0, 43.0];
@@ -80,6 +88,8 @@ impl Reverb {
         }
     }
 
+    /// Advance one sample through the delay network and apply the damping
+    /// low-pass; returns the wet/dry blend.
     pub fn tick(&mut self, input: f64) -> f64 {
         let mut wet = 0.0;
         for d in &mut self.delays {
@@ -91,6 +101,7 @@ impl Reverb {
         input * (1.0 - self.mix) + damped * self.mix
     }
 
+    /// Apply the reverb to `input`, writing up to `output.len()` samples.
     pub fn process(&mut self, input: &[f64], output: &mut [f64]) {
         for (i, &s) in input.iter().enumerate() {
             if i < output.len() {
@@ -99,6 +110,7 @@ impl Reverb {
         }
     }
 
+    /// Clear all internal delay lines.
     pub fn reset(&mut self) {
         for d in &mut self.delays {
             d.reset();
@@ -120,6 +132,9 @@ pub struct Compressor {
 }
 
 impl Compressor {
+    /// `threshold` in dB, `ratio` clamped to ≥ 1, `attack`/`release` in
+    /// seconds; attack/release smoothing coefficients are derived from
+    /// `sample_rate`.
     pub fn new(threshold: f64, ratio: f64, attack: f64, release: f64, sample_rate: f64) -> Self {
         let attack_coef = (-1.0 / (attack * sample_rate)).exp();
         let release_coef = (-1.0 / (release * sample_rate)).exp();
@@ -135,6 +150,9 @@ impl Compressor {
         }
     }
 
+    /// Advance one sample: measures level in dB, applies attack/release
+    /// envelope smoothing to the gain-reduction target, and returns the
+    /// compressed sample.
     pub fn tick(&mut self, input: f64) -> f64 {
         // Convert to dB.
         let abs_input = input.abs();
@@ -165,6 +183,7 @@ impl Compressor {
         input * gain_linear
     }
 
+    /// Apply the compressor to `input`, writing up to `output.len()` samples.
     pub fn process(&mut self, input: &[f64], output: &mut [f64]) {
         for (i, &s) in input.iter().enumerate() {
             if i < output.len() {
@@ -173,14 +192,15 @@ impl Compressor {
         }
     }
 
+    /// Reset the gain-reduction envelope to zero.
     pub fn reset(&mut self) {
         self.envelope = 0.0;
     }
 }
 
-/// Simple 3-band EQ (low, mid, high) using biquad filters.
 use super::filter::{BiquadFilter, FilterType};
 
+/// Simple 3-band EQ (low, mid, high) using biquad filters.
 #[derive(Debug)]
 pub struct Equalizer {
     low: BiquadFilter,
@@ -192,6 +212,8 @@ pub struct Equalizer {
 }
 
 impl Equalizer {
+    /// Build the three biquads at 200 Hz (low-pass), 1 kHz (band-pass), and
+    /// 3 kHz (high-pass); all band gains start at 0 dB.
     pub fn new(sample_rate: f64) -> Self {
         Self {
             low: BiquadFilter::new(FilterType::LowPass, 200.0, 0.707, sample_rate),
@@ -203,12 +225,16 @@ impl Equalizer {
         }
     }
 
+    /// Set per-band gains in dB (applied multiplicatively to each band's
+    /// output).
     pub fn set_band_gains(&mut self, low_db: f64, mid_db: f64, high_db: f64) {
         self.low_gain = low_db;
         self.mid_gain = mid_db;
         self.high_gain = high_db;
     }
 
+    /// Advance one sample through all three bands and sum the
+    /// gain-weighted outputs.
     pub fn tick(&mut self, input: f64) -> f64 {
         let low = self.low.tick(input) * 10.0_f64.powf(self.low_gain / 20.0);
         let mid = self.mid.tick(input) * 10.0_f64.powf(self.mid_gain / 20.0);
@@ -216,6 +242,7 @@ impl Equalizer {
         low + mid + high
     }
 
+    /// Apply the EQ to `input`, writing up to `output.len()` samples.
     pub fn process(&mut self, input: &[f64], output: &mut [f64]) {
         for (i, &s) in input.iter().enumerate() {
             if i < output.len() {

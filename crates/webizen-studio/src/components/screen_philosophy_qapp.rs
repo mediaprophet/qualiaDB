@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `ScreenPhilosophyQapp` component.
 pub fn ScreenPhilosophyQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -35,6 +35,7 @@ pub struct SpscQueue {
 }
 
 impl SpscQueue {
+    /// Creates `SpscQueue` with the given state.
     pub const fn new() -> Self {
         const EMPTY: RingSlot = RingSlot {
             receipt: OwnershipReceipt {

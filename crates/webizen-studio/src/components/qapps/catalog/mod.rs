@@ -37,6 +37,7 @@ pub(crate) enum Cat {
 }
 
 impl Cat {
+    /// Label.
     pub(crate) fn label(self) -> &'static str {
         match self {
             Cat::All => "All",
@@ -56,6 +57,7 @@ impl Cat {
     }
 }
 
+/// Category list.
 pub(crate) fn cat_list() -> Vec<Cat> {
     vec![
         Cat::All,
@@ -92,6 +94,12 @@ pub(crate) enum AppRoute {
     TalkPeople,
     /// Daily inbox under Talk → Mail — not Poet Domain.info admin.
     TalkMail,
+    WorkProjects,
+    WalletCrypto,
+    HypermediaLibrary,
+    LlmAgents,
+    WebBrowser,
+    JobsScheduler,
 }
 
 pub(crate) struct QApp {
@@ -113,6 +121,7 @@ pub(crate) struct Template {
     pub(crate) icons: Vec<&'static str>,
 }
 
+/// Featured templates.
 pub(crate) fn featured_templates() -> Vec<Template> {
     vec![
         Template {
@@ -173,6 +182,7 @@ pub(crate) fn featured_templates() -> Vec<Template> {
 
 // ── Full app catalog ────────────────────────────────────────────────────────
 
+/// `qapp` catalog.
 pub(crate) fn qapp_catalog() -> Vec<QApp> {
     let mut apps = Vec::new();
     apps.extend(platform::apps());
@@ -203,6 +213,12 @@ pub(crate) enum BtnKind {
     LaunchNexus,
     LaunchTalkPeople,
     LaunchTalkMail,
+    LaunchWorkProjects,
+    LaunchWalletCrypto,
+    LaunchHypermediaLibrary,
+    LaunchLlmAgents,
+    LaunchWebBrowser,
+    LaunchJobsScheduler,
     OpenInStudio,
     ComingSoon,
 }

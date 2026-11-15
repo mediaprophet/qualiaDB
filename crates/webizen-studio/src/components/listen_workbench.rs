@@ -1,6 +1,6 @@
 //! Listen workbench — Ears demos + DAW mixer strips (reference engine).
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::qapp_engine::invoke_json;
@@ -94,6 +94,7 @@ fn default_tracks() -> Vec<MixerTrackDto> {
 }
 
 #[component]
+/// Aether `ListenWorkbench` component.
 pub fn ListenWorkbench() -> Element {
     let mut status = use_signal(|| {
         String::from("Run Ears demo or use the mixer strips below (reference DAW — not Pro Tools).")

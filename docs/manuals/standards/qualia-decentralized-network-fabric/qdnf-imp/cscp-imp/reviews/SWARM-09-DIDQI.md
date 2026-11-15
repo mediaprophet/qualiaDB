@@ -2,7 +2,7 @@
 
 **Reviewer:** swarm review lane (did not author `cscp_h2.rs`, `h2_capsule.rs`, `did-qi-method.md`, or `did_qi/`). Not approved from the implementer handoffs.  
 **Date:** 2026-09-10  
-**Branch:** `0.0.38`  
+**Branch:** `0.0.40`  
 **HEAD read:** `a8164506` plus integrator-wired working tree (`pub mod cscp_h2`, `pub mod h2_capsule`, `pub mod did_qi`)  
 **Scope:** child CSCP-09.02 (loopback TLS HTTP/2 Extended CONNECT + capsules + CSCP/QSession) and children DID-QI-SPEC / DID-QI-IMPL. Parent CSCP-09 Internet/MASQUE/HTTP/3 and parent DID-QI registration are out of scope for accept.
 

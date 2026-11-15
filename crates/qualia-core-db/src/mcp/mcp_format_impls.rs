@@ -11,20 +11,24 @@ use serde_json::{json, Value};
 /// Upper bound on quins collected per parse/serialize MCP call.
 pub const MAX_MCP_FORMAT_QUINS: usize = 8_192;
 
+/// JSON `v[key]` as `&str`, or `default` when absent/not a string.
 fn json_str<'a>(v: &'a Value, key: &str, default: &'a str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or(default)
 }
 
+/// JSON `v[key]` as `u64` (accepts non-negative `i64`); `default` otherwise.
 fn json_u64(v: &Value, key: &str, default: u64) -> u64 {
     v.get(key)
         .and_then(|x| x.as_u64().or_else(|| x.as_i64().map(|n| n as u64)))
         .unwrap_or(default)
 }
 
+/// JSON `v[key]` as `bool`; `default` otherwise.
 fn json_bool(v: &Value, key: &str, default: bool) -> bool {
     v.get(key).and_then(Value::as_bool).unwrap_or(default)
 }
 
+/// Serializes an `NQuin`'s six u64 fields to a JSON object.
 fn quin_to_json(q: &NQuin) -> Value {
     json!({
         "subject": q.subject,
@@ -36,6 +40,7 @@ fn quin_to_json(q: &NQuin) -> Value {
     })
 }
 
+/// Stamps `context_hash` onto the quin when nonzero and recomputes parity if unset.
 fn apply_context(q: &mut NQuin, context_hash: u64) {
     if context_hash != 0 {
         q.context = context_hash;
@@ -45,6 +50,7 @@ fn apply_context(q: &mut NQuin, context_hash: u64) {
     }
 }
 
+/// Resolves a field mapping's predicate: `predicate_hash` u64 directly, or a `predicate` IRI hashed via `q_hash`. `InvalidParameters` when neither is present.
 fn resolve_predicate_hash(field: &Value) -> Result<u64, McpSystemError> {
     if let Some(h) = field.get("predicate_hash").and_then(|x| x.as_u64()) {
         return Ok(h);
@@ -57,6 +63,7 @@ fn resolve_predicate_hash(field: &Value) -> Result<u64, McpSystemError> {
     Err(McpSystemError::InvalidParameters)
 }
 
+/// Maps the `datatype` string to `CsvDatatype` (`integer`/`float`/`datetime`, default `StringRef`).
 fn parse_csv_datatype(s: &str) -> crate::sparql_library::parsers::csv_parser::CsvDatatype {
     use crate::sparql_library::parsers::csv_parser::CsvDatatype;
     match s {
@@ -67,6 +74,7 @@ fn parse_csv_datatype(s: &str) -> crate::sparql_library::parsers::csv_parser::Cs
     }
 }
 
+/// Maps the `datatype` string to `JsonDatatype` (`integer`/`float`/`datetime`, default `StringRef`).
 fn parse_json_datatype(s: &str) -> crate::sparql_library::parsers::json_parser::JsonDatatype {
     use crate::sparql_library::parsers::json_parser::JsonDatatype;
     match s {
@@ -77,6 +85,7 @@ fn parse_json_datatype(s: &str) -> crate::sparql_library::parsers::json_parser::
     }
 }
 
+/// Builds a `CsvMappingProfile` from `field_mappings` (source_key + predicate + datatype); errors when the array is absent or empty.
 fn parse_csv_profile(
     v: &Value,
 ) -> Result<crate::sparql_library::parsers::csv_parser::CsvMappingProfile, McpSystemError> {
@@ -112,6 +121,7 @@ fn parse_csv_profile(
     })
 }
 
+/// Builds a `JsonMappingProfile` from `field_mappings` (source_key + predicate + datatype); errors when absent or empty.
 fn parse_json_profile(
     v: &Value,
 ) -> Result<crate::sparql_library::parsers::json_parser::JsonMappingProfile, McpSystemError> {
@@ -146,6 +156,7 @@ fn parse_json_profile(
     })
 }
 
+/// Reads input bytes from the inline `inline_key` string or a `file_path`; `InvalidParameters` when neither is present or the read fails.
 fn read_input_bytes(v: &Value, inline_key: &str) -> Result<Vec<u8>, McpSystemError> {
     if let Some(inline) = v.get(inline_key).and_then(Value::as_str) {
         return Ok(inline.as_bytes().to_vec());
@@ -166,6 +177,7 @@ struct QuinCollector {
 }
 
 impl QuinCollector {
+    /// Creates a collector over a fixed `[NQuin; MAX_MCP_FORMAT_QUINS]` buffer — no heap in the hot path.
     fn new() -> Self {
         Self {
             buf: [NQuin::default(); MAX_MCP_FORMAT_QUINS],
@@ -174,6 +186,7 @@ impl QuinCollector {
         }
     }
 
+    /// Stamps context, then stores `q` in the fixed buffer; sets `truncated` once the buffer is full rather than erroring.
     fn push(&mut self, mut q: NQuin, context_hash: u64) {
         apply_context(&mut q, context_hash);
         if self.count < MAX_MCP_FORMAT_QUINS {
@@ -184,11 +197,13 @@ impl QuinCollector {
         }
     }
 
+    /// Returns the collected `&[NQuin]` prefix.
     fn as_slice(&self) -> &[NQuin] {
         &self.buf[..self.count]
     }
 }
 
+/// Source of quins for serialize tools: `use_graph` pulls from the daemon graph (filtered by `context_hash`, capped at `max_quins`); otherwise parses the inline `quins` array.
 fn resolve_input_quins(v: &Value) -> Result<Vec<NQuin>, McpSystemError> {
     if json_bool(v, "use_graph", false) {
         let guard = crate::daemon_graph::graph_read_guard();
@@ -213,6 +228,7 @@ fn resolve_input_quins(v: &Value) -> Result<Vec<NQuin>, McpSystemError> {
     parse_quin_slice(v, "quins")
 }
 
+/// Builds a `CsvSerializationProfile` from `headers`/`field_names` + per-field predicate/datatype arrays; errors when headers are absent.
 fn csv_serialize_profile(
     v: &Value,
 ) -> Result<
@@ -267,6 +283,7 @@ fn csv_serialize_profile(
     })
 }
 
+/// Builds a `JsonSerializationProfile` from `field_names` + `predicate_hashes`/`predicates` + `datatypes` arrays.
 fn json_serialize_profile(
     v: &Value,
 ) -> Result<
@@ -320,6 +337,7 @@ fn json_serialize_profile(
     })
 }
 
+/// Delivers serialized output: `"output":"file"` writes `bytes` to `file_path`; otherwise returns them UTF-8 inline under `inline_key`.
 fn write_or_inline_output(
     v: &Value,
     inline_key: &str,
@@ -350,6 +368,7 @@ fn write_or_inline_output(
 
 // ── Parse ────────────────────────────────────────────────────────────────────
 
+/// MCP `parse_csv` impl: streams CSV → Quins through a fixed collector; optional `ingest_to_graph`; reports `quinCount`/`truncated`/`ingestedToGraph`.
 pub fn parse_csv(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::parsers::csv_parser::parse_csv_to_quins;
     use std::io::Cursor;
@@ -383,6 +402,7 @@ pub fn parse_csv(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// MCP `parse_json` impl: streams JSON records → Quins through a fixed collector; optional `ingest_to_graph`.
 pub fn parse_json(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::parsers::json_parser::parse_json_to_quins;
     use std::io::Cursor;
@@ -418,6 +438,7 @@ pub fn parse_json(args: &[u8]) -> Result<String, McpSystemError> {
 
 // ── Serialize ────────────────────────────────────────────────────────────────
 
+/// MCP `serialize_csv` impl: serializes resolved quins to CSV via the serialization profile; output inline or to file.
 pub fn serialize_csv(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::serialisers::csv_serializer::serialize_quins_to_csv;
 
@@ -439,6 +460,7 @@ pub fn serialize_csv(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// MCP `serialize_json` impl: serializes resolved quins to JSON via the serialization profile; output inline or to file.
 pub fn serialize_json(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::serialisers::json_serializer::serialize_quins_to_json;
 
@@ -460,6 +482,7 @@ pub fn serialize_json(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// MCP `parse_rdf` impl: dispatches to `rdf_formats::parse_rdf` by `format` string (nt/turtle/trig/rdf-star); bounded collection + optional ingest.
 pub fn parse_rdf(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::rdf_formats::{
         parse_rdf as dispatch_parse, QuinCollector, RdfFormat,
@@ -501,6 +524,7 @@ pub fn parse_rdf(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// MCP `serialize_rdf` impl: dispatches to `rdf_formats::serialize_rdf` by `format`; `rdf_star`/`star`/`plain` flags select `RdfStarMode`.
 pub fn serialize_rdf(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::sparql_library::rdf_formats::{
         serialize_rdf as dispatch_serialize, RdfFormat, RdfStarMode,

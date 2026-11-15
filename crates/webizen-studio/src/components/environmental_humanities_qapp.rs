@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `EnvironmentalHumanitiesQapp` component.
 pub fn EnvironmentalHumanitiesQapp() -> Element {
     rsx! {
         QAppEngine {

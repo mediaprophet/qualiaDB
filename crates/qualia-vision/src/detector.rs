@@ -42,6 +42,7 @@ impl Default for GridMultiObjectDetector {
 }
 
 impl GridMultiObjectDetector {
+    /// Creates a new instance.
     pub fn new(grid_w: u32, grid_h: u32) -> Self {
         let gw = grid_w.clamp(1, MAX_GRID);
         let gh = grid_h.clamp(1, MAX_GRID);
@@ -54,6 +55,7 @@ impl GridMultiObjectDetector {
         }
     }
 
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.model_hash
     }

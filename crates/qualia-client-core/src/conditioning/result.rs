@@ -25,6 +25,7 @@ pub struct NormalizedInferenceResult {
 }
 
 impl NormalizedInferenceResult {
+    /// Unmeasured result.
     pub fn new_unmeasured(text: String, committed: bool) -> Self {
         Self {
             text,
@@ -39,6 +40,7 @@ impl NormalizedInferenceResult {
         }
     }
 
+    /// Measured result.
     pub fn new_measured(
         text: String,
         committed: bool,

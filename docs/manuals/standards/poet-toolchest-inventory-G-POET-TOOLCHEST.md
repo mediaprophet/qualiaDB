@@ -1,6 +1,6 @@
 # Poet Toolchest Inventory — G-POET-TOOLCHEST (2026-09-04)
 
-> Branch: `0.0.36-dev` · Slice: inventory + one live toolchain onto `ALL_BOUND`  
+> Branch: `0.0.40-dev` · Slice: inventory + one live toolchain onto `ALL_BOUND`  
 > Owner: Neo · Gaps triage: Vibe · Gate reports: Capt.
 
 ## Model (locked)

@@ -131,6 +131,7 @@ impl WebizenHostApi {
         crate::duty_of_inquiry::assess(&duty, &conduct)
     }
 
+    /// Sleep analytics.
     pub fn sleep_analytics(
         &self,
         target_min: f64,
@@ -154,10 +155,12 @@ impl WebizenHostApi {
         Ok((debt, heatmap))
     }
 
+    /// Default sleep analytics.
     pub fn default_sleep_analytics(&self) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
         self.sleep_analytics(DEFAULT_TARGET_SLEEP_MIN)
     }
 
+    /// Adds emergency-contact.
     pub fn add_emergency_contact(
         &self,
         display_name: &str,
@@ -181,15 +184,18 @@ impl WebizenHostApi {
         Ok(contact)
     }
 
+    /// Lists emergency contacts.
     pub fn list_emergency_contacts(&self) -> Result<Vec<EmergencyContact>, String> {
         let store = EmergencyContactStore::open(&self.storage_root).map_err(|e| e.to_string())?;
         store.list().map_err(|e| e.to_string())
     }
 
+    /// Med-reminder prefs.
     pub fn med_reminder_prefs(&self) -> MedReminderPrefs {
         load_prefs(&self.storage_root)
     }
 
+    /// Sets med-reminders-enabled.
     pub fn set_med_reminders_enabled(&self, enabled: bool) -> Result<MedReminderPrefs, String> {
         let mut prefs = load_prefs(&self.storage_root);
         if enabled && !prefs.permission_granted {
@@ -200,6 +206,7 @@ impl WebizenHostApi {
         Ok(prefs)
     }
 
+    /// Grants med-reminder permission.
     pub fn grant_med_reminder_permission(&self) -> Result<MedReminderPrefs, String> {
         let mut prefs = load_prefs(&self.storage_root);
         prefs.permission_granted = true;
@@ -208,6 +215,7 @@ impl WebizenHostApi {
         Ok(prefs)
     }
 
+    /// Lists due med reminders.
     pub fn list_due_med_reminders(
         &self,
         window_minutes: i32,
@@ -224,10 +232,12 @@ impl WebizenHostApi {
         Ok(compute_due_reminders(&journal, now, window_minutes))
     }
 
+    /// Sanctuary prefs.
     pub fn sanctuary_prefs(&self) -> SanctuaryPrefs {
         load_sanctuary_prefs(&self.storage_root)
     }
 
+    /// Sets up sanctuary.
     pub fn setup_sanctuary(
         &self,
         real_pin: &str,
@@ -241,10 +251,12 @@ impl WebizenHostApi {
         )
     }
 
+    /// Locks sanctuary.
     pub fn lock_sanctuary(&self) -> Result<SanctuaryPrefs, String> {
         lock_sanctuary(&self.storage_root)
     }
 
+    /// Unlocks sanctuary.
     pub fn unlock_sanctuary(&self, pin: &str) -> Result<SanctuaryPrefs, String> {
         unlock_sanctuary(&self.storage_root, pin)
     }
@@ -256,11 +268,13 @@ impl WebizenHostApi {
     // without the PIN, and the decoy PIN opens a separate lane that never aliases real data.
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// `true` when the sanctuary vault is configured.
     pub fn sanctuary_vault_configured(&self) -> bool {
         super::super::sanctuary_vault::is_configured(&self.storage_root)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Sets up the sanctuary vault.
     pub fn setup_sanctuary_vault(&self, real_pin: &str, decoy_pin: &str) -> Result<(), String> {
         super::super::sanctuary_vault::setup(&self.storage_root, real_pin, decoy_pin)
     }
@@ -275,6 +289,7 @@ impl WebizenHostApi {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Adds sanctuary-vault-note.
     pub fn add_sanctuary_vault_note(
         &self,
         pin: &str,
@@ -289,6 +304,7 @@ impl WebizenHostApi {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Lists sanctuary vault notes.
     pub fn list_sanctuary_vault_notes(
         &self,
         pin: &str,

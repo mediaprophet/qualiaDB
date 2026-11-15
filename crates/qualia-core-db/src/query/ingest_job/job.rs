@@ -75,6 +75,7 @@ pub struct SourceAttestation {
 }
 
 impl SourceAttestation {
+    /// Human-readable verification instructions depending on which digest was recorded (full SHA-256, 16 MiB window commitment, or none yet).
     pub fn verify_story(&self) -> &'static str {
         if self.uncompressed_sha256_hex.is_some() {
             "re-stream the locator (file or URL), decompress the same way, SHA-256 the bytes Rio saw, compare uncompressed_sha256_hex. The source file does not need to stay on disk."
@@ -94,6 +95,7 @@ pub struct IngestJob {
 }
 
 impl IngestJob {
+    /// Creates a new ingest job: makes the runs dir, writes the spec (source/encoding/format/mode/segment size), and initializes the checkpoint.
     pub fn create(
         dir: PathBuf,
         source: IngestSourceKind,
@@ -138,6 +140,7 @@ impl IngestJob {
         Ok(job)
     }
 
+    /// Reopens a job dir, loading spec and checkpoint; `io` errors propagate.
     pub fn open(dir: PathBuf) -> io::Result<Self> {
         let spec = read_json(&dir.join(JOB_SPEC))?;
         let checkpoint = read_json(&dir.join(JOB_CHECKPOINT))?;
@@ -148,28 +151,34 @@ impl IngestJob {
         })
     }
 
+    /// Path to the job's `runs/` subdirectory.
     pub fn runs_dir(&self) -> PathBuf {
         self.dir.join(JOB_RUNS)
     }
 
+    /// `true` once the checkpoint phase is `Complete`.
     pub fn is_complete(&self) -> bool {
         self.checkpoint.phase == IngestJobPhase::Complete
     }
 
+    /// Persists the job spec JSON atomically.
     pub fn write_spec(&self) -> io::Result<()> {
         write_json_atomic(&self.dir.join(JOB_SPEC), &self.spec)
     }
 
+    /// Persists the checkpoint JSON atomically.
     pub fn write_checkpoint(&self) -> io::Result<()> {
         write_json_atomic(&self.dir.join(JOB_CHECKPOINT), &self.checkpoint)
     }
 
+    /// Updates the checkpoint phase and persists it.
     pub fn set_phase(&mut self, phase: IngestJobPhase) -> io::Result<()> {
         self.checkpoint.phase = phase;
         self.checkpoint.updated_unix = unix_now();
         self.write_checkpoint()
     }
 
+    /// Records bytes/quins processed plus optional window hash and persists the checkpoint.
     pub fn record_progress(
         &mut self,
         triples: u64,
@@ -186,6 +195,7 @@ impl IngestJob {
         self.write_checkpoint()
     }
 
+    /// Marks the job failed with `err` and persists the checkpoint.
     pub fn mark_failed(&mut self, err: impl ToString) -> io::Result<()> {
         self.checkpoint.phase = IngestJobPhase::Failed;
         self.checkpoint.last_error = Some(err.to_string());
@@ -193,18 +203,22 @@ impl IngestJob {
         self.write_checkpoint()
     }
 
+    /// Writes the source attestation JSON atomically.
     pub fn write_attestation(&self, att: &SourceAttestation) -> io::Result<()> {
         write_json_atomic(&self.dir.join(JOB_ATTESTATION), att)
     }
 
+    /// Path to the attestation file inside the job dir.
     pub fn attestation_path(&self) -> PathBuf {
         self.dir.join(JOB_ATTESTATION)
     }
 
+    /// Path to the per-window hash file.
     pub fn windows_path(&self) -> PathBuf {
         self.dir.join(JOB_WINDOWS)
     }
 
+    /// Reads the attestation JSON; `Ok(None)` when absent.
     pub fn load_attestation(&self) -> io::Result<Option<SourceAttestation>> {
         let path = self.attestation_path();
         if !path.is_file() {
@@ -214,6 +228,7 @@ impl IngestJob {
     }
 }
 
+/// Current UNIX epoch seconds (saturating at 0 on clock skew).
 pub fn unix_now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -221,6 +236,7 @@ pub fn unix_now() -> u64 {
         .as_secs()
 }
 
+/// Serializes `value` to `<path>.json.tmp` then renames — readers never see a partial file.
 pub fn write_json_atomic(path: &Path, value: &impl Serialize) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -234,11 +250,13 @@ pub fn write_json_atomic(path: &Path, value: &impl Serialize) -> io::Result<()> 
     fs::rename(tmp, path)
 }
 
+/// Reads and deserializes a JSON file; `InvalidData` on parse failure.
 pub fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> io::Result<T> {
     let bytes = fs::read(path)?;
     serde_json::from_slice(&bytes).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
+/// Appends one hex-encoded 32-byte window hash line.
 pub fn append_window_hash(path: &Path, hash: &[u8; 32]) -> io::Result<()> {
     use std::io::Write as _;
     if let Some(parent) = path.parent() {
@@ -251,6 +269,7 @@ pub fn append_window_hash(path: &Path, hash: &[u8; 32]) -> io::Result<()> {
     writeln!(f, "{}", hex_encode(hash))
 }
 
+/// Reads all window-hash lines, hex-decoding each; empty vec when absent.
 pub fn read_window_hashes(path: &Path) -> io::Result<Vec<[u8; 32]>> {
     if !path.is_file() {
         return Ok(Vec::new());
@@ -267,6 +286,7 @@ pub fn read_window_hashes(path: &Path) -> io::Result<Vec<[u8; 32]>> {
     Ok(out)
 }
 
+/// SHA-256 over `WINDOW_BYTES` + window count + each hash — binds the commitment to the segmentation scheme.
 pub fn window_commitment(windows: &[[u8; 32]]) -> [u8; 32] {
     use sha2::{Digest, Sha256};
     let mut h = Sha256::new();
@@ -278,6 +298,7 @@ pub fn window_commitment(windows: &[[u8; 32]]) -> [u8; 32] {
     h.finalize().into()
 }
 
+/// Lowercase hex encoding (no external deps).
 pub fn hex_encode(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut s = String::with_capacity(bytes.len() * 2);
@@ -288,6 +309,7 @@ pub fn hex_encode(bytes: &[u8]) -> String {
     s
 }
 
+/// Decodes exactly 64 hex chars into `[u8; 32]`; `InvalidData` otherwise.
 pub fn hex_decode32(s: &str) -> io::Result<[u8; 32]> {
     let s = s.trim();
     if s.len() != 64 {

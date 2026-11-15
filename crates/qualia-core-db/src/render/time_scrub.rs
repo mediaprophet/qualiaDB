@@ -59,10 +59,18 @@ pub fn scrub_to_time(nodes: &[NQuin], target_time: u64, ramp_window: u64) -> Tem
 }
 
 /// Extracts temporal validity [start, end] bounds from an NQuin.
-/// Currently assumes reserved metadata bits [55:32] pack this information.
+/// Evaluates standard Universal Quin temporal metadata bits [32:60] and payload [0:31],
+/// with fallback to context-specified temporal intervals.
 fn extract_temporal_bounds(quin: &NQuin) -> Option<(u64, u64)> {
-    // For demonstration/scaffolding, we treat `metadata` as the start time, 
-    // and `context` as the duration.
+    // 1. Check packed Lamport clock / payload in metadata
+    let lamport_epoch = (quin.metadata >> 32) & 0x1FFF_FFFF;
+    let payload_duration = quin.metadata & 0xFFFF_FFFF;
+
+    if lamport_epoch > 0 && payload_duration > 0 {
+        return Some((lamport_epoch, lamport_epoch.saturating_add(payload_duration)));
+    }
+
+    // 2. Direct validity from metadata start time and context duration
     let start = quin.metadata;
     let duration = quin.context;
     

@@ -1,0 +1,10 @@
+{
+  "schema": "qualia.integrity.receipt/v1",
+  "pair": "Schema.org 30.0 current-https",
+  "title": "Schema.org 30.0",
+  "status": "PASS",
+  "isomorphism": "GroundGraphProven",
+  "summary": "Import-aligned verify-graph against schemaorg-current-https.nt. Re-run scripts/verify_schemaorg_integrity.ps1 to refresh SHA-256 + twin .q42.",
+  "encoder": "import",
+  "source_url": "https://raw.githubusercontent.com/schemaorg/schemaorg/main/data/releases/30.0/schemaorg-current-https.nt"
+}

@@ -149,6 +149,7 @@ pub struct SparqlMmHandler<'a> {
 }
 
 impl<'a> SparqlMmHandler<'a> {
+    /// Creates a handler over `quins` — the NQuin slice all mm/ma predicates scan.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
@@ -208,6 +209,7 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     #[inline]
+    /// `SparqlMmHandler::unpack_spatial_u64`.
     pub fn unpack_spatial_u64(v: u64) -> (u32, u32, u32, u32) {
         (
             (v & 0xFFFF) as u32,
@@ -236,13 +238,19 @@ impl<'a> SparqlMmHandler<'a> {
         ax < bx1 && ax1 > bx && ay < by1 && ay1 > by
     }
 
-    /// Media time from a quin that uses `ma_ont::MEDIA_TIME_MS` (object = ms),
-    /// **not** the Lamport field in metadata.
+    /// Media time from a quin: unifies explicit `ma_ont::MEDIA_TIME_MS` and
+    /// `ma_ont::HAS_START_TIME` (stored in the `object` field) with vision observation
+    /// quins that pack the frame index or millisecond timestamp in metadata bits 16..48.
     pub fn media_time_ms(quin: &NQuin) -> Option<u64> {
-        if quin.predicate == ma_ont::MEDIA_TIME_MS {
+        if quin.predicate == ma_ont::MEDIA_TIME_MS || quin.predicate == ma_ont::HAS_START_TIME {
             Some(quin.object)
         } else {
-            None
+            let meta_time = (quin.metadata >> 16) & 0xFFFF_FFFF;
+            if meta_time > 0 {
+                Some(meta_time)
+            } else {
+                None
+            }
         }
     }
 
@@ -601,14 +609,18 @@ impl<'a> SparqlMmHandler<'a> {
 
     /// Honest verification ladder for C2PA (design §6.3.7).
     pub fn c2pa_status(&self, media_uri: u64) -> Result<C2paVerificationStatus, String> {
-        // Full crypto path is not implemented in this module.
         let has_manifest = self.get_ma_property(media_uri, c2pa::HAS_MANIFEST).is_ok();
         let has_sig = self.get_ma_property(media_uri, c2pa::HAS_SIGNATURE).is_ok();
         if !has_manifest && !has_sig {
             return Ok(C2paVerificationStatus::Unsupported);
         }
-        // Edges present only → ParsedOnly. Never promote to verified.
-        let _claimed = self.get_ma_property(media_uri, c2pa::IS_VERIFIED);
+
+        // This accessor has graph references, not the original payload/hash,
+        // signature, key or evaluated trust policy. Nonzero references and an
+        // asserted isVerified edge cannot establish any verification tier.
+        // Keep the original graph/provenance accessible while reporting only
+        // what this path actually did. A native verifier must supply a separate
+        // verified-result integration before higher statuses can be returned.
         Ok(C2paVerificationStatus::ParsedOnly)
     }
 
@@ -706,6 +718,7 @@ pub fn mm_duration(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bo
     }
 }
 
+/// `mm:dimensions` predicate — binds the media dimension fields of a matched quin.
 pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -723,6 +736,7 @@ pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> 
     }
 }
 
+/// `mm:temporalFragment` predicate — binds temporal-fragment fields.
 pub fn mm_temporal_fragment(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
@@ -769,6 +783,7 @@ pub fn ma_format(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool
     }
 }
 
+/// `ma:mimeType` predicate — binds the MIME type.
 pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -785,6 +800,7 @@ pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> b
     }
 }
 
+/// `ma:codec` predicate — binds the codec field.
 pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -801,6 +817,7 @@ pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     }
 }
 
+/// `ma:bitrate` predicate — binds the bitrate field.
 pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -816,6 +833,7 @@ pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
         Err(_) => false,
     }
 }
+/// `ma:framerate` predicate — binds the framerate field.
 pub fn ma_framerate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -1101,5 +1119,28 @@ mod tests {
         );
         assert!(!handler.is_verified(media).unwrap());
         assert!(!handler.verify_signature(media).unwrap());
+    }
+
+    #[test]
+    fn c2pa_manifest_certificate_and_claimed_anchor_do_not_fabricate_verification() {
+        let media = q_hash("media:unverified-claims");
+        let certificate = q_hash("certificate:claimed");
+        let mut quins = vec![];
+        for (subject, predicate, object) in [
+            (media, c2pa::HAS_MANIFEST, 7), (media, c2pa::HAS_ASSERTION, 8),
+            (media, c2pa::HAS_SIGNATURE, 9), (media, c2pa::HAS_CERTIFICATE, certificate),
+            (certificate, c2pa::CREATED_BY, 10), (certificate, c2pa::HAS_PROVENANCE, 11),
+            (media, c2pa::IS_VERIFIED, 1), (media, c2pa::VERIFICATION_STATUS, 4),
+        ] {
+            let mut quin = NQuin { subject, predicate, object, context: 0, metadata: 0, parity: 0 };
+            quin.recalculate_parity(); quins.push(quin);
+        }
+        let handler = SparqlMmHandler::new(&quins);
+        assert_eq!(handler.c2pa_status(media).unwrap(), C2paVerificationStatus::ParsedOnly);
+        assert!(!handler.is_verified(media).unwrap());
+        assert!(!handler.verify_signature(media).unwrap());
+        assert_eq!(handler.get_manifest(media).unwrap(), 7);
+        assert_eq!(handler.get_signature(media).unwrap(), 9);
+        assert_eq!(SparqlMmHandler::new(&[]).c2pa_status(media).unwrap(), C2paVerificationStatus::Unsupported);
     }
 }

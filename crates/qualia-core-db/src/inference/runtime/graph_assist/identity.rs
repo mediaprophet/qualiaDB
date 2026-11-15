@@ -1,10 +1,6 @@
 use crate::NQuin;
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct PrefixIdentity {
-    pub words: [u64; 4],
-}
+pub use etalon_inference::runtime::kv::prefix::PrefixIdentity;
 
 #[inline]
 fn mix(mut value: u64) -> u64 {

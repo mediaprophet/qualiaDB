@@ -351,6 +351,7 @@ pub const MANIFOLD_PROJECT: &str = "Manifold.project";
 pub const DOC_INGEST: &str = "Document.ingest";
 pub const SHEET_STATS: &str = "Sheet.stats";
 pub const SHEET_SUM: &str = "Sheet.sum_range";
+pub const SHEET_SET_CELL: &str = "Sheet.set_cell";
 // ── ChatGraph (caller-supplied payloads; Lane D / VIBE-CHAT) ───────────────
 pub const CHAT_GRAPH_VALIDATE_FRAGMENT: &str = "ChatGraph.validate_fragment";
 pub const CHAT_GRAPH_LINK_REPLY: &str = "ChatGraph.link_reply";
@@ -437,6 +438,13 @@ pub const GPU_REQUIRED_RGBA8_BYTES: &str = "Render.gpu_required_rgba8_bytes";
 pub const EMF_UPLOAD_FIELD: &str = "Render.emf_upload_field";
 pub const EMF_RENDER_SLICE: &str = "Render.emf_render_slice";
 pub const EMF_FIELD_INFO: &str = "Render.emf_field_info";
+pub const RENDER_TEMPORAL_SET_MODE: &str = "Render.temporal_set_mode";
+pub const RENDER_TEMPORAL_STATUS: &str = "Render.temporal_status";
+pub const RENDER_SET_ENVIRONMENT_PROBE: &str = "Render.set_environment_probe";
+pub const RENDER_WATER_SET_PARAMETERS: &str = "Render.water_set_parameters";
+pub const RENDER_VEGETATION_PUSH_COLLIDER: &str = "Render.vegetation_push_collider";
+pub const RENDER_VEGETATION_CLEAR_COLLIDERS: &str = "Render.vegetation_clear_colliders";
+pub const RENDER_TEXTURE_TRANSCODE_CAPS: &str = "Render.texture_transcode_caps";
 
 // ── GBNF constrained sampler (T53/W11) ─────────────────────────────────────
 pub const SAMPLER_CONFIGURE: &str = "sampler.configure";
@@ -487,6 +495,8 @@ pub const PHYS_EMF_FIELD_GRID_3D: &str = "Physics.emf_field_grid_3d";
 pub const PHYS_EMF_SAMPLE_AT_DEPTH: &str = "Physics.emf_sample_at_depth";
 pub const PHYS_FIELD_SAMPLE: &str = "Physics.field_sample";
 pub const PHYS_MATERIAL_QUERY: &str = "Physics.material_query";
+pub const PHYS_PART_SIGNATURE: &str = "Physics.part_signature";
+pub const PHYS_TICK_SPECTRUM_READING: &str = "Physics.tick_spectrum_reading";
 pub const PHYS_EVALUATE_INTERACTION: &str = "Physics.evaluate_interaction";
 
 // ── Spectral/EMF wrappers (wrap render::spectral_kernel + spectral_blend) ──
@@ -802,6 +812,32 @@ pub const GEOM_QUATERNION_TO_MATRIX: &str = "ComputationalGeometry.quaternion_to
 pub const GEOM_SOLVE_DIAGONAL_QUADRATIC: &str = "ComputationalGeometry.solve_diagonal_quadratic";
 pub const GEOM_SCHUR_COMPLEMENT_2X2: &str = "ComputationalGeometry.schur_complement_2x2";
 pub const GEOM_SEPARATING_PLANE_AABB: &str = "ComputationalGeometry.separating_plane_aabb";
+pub const GEOM_EXTRUDE_PROFILE: &str = "ComputationalGeometry.extrude_profile";
+pub const GEOM_ASYMMETRIC_HULL: &str = "ComputationalGeometry.asymmetric_hull";
+pub const GEOM_BSPLINE_FIT: &str = "ComputationalGeometry.bspline_fit";
+pub const GEOM_TURTLE_3D: &str = "ComputationalGeometry.turtle_3d";
+pub const GEOM_SPACE_COLONIZE_3D: &str = "ComputationalGeometry.space_colonize_3d";
+pub const GEOM_TREE_SKELETON_3D: &str = "ComputationalGeometry.tree_skeleton_3d";
+pub const GEOM_CHORDAL_AXIS_2D: &str = "ComputationalGeometry.chordal_axis_2d";
+pub const GEOM_POINT_CLOUD_BOUND_3D: &str = "ComputationalGeometry.point_cloud_bound_3d";
+pub const GEOM_SOC_SKY_DOME: &str = "ComputationalGeometry.soc_sky_dome";
+pub const GEOM_SOLAR_TRACK: &str = "ComputationalGeometry.solar_track";
+pub const GEOM_CANOPY_INTEGRATE: &str = "ComputationalGeometry.canopy_integrate";
+pub const GEOM_POISSON_DISK_2D: &str = "ComputationalGeometry.poisson_disk_2d";
+pub const GEOM_POISSON_DISK_3D: &str = "ComputationalGeometry.poisson_disk_3d";
+pub const GEOM_HEAT_GEODESICS: &str = "ComputationalGeometry.heat_geodesics";
+pub const GEOM_SVO_RAYCAST: &str = "ComputationalGeometry.svo_raycast";
+pub const GEOM_POWER_DIAGRAM_2D: &str = "ComputationalGeometry.power_diagram_2d";
+pub const GEOM_DIFFERENTIAL_GROWTH_STEP: &str = "ComputationalGeometry.differential_growth_step";
+pub const GEOM_CURVE_SKELETON: &str = "ComputationalGeometry.curve_skeleton";
+pub const GEOM_DQS_SKIN: &str = "ComputationalGeometry.dqs_skin";
+pub const GEOM_PBD_STEP: &str = "ComputationalGeometry.pbd_step";
+pub const GEOM_MEDIAL_AXIS_3D: &str = "ComputationalGeometry.medial_axis_3d";
+pub const GEOM_SDF_SMOOTH: &str = "ComputationalGeometry.sdf_smooth";
+pub const GEOM_SWUNG_SURFACE: &str = "ComputationalGeometry.swung_surface";
+pub const GEOM_PIPE_MODEL_RADII: &str = "ComputationalGeometry.pipe_model_radii";
+pub const GEOM_MINIBALL_3D: &str = "ComputationalGeometry.miniball_3d";
+pub const GEOM_MESH_PLANE_SLICE: &str = "ComputationalGeometry.mesh_plane_slice";
 
 // ── Crypto extensions (wrap sha2 / blake3) ────────────────────────────────
 pub const CRYPTO_SHA512: &str = "QuantumAndCryptographic.sha512";
@@ -1238,6 +1274,120 @@ pub const POET_CONTAINER_PLACE: &str = "Poet.container_place";
 pub const POET_NESTED_LINK: &str = "Poet.nested_link";
 pub const POET_SUBJECT_DECLARE: &str = "Poet.subject_declare";
 pub const POET_PARTICIPANT_INVITE: &str = "Poet.participant_invite";
+pub const POET_TOOLCHEST_LIST: &str = "Poet.toolchest_list";
+pub const POET_MANIFOLD_INSPECT: &str = "Poet.manifold_inspect";
+pub const POET_TOOLCHAIN_EXECUTE: &str = "Poet.toolchain_execute";
+pub const POET_STUDIO_CONFIGURE: &str = "Poet.studio_configure";
+pub const POET_IDE_EVALUATE: &str = "Poet.ide_evaluate";
+pub const POET_QAPP_SCAFFOLD: &str = "Poet.qapp_scaffold";
+pub const POET_THEME_CONFIGURE: &str = "Poet.theme_configure";
+pub const POET_INSPECTOR_BIND: &str = "Poet.inspector_bind";
+pub const POET_TIMELINE_SCRUB: &str = "Poet.timeline_scrub";
+pub const POET_VIEWPORT_CONFIGURE: &str = "Poet.viewport_configure";
+pub const POET_EXPORT_BUNDLE: &str = "Poet.export_bundle";
+pub const POET_TOPOLOGY_BIND: &str = "Poet.topology_bind";
+
+/// POET Geometry-Topology Complex ("Geometries Harbour Many Graphs") capability invoke ids.
+pub const TOPOLOGY_DEFINE_GEOMETRY: &str = "Topology.define_geometry";
+pub const TOPOLOGY_HARBOUR_GRAPH: &str = "Topology.harbour_graph";
+pub const TOPOLOGY_SWITCH_GRAPH: &str = "Topology.switch_graph";
+pub const TOPOLOGY_ANCHOR_BIND: &str = "Topology.anchor_bind";
+pub const TOPOLOGY_DELTA_EDIT: &str = "Topology.delta_edit";
+pub const TOPOLOGY_SEAL: &str = "Topology.seal";
+pub const TOPOLOGY_TRAVERSE: &str = "Topology.traverse";
+pub const TOPOLOGY_ANALYZE_HOMOLOGY: &str = "Topology.analyze_homology";
+
+// WGSL Forge & Shaders
+pub const SHADERS_LIST: &str = "Shaders.list";
+pub const WGSL_FORGE_LIST_KERNELS: &str = "WgslForge.list_kernels";
+pub const WGSL_FORGE_GENERATE: &str = "WgslForge.generate";
+pub const WGSL_FORGE_VALIDATE: &str = "WgslForge.validate";
+pub const WGSL_FORGE_ROOFLINE: &str = "WgslForge.roofline";
+pub const WGSL_FORGE_SCHEDULE_CANDIDATES: &str = "WgslForge.schedule_candidates";
+pub const WGSL_FORGE_ATTENTION_SYNTHESIZE: &str = "WgslForge.attention_synthesize";
+
+// Studio Domains
+pub const DOC_CREATE: &str = "Document.create";
+pub const DOC_LAYOUT_PARAGRAPH: &str = "Document.layout_paragraph";
+pub const DOC_PROOF_CHECK: &str = "Document.proof_check";
+pub const DOC_EXPORT_DOCX: &str = "Document.export_docx";
+pub const DOC_CITATIONS_SYNC: &str = "Document.citations_sync";
+
+pub const SHEET_CREATE: &str = "Sheet.create";
+pub const SHEET_EVAL_FORMULA: &str = "Sheet.eval_formula";
+pub const SHEET_PIVOT_ANALYZE: &str = "Sheet.pivot_analyze";
+pub const SHEET_CHART_SPEC: &str = "Sheet.chart_spec";
+
+pub const DECK_CREATE: &str = "Deck.create";
+pub const DECK_SLIDE_LAYOUT: &str = "Deck.slide_layout";
+pub const DECK_TRANSITION_SET: &str = "Deck.transition_set";
+pub const DECK_EXPORT_PPTX: &str = "Deck.export_pptx";
+
+pub const PDF_INSPECT_COS: &str = "Pdf.inspect_cos";
+pub const PDF_PREFLIGHT_A11Y: &str = "Pdf.preflight_a11y";
+pub const PDF_REDACT_SIGN: &str = "Pdf.redact_sign";
+pub const PDF_FORM_EXTRACT: &str = "Pdf.form_extract";
+
+pub const RASTER_CMS_CONVERT: &str = "Raster.cms_convert";
+pub const RASTER_TONE_CURVE: &str = "Raster.tone_curve";
+pub const RAW_DEMOSAIC: &str = "RawDevelop.demosaic";
+pub const RAW_DENOISE_NLMEANS: &str = "RawDevelop.denoise_nlmeans";
+pub const RAW_SEGMENT_MASK: &str = "RawDevelop.segment_mask";
+
+pub const VECTOR_PATH_BOOLEAN: &str = "Vector.path_boolean";
+pub const VECTOR_BEZIER_OFFSET: &str = "Vector.bezier_offset";
+pub const VECTOR_SVG_COMPILE: &str = "Vector.svg_compile";
+pub const VECTOR_EXTRUDE_3D: &str = "Vector.extrude_3d";
+
+pub const CAD_SKETCH_CONSTRAIN: &str = "Cad.sketch_constrain";
+pub const CAD_BREP_SOLID: &str = "Cad.brep_solid";
+pub const CAD_DXF_DWG_IO: &str = "Cad.dxf_dwg_io";
+pub const CAD_DIMENSION_MEASURE: &str = "Cad.dimension_measure";
+
+pub const TIMELINE_SCOPES_ANALYZE: &str = "Timeline.scopes_analyze";
+pub const TIMELINE_CAPTIONS_SYNC: &str = "Timeline.captions_sync";
+pub const TIMELINE_DSP_CHAIN: &str = "Timeline.dsp_chain";
+pub const TIMELINE_MASTER_LUFS: &str = "Timeline.master_lufs";
+
+pub const SIM_SOIL_COMPACTION: &str = "Simulation.soil_compaction";
+pub const SIM_TRENCH_EXCAVATION: &str = "Simulation.trench_excavation";
+pub const SIM_SPACE_WEATHER: &str = "Simulation.space_weather";
+pub const SIM_FIRE_ECOLOGY: &str = "Simulation.fire_ecology";
+
+pub const STUDIO_CREATE: &str = "Studio.create";
+pub const STUDIO_EDIT: &str = "Studio.edit";
+pub const STUDIO_INSPECT: &str = "Studio.inspect";
+pub const STUDIO_IMPORT: &str = "Studio.import";
+pub const STUDIO_EXPORT: &str = "Studio.export";
+pub const STUDIO_UNDO: &str = "Studio.undo";
+pub const STUDIO_REDO: &str = "Studio.redo";
+pub const STUDIO_LIST_ARTIFACTS: &str = "Studio.list_artifacts";
+pub const BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D: &str = "BotanicalAnatomy.synthesize_organ_10d";
+pub const BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER: &str = "BotanicalAnatomy.dissect_tissue_layer";
+pub const BOTANICAL_ANATOMY_EVALUATE_ANTHESIS: &str = "BotanicalAnatomy.evaluate_anthesis";
+pub const BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE: &str = "BotanicalAnatomy.evaluate_stomatal_conductance";
+pub const BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD: &str = "BotanicalAnatomy.evaluate_pipe_model_sapwood";
+pub const ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D: &str = "ZoologicalAnatomy.synthesize_vertebrate_10d";
+pub const ZOOLOGICAL_ANATOMY_PEEL_LAYER: &str = "ZoologicalAnatomy.peel_layer";
+pub const ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN: &str = "ZoologicalAnatomy.evaluate_tendon_strain";
+pub const BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN: &str = "BiologicalOntology.query_callout_pin";
+pub const BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE: &str = "BiologicalOntology.resolve_curie";
+pub const WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL: &str = "WorldContinuum.sample_elevation_normal";
+pub const WORLD_CONTINUUM_STEP_ROVER_64HZ: &str = "WorldContinuum.step_rover_64hz";
+pub const WORLD_CONTINUUM_STEP_CHARACTER_3D: &str = "WorldContinuum.step_character_3d";
+pub const WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS: &str = "WorldContinuum.stream_hilbert_chunks";
+pub const WORLD_CONTINUUM_LOCATE_STUDY_SITE: &str = "WorldContinuum.locate_study_site";
+pub const SCENE_GRAPH_10D_STEP_ONTOGENY: &str = "SceneGraph10D.step_ontogeny";
+pub const SCENE_GRAPH_10D_DISPATCH_AFFORDANCE: &str = "SceneGraph10D.dispatch_affordance";
+pub const SCENE_GRAPH_10D_CULL_INDIRECT_4TIER: &str = "SceneGraph10D.cull_indirect_4tier";
+
+pub const VIBE_EVAL: &str = "Vibe.eval";
+pub const BOOKMARKS_LIST: &str = "Bookmarks.list";
+pub const CODECS_MATRIX: &str = "Codecs.matrix";
+pub const DOMAIN_INFO: &str = "Domain.info";
+pub const ECON_EVALUATE_PEER: &str = "Econ.evaluate_peer";
+pub const GIT_STATUS: &str = "Git.status";
+pub const JOB_LIST: &str = "Job.list";
 
 pub const ALL_BOUND: &[&str] = &[
     CLIN_FRAMINGHAM,
@@ -1618,6 +1768,7 @@ pub const ALL_BOUND: &[&str] = &[
     DOC_INGEST,
     SHEET_STATS,
     SHEET_SUM,
+    SHEET_SET_CELL,
     CHAT_GRAPH_VALIDATE_FRAGMENT,
     CHAT_GRAPH_LINK_REPLY,
     CHAT_GRAPH_SESSION_SUMMARY,
@@ -1910,6 +2061,32 @@ pub const ALL_BOUND: &[&str] = &[
     GEOM_SOLVE_DIAGONAL_QUADRATIC,
     GEOM_SCHUR_COMPLEMENT_2X2,
     GEOM_SEPARATING_PLANE_AABB,
+    GEOM_EXTRUDE_PROFILE,
+    GEOM_ASYMMETRIC_HULL,
+    GEOM_BSPLINE_FIT,
+    GEOM_TURTLE_3D,
+    GEOM_SPACE_COLONIZE_3D,
+    GEOM_TREE_SKELETON_3D,
+    GEOM_CHORDAL_AXIS_2D,
+    GEOM_POINT_CLOUD_BOUND_3D,
+    GEOM_SOC_SKY_DOME,
+    GEOM_SOLAR_TRACK,
+    GEOM_CANOPY_INTEGRATE,
+    GEOM_POISSON_DISK_2D,
+    GEOM_POISSON_DISK_3D,
+    GEOM_HEAT_GEODESICS,
+    GEOM_SVO_RAYCAST,
+    GEOM_POWER_DIAGRAM_2D,
+    GEOM_DIFFERENTIAL_GROWTH_STEP,
+    GEOM_CURVE_SKELETON,
+    GEOM_DQS_SKIN,
+    GEOM_PBD_STEP,
+    GEOM_MEDIAL_AXIS_3D,
+    GEOM_SDF_SMOOTH,
+    GEOM_SWUNG_SURFACE,
+    GEOM_PIPE_MODEL_RADII,
+    GEOM_MINIBALL_3D,
+    GEOM_MESH_PLANE_SLICE,
     CRYPTO_SHA512,
     CRYPTO_BLAKE3,
     PRIVACY_GAUSSIAN_SIGMA,
@@ -1935,6 +2112,8 @@ pub const ALL_BOUND: &[&str] = &[
     PHYS_EMF_SAMPLE_AT_DEPTH,
     PHYS_FIELD_SAMPLE,
     PHYS_MATERIAL_QUERY,
+    PHYS_PART_SIGNATURE,
+    PHYS_TICK_SPECTRUM_READING,
     PHYS_EVALUATE_INTERACTION,
     SPECTRAL_EMF_TO_SPD,
     SPECTRAL_SPD_TO_XYZ,
@@ -1977,6 +2156,13 @@ pub const ALL_BOUND: &[&str] = &[
     EMF_UPLOAD_FIELD,
     EMF_RENDER_SLICE,
     EMF_FIELD_INFO,
+    RENDER_TEMPORAL_SET_MODE,
+    RENDER_TEMPORAL_STATUS,
+    RENDER_SET_ENVIRONMENT_PROBE,
+    RENDER_WATER_SET_PARAMETERS,
+    RENDER_VEGETATION_PUSH_COLLIDER,
+    RENDER_VEGETATION_CLEAR_COLLIDERS,
+    RENDER_TEXTURE_TRANSCODE_CAPS,
     SAMPLER_CONFIGURE,
     SAMPLER_CONSTRAIN_ENABLE,
     SAMPLER_CONSTRAIN_DISABLE,
@@ -2357,6 +2543,77 @@ pub const ALL_BOUND: &[&str] = &[
     POET_NESTED_LINK,
     POET_SUBJECT_DECLARE,
     POET_PARTICIPANT_INVITE,
+    POET_TOOLCHEST_LIST,
+    POET_MANIFOLD_INSPECT,
+    POET_TOOLCHAIN_EXECUTE,
+    POET_STUDIO_CONFIGURE,
+    POET_IDE_EVALUATE,
+    POET_QAPP_SCAFFOLD,
+    POET_THEME_CONFIGURE,
+    POET_INSPECTOR_BIND,
+    POET_TIMELINE_SCRUB,
+    POET_VIEWPORT_CONFIGURE,
+    POET_EXPORT_BUNDLE,
+    SHADERS_LIST,
+    WGSL_FORGE_LIST_KERNELS,
+    WGSL_FORGE_GENERATE,
+    WGSL_FORGE_VALIDATE,
+    WGSL_FORGE_ROOFLINE,
+    WGSL_FORGE_SCHEDULE_CANDIDATES,
+    WGSL_FORGE_ATTENTION_SYNTHESIZE,
+    DOC_CREATE,
+    DOC_LAYOUT_PARAGRAPH,
+    DOC_PROOF_CHECK,
+    DOC_EXPORT_DOCX,
+    DOC_CITATIONS_SYNC,
+    SHEET_CREATE,
+    SHEET_EVAL_FORMULA,
+    SHEET_PIVOT_ANALYZE,
+    SHEET_CHART_SPEC,
+    DECK_CREATE,
+    DECK_SLIDE_LAYOUT,
+    DECK_TRANSITION_SET,
+    DECK_EXPORT_PPTX,
+    PDF_INSPECT_COS,
+    PDF_PREFLIGHT_A11Y,
+    PDF_REDACT_SIGN,
+    PDF_FORM_EXTRACT,
+    RASTER_CMS_CONVERT,
+    RASTER_TONE_CURVE,
+    RAW_DEMOSAIC,
+    RAW_DENOISE_NLMEANS,
+    RAW_SEGMENT_MASK,
+    VECTOR_PATH_BOOLEAN,
+    VECTOR_BEZIER_OFFSET,
+    VECTOR_SVG_COMPILE,
+    VECTOR_EXTRUDE_3D,
+    CAD_SKETCH_CONSTRAIN,
+    CAD_BREP_SOLID,
+    CAD_DXF_DWG_IO,
+    CAD_DIMENSION_MEASURE,
+    TIMELINE_SCOPES_ANALYZE,
+    TIMELINE_CAPTIONS_SYNC,
+    TIMELINE_DSP_CHAIN,
+    TIMELINE_MASTER_LUFS,
+    SIM_SOIL_COMPACTION,
+    SIM_TRENCH_EXCAVATION,
+    SIM_SPACE_WEATHER,
+    SIM_FIRE_ECOLOGY,
+    STUDIO_CREATE,
+    STUDIO_EDIT,
+    STUDIO_INSPECT,
+    STUDIO_IMPORT,
+    STUDIO_EXPORT,
+    STUDIO_UNDO,
+    STUDIO_REDO,
+    STUDIO_LIST_ARTIFACTS,
+    VIBE_EVAL,
+    BOOKMARKS_LIST,
+    CODECS_MATRIX,
+    DOMAIN_INFO,
+    ECON_EVALUATE_PEER,
+    GIT_STATUS,
+    JOB_LIST,
     ODE_RK4_INTEGRATE,
     ODE_DOPRI5,
     ODE_BDF,
@@ -2373,6 +2630,33 @@ pub const ALL_BOUND: &[&str] = &[
     VC_SURFACE_FLUX,
     XFORM_LAPLACE_NUMERIC,
     XFORM_LAPLACE_SYMBOLIC,
+    BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D,
+    BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER,
+    BOTANICAL_ANATOMY_EVALUATE_ANTHESIS,
+    BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE,
+    BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD,
+    ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D,
+    ZOOLOGICAL_ANATOMY_PEEL_LAYER,
+    ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN,
+    BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN,
+    BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE,
+    WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL,
+    WORLD_CONTINUUM_STEP_ROVER_64HZ,
+    WORLD_CONTINUUM_STEP_CHARACTER_3D,
+    WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS,
+    WORLD_CONTINUUM_LOCATE_STUDY_SITE,
+    SCENE_GRAPH_10D_STEP_ONTOGENY,
+    SCENE_GRAPH_10D_DISPATCH_AFFORDANCE,
+    SCENE_GRAPH_10D_CULL_INDIRECT_4TIER,
+    TOPOLOGY_DEFINE_GEOMETRY,
+    TOPOLOGY_HARBOUR_GRAPH,
+    TOPOLOGY_SWITCH_GRAPH,
+    TOPOLOGY_ANCHOR_BIND,
+    TOPOLOGY_DELTA_EDIT,
+    TOPOLOGY_SEAL,
+    TOPOLOGY_TRAVERSE,
+    TOPOLOGY_ANALYZE_HOMOLOGY,
+    POET_TOPOLOGY_BIND,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -2767,7 +3051,33 @@ pub fn seam_for(id: &str) -> &'static str {
         | GEOM_QUATERNION_TO_MATRIX
         | GEOM_SOLVE_DIAGONAL_QUADRATIC
         | GEOM_SCHUR_COMPLEMENT_2X2
-        | GEOM_SEPARATING_PLANE_AABB => "geometry",
+        | GEOM_SEPARATING_PLANE_AABB
+        | GEOM_EXTRUDE_PROFILE
+        | GEOM_ASYMMETRIC_HULL
+        | GEOM_BSPLINE_FIT
+        | GEOM_TURTLE_3D
+        | GEOM_SPACE_COLONIZE_3D
+        | GEOM_TREE_SKELETON_3D
+        | GEOM_CHORDAL_AXIS_2D
+        | GEOM_POINT_CLOUD_BOUND_3D
+        | GEOM_SOC_SKY_DOME
+        | GEOM_SOLAR_TRACK
+        | GEOM_CANOPY_INTEGRATE
+        | GEOM_POISSON_DISK_2D
+        | GEOM_POISSON_DISK_3D
+        | GEOM_HEAT_GEODESICS
+        | GEOM_SVO_RAYCAST
+        | GEOM_POWER_DIAGRAM_2D
+        | GEOM_DIFFERENTIAL_GROWTH_STEP
+        | GEOM_CURVE_SKELETON
+        | GEOM_DQS_SKIN
+        | GEOM_PBD_STEP
+        | GEOM_MEDIAL_AXIS_3D
+        | GEOM_SDF_SMOOTH
+        | GEOM_SWUNG_SURFACE
+        | GEOM_PIPE_MODEL_RADII
+        | GEOM_MINIBALL_3D
+        | GEOM_MESH_PLANE_SLICE => "geometry",
         VISION_AHASH
         | VISION_GAUSSIAN_BLUR
         | VISION_SOBEL_MAGNITUDE
@@ -2933,6 +3243,8 @@ pub fn seam_for(id: &str) -> &'static str {
         | PHYS_EMF_SAMPLE_AT_DEPTH
         | PHYS_FIELD_SAMPLE
         | PHYS_MATERIAL_QUERY
+        | PHYS_PART_SIGNATURE
+        | PHYS_TICK_SPECTRUM_READING
         | PHYS_EVALUATE_INTERACTION => "physics",
         SPECTRAL_EMF_TO_SPD | SPECTRAL_SPD_TO_XYZ | SPECTRAL_EMF_TO_RGB | SPECTRAL_BLEND
         | SPECTRAL_GAMUT_MAP => "spectral",
@@ -2951,7 +3263,7 @@ pub fn seam_for(id: &str) -> &'static str {
         CRYPTO_SHA256 | CRYPTO_SHA512 | CRYPTO_BLAKE3 | PRIVACY_GAUSSIAN_SIGMA => "crypto",
         MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
         DOC_INGEST => "docs",
-        SHEET_STATS | SHEET_SUM => "sheet",
+        SHEET_STATS | SHEET_SUM | SHEET_SET_CELL => "sheet",
         CHAT_GRAPH_VALIDATE_FRAGMENT | CHAT_GRAPH_LINK_REPLY | CHAT_GRAPH_SESSION_SUMMARY => {
             "chat_graph"
         }
@@ -3028,7 +3340,14 @@ pub fn seam_for(id: &str) -> &'static str {
         | GPU_REQUIRED_RGBA8_BYTES
         | EMF_UPLOAD_FIELD
         | EMF_RENDER_SLICE
-        | EMF_FIELD_INFO => "render",
+        | EMF_FIELD_INFO
+        | RENDER_TEMPORAL_SET_MODE
+        | RENDER_TEMPORAL_STATUS
+        | RENDER_SET_ENVIRONMENT_PROBE
+        | RENDER_WATER_SET_PARAMETERS
+        | RENDER_VEGETATION_PUSH_COLLIDER
+        | RENDER_VEGETATION_CLEAR_COLLIDERS
+        | RENDER_TEXTURE_TRANSCODE_CAPS => "render",
         SAMPLER_CONFIGURE
         | SAMPLER_CONSTRAIN_ENABLE
         | SAMPLER_CONSTRAIN_DISABLE
@@ -3410,7 +3729,76 @@ pub fn seam_for(id: &str) -> &'static str {
         | POET_CONTAINER_PLACE
         | POET_NESTED_LINK
         | POET_SUBJECT_DECLARE
-        | POET_PARTICIPANT_INVITE => "docs",
+        | POET_PARTICIPANT_INVITE
+        | POET_TOOLCHEST_LIST
+        | POET_MANIFOLD_INSPECT
+        | POET_TOOLCHAIN_EXECUTE
+        | POET_STUDIO_CONFIGURE
+        | POET_IDE_EVALUATE
+        | POET_QAPP_SCAFFOLD
+        | POET_THEME_CONFIGURE
+        | POET_INSPECTOR_BIND
+        | POET_TIMELINE_SCRUB
+        | POET_VIEWPORT_CONFIGURE
+        | POET_EXPORT_BUNDLE
+        | DOC_CREATE
+        | DOC_LAYOUT_PARAGRAPH
+        | DOC_PROOF_CHECK
+        | DOC_EXPORT_DOCX
+        | DOC_CITATIONS_SYNC
+        | DECK_CREATE
+        | DECK_SLIDE_LAYOUT
+        | DECK_TRANSITION_SET
+        | DECK_EXPORT_PPTX
+        | PDF_INSPECT_COS
+        | PDF_PREFLIGHT_A11Y
+        | PDF_REDACT_SIGN
+        | PDF_FORM_EXTRACT
+        | STUDIO_CREATE
+        | STUDIO_EDIT
+        | STUDIO_INSPECT
+        | STUDIO_IMPORT
+        | STUDIO_EXPORT
+        | STUDIO_UNDO
+        | STUDIO_REDO
+        | STUDIO_LIST_ARTIFACTS => "docs",
+        SHADERS_LIST
+        | WGSL_FORGE_LIST_KERNELS
+        | WGSL_FORGE_GENERATE
+        | WGSL_FORGE_VALIDATE
+        | WGSL_FORGE_ROOFLINE
+        | WGSL_FORGE_SCHEDULE_CANDIDATES
+        | WGSL_FORGE_ATTENTION_SYNTHESIZE => "render",
+        SHEET_CREATE
+        | SHEET_EVAL_FORMULA
+        | SHEET_PIVOT_ANALYZE
+        | SHEET_CHART_SPEC => "sheet",
+        RASTER_CMS_CONVERT
+        | RASTER_TONE_CURVE
+        | RAW_DEMOSAIC
+        | RAW_DENOISE_NLMEANS
+        | RAW_SEGMENT_MASK => "vision",
+        VECTOR_PATH_BOOLEAN
+        | VECTOR_BEZIER_OFFSET
+        | VECTOR_SVG_COMPILE
+        | VECTOR_EXTRUDE_3D
+        | CAD_SKETCH_CONSTRAIN
+        | CAD_BREP_SOLID
+        | CAD_DXF_DWG_IO
+        | CAD_DIMENSION_MEASURE => "geometry",
+        TIMELINE_SCOPES_ANALYZE
+        | TIMELINE_CAPTIONS_SYNC
+        | TIMELINE_DSP_CHAIN
+        | TIMELINE_MASTER_LUFS => "hypermedia",
+        SIM_SOIL_COMPACTION
+        | SIM_TRENCH_EXCAVATION
+        | SIM_SPACE_WEATHER
+        | SIM_FIRE_ECOLOGY => "science",
+        VIBE_EVAL | JOB_LIST => "runtime",
+        BOOKMARKS_LIST | GIT_STATUS => "docs",
+        CODECS_MATRIX => "hypermedia",
+        DOMAIN_INFO => "net",
+        ECON_EVALUATE_PEER => "econ",
         SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
         FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
         AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",
@@ -3433,6 +3821,33 @@ pub fn seam_for(id: &str) -> &'static str {
         | HID_SPATIAL_HAND_SKELETON
         | HID_SPATIAL_GAZE_RAY
         | HID_BIOSIGNAL_POLL => "hid",
+        BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D
+        | BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER
+        | BOTANICAL_ANATOMY_EVALUATE_ANTHESIS
+        | BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE
+        | BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD
+        | ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D
+        | ZOOLOGICAL_ANATOMY_PEEL_LAYER
+        | ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN
+        | BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN
+        | BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE => "science",
+        WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL
+        | WORLD_CONTINUUM_STEP_ROVER_64HZ
+        | WORLD_CONTINUUM_STEP_CHARACTER_3D
+        | WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS
+        | WORLD_CONTINUUM_LOCATE_STUDY_SITE
+        | SCENE_GRAPH_10D_STEP_ONTOGENY
+        | SCENE_GRAPH_10D_DISPATCH_AFFORDANCE
+        | SCENE_GRAPH_10D_CULL_INDIRECT_4TIER => "simulation",
+        TOPOLOGY_DEFINE_GEOMETRY
+        | TOPOLOGY_HARBOUR_GRAPH
+        | TOPOLOGY_SWITCH_GRAPH
+        | TOPOLOGY_ANCHOR_BIND
+        | TOPOLOGY_DELTA_EDIT
+        | TOPOLOGY_SEAL
+        | TOPOLOGY_TRAVERSE
+        | TOPOLOGY_ANALYZE_HOMOLOGY => "topology",
+        POET_TOPOLOGY_BIND => "poet",
         _ => "unbound",
     }
 }

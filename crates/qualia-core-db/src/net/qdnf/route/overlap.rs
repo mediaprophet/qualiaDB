@@ -18,6 +18,7 @@ pub struct GenerationPair {
 }
 
 impl GenerationPair {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             old: ForwardingGeneration::empty(0),

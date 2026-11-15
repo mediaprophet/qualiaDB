@@ -15,6 +15,7 @@ use super::*;
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: align-sequences.
 pub fn align_sequences_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let params: AlignmentParams = serde_wasm_bindgen::from_value(val)?;
     let result = if params.mode == "protein" {
@@ -58,6 +59,7 @@ pub struct FastaParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: validate-fasta.
 pub fn validate_fasta_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let params: FastaParams = serde_wasm_bindgen::from_value(val)?;
     let record = crate::domains::biological::bioinformatics::validate_fasta_record(
@@ -81,6 +83,7 @@ pub fn validate_fasta_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: predict-receptor-binding.
 pub fn predict_receptor_binding_wasm() -> f64 {
     // Molecule and receptor Quins would be loaded from the OPFS graph in production.
     // Returns binding affinity in kcal/mol (more negative = stronger binding).

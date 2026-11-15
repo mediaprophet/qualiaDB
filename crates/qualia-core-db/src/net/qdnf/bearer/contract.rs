@@ -23,14 +23,21 @@ pub struct RecvMeta {
 }
 
 pub trait Bearer {
+    /// Bearer profile.
     fn profile(&self) -> BearerProfile;
+    /// MTU.
     fn mtu(&self) -> u16;
+    /// Scope epoch.
     fn scope(&self) -> ScopeEpoch;
+    /// Sends a frame.
     fn send(&mut self, dest: &ObservedLocator, frame: &[u8]) -> Result<usize, QdnfError>;
+    /// Receives into `out`.
     fn recv(&mut self, out: &mut [u8]) -> Result<(usize, RecvMeta), QdnfError>;
+    /// Shuts down.
     fn shutdown(&mut self) -> Result<(), QdnfError>;
 }
 
+/// `Ok(())` when the frame fits the MTU.
 pub fn check_frame_mtu(frame_len: usize, mtu: u16) -> Result<(), QdnfError> {
     if frame_len > mtu as usize {
         Err(QdnfError::Capacity)

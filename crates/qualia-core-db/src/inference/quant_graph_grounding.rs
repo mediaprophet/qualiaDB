@@ -20,6 +20,8 @@
 use std::sync::{Mutex, OnceLock};
 
 use crate::{q_hash, NQuin};
+#[path = "grounding_scope.rs"]
+pub(crate) mod scoped;
 
 /// Predicate IRI for capital facts (hashed into quins).
 pub const P_CAPITAL_OF: &str = "https://ns.webizen.org/q42/capitalOf";
@@ -210,11 +212,23 @@ fn fact_store() -> &'static Mutex<Vec<GroundingFact>> {
 
 /// Number of facts currently registered.
 pub fn fact_count() -> usize {
+    if let Some(n) = scoped::read(|facts| facts.len()) {
+        return n;
+    }
     fact_store().lock().map(|g| g.len()).unwrap_or(0)
 }
 
 /// Export all fact quins (for tests / graph dump / later SPARQL seed).
 pub fn export_fact_quins(out: &mut [NQuin]) -> usize {
+    if let Some(n) = scoped::read(|facts| {
+        let n = facts.len().min(out.len());
+        for (dst, fact) in out.iter_mut().zip(facts.iter()).take(n) {
+            *dst = fact.quin;
+        }
+        n
+    }) {
+        return n;
+    }
     let Ok(guard) = fact_store().lock() else {
         return 0;
     };
@@ -276,17 +290,23 @@ pub fn maybe_ground_generation(prompt: &str, text: &str) -> GroundingResult {
 
 /// Unconditional grounding pass (tests / CLI).
 pub fn ground_generation(prompt: &str, text: &str) -> GroundingResult {
-    let p = prompt.to_ascii_lowercase();
-    let a = text.to_ascii_lowercase();
+    if let Some(result) = scoped::read(|facts| ground_from_facts(prompt, text, facts)) {
+        return result;
+    }
     let Ok(guard) = fact_store().lock() else {
         return GroundingResult {
-            text: text.to_string(),
+            text: text.into(),
             repaired: false,
             reason: None,
             object_hash: None,
         };
     };
-    for fact in guard.iter() {
+    ground_from_facts(prompt, text, &guard)
+}
+fn ground_from_facts(prompt: &str, text: &str, facts: &[GroundingFact]) -> GroundingResult {
+    let p = prompt.to_ascii_lowercase();
+    let a = text.to_ascii_lowercase();
+    for fact in facts.iter() {
         if !fact.prompt_needles.iter().all(|s| p.contains(s.as_str())) {
             continue;
         }
@@ -322,6 +342,14 @@ pub fn ground_generation(prompt: &str, text: &str) -> GroundingResult {
 pub fn lookup_capital_object(place_iri: &str) -> Option<u64> {
     let s = q_hash(place_iri);
     let p = q_hash(P_CAPITAL_OF);
+    if let Some(result) = scoped::read(|facts| {
+        facts
+            .iter()
+            .find(|f| f.quin.subject == s && f.quin.predicate == p)
+            .map(|f| f.quin.object)
+    }) {
+        return result;
+    }
     let Ok(guard) = fact_store().lock() else {
         return None;
     };

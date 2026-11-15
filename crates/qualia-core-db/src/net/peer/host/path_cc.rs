@@ -25,15 +25,18 @@ impl NativePeer {
         self.sessions.path_cc.independent_bottleneck
     }
 
+    /// Sets `independent-bottleneck`.
     pub fn set_independent_bottleneck(&mut self, independent: bool) {
         self.sessions.path_cc.independent_bottleneck = independent;
     }
 
+    /// Sets `path_cc_window`.
     pub fn set_path_cc_window(&mut self, window_bytes: u64) {
         self.sessions.path_cc.shared.window_bytes = window_bytes;
     }
 
     #[inline]
+    /// `NativePeer::path_cc_in_flight`.
     pub fn path_cc_in_flight(&self) -> u64 {
         self.sessions.path_cc.total_in_flight()
     }
@@ -51,6 +54,7 @@ impl NativePeer {
         Ok(h)
     }
 
+    /// Ensures a primary path.
     pub(super) fn ensure_primary_path(&mut self) -> Result<PathHandle, QdnfError> {
         if let Some(h) = self.sessions.primary_path {
             let _ = self.sessions.path_cc.path_rtt(h)?;
@@ -61,6 +65,7 @@ impl NativePeer {
         Ok(h)
     }
 
+    /// Sends protected traffic on `path`.
     pub fn send_protected_on_path(
         &mut self,
         path: PathHandle,

@@ -32,12 +32,14 @@ impl Default for CheckpointMeta {
     }
 }
 
+/// Loads meta.
 pub fn load_meta(storage_root: impl AsRef<Path>) -> Option<CheckpointMeta> {
     let path = storage_root.as_ref().join(META_FILE);
     let text = fs::read_to_string(path).ok()?;
     serde_json::from_str(&text).ok()
 }
 
+/// Saves meta.
 pub fn save_meta(storage_root: impl AsRef<Path>, meta: &CheckpointMeta) -> std::io::Result<()> {
     let path = storage_root.as_ref().join(META_FILE);
     ensure_parent(&path)?;
@@ -46,6 +48,7 @@ pub fn save_meta(storage_root: impl AsRef<Path>, meta: &CheckpointMeta) -> std::
     fs::write(path, text)
 }
 
+/// Loads dag.
 pub fn load_dag(storage_root: impl AsRef<Path>) -> DagStore {
     let path = storage_root.as_ref().join(DAG_FILE);
     match fs::read(&path) {
@@ -54,12 +57,14 @@ pub fn load_dag(storage_root: impl AsRef<Path>) -> DagStore {
     }
 }
 
+/// Saves dag.
 pub fn save_dag(storage_root: impl AsRef<Path>, dag: &DagStore) -> std::io::Result<()> {
     let path = storage_root.as_ref().join(DAG_FILE);
     ensure_parent(&path)?;
     fs::write(path, dag.serialize())
 }
 
+/// Persists a checkpoint.
 pub fn persist_checkpoint(
     storage_root: impl AsRef<Path>,
     dag: &DagStore,
@@ -83,6 +88,7 @@ pub fn persist_checkpoint(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Writes a q42 checkpoint.
 pub fn write_q42_checkpoint(
     storage_root: &Path,
     quins: &[NQuin],
@@ -97,6 +103,7 @@ pub fn write_q42_checkpoint(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Writes a q42 checkpoint.
 pub fn write_q42_checkpoint(
     _storage_root: &Path,
     _quins: &[NQuin],

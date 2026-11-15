@@ -35,7 +35,7 @@
 //!
 //! * Compute reuses [`crate::solvers::linear_algebra`] (matmul/matvec) and
 //!   [`crate::solvers::learning::kg_embedding`] (the real KGE trainer).
-//! * Money arithmetic reuses [`crate::modalities::value_flow`] (pool/discharge,
+//! * Money arithmetic reuses [`crate::modalities::socioeconomics`] (pool/discharge,
 //!   `eroi_viable` — the thermodynamic supply gate that refuses net-extractive jobs).
 //! * Payment transport reuses [`crate::ilp_dispatcher`].
 //!

@@ -35,11 +35,8 @@ fn test_01_model_target_mapping_and_registry() {
         qualia_core_db::gguf_sharder::ChatFamily::ChatMl
     );
 
-    let mcp_target = ModelPrecisionTarget::mcp_endpoint(
-        "claude-3-5-sonnet-mcp",
-        200000,
-        "general-assistant",
-    );
+    let mcp_target =
+        ModelPrecisionTarget::mcp_endpoint("claude-3-5-sonnet-mcp", 200000, "general-assistant");
 
     registry.register(llama_target);
     registry.register(qwen_target);
@@ -60,7 +57,11 @@ fn test_01_model_target_mapping_and_registry() {
     );
     assert!(res.is_ok());
     assert_eq!(
-        registry.get("llama-3.2-1b-instruct").unwrap().active_profile_id.as_deref(),
+        registry
+            .get("llama-3.2-1b-instruct")
+            .unwrap()
+            .active_profile_id
+            .as_deref(),
         Some("urn:qualia:profile:model:llama-3.2-1b-instruct:v1")
     );
 }
@@ -74,7 +75,8 @@ fn test_02_strategy_generator_b0_through_b5() {
         "clinical-guidance",
     );
 
-    let candidates = StrategyGenerator::generate_candidates(&target, "Clinical diagnostic precision");
+    let candidates =
+        StrategyGenerator::generate_candidates(&target, "Clinical diagnostic precision");
     assert_eq!(candidates.len(), 6);
 
     let labels: Vec<&str> = candidates.iter().map(|c| c.label.as_str()).collect();
@@ -94,13 +96,19 @@ fn test_02_strategy_generator_b0_through_b5() {
     assert_eq!(candidates[0].requirements.len(), 0);
 
     // B2 has enforced validator requirements
-    assert!(candidates[2].requirements.iter().any(|r| r.validator.is_some()));
+    assert!(candidates[2]
+        .requirements
+        .iter()
+        .any(|r| r.validator.is_some()));
 
     // B3 has lower budget than B2
     assert!(candidates[3].budget.max_bytes < candidates[2].budget.max_bytes);
 
     // B5 contains domain-specific optimizations
-    assert!(candidates[5].requirements.iter().any(|r| r.rule.contains("clinical-guidance")));
+    assert!(candidates[5]
+        .requirements
+        .iter()
+        .any(|r| r.rule.contains("clinical-guidance")));
 }
 
 #[test]
@@ -174,17 +182,14 @@ fn test_03_end_to_end_model_precision_optimization() {
 
 #[test]
 fn test_04_split_isolation_and_error_handling() {
-    let target = ModelPrecisionTarget::native_gguf(
-        "test-model",
-        ModelFamily::Generic,
-        8192,
-        "test",
-    );
+    let target =
+        ModelPrecisionTarget::native_gguf("test-model", ModelFamily::Generic, 8192, "test");
     let mut registry = ConditioningRegistry::new();
 
     // 1. Empty manifest fails
     let empty_manifest = TaskManifest::new("empty", 1);
-    let err1 = ModelPrecisionOptimizer::optimize_model(&target, &empty_manifest, &mut registry, "r1");
+    let err1 =
+        ModelPrecisionOptimizer::optimize_model(&target, &empty_manifest, &mut registry, "r1");
     assert_eq!(err1.unwrap_err(), OptimizationError::EmptyManifest);
 
     // 2. Manifest with no training tasks fails
@@ -214,12 +219,8 @@ fn test_04_split_isolation_and_error_handling() {
 
 #[test]
 fn test_05_model_profile_versioning_and_rollback() {
-    let target = ModelPrecisionTarget::native_gguf(
-        "mistral-7b-v0.3",
-        ModelFamily::Mistral,
-        32768,
-        "audit",
-    );
+    let target =
+        ModelPrecisionTarget::native_gguf("mistral-7b-v0.3", ModelFamily::Mistral, 32768, "audit");
 
     let mut manifest_v1 = TaskManifest::new("audit-v1", 1);
     manifest_v1.add_task(TaskItem {
@@ -256,23 +257,15 @@ fn test_05_model_profile_versioning_and_rollback() {
     let mut registry = ConditioningRegistry::new();
 
     // Optimize and activate v1
-    let receipt_v1 = ModelPrecisionOptimizer::optimize_model(
-        &target,
-        &manifest_v1,
-        &mut registry,
-        "run-v1",
-    )
-    .expect("v1 succeeds");
+    let receipt_v1 =
+        ModelPrecisionOptimizer::optimize_model(&target, &manifest_v1, &mut registry, "run-v1")
+            .expect("v1 succeeds");
     assert_eq!(receipt_v1.promoted_version, 1);
 
     // Optimize and activate v2
-    let receipt_v2 = ModelPrecisionOptimizer::optimize_model(
-        &target,
-        &manifest_v2,
-        &mut registry,
-        "run-v2",
-    )
-    .expect("v2 succeeds");
+    let receipt_v2 =
+        ModelPrecisionOptimizer::optimize_model(&target, &manifest_v2, &mut registry, "run-v2")
+            .expect("v2 succeeds");
     assert_eq!(receipt_v2.promoted_version, 2);
     assert_eq!(receipt_v2.previous_version, Some(1));
 

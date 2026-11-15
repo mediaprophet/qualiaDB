@@ -34,13 +34,19 @@ pub enum BufferChannel {
 /// Failures for the buffered contract API. Never converted into empty success.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NlpContractError {
-    SourceTooLarge { bytes: usize, max: usize },
+    SourceTooLarge {
+        bytes: usize,
+        max: usize,
+    },
     OutputBufferFull {
         needed: usize,
         capacity: usize,
         channel: BufferChannel,
     },
-    SpanInvalid { start: u32, end: u32 },
+    SpanInvalid {
+        start: u32,
+        end: u32,
+    },
 }
 
 impl fmt::Display for NlpContractError {

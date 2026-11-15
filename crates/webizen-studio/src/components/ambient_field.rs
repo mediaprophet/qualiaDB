@@ -1,7 +1,7 @@
 //! Canvas2D ambient knowledge field (BACKGROUND_VISUALISATION.md).
 //! Cheap particle cymatics driven by `SystemTelemetry` uniforms.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -124,6 +124,7 @@ fn sigma_rgb(sigma: f32) -> (u8, u8, u8) {
 }
 
 #[component]
+/// Aether `AmbientFieldCanvas` component.
 pub fn AmbientFieldCanvas(canvas_id: String, height_px: u32) -> Element {
     let mut telemetry = use_signal(AmbientTelemetry::default);
     let mut frame = use_signal(|| 0u64);

@@ -4,12 +4,14 @@ use super::super::args;
 use crate::tensor::Tensor10D;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: manifold distance.
 pub fn distance(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = tensor(args_v, "a", span)?;
     let b = tensor(args_v, "b", span)?;
     Ok(Value::F64(a.full_distance(&b) as f64))
 }
 
+/// Builds `?` from `list`.
 pub fn from_list(xs: &[f64]) -> Option<Tensor10D> {
     if xs.len() != 10 {
         return None;

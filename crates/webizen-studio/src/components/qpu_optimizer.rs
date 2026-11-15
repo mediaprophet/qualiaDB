@@ -1,6 +1,7 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `QpuOptimizer` component.
 pub fn QpuOptimizer() -> Element {
     rsx! {
         div {

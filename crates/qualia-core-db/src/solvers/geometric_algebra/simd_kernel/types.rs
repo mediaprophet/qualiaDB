@@ -29,12 +29,14 @@ pub struct Translator {
 }
 
 impl Default for Multivector {
+    /// The zero multivector.
     fn default() -> Self {
         Self::zero()
     }
 }
 
 impl Multivector {
+    /// All-grade-zero multivector.
     pub fn zero() -> Self {
         Self {
             coeffs: [0.0; 8],
@@ -42,6 +44,7 @@ impl Multivector {
         }
     }
 
+    /// Grade-0 multivector holding `value`.
     pub fn scalar(value: f32) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[0] = value;
@@ -49,6 +52,7 @@ impl Multivector {
         mv
     }
 
+    /// Grade-1 multivector with vector part (x, y, z).
     pub fn vector(x: f32, y: f32, z: f32) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[1] = x;
@@ -58,6 +62,7 @@ impl Multivector {
         mv
     }
 
+    /// Grade-2 multivector with bivector coefficients.
     pub fn bivector(xy: f32, xz: f32, yz: f32) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[4] = xy;
@@ -67,6 +72,7 @@ impl Multivector {
         mv
     }
 
+    /// Grade-3 multivector with pseudoscalar `xyz`.
     pub fn trivector(xyz: f32) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[7] = xyz;
@@ -74,6 +80,7 @@ impl Multivector {
         mv
     }
 
+    /// Multivector view of a rotor (scalar + bivector grades).
     pub fn from_rotor(rotor: &Rotor) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[0] = rotor.components[0];
@@ -84,6 +91,7 @@ impl Multivector {
         mv
     }
 
+    /// Multivector view of a translator (1 + t·e₀ versor).
     pub fn from_translator(translator: &Translator) -> Self {
         let mut mv = Self::zero();
         mv.coeffs[0] = translator.components[0];
@@ -94,18 +102,23 @@ impl Multivector {
         mv
     }
 
+    /// Multivector from a 3-component vector array.
     pub fn from_vector(vector: &[f32; 3]) -> Self {
         Self::vector(vector[0], vector[1], vector[2])
     }
 
+    /// The grade-1 (vector) part as a 3-array.
     pub fn to_vector(&self) -> [f32; 3] {
         [self.coeffs[1], self.coeffs[2], self.coeffs[3]]
     }
 
+    /// The grade-0 (scalar) coefficient.
     pub fn get_scalar(&self) -> f32 {
         self.coeffs[0]
     }
 
+    /// Grade involution — reverses the sign of grade-2 and grade-3
+    /// parts.
     pub fn reverse(&self) -> Self {
         let mut result = *self;
         result.coeffs[4] = -result.coeffs[4];
@@ -115,6 +128,7 @@ impl Multivector {
         result
     }
 
+    /// Scale all coefficients by `1/scalar` (no zero check).
     pub fn div_scalar(&self, scalar: f32) -> Self {
         let mut result = *self;
         for coeff in &mut result.coeffs {
@@ -123,6 +137,7 @@ impl Multivector {
         result
     }
 
+    /// Component-wise multivector addition.
     pub fn add(&self, other: &Self) -> Self {
         let mut result = *self;
         for (i, coeff) in result.coeffs.iter_mut().enumerate() {
@@ -132,6 +147,7 @@ impl Multivector {
         result
     }
 
+    /// Component-wise multivector subtraction.
     pub fn sub(&self, other: &Self) -> Self {
         let mut result = *self;
         for (i, coeff) in result.coeffs.iter_mut().enumerate() {
@@ -141,14 +157,17 @@ impl Multivector {
         result
     }
 
+    /// `true` when every coefficient is exactly zero.
     pub fn is_zero(&self) -> bool {
         self.coeffs.iter().all(|&c| c.abs() < f32::EPSILON)
     }
 
+    /// Bitmask of grades with nonzero coefficients.
     pub fn grade_mask(&self) -> u8 {
         self.grade_mask
     }
 
+    /// `true` when `grade` has a nonzero coefficient.
     pub fn has_grade(&self, grade: Grade) -> bool {
         self.grade_mask & (grade as u8) != 0
     }
@@ -156,6 +175,7 @@ impl Multivector {
 
 impl Add for Multivector {
     type Output = Self;
+    /// `Add` operator — forwards to `Self::add`.
     fn add(self, other: Self) -> Self {
         Multivector::add(&self, &other)
     }
@@ -163,6 +183,7 @@ impl Add for Multivector {
 
 impl Sub for Multivector {
     type Output = Self;
+    /// `Sub` operator — forwards to `Self::sub`.
     fn sub(self, other: Self) -> Self {
         Multivector::sub(&self, &other)
     }
@@ -170,6 +191,7 @@ impl Sub for Multivector {
 
 impl Neg for Multivector {
     type Output = Self;
+    /// `Neg` operator — negates all coefficients.
     fn neg(self) -> Self {
         let mut result = self;
         for coeff in &mut result.coeffs {
@@ -180,19 +202,23 @@ impl Neg for Multivector {
 }
 
 impl Rotor {
+    /// Identity rotor (scalar 1, no bivector part).
     pub fn identity() -> Self {
         Self {
             components: [1.0, 0.0, 0.0, 0.0],
         }
     }
+    /// Rotor from quaternion coefficients (w + xi + yj + zk mapping).
     pub fn from_quaternion(w: f32, x: f32, y: f32, z: f32) -> Self {
         Self {
             components: [w, x, y, z],
         }
     }
+    /// Quaternion view `[w, x, y, z]` of the rotor.
     pub fn as_quaternion(&self) -> [f32; 4] {
         self.components
     }
+    /// Unit-normalize the rotor in place (degenerate → identity).
     pub fn normalize(&mut self) {
         let mag = (self.components[0] * self.components[0]
             + self.components[1] * self.components[1]
@@ -205,6 +231,8 @@ impl Rotor {
             }
         }
     }
+    /// Rotor inverse — negates the bivector components (the reverse,
+    /// valid for unit rotors).
     pub fn inverse(&self) -> Self {
         let mut result = *self;
         result.components[1] = -result.components[1];
@@ -215,11 +243,13 @@ impl Rotor {
 }
 
 impl Translator {
+    /// Identity translator (zero displacement).
     pub fn identity() -> Self {
         Self {
             components: [1.0, 0.0, 0.0, 0.0],
         }
     }
+    /// The translation vector `[x, y, z]`.
     pub fn displacement(&self) -> [f32; 3] {
         [
             self.components[1] * 2.0,
@@ -227,6 +257,7 @@ impl Translator {
             self.components[3] * 2.0,
         ]
     }
+    /// Inverse translator — negated displacement components.
     pub fn inverse(&self) -> Self {
         Self {
             components: [

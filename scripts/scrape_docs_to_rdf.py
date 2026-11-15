@@ -34,6 +34,7 @@ RE_INDOC_DATE = re.compile(r'(20\d{2})(0[1-9]|1[0-2])([0-3]\d)')  # e.g. Timothy
 
 
 def pdf_text(path):
+    """Extracts PDF text."""
     try:
         return subprocess.run(["pdftotext", "-layout", path, "-"],
                               capture_output=True, text=True, timeout=120).stdout
@@ -43,6 +44,7 @@ def pdf_text(path):
 
 
 def pdf_meta_date(path):
+    """PDF metadata date."""
     try:
         out = subprocess.run(["pdfinfo", path], capture_output=True, text=True, timeout=30).stdout
         m = re.search(r'^CreationDate:\s*(.+)$', out, re.M)
@@ -55,6 +57,7 @@ def pdf_meta_date(path):
 
 
 def docx_text_and_date(path):
+    """DOCX text and date."""
     import zipfile
     text, created = "", None
     try:
@@ -86,6 +89,7 @@ def best_date(fname, text, embedded):
 
 
 def main():
+    """CLI entry point."""
     ap = argparse.ArgumentParser(description="Documents -> RDF provenance vault.")
     ap.add_argument("--dir", default="C:/Projects/mydocs", help="folder of documents")
     ap.add_argument("--extra", nargs="*", default=[], help="extra individual files to include")

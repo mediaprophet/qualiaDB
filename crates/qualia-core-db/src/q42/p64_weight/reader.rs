@@ -3,13 +3,8 @@
 //! `IntegrityMode`, and the convert-layout recommender.
 
 use super::*;
-use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex, GgufTensorInfo};
-
-// CRC-32C (Castagnoli, reflected) — delegated to the shared
-// `container_10d::crc32c` module (P0.3 consolidation). The algorithm is
-// byte-identical to the previous in-line implementation; the p64 round-trip
-// tests verify the checksums are unchanged after delegation.
-use crate::container_10d::crc32c::crc32c;
+use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex};
+pub use etalon_model::p64::convert::P64RoundTripReport;
 
 /// Runtime reader: parses a P64 container's header + manifest in microseconds. Tensor blobs
 /// stay in the caller's byte slice (zero-copy); only the small manifest is materialized. The
@@ -84,176 +79,40 @@ pub fn recommend_convert_layout(source_bytes: u64, vram_budget_bytes: u64) -> P6
 }
 
 impl P64TensorIndex {
+    /// Prepare the native inference directory while retaining authoritative P64 bytes.
+    /// Metadata extensions are explicit because the fixed v4 header has no recurrent/PLE fields.
+    pub fn prepare_native<'a>(
+        data: &'a [u8],
+        integrity: IntegrityMode,
+        budget: etalon_model::inference::ModelPreparationBudget,
+        metadata: Option<etalon_model::inference::ModelMetadata>,
+    ) -> Result<
+        etalon_model::inference::PreparedP64<'a, GgufHyperparams>,
+        etalon_model::inference::PrepareModelError,
+    > {
+        let integrity = match integrity {
+            IntegrityMode::Full => etalon_model::p64::IntegrityMode::Full,
+            IntegrityMode::Metadata => etalon_model::p64::IntegrityMode::Metadata,
+            IntegrityMode::Structure => etalon_model::p64::IntegrityMode::Structure,
+        };
+        etalon_model::inference::PreparedP64::parse(data, integrity, budget, metadata)
+    }
+
+    /// Parses a tensor index from a `.q42` volume blob; `Err` on malformed header/directory.
     pub fn from_q42(data: &[u8]) -> Result<Self, String> {
         Self::from_p64(data)
     }
+    /// Parses a tensor index from raw `.p64` bytes.
     pub fn from_p64(data: &[u8]) -> Result<Self, String> {
         Self::from_p64_with_integrity(data, IntegrityMode::from_env())
     }
 
     /// Parse a P64 container with an explicit integrity policy.
     pub fn from_p64_with_integrity(data: &[u8], integrity: IntegrityMode) -> Result<Self, String> {
-        let header = P64WeightHeader::read_le(data)?;
-        if header.magic != P64_MAGIC {
-            return Err("p64: invalid magic".to_string());
-        }
-        if header.version != P64_VERSION {
-            return Err(format!("p64: unsupported version {}", header.version));
-        }
-        if header.flags & P64_FLAG_LITTLE_ENDIAN == 0 {
-            return Err("p64: non-little-endian container is unsupported".to_string());
-        }
-        let page = header.page_size as usize;
-        if page < 256 || !page.is_power_of_two() {
-            return Err("p64: invalid page size".to_string());
-        }
-        let hparams_start = header.hparams_offset as usize;
-        let hparams_end = hparams_start
-            .checked_add(64)
-            .ok_or("p64: hyperparameter offset overflow")?;
-        if hparams_end > data.len() {
-            return Err("p64: hyperparameters out of bounds".to_string());
-        }
-        let hparams = P64HParams::read_le(&data[hparams_start..hparams_end])?;
-
-        let tensor_count = header.tensor_count as usize;
-        let tensor_table_start = header.tensor_table_offset as usize;
-        let tensor_table_end = tensor_table_start
-            .checked_add(
-                tensor_count
-                    .checked_mul(P64_TENSOR_ENTRY_BYTES)
-                    .ok_or("p64: tensor table overflow")?,
-            )
-            .ok_or("p64: tensor table overflow")?;
-        let string_table_start = header.string_table_offset as usize;
-        let manifold_table_start = header.manifold_table_offset as usize;
-        let manifold_count = hparams
-            .n_layer
-            .checked_add(1)
-            .ok_or("p64: manifold count overflow")? as usize;
-        let manifold_table_end = manifold_table_start
-            .checked_add(
-                manifold_count
-                    .checked_mul(P64_MANIFOLD_ENTRY_BYTES)
-                    .ok_or("p64: manifold table overflow")?,
-            )
-            .ok_or("p64: manifold table overflow")?;
-        let tokenizer_start = header.tokenizer_offset as usize;
-        let checksum_start = header.checksum_offset as usize;
-        let checksum_end = checksum_start
-            .checked_add(
-                tensor_count
-                    .checked_add(1)
-                    .and_then(|count| count.checked_mul(4))
-                    .ok_or("p64: checksum table overflow")?,
-            )
-            .ok_or("p64: checksum table overflow")?;
-        if tensor_table_start < hparams_end
-            || tensor_table_end > string_table_start
-            || string_table_start > manifold_table_start
-            || manifold_table_end > tokenizer_start
-            || tokenizer_start > checksum_start
-            || checksum_end > data.len()
-        {
-            return Err("p64: metadata sections overlap or are out of bounds".to_string());
-        }
-        if manifold_table_start % 64 != 0 {
-            return Err("p64: manifold table is not cache-line aligned".to_string());
-        }
-        if !matches!(integrity, IntegrityMode::Structure) {
-            let stored_metadata_crc =
-                u32::from_le_bytes(data[checksum_start..checksum_start + 4].try_into().unwrap());
-            if crc32c(&data[..checksum_start]) != stored_metadata_crc {
-                return Err("p64: metadata CRC-32C mismatch".to_string());
-            }
-        }
-
-        let mut entries = Vec::with_capacity(tensor_count);
-        let mut cursor = header.tensor_table_offset as usize;
-        let blob_floor = align_up(checksum_end, page);
-        let mut previous_blob_end = blob_floor;
-        let mut previous_manifold_idx = None;
-        let layer_packed = header.flags & P64_FLAG_LAYER_PACK != 0;
-        let verify_tensor_crc = matches!(integrity, IntegrityMode::Full);
-        for tensor_index in 0..tensor_count {
-            if cursor + P64_TENSOR_ENTRY_BYTES > data.len() {
-                return Err("p64: truncated tensor table".to_string());
-            }
-            let bytes = &data[cursor..cursor + P64_TENSOR_ENTRY_BYTES];
-            let eu32 = |o: usize| u32::from_le_bytes(bytes[o..o + 4].try_into().unwrap());
-            let eu16 = |o: usize| u16::from_le_bytes(bytes[o..o + 2].try_into().unwrap());
-            let eu64 = |o: usize| u64::from_le_bytes(bytes[o..o + 8].try_into().unwrap());
-            let entry = P64TensorEntry {
-                name_offset: eu32(0),
-                role_id: eu16(4),
-                dtype: eu16(6),
-                manifold_idx: eu32(8),
-                rank: eu32(12),
-                dimensions: [eu32(16), eu32(20), eu32(24), eu32(28)],
-                blob_offset: eu32(32),
-                blob_size: eu32(36),
-                source_offset: eu64(40),
-                source_name_hash: eu64(48),
-                alt_dtype: eu16(56),
-                precision_views_mask: eu16(58),
-                alt_blob_offset: eu32(60),
-            };
-            if !(1..=4).contains(&entry.rank) {
-                return Err(format!("p64: tensor {tensor_index} has invalid rank"));
-            }
-            if entry.manifold_idx as usize >= manifold_count {
-                return Err(format!(
-                    "p64: tensor {tensor_index} has invalid manifold index"
-                ));
-            }
-            let name_start = string_table_start
-                .checked_add(entry.name_offset as usize)
-                .ok_or("p64: tensor name offset overflow")?;
-            if name_start >= manifold_table_start
-                || !data[name_start..manifold_table_start].contains(&0)
-            {
-                return Err(format!("p64: tensor {tensor_index} has invalid name"));
-            }
-            let blob_start = entry.blob_offset as usize;
-            let blob_end = blob_start
-                .checked_add(entry.blob_size as usize)
-                .ok_or("p64: tensor blob overflow")?;
-            let required_alignment = if layer_packed
-                && tensor_index > 0
-                && previous_manifold_idx == Some(entry.manifold_idx)
-            {
-                256
-            } else {
-                page
-            };
-            if blob_start % required_alignment != 0
-                || blob_start < previous_blob_end
-                || blob_end > data.len()
-            {
-                return Err(format!(
-                    "p64: tensor {tensor_index} is unaligned, overlapping, or out of bounds"
-                ));
-            }
-            if verify_tensor_crc {
-                let crc_start = checksum_start + 4 + tensor_index * 4;
-                let stored_crc =
-                    u32::from_le_bytes(data[crc_start..crc_start + 4].try_into().unwrap());
-                if crc32c(&data[blob_start..blob_end]) != stored_crc {
-                    return Err(format!("p64: tensor {tensor_index} CRC-32C mismatch"));
-                }
-            }
-            previous_blob_end = blob_end;
-            previous_manifold_idx = Some(entry.manifold_idx);
-            entries.push(entry);
-            cursor += P64_TENSOR_ENTRY_BYTES;
-        }
-        Ok(Self {
-            header,
-            hparams,
-            entries,
-        })
+        super::etalon_adapter::parse_owned(data, integrity)
     }
 
+    /// Model hyperparameters decoded from the index header.
     pub fn hyperparams(&self) -> GgufHyperparams {
         GgufHyperparams {
             n_layer: self.hparams.n_layer,
@@ -267,81 +126,52 @@ impl P64TensorIndex {
             sliding_window: self.hparams.sliding_window,
             shared_kv_layers: self.hparams.shared_kv_layers,
             logit_softcap: self.hparams.logit_softcap,
+            ssm_conv_kernel: 0,
+            ssm_state_size: 0,
+            ssm_group_count: 0,
+            ssm_time_step_rank: 0,
+            ssm_inner_size: 0,
+            full_attention_interval: 0,
             architecture: self.hparams.architecture,
             arch_flags: self.hparams.arch_flags,
+            ..GgufHyperparams::default()
         }
     }
 
+    /// Zero-copy tensor byte slice for `entry` within `data`.
+    #[inline]
     pub fn blob<'a>(&self, data: &'a [u8], entry: &P64TensorEntry) -> &'a [u8] {
-        let start = entry.blob_offset as usize;
-        &data[start..start + entry.blob_size as usize]
+        entry.blob_slice(data).unwrap_or_else(|| {
+            let start = entry.blob_offset as usize;
+            &data[start..start + entry.blob_size as usize]
+        })
     }
 
+    /// Zero-copy tokenizer blob within `data`.
+    #[inline]
     pub fn tokenizer_bytes<'a>(&self, data: &'a [u8]) -> &'a [u8] {
-        let start = self.header.tokenizer_offset as usize;
-        let end = self.header.checksum_offset as usize;
-        if start <= data.len() && end <= data.len() && start <= end {
-            &data[start..end]
-        } else {
-            &[]
-        }
+        self.header.tokenizer_slice(data)
     }
 
+    /// Manifold coordinate for a tensor entry (bridges neutral 64B P64 record to Q42 `ManifoldCoordinate10D`).
     pub fn manifold_coordinate(
         &self,
         data: &[u8],
         index: u32,
     ) -> Result<crate::modalities::manifold::ManifoldCoordinate10D, String> {
-        if index > self.hparams.n_layer {
-            return Err("p64: manifold index out of bounds".to_string());
-        }
-        let start = (self.header.manifold_table_offset as usize)
-            .checked_add(index as usize * P64_MANIFOLD_ENTRY_BYTES)
-            .ok_or("p64: manifold offset overflow")?;
-        let end = start + P64_MANIFOLD_ENTRY_BYTES;
-        if end > data.len() {
-            return Err("p64: manifold coordinate out of bounds".to_string());
-        }
-        crate::modalities::manifold::ManifoldCoordinate10D::from_p64_bytes(&data[start..end])
+        let record = self
+            .header
+            .manifold_record_slice(data, self.hparams.n_layer, index)?;
+        crate::modalities::manifold::ManifoldCoordinate10D::from_p64_bytes(record)
     }
 
     /// Build a GGUF-equivalent index for the existing inference hot path.
     pub fn to_gguf_index(&self) -> GgufTensorIndex {
-        let mut named: Vec<(Vec<u8>, GgufTensorInfo)> = Vec::with_capacity(self.entries.len());
-        for entry in &self.entries {
-            let name = if entry.manifold_idx == self.hparams.n_layer {
-                match entry.role_id {
-                    P64_ROLE_TOKEN_EMBD => b"token_embd.weight".to_vec(),
-                    P64_ROLE_OUTPUT => b"output.weight".to_vec(),
-                    P64_ROLE_OUTPUT_NORM => b"output_norm.weight".to_vec(),
-                    _ => continue,
-                }
-            } else if let Some(suffix) = p64_role_suffix(entry.role_id) {
-                let mut buffer = [0u8; 96];
-                let length = crate::gguf_sharder::write_blk_tensor_name(
-                    entry.manifold_idx,
-                    suffix,
-                    &mut buffer,
-                );
-                buffer[..length].to_vec()
-            } else {
-                continue;
-            };
-            named.push((
-                name,
-                GgufTensorInfo {
-                    dims: entry.dimensions.map(u64::from),
-                    n_dims: entry.rank,
-                    ggml_type: entry.dtype as u32,
-                    byte_offset: entry.blob_offset as u64,
-                },
-            ));
-        }
-        let references: Vec<(&[u8], GgufTensorInfo)> = named
-            .iter()
-            .map(|(name, info)| (name.as_slice(), *info))
-            .collect();
-        GgufTensorIndex::from_components(&references, self.hyperparams(), 0)
+        etalon_model::p64::convert::synthesize_gguf_index(
+            &self.entries,
+            self.hparams.n_layer,
+            self.hyperparams(),
+        )
     }
 
     /// Prove that a parsed P64 contains every GGUF tensor with identical shape,
@@ -352,54 +182,11 @@ impl P64TensorIndex {
         p64_data: &[u8],
         gguf_data: &[u8],
     ) -> Result<P64RoundTripReport, String> {
-        let source = GgufTensorIndex::from_gguf(gguf_data);
-        if source.entries.len() != self.entries.len() {
-            return Err(format!(
-                "p64: tensor count differs (GGUF {}, P64 {})",
-                source.entries.len(),
-                self.entries.len()
-            ));
-        }
-        let source_data_start = source.tensor_data_start as usize;
-        let mut tensor_bytes = 0u64;
-        for (position, entry) in self.entries.iter().enumerate() {
-            let (source_name_hash, source_info) = source
-                .entries
-                .iter()
-                .find(|(_, info)| info.byte_offset == entry.source_offset)
-                .ok_or_else(|| format!("p64: tensor {position} source offset is missing"))?;
-            if *source_name_hash != entry.source_name_hash
-                || source_info.ggml_type != entry.dtype as u32
-                || source_info.n_dims != entry.rank
-                || source_info.dims != entry.dimensions.map(u64::from)
-            {
-                return Err(format!("p64: tensor {position} metadata differs from GGUF"));
-            }
-            let source_len = crate::ggml_quants::tensor_byte_len(source_info)
-                .ok_or_else(|| format!("p64: tensor {position} has unsupported source type"))?;
-            if source_len != entry.blob_size as usize {
-                return Err(format!("p64: tensor {position} byte length differs"));
-            }
-            let source_start = source_data_start + source_info.byte_offset as usize;
-            let source_end = source_start + source_len;
-            if source_end > gguf_data.len()
-                || self.blob(p64_data, entry) != &gguf_data[source_start..source_end]
-            {
-                return Err(format!("p64: tensor {position} bytes differ from GGUF"));
-            }
-            tensor_bytes += source_len as u64;
-        }
-        Ok(P64RoundTripReport {
-            tensor_count: self.entries.len(),
-            tensor_bytes,
-            manifold_count: self.hparams.n_layer as usize + 1,
-        })
+        etalon_model::p64::convert::validate_p64_against_gguf(
+            &self.entries,
+            self.hparams.n_layer,
+            p64_data,
+            gguf_data,
+        )
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct P64RoundTripReport {
-    pub tensor_count: usize,
-    pub tensor_bytes: u64,
-    pub manifold_count: usize,
 }

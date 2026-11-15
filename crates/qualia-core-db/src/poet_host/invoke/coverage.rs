@@ -177,6 +177,7 @@ pub fn rows() -> Vec<Row> {
     out
 }
 
+/// Coverage report as a Vibe `Value`.
 pub fn as_value() -> Value {
     let rs = rows();
     let bound = rs.iter().filter(|r| r.bind == Bind::Bound).count() as u64;
@@ -210,6 +211,7 @@ pub fn as_value() -> Value {
     Value::Record(out)
 }
 
+/// Coverage report as Markdown.
 pub fn markdown() -> String {
     let rs = rows();
     let mut s = String::from(
@@ -259,10 +261,10 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::DAG_STATUS,
         family: "agent",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
-        arg_shape: r#"{"type":"null"}"#,
-        return_shape: r#"{"type":"null"}"#,
+        arg_shape: r#"{"type":"record"}"#,
+        return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
     },
     MachineSchema {
         id: ids::DISCOVERY_LIST,
@@ -385,6 +387,22 @@ pub const SCHEMAS: &[MachineSchema] = &[
         return_shape: r#"{"type":"record"}"#,
     },
     MachineSchema {
+        id: ids::PHYS_TICK_SPECTRUM_READING,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"part":{"type":"string"},"signature":{"type":"string"},"reading":{"type":"string"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
+        id: ids::PHYS_PART_SIGNATURE,
+        family: "physics",
+        honesty: "certified",
+        effect_class: "Pure",
+        arg_shape: r#"{"type":"record","properties":{"part":{"type":"string"},"signature":{"type":"string"},"facet":{"type":"string"}}}"#,
+        return_shape: r#"{"type":"record"}"#,
+    },
+    MachineSchema {
         id: ids::PHYS_EVALUATE_INTERACTION,
         family: "physics",
         honesty: "certified",
@@ -435,7 +453,7 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::MANIFOLD_PROJECT,
         family: "manifold",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record"}"#,
@@ -603,7 +621,7 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::ECON_AGGREGATE_WEALTH,
         family: "econ",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
@@ -611,17 +629,19 @@ pub const SCHEMAS: &[MachineSchema] = &[
     MachineSchema {
         id: ids::ECON_NARRATIVE_DIVERGENCE,
         family: "econ",
-        honesty: "stub",
+        honesty: "certified",
         effect_class: "Pure",
         arg_shape: r#"{"type":"record"}"#,
         return_shape: r#"{"type":"record","properties":{"status":{"type":"string"}}}"#,
     },
 ];
 
+/// Machine schema for invoke `id`.
 pub fn schema_for(id: &str) -> Option<&'static MachineSchema> {
     SCHEMAS.iter().find(|s| s.id == id)
 }
 
+/// All registered machine schemas.
 pub fn all_schemas() -> &'static [MachineSchema] {
     SCHEMAS
 }
@@ -668,8 +688,8 @@ mod tests {
         assert_eq!(s.effect_class, "Cold");
         let gemm = schema_for(ids::LA_GEMM).expect("LA_GEMM must have a schema");
         assert_eq!(gemm.honesty, "certified");
-        let wealth = schema_for(ids::ECON_AGGREGATE_WEALTH).expect("wealth stub schema");
-        assert_eq!(wealth.honesty, "stub");
+        let wealth = schema_for(ids::ECON_AGGREGATE_WEALTH).expect("wealth schema");
+        assert_eq!(wealth.honesty, "certified");
     }
 
     #[test]

@@ -30,6 +30,7 @@ pub struct StatusRegistry {
 }
 
 impl StatusRegistry {
+    /// Creates a default `StatusRegistry`.
     pub fn new() -> Self {
         Self {
             revoked: BTreeMap::new(),
@@ -52,6 +53,7 @@ impl StatusRegistry {
         self.revoked.keys().map(String::as_str)
     }
 
+    /// `StatusRegistry::status`.
     pub fn status(&self, attestation: &InstrumentAttestation, now: u32) -> AttestationStatus {
         if let Some(record) = self.revoked.get(&attestation.claim_id()) {
             return AttestationStatus::Revoked {
@@ -132,7 +134,10 @@ mod tests {
     fn expiry_without_revoke_is_expired() {
         let attestation = sample(AttestationKind::Endorsement, 100);
         let registry = StatusRegistry::new();
-        assert_eq!(registry.status(&attestation, 101), AttestationStatus::Expired);
+        assert_eq!(
+            registry.status(&attestation, 101),
+            AttestationStatus::Expired
+        );
         assert_eq!(
             registry.assert_rely(&attestation, 101),
             Err(InstrumentError::Expired)

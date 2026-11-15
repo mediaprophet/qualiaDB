@@ -1,6 +1,6 @@
 //! WellFair Tools — companion bundle ingest (primary) + folder import (dev fallback).
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct ImportUiState {
@@ -12,6 +12,7 @@ struct ImportUiState {
 }
 
 #[component]
+/// Aether `WellfairToolsPanel` component.
 pub fn WellfairToolsPanel() -> Element {
     let mut state = use_signal(ImportUiState::default);
 

@@ -42,6 +42,16 @@ pub use epistemic_boundaries::{
     requires_physiological_quarantine, DegradationVector, ReferralDomain, ReferralTrigger,
     SocraticDegradation, BIO_DISCLAIMER, EMERGENCY_PROMPT, LEGAL_DISCLAIMER, LEGAL_JEOPARDY_PROMPT,
 };
+pub mod epistemic_ontology;
+pub use epistemic_ontology::{
+    compile_epistemic_stance_quin, evaluate_epistemic_stances, is_epistemic_subsumed,
+    lookup_epistemic_lemma, parse_epistemic_mode_to_synset, synset_to_canonical_label,
+    synset_to_cili, EpistemicOntologyError, EpistemicStanceRecord, CILI_CIVICS, CILI_CONJECTURE,
+    CILI_FACT, CILI_FICTION, CILI_HYPOTHESIS, CILI_OBSERVATION, CILI_SIMULATION, PRED_CILI_CONCEPT,
+    PRED_EPISTEMIC_STANCE, PRED_SUB_CLASS_OF, PRED_WORDNET_SYNSET, SYNSET_BELIEF, SYNSET_CIVICS,
+    SYNSET_CONJECTURE, SYNSET_COUNTERFACTUAL, SYNSET_FACT, SYNSET_FICTION, SYNSET_HYPOTHESIS,
+    SYNSET_KNOWLEDGE, SYNSET_OBSERVATION, SYNSET_SIMULATION,
+};
 pub mod graph_theory;
 pub use graph_theory::{
     BoundedGraphAnalysisSummary, CommunitySpan, GraphAnalysisError, MotifRecord, TopNodeScore,
@@ -61,6 +71,8 @@ pub use likeliness::Likeliness;
 pub mod linear;
 pub use linear::{consume_quin, is_consumed, CONSUMED_BIT};
 pub mod logic;
+pub mod n3_deontic_bridge;
+pub mod typed_cue_profile;
 pub mod paraconsistent;
 pub use paraconsistent::{
     route_paraconsistent, ContradictionStatus, ParaconsistentError, ISOLATED_CONTEXT_PREFIX,
@@ -101,6 +113,11 @@ pub mod interaction_governance;
 pub use interaction_governance::{
     govern_verdict, map_policy, permits_execution, policy_action, Governance, PolicyMode,
 };
+pub mod inference_guard;
+pub use inference_guard::{
+    evaluate_inference_guard, InferenceGuardAction, InferenceGuardReason, InferenceGuardVerdict,
+    MAX_GUARD_GRAPH_QUINS,
+};
 pub mod causal;
 pub use causal::{but_for_cause, caused, dependents_voided, is_overdetermined, is_voided_by};
 pub mod responsibility;
@@ -119,8 +136,8 @@ pub mod contract;
 pub use contract::{
     formation_stage, incorporates_by_reference, is_binding_contract, FormationStage,
 };
-pub mod value_flow;
-pub use value_flow::{commons_cost, is_commons_discharged, outstanding, pool_after, royalty};
+pub mod socioeconomics;
+pub use socioeconomics::{commons_cost, is_commons_discharged, outstanding, pool_after, royalty};
 pub mod capability_gap;
 pub use capability_gap::{capability_gap, requirements_met};
 pub mod identity_fabric;
@@ -150,3 +167,64 @@ pub use temporal_ltl::{
 };
 pub mod manifold;
 pub use manifold::project_10d_to_quaternion;
+pub mod accrual;
+pub use accrual::{
+    asymmetry_ratio, eval_accrual_loss, AccrualLossReport, AccrualProfile, IrreversibilityClass,
+    LossEvent, MaturityClass, StockEntity,
+};
+pub mod reconciliation;
+pub use reconciliation::{
+    cascade_recheck_flags, compare_views, ReconciliationRecord, ReconciliationStatus,
+    RECHECKABLE_FLAG,
+};
+pub mod spatiotemporal_predicates;
+pub use spatiotemporal_predicates::*;
+pub mod spatiotemporal_linguistics;
+pub use spatiotemporal_linguistics::*;
+pub mod hydrology;
+pub use hydrology::{
+    evaluate_hydrological_frame, pack_hydro_barometric_quin, pack_hydro_submersion_quin,
+    pack_hydro_wetness_quin, unpack_hydro_submersion_quin, unpack_hydro_wetness_quin, HydroError,
+    HydroVerdict, OP_HYDRO_BAROMETRIC, OP_HYDRO_CURRENT, OP_HYDRO_PRECIPITATION,
+    OP_HYDRO_SUBMERSION, OP_HYDRO_THERMAL, OP_HYDRO_WETNESS, SUBMERSION_DIVING, SUBMERSION_DRY,
+    SUBMERSION_SWIMMING, SUBMERSION_WADING,
+};
+pub mod botany;
+pub use botany::{
+    evaluate_botanical_frame, pack_botany_metamer_quin, pack_botany_phenology_quin,
+    pack_botany_turgor_quin, unpack_botany_metamer_quin, unpack_botany_turgor_quin, BotanyError,
+    BotanyVerdict, OP_BOTANY_ECOTOPE, OP_BOTANY_METAMER, OP_BOTANY_PHENOLOGY,
+    OP_BOTANY_RAUNKIAER, OP_BOTANY_TURGOR, OP_BOTANY_VASCULAR,
+};
+pub mod differential_render;
+pub use differential_render::{
+    evaluate_differential_frame, pack_f32_to_f16, unpack_f16_to_f32, DeltaNQuin,
+    MEDIUM_CLEAR_WATER, MEDIUM_HOMOGENEOUS_AIR, MEDIUM_MIST_FOG, MEDIUM_TURBID_BLACKWATER,
+    OP_DIFF_EPOCH_WATERMARK, OP_DIFF_ISOLATION_MASK, OP_DIFF_LTR_PROMOTION,
+    OP_DIFF_RADIANCE_DELTA, OP_DIFF_SALIENT_QP, OP_DIFF_TRANSFORM_DELTA, SALIENCE_CLASS_A_FOCAL,
+    SALIENCE_CLASS_B_DYNAMIC, SALIENCE_CLASS_C_AMBIENT, SALIENCE_CLASS_D_SUBPERCEPTUAL,
+};
+
+
+
+pub mod biological_ontology;
+pub use biological_ontology::*;
+
+pub mod holographic_scene;
+pub use holographic_scene::{
+    decode_trigger_rules_cbor_ld_into, encode_scene_slice_cbor_ld_into,
+    evaluate_predicate_triggers_zero_heap, pack_preset_command_quin, pack_preset_defeater_quin,
+    select_p64_vendor_slot, slice_scene_state_graph, AssetStateNode, P64ExtensionSlot,
+    PredicateTriggerRule, SceneGraphError, SceneSliceScope, ScheduledPresetCommand,
+    CBOR_LD_SCENE_MAGIC, OP_SCENE_BLEND_SUBPART, OP_SCENE_DEFEATER_CANCEL, OP_SCENE_PLAY_PRESET,
+    OP_SCENE_PREDICATE_TRIGGER,
+};
+
+pub mod p64_cartridge;
+pub use p64_cartridge::{
+    encode_trigger_rules_cbor_ld_into, load_p64_slot_f32_seed_into,
+    pack_p64_extension_cartridge_into, unpack_p64_extension_cartridge_into, P64ExtensionHeader,
+    P64_EXT_CARTRIDGE_MAGIC,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use p64_cartridge::mount_p64_cartridge_onto_engine;

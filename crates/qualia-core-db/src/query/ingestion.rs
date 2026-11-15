@@ -4,6 +4,7 @@ use crate::{query_compiler::QueryCompiler, NQuin};
 /// of bytes/strings without allocating to the heap.
 pub trait ZeroCopyStream<'a> {
     type Item;
+    /// Streaming parse iterator.
     fn stream_parse(&self) -> impl Iterator<Item = Self::Item> + 'a;
 }
 
@@ -15,6 +16,7 @@ pub struct IngestionPipeline<'a> {
 }
 
 impl<'a> IngestionPipeline<'a> {
+    /// Creates a default `IngestionPipeline`.
     pub fn new(payload: &'a str) -> Self {
         Self { payload }
     }

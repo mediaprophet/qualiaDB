@@ -3,6 +3,7 @@
 use crate::net::qdnf::authority::{admit_service, ContactState, PolicyOutcome};
 use crate::net::qdnf::errors::QdnfError;
 
+/// Gates the channel by policy.
 pub fn gate_channel(
     outcome: PolicyOutcome,
     grant_current: bool,

@@ -7,7 +7,8 @@ fn read_ids(corpus: &str, split: &str) -> Vec<String> {
         .join(corpus)
         .join("splits")
         .join(format!("{split}.txt"));
-    let raw = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    let raw =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let ids: Vec<String> = raw
         .lines()
         .map(str::trim)
@@ -40,7 +41,10 @@ fn assert_frozen_splits(corpus: &str) {
         .collect();
     let mut gold_sorted = gold_ids.clone();
     gold_sorted.sort();
-    assert_eq!(listed, gold_sorted, "{corpus}: split lists must cover every gold doc");
+    assert_eq!(
+        listed, gold_sorted,
+        "{corpus}: split lists must cover every gold doc"
+    );
 
     for id in &test {
         assert!(

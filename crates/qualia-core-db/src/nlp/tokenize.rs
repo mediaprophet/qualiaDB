@@ -22,6 +22,7 @@ pub struct Sentence {
     pub span: DocSpan,
 }
 
+/// `?::tokenize`.
 pub fn tokenize(source: &str) -> Vec<Token<'_>> {
     let mut out = Vec::new();
     let bytes = source.as_bytes();
@@ -88,6 +89,7 @@ pub fn tokenize(source: &str) -> Vec<Token<'_>> {
     out
 }
 
+/// Splits `text` into sentences.
 pub fn split_sentences(source: &str) -> Vec<Sentence> {
     let mut out = Vec::new();
     let mut start = 0usize;

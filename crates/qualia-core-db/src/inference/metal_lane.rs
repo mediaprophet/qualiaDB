@@ -1,72 +1,86 @@
-//! Metal mega-pass orchestrator: chain all transformer layers into one Metal
-//! command buffer with a single fence at the end. No per-layer readback.
-//!
-//! This mirrors the CUDA `cuda_lane/mega_pass.rs` architecture but targets
-//! Apple Silicon via `metal-rs` or wgpu's Metal backend. On non-Apple
-//! platforms, all functions return `None`/`false` — the wgpu WGSL path
-//! handles inference instead.
-//!
-//! ## Architecture
-//!
-//! 1. Upload hidden state to device buffer (once).
-//! 2. For each layer:
-//!    a. RMSNorm + QKV + RoPE (fused dispatch via `fused-qkv-rope` MSL kernel)
-//!    b. KV cache write
-//!    c. SDPA decode (via `sdpa-decode` MSL kernel)
-//!    d. O-proj GEMV + residual add
-//!    e. RMSNorm + SwiGLU (fused)
-//!    f. Down GEMV + residual add
-//! 3. Output norm + logits GEMV + argmax
-//! 4. Single readback of the final token
-//!
-//! All dispatches share one command buffer — the GPU never idles waiting
-//! for CPU between layers.
-
-#![allow(dead_code, unused_variables)]
-
-/// Per-layer weight references for the Metal mega-pass.
-pub struct MetalPassLayerWeights<'a> {
-    pub attn_norm: &'a [f32],
-    pub q_raw: &'a [u8],
-    pub k_raw: &'a [u8],
-    pub v_raw: &'a [u8],
-    pub o_raw: &'a [u8],
-    pub ffn_norm: &'a [f32],
-    pub gate_raw: &'a [u8],
-    pub up_raw: &'a [u8],
-    pub down_raw: &'a [u8],
+//! Shared-device and host-policy adapter for the canonical Metal lane.
+pub use etalon_inference::backends::metal_lane::*;
+fn install_device_source() {
+    #[cfg(all(target_os = "macos", feature = "gpu-runtime"))]
+    {
+        let _ = etalon_inference::backends::metal_lane::device_source::install(|| {
+            crate::gpu_context::try_shared_gpu().map(|owner| {
+                etalon_inference::backends::metal_lane::device_source::MetalDevice {
+                    device: owner.device.clone(),
+                    queue: owner.queue.clone(),
+                }
+            })
+        });
+    }
 }
-
-/// Per-layer matmul dimensions (pre-computed by caller).
-pub struct MetalPassLayerDims {
-    pub q_in: usize,
-    pub q_out: usize,
-    pub kv_in: usize,
-    pub kv_out: usize,
-    pub o_in: usize,
-    pub o_out: usize,
-    pub gate_in: usize,
-    pub gate_out: usize,
-    pub up_in: usize,
-    pub up_out: usize,
-    pub down_in: usize,
-    pub down_out: usize,
+pub fn metal_lane_capability() -> MetalCapabilityState {
+    install_device_source();
+    etalon_inference::backends::metal_lane::metal_lane_capability()
 }
-
-/// Metal mega-pass: chain all transformer layers into one Metal command buffer
-/// with a **single fence** at the end. No per-layer readback. The hidden state
-/// stays on-device for the entire forward pass; only the final logits/token
-/// come back to host.
-///
-/// This is the Apple Silicon equivalent of `try_cuda_mega_pass`.
-///
-/// **Requirements:**
-/// - `metal-rs` crate (or wgpu Metal backend) must be available.
-/// - Device KV cache must be initialized.
-/// - All weights must be resident on-device.
-///
-/// Returns `Some(token)` on success, `None` if Metal is unavailable or
-/// any kernel fails.
+pub fn metal_lane_capability_state() -> &'static str {
+    install_device_source();
+    etalon_inference::backends::metal_lane::metal_lane_capability_state()
+}
+pub fn clear_metal_kv_cache() {
+    install_device_source();
+    etalon_inference::backends::metal_lane::clear_metal_kv_cache()
+}
+pub fn project_weight_bytes(
+    weight_raw: &[u8],
+    in_dim: usize,
+    out_dim: usize,
+    x: &[f32],
+    out: &mut [f32],
+) -> bool {
+    install_device_source();
+    etalon_inference::backends::metal_lane::project_weight_bytes(
+        weight_raw, in_dim, out_dim, x, out,
+    )
+}
+pub fn execute_metal_mega_pass(
+    n_embd: usize,
+    n_head: usize,
+    n_kv: usize,
+    head_dim: usize,
+    n_layer: u32,
+    token_idx: u32,
+    max_context: u32,
+    _layer_stride: u32,
+    _slot_kv_elems: u32,
+    rope_base: f32,
+    rope_scale: f32,
+    rms_eps: f32,
+    hidden: &[f32],
+    layers: &[MetalPassLayerWeights<'_>],
+    layer_dims: &[MetalPassLayerDims],
+    output_norm: Option<&[f32]>,
+    lm_head_raw: Option<&[u8]>,
+    lm_head_in: usize,
+    lm_head_out: usize,
+) -> Option<u32> {
+    install_device_source();
+    etalon_inference::backends::metal_lane::execute_metal_mega_pass(
+        n_embd,
+        n_head,
+        n_kv,
+        head_dim,
+        n_layer,
+        token_idx,
+        max_context,
+        _layer_stride,
+        _slot_kv_elems,
+        rope_base,
+        rope_scale,
+        rms_eps,
+        hidden,
+        layers,
+        layer_dims,
+        output_norm,
+        lm_head_raw,
+        lm_head_in,
+        lm_head_out,
+    )
+}
 pub fn try_metal_mega_pass(
     n_embd: usize,
     n_head: usize,
@@ -88,93 +102,38 @@ pub fn try_metal_mega_pass(
     lm_head_in: usize,
     lm_head_out: usize,
 ) -> Option<u32> {
-    // Metal is only available on macOS. On other platforms, return None
-    // and let the wgpu WGSL path handle inference.
-    #[cfg(not(target_os = "macos"))]
-    {
-        None
-    }
-    #[cfg(target_os = "macos")]
-    {
-        // TODO: implement via metal-rs when available on the build target.
-        // The MSL kernels (rmsnorm, fused-qkv-rope, sdpa-decode, gemv-simd-matrix)
-        // are already emitted by the MSL emitter. The execution bridge needs
-        // `WgpuPipeline::compile_msl` to be implemented with metal-rs.
-        log::info!("metal_mega_pass: not yet implemented on this build");
-        None
-    }
+    install_device_source();
+    etalon_inference::backends::metal_lane::try_metal_mega_pass(
+        n_embd,
+        n_head,
+        n_kv,
+        head_dim,
+        n_layer,
+        token_idx,
+        max_context,
+        layer_stride,
+        slot_kv_elems,
+        rope_base,
+        rope_scale,
+        rms_eps,
+        hidden,
+        layers,
+        layer_dims,
+        output_norm,
+        lm_head_raw,
+        lm_head_in,
+        lm_head_out,
+    )
 }
-
-/// Check if the Metal mega-pass is available on this platform.
 pub fn metal_mega_pass_available() -> bool {
-    cfg!(target_os = "macos")
+    install_device_source();
+    etalon_inference::backends::metal_lane::metal_mega_pass_available()
 }
-
-/// Warm the Metal context (pre-compile kernels, pre-allocate arenas).
-/// On non-Apple platforms, this is a no-op.
 pub fn warm_metal_context() {
-    #[cfg(target_os = "macos")]
-    {
-        // TODO: pre-compile MSL kernels and cache them
-    }
+    install_device_source();
+    etalon_inference::backends::metal_lane::warm_metal_context()
 }
-
-/// MSL double-buffered weight streaming: overlap H2D weight copies with
-/// compute using `MTLBlitCommandEncoder` on a separate Metal command buffer.
-/// This is the Metal equivalent of CUDA's `write_view_prefetch` + `join_prefetch`
-/// on a secondary stream.
-///
-/// **Architecture:**
-/// 1. Issue async H2D copies for next layer's weights via `MTLBlitCommandEncoder`
-///    on a dedicated command buffer (prefetch buffer).
-/// 2. Encode compute kernels for current layer on the main command buffer.
-/// 3. Insert a `MTLEvent` signal so compute waits for prefetch to complete.
-/// 4. Repeat for each layer — compute and prefetch overlap.
-///
-/// **Requirements:** `metal-rs` crate (macOS only). Not implementable on
-/// non-Apple platforms.
-pub fn metal_double_buffered_prefetch(_weight_data: &[u8], _dst_offset: u64) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        // TODO: implement via metal-rs MTLBlitCommandEncoder
-        false
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        false
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn metal_mega_pass_unavailable_on_non_macos() {
-        if cfg!(not(target_os = "macos")) {
-            assert!(!metal_mega_pass_available());
-            assert!(try_metal_mega_pass(
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0.0,
-                0.0,
-                0.0,
-                &[],
-                &[],
-                &[],
-                None,
-                None,
-                0,
-                0,
-            )
-            .is_none());
-        }
-    }
+pub fn metal_double_buffered_prefetch(weight_data: &[u8], dst_offset: u64) -> bool {
+    install_device_source();
+    etalon_inference::backends::metal_lane::metal_double_buffered_prefetch(weight_data, dst_offset)
 }

@@ -338,15 +338,11 @@ fn x() { return 0; }
 // ── Phase G: Golden corpus expansion ─────────────────────────────────────
 
 #[test]
-fn g1_tick_hook_loads_and_dispatches() {
+fn g1_tick_hook_rejects_transitive_external() {
+    // Unsafe legacy input is retained as a negative compatibility fixture.
     let src = include_str!("../fixtures/g1_tick_hook.vibe");
-    let program = load_program(src).expect("g1 fixture");
-    let mut host = LocalHost::default();
-    let mut env = Env::default();
-    let path = vec!["tick".to_string()];
-    let v = dispatch_hook(&program, &path, vec![], &mut host, &mut env).unwrap();
-    assert_eq!(v, Value::Null, "tick hook should return null: {v:?}");
-    assert_eq!(host.published, vec!["poet/tick".to_string()]);
+    let error = load_program(src).expect_err("must reject before dispatch");
+    assert_eq!(error.code, DiagCode::E200);
 }
 
 #[test]
@@ -928,21 +924,11 @@ fn r3_time_cell_clamps_score() {
 // ── Hook dispatch ───────────────────────────────────────────────────────────
 
 #[test]
-fn h1_tick_counter_publishes() {
+fn h1_tick_counter_rejects_transitive_external() {
+    // Unsafe legacy input is retained as a negative compatibility fixture.
     let src = include_str!("../fixtures/h1_tick_counter.vibe");
-    let program = load_program(src).expect("h1 fixture");
-    let mut host = LocalHost::default();
-    let mut env = Env::default();
-    let v = dispatch_hook(
-        &program,
-        &vec!["tick".to_string()],
-        vec![],
-        &mut host,
-        &mut env,
-    )
-    .unwrap();
-    assert_eq!(v, Value::Null);
-    assert_eq!(host.published, vec!["tick/count".to_string()]);
+    let error = load_program(src).expect_err("must reject before dispatch");
+    assert_eq!(error.code, DiagCode::E200);
 }
 
 #[test]
@@ -977,21 +963,11 @@ fn h2_pulse_filter_positive_only() {
 }
 
 #[test]
-fn h3_tick_time_publish_uses_time() {
+fn h3_tick_time_rejects_transitive_external() {
+    // Unsafe legacy input is retained as a negative compatibility fixture.
     let src = include_str!("../fixtures/h3_tick_time_publish.vibe");
-    let program = load_program(src).expect("h3 fixture");
-    let mut host = LocalHost::default();
-    let mut env = Env::default();
-    let v = dispatch_hook(
-        &program,
-        &vec!["tick".to_string()],
-        vec![],
-        &mut host,
-        &mut env,
-    )
-    .unwrap();
-    assert_eq!(v, Value::Null);
-    assert_eq!(host.published, vec!["time/tick".to_string()]);
+    let error = load_program(src).expect_err("must reject before dispatch");
+    assert_eq!(error.code, DiagCode::E200);
 }
 
 // ── Legal / Governance ──────────────────────────────────────────────────────
@@ -1213,13 +1189,11 @@ fn f3_var_calc_clamps_confidence() {
 // ── Negative (must-reject) fixtures ─────────────────────────────────────────
 
 #[test]
-fn n4_unknown_math_fn_runtime_error() {
+fn n4_unknown_math_fn_rejected_before_execution() {
+    // Unsafe legacy input is retained as a negative compatibility fixture.
     let src = include_str!("../fixtures/n4_unknown_math_fn.vibe");
-    let program = load_program(src).unwrap();
-    let mut host = LocalHost::default();
-    let mut env = Env::default();
-    let err = eval_function(&program, "bad", vec![], &mut host, &mut env).unwrap_err();
-    assert_eq!(err.code, DiagCode::E100);
+    let error = load_program(src).expect_err("must reject before dispatch");
+    assert_eq!(error.code, DiagCode::E200);
 }
 
 #[test]
@@ -3128,4 +3102,122 @@ fn cosmic4_cosmology_parses() {
 fn cosmic5_quantum_parses() {
     let src = include_str!("../fixtures/cosmic5_quantum.vibe");
     load_program(src).expect("cosmic5 fixture");
+}
+
+// ── Identifier Fabric plane-collapse guard conformance tests (Packet IDF-04) ──
+
+#[test]
+fn f5_a_collapse_did_to_who() {
+    let src = r#"
+fn bad_identity_binding() {
+    let who = "did:q42:sector:alpha:node7";
+    return who;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-A must reject collapsing did: into who");
+    let err = rep.error.as_ref().expect("expected F5-A diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-A\""));
+    assert!(fix.contains("\"plane\":\"NaturalAgent\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+    assert!(fix.contains("\"instrumentKind\":\"Did\""));
+}
+
+#[test]
+fn f5_b_vc_verified_as_objective_truth() {
+    let src = r#"
+fn bad_vc_truth(vc_verified: bool) {
+    let objective_truth = vc_verified;
+    return objective_truth;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-B must reject treating vc_verified as objective_truth");
+    let err = rep.error.as_ref().expect("expected F5-B diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-B\""));
+    assert!(fix.contains("\"plane\":\"ClaimOpinion\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"VerifiableCredential\""));
+}
+
+#[test]
+fn f5_c_qrc_observer_as_person_join_key() {
+    let src = r#"
+fn bad_qrc_person_join() {
+    let person_join_key = "did:q42:earth:sydney:cell9";
+    return person_join_key;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-C must reject using did:q42: QRC as person_join_key");
+    let err = rep.error.as_ref().expect("expected F5-C diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-C\""));
+    assert!(fix.contains("\"plane\":\"SpatiotemporalHandle\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"QrcCoordinate\""));
+}
+
+#[test]
+fn f5_d_biometric_instance_without_family_as_who() {
+    let src = r#"
+fn bad_biometric_identity(biometric_instance: str) {
+    let who = biometric_instance;
+    return who;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-D must reject single BiometricInstance as timeless who");
+    let err = rep.error.as_ref().expect("expected F5-D diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-D\""));
+    assert!(fix.contains("\"plane\":\"Instrument\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+    assert!(fix.contains("\"instrumentKind\":\"BiometricInstance\""));
+}
+
+#[test]
+fn f5_e_natural_agent_typed_as_thing() {
+    let src = r#"
+fn bad_living_ontology() {
+    let natural_agent_superclass = "owl:Thing";
+    return natural_agent_superclass;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-E must reject typing NaturalAgent as owl:Thing");
+    let err = rep.error.as_ref().expect("expected F5-E diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-E\""));
+    assert!(fix.contains("\"plane\":\"NaturalAgent\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+}
+
+#[test]
+fn f5_f_ai_agent_collapsed_to_person() {
+    let src = r#"
+fn bad_ai_person_collapse(ai_agent: str) {
+    let natural_person = ai_agent;
+    return natural_person;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-F must reject collapsing AiAgent into natural_person");
+    let err = rep.error.as_ref().expect("expected F5-F diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-F\""));
+    assert!(fix.contains("\"plane\":\"Instrument\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"MachineDeviceId\""));
+    assert!(fix.contains("\"instrumentKind\":\"MachineDeviceId\""));
+    let _ = ();
+    let _ = ();
 }

@@ -23,6 +23,7 @@ OUT = REPO / "docs" / "data" / "values-credentials.json"
 
 
 def first(pat, text, default=None):
+    """First match."""
     m = re.search(pat, text)
     return m.group(1) if m else default
 
@@ -34,6 +35,7 @@ def lit(pat, text, default=None):
 
 
 def main():
+    """CLI entry point."""
     manifest = json.loads((ROOT / "dist" / "q42" / "manifest.json").read_text("utf-8"))
     triples_by_vol = {v["source"]: v["triples"] for v in manifest["volumes"]}
 

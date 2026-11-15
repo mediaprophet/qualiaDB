@@ -26,7 +26,9 @@ impl WebizenHostApi {
     // record summary so the full object reconstructs on read; updates append a superseding version of
     // the same delegation id (latest-wins projection in `list_agency_delegations`).
 
-    /// Persist a delegation (create or supersede). Returns the committed journal entry.
+    /// Persist a delegation (create or supersede). Returns the checkpointed journal entry.
+    /// A checkpoint error can occur after the journal write; callers must reconcile the
+    /// stored record before retrying rather than assume that no write occurred.
     pub fn add_agency_delegation(
         &mut self,
         delegation: &AgencyDelegation,
@@ -45,7 +47,9 @@ impl WebizenHostApi {
             SOURCE_COOPERATIVE,
             Some(summary),
         )?;
-        self.finalize_batch().ok();
+        self.finalize_batch().map_err(|e| {
+            format!("agency delegation journal write completed but checkpoint failed; reconcile before retrying: {e}")
+        })?;
         self.list_journal_by_kind("agency_delegation", 1)?
             .into_iter()
             .next()

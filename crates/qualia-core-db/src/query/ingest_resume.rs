@@ -23,6 +23,7 @@ pub struct ResumeCursor {
 }
 
 impl ResumeCursor {
+    /// Loads a resumable cursor from `dir`; `None` when absent.
     pub fn load(dir: &Path) -> io::Result<Option<Self>> {
         let path = dir.join(RESUME_FILE);
         if !path.is_file() {
@@ -34,6 +35,7 @@ impl ResumeCursor {
         ))
     }
 
+    /// Atomically persists the cursor into `dir`.
     pub fn store(&self, dir: &Path) -> io::Result<()> {
         let path = dir.join(RESUME_FILE);
         let tmp = path.with_extension("json.tmp");
@@ -44,10 +46,12 @@ impl ResumeCursor {
     }
 }
 
+/// `true` when `fmt` parses line-by-line (ND/NT/NQ).
 pub fn format_is_line_oriented(fmt: IngestRdfFormat) -> bool {
     matches!(fmt, IngestRdfFormat::NTriples | IngestRdfFormat::NQuads)
 }
 
+/// `true` when `fmt` parses through the Prolog engine.
 pub fn format_uses_prolog(fmt: IngestRdfFormat) -> bool {
     matches!(
         fmt,
@@ -55,6 +59,7 @@ pub fn format_uses_prolog(fmt: IngestRdfFormat) -> bool {
     )
 }
 
+/// `true` when `fmt` supports byte-offset seeking.
 pub fn format_can_seek(fmt: IngestRdfFormat) -> bool {
     format_is_line_oriented(fmt) || format_uses_prolog(fmt)
 }
@@ -104,10 +109,12 @@ pub struct ByteCounter<R> {
 }
 
 impl<R> ByteCounter<R> {
+    /// Wraps `inner`, counting bytes read into `count`.
     pub fn new(inner: R, count: Arc<AtomicU64>) -> Self {
         Self { inner, count }
     }
 
+    /// Bytes read so far.
     pub fn count(&self) -> u64 {
         self.count.load(Ordering::Relaxed)
     }
@@ -132,6 +139,7 @@ pub struct PrefixCapture<R> {
 }
 
 impl<R> PrefixCapture<R> {
+    /// Wraps `inner`, capturing a bounded prefix for format sniffing.
     pub fn new(inner: R) -> Self {
         Self {
             inner,

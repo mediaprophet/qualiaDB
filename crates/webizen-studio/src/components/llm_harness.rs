@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
@@ -9,6 +9,7 @@ use webizen_studio::tauri_ffi::invoke;
 
 // The engine runs NATIVELY; this wasm UI only reads its telemetry over the Tauri invoke bridge.
 #[component]
+/// Aether `LlmHarness` component.
 pub fn LlmHarness() -> Element {
     let mut tokens_per_sec = use_signal(|| 0.0);
     let mut tok_source = use_signal(|| "none".to_string());

@@ -25,6 +25,7 @@ pub struct LedgerRecord {
 }
 
 impl LedgerRecord {
+    /// Constructs from snapshot.
     pub fn from_snapshot(snapshot: &SimulationSnapshot) -> Self {
         Self {
             epoch: snapshot.epoch,
@@ -44,6 +45,7 @@ pub struct ChannelLedgerSink {
 }
 
 impl ChannelLedgerSink {
+    /// Bounded constructor.
     pub fn bounded(capacity: usize) -> (Self, Receiver<LedgerRecord>) {
         let (sender, receiver) = crossbeam_channel::bounded(capacity);
         (Self { sender }, receiver)
@@ -89,6 +91,7 @@ where
     B: ComputeBackend,
     L: LedgerSink,
 {
+    /// Creates a new instance.
     pub fn new(
         timestep: Duration,
         config: DiffusionConfig,
@@ -109,6 +112,7 @@ where
         (kernel, snapshot_rx, command_tx)
     }
 
+    /// Advances by elapsed time.
     pub fn advance_elapsed(&mut self, elapsed: Duration) -> Result<usize, RuntimeError> {
         self.drain_control_plane()?;
         let ticks = self.clock.push_elapsed(elapsed);
@@ -118,14 +122,17 @@ where
         Ok(ticks)
     }
 
+    /// Latest snapshot.
     pub fn latest_snapshot(&self) -> Option<&SimulationSnapshot> {
         self.latest_snapshot.as_ref()
     }
 
+    /// Field.
     pub fn field(&self) -> DiffusionField {
         self.field
     }
 
+    /// Shared frames.
     pub fn shared_frames(&self) -> Option<SharedFrameBuffer> {
         self.backend.shared_frames()
     }

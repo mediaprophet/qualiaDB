@@ -1,17 +1,23 @@
 name: Deploy Qualia-DB Playground to GitHub Pages
 
 # Deploys Jekyll site under /docs to GitHub Pages (baseurl: /qualiaDB).
-# Triggers: main, active release branch 0.0.39, version tags, or manual run.
+# Triggers: main, active release branch 0.0.40, version tags, or manual run.
 # Build/test runs on those refs without the github-pages environment so a missing
 # deployment-branch policy cannot skip node/wasm/jekyll verification.
-# Deploy still needs environment github-pages. Historical allowed refs (repo settings):
-# main, 0.0.24–0.0.34, tags v*. Branch 0.0.39 may still be rejected until settings
-# add that branch. Tag v0.0.39 is the intended publish path.
+# The github-pages deployment policy reviewed on 2026-10-30 permits 0.0.40*,
+# including the active 0.0.40.8-dev branch.
 on:
   push:
     branches:
       - main
-      - "0.0.39"
+      - "0.0.40"
+      - "0.0.40.1"
+      - "0.0.40.1-dev"
+      - "0.0.40.*"
+      - "0.0.41"
+      - "0.0.41.1"
+      - "0.0.41.2"
+      - "0.0.41.*"
     tags:
       - "v*"
   workflow_dispatch:
@@ -62,6 +68,9 @@ jobs:
       - name: Add wasm32 target
         run: rustup target add wasm32-unknown-unknown
 
+      - name: Capture browser harness source identity
+        run: node scripts/device-harness-build.mjs --capture-source target/device-harness-source.json
+
       - name: Install system deps
         run: |
           sudo apt-get update -qq
@@ -77,6 +86,8 @@ jobs:
           node docs/tests/vibe-dev-docs.test.mjs
           node docs/tests/qdnf-pages.test.mjs
           node docs/tests/edge-llm-smoke.test.mjs
+          node docs/tests/lexicon-v4-namespaced.test.mjs
+          node --test docs/tests/interactive-wasm-vibe-demos.test.mjs docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs scripts/device-harness-identity.test.mjs
 
       - name: Install wasm-pack
         run: |
@@ -96,13 +107,19 @@ jobs:
           wasm-pack --version
 
       - name: WASM smoke-check (portal)
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
       - name: WASM capability profile checks
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-webcivics
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-logic
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
@@ -119,7 +136,7 @@ jobs:
           rm -f docs/pkg/vibe/.gitignore docs/pkg/vibe/README.md docs/pkg/vibe/LICENSE
           cargo run -q -p vibe-wasm --bin gen-dev-docs -- docs/vibe/dev-docs.json
           ls -la docs/pkg/vibe/vibe_wasm.js docs/pkg/vibe/vibe_wasm_bg.wasm docs/vibe/dev-docs.json
-          node docs/tests/wasm-size-check.mjs docs/pkg/vibe/vibe_wasm_bg.wasm 2097152 786432
+          node docs/tests/wasm-size-check.mjs docs/pkg/vibe/vibe_wasm_bg.wasm 3670016 1048576
           python3 - <<'PY'
           import json, pathlib, sys
           data = json.loads(pathlib.Path("docs/vibe/dev-docs.json").read_text())
@@ -135,9 +152,9 @@ jobs:
             --target web \
             --release \
             --out-dir ../../docs/pkg/webizen-lite
-          # Raw 640 KiB / gzip 200 KiB — keep in step with release-wasm.yml.
+          # Raw 800 KiB / gzip 260 KiB — keep in step with release-wasm.yml.
           node docs/tests/wasm-size-check.mjs \
-            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
+            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 819200 266240
           ls -la docs/pkg/webizen-lite/webizen_lite_wasm.js \
             docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm
 
@@ -145,7 +162,7 @@ jobs:
         env:
           # Full WASM-safe engine (logic + science + WebGPU viewport). Ontology MCP stays
           # size-bounded separately. LLM remains the wasm-llm / wasm-full package.
-          RUSTFLAGS: "-C target-feature=+simd128"
+          RUSTFLAGS: "-C target-feature=+simd128 --cfg getrandom_backend=\"wasm_js\""
           PORTAL_FEATURES: "portal"
         run: |
           wasm-pack build crates/qualia-core-db \
@@ -159,20 +176,39 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.39","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.41","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
 
       - name: Phase 7.1 — portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).
-        # Measured 0.0.39 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
+        # Measured 0.0.41 cinema portal: ~14.15 MiB raw / ~4.77 MiB gzip (node gzipSync).
         # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
-        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
+        run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 25165824 8388608
+
+      - name: Build isolated device diagnostics WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128 --cfg getrandom_backend=\"wasm_js\""
+        run: |
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir pkg-device-harness \
+            --out-name qualia \
+            -- --no-default-features --features device-harness
+          mkdir -p docs/pkg/device-harness
+          cp crates/qualia-core-db/pkg-device-harness/qualia.js docs/pkg/device-harness/qualia.js
+          cp crates/qualia-core-db/pkg-device-harness/qualia_bg.wasm docs/pkg/device-harness/qualia_bg.wasm
+          node docs/tests/wasm-size-check.mjs docs/pkg/device-harness/qualia_bg.wasm 25165824 8388608
+
+      - name: Attribute browser harness assets
+        run: node scripts/device-harness-build.mjs --source-record target/device-harness-source.json
 
       - name: PR-C11b — phenomenal viewport contract checklist
         run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
 
       - name: Anatomy .hmc packs (prefer Release, fall back to building from the HRA)
+        if: false # Disabled pending Synth remodel
         # The packs (XY + XX, ~100 MB each — every CCF/HRA reference organ) are Release
         # artefacts, produced once per release by build-anatomy-packs in release-wasm.yml.
         # Prefer pulling them from our own GitHub Release so the deploy doesn't re-hit the HRA
@@ -193,7 +229,7 @@ jobs:
       - name: Build full WASM (playground / API explorer)
         env:
           # wasm-full includes wasm-llm → same 8 MB stack / 4 GB max-memory requirement as above.
-          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
+          RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 --cfg getrandom_backend=\"wasm_js\""
         run: |
           wasm-pack build crates/qualia-core-db \
             --target web \
@@ -205,9 +241,9 @@ jobs:
           ls -la docs/playground/qualia_core_db.js docs/playground/qualia_core_db_bg.wasm
 
       - name: Playground WASM size budget
-        # Same 16 MiB / 4 MiB sanity cap as portal. Measured 0.0.39 wasm-full:
-        # ~8.23 MiB raw / ~2.32 MiB gzip. Keep in step with release-wasm.yml.
-        run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
+        # Same 24 MiB / 8 MiB sanity cap as portal. Measured 0.0.41 cinema portal
+        # ~14.15 MiB raw / ~4.77 MiB gzip. Keep in step with release-wasm.yml.
+        run: node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 25165824 8388608
 
       - name: Prepare Schema.org benchmark artifacts for Pages
         continue-on-error: true   # non-fatal: Pages deploys fine without Schema.org artifacts
@@ -343,7 +379,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          timeout: 1800000

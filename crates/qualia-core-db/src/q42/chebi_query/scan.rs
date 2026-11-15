@@ -15,6 +15,7 @@ pub struct PredHashes {
 }
 
 impl PredHashes {
+    /// Loads from storage.
     pub fn load() -> Self {
         Self {
             accession: q_hash(PRED_ACCESSION),
@@ -39,6 +40,7 @@ pub struct CompoundView {
 }
 
 impl CompoundView {
+    /// Uncertainty margin.
     pub fn uncertainty(self) -> Uncertainty {
         if !self.has_accession {
             return Uncertainty::Unknown;

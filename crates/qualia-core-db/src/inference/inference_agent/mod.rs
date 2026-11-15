@@ -3,15 +3,17 @@
 // This crate implements the AgentRuntime trait and the Webizen-gated message
 // protocol that governs every LLM interaction under the Principal-Agent Duty of Care.
 //
-// Architecture:
-//   Principal (Natural Person)
-//     └── qualiaDB Webizen VM  ← GATEKEEPER (validates all I/O)
+// Intended normal-runtime authority:
+//   Acting subject (currently Human, SoftwareAgent, or Organization), with
+//   independently admitted identifier associations and controller authority
+//     └── qualiaDB Webizen VM — human-centric policy and token acceptance
 //           └── LlmAgent (AgentRuntime impl)
 //                 ├── Backend::Local  (llama.cpp / WebLLM / ONNX)
 //                 ├── Backend::Remote (Nym-tunnelled, ILP-metered, user-consented)
 //                 └── Backend::Hybrid (local first, remote fallback with consent)
 //
-// CRITICAL CONSTRAINT: All paths enforce:
+// Required runtime constraints (the governed foundation is implemented; legacy
+// decoder/browser acceptance paths still require the tracked G3 integration):
 //   - Zero outbound telemetry
 //   - All outputs must be cited to a NQuin provenance chain
 //   - Webizen validates I/O before touching the semantic graph
@@ -37,14 +39,22 @@ pub use crate::modalities::logic::n3_compiler::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-mod sticky_infer;
+pub mod sticky_infer;
 
 mod config;
 mod control;
+pub mod governed;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod governed_cpu;
 mod decode;
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod decode_helpers;
 mod local_agent;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native_request;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod prefill_executor;
+pub mod prefix_cache;
 mod runtime;
 mod types;
 mod validation;
@@ -52,6 +62,8 @@ mod validation;
 pub use config::*;
 pub use control::*;
 pub use local_agent::*;
+#[cfg(not(target_arch = "wasm32"))]
+pub use native_request::{NativeDecodeRequest, NativePreparedReceipt};
 pub use types::*;
 
 #[cfg(test)]

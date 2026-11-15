@@ -9,6 +9,7 @@ LAYOUT_LINK = '<link rel="stylesheet" href="{{ \'/css/tailwind-built.css\' | rel
 
 
 def css_href(html_path: Path) -> str:
+    """CSS href."""
     rel = html_path.relative_to(DOCS)
     depth = len(rel.parts) - 1  # index.html -> 0, playground/x.html -> 1
     prefix = "../" * depth if depth else ""
@@ -16,6 +17,7 @@ def css_href(html_path: Path) -> str:
 
 
 def main() -> None:
+    """CLI entry point."""
     changed = 0
     for path in DOCS.rglob("*.html"):
         if "init-draft-standards" in str(path):

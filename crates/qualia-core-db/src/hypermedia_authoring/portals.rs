@@ -30,6 +30,7 @@ pub struct PhysicsConfig {
 }
 
 impl World {
+    /// Named world with `id` (default ±1000 bounds, empty).
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -49,26 +50,32 @@ impl World {
         }
     }
 
+    /// Add an object to the world.
     pub fn add_object(&mut self, obj: WorldObject) {
         self.objects.insert(obj.id.clone(), obj);
     }
 
+    /// Add an inter-world portal.
     pub fn add_portal(&mut self, portal: Portal) {
         self.portals.insert(portal.id.clone(), portal);
     }
 
+    /// Add a resident avatar.
     pub fn add_avatar(&mut self, avatar: Avatar) {
         self.avatars.insert(avatar.id.clone(), avatar);
     }
 
+    /// Set the world's gravity vector.
     pub fn set_gravity(&mut self, x: f32, y: f32, z: f32) {
         self.physics_config.gravity = [x, y, z];
     }
 
+    /// Number of objects in the world.
     pub fn object_count(&self) -> usize {
         self.objects.len()
     }
 
+    /// Number of portals in the world.
     pub fn portal_count(&self) -> usize {
         self.portals.len()
     }
@@ -98,6 +105,7 @@ pub enum Collider {
 }
 
 impl WorldObject {
+    /// Named physics object with `id` at the origin.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -113,18 +121,23 @@ impl WorldObject {
         }
     }
 
+    /// Set object position.
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) {
         self.position = [x, y, z];
     }
 
+    /// Set linear velocity.
     pub fn set_velocity(&mut self, x: f32, y: f32, z: f32) {
         self.velocity = [x, y, z];
     }
 
+    /// Set mass (kg); static objects use 0 conventions per the
+    /// physics step.
     pub fn set_mass(&mut self, mass: f32) {
         self.mass = mass.max(0.0);
     }
 
+    /// Assign a collider shape.
     pub fn set_collider(&mut self, collider: Collider) {
         self.collider = collider;
     }
@@ -169,6 +182,7 @@ pub struct Portal {
 }
 
 impl Portal {
+    /// Portal at the origin linking to `target_world`.
     pub fn new(id: &str, target_world: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -181,19 +195,23 @@ impl Portal {
         }
     }
 
+    /// Set portal position in the source world.
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) {
         self.position = [x, y, z];
     }
 
+    /// Set the target world and landing coordinates.
     pub fn set_target(&mut self, world: &str, x: f32, y: f32, z: f32) {
         self.target_world = world.to_string();
         self.target_position = [x, y, z];
     }
 
+    /// Activate the portal (traversable).
     pub fn activate(&mut self) {
         self.active = true;
     }
 
+    /// Deactivate the portal.
     pub fn deactivate(&mut self) {
         self.active = false;
     }
@@ -226,6 +244,7 @@ pub enum MovementMode {
 }
 
 impl Avatar {
+    /// Avatar bound to `user_did` at the origin.
     pub fn new(id: &str, user_did: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -241,14 +260,17 @@ impl Avatar {
         }
     }
 
+    /// Teleport the avatar to a position.
     pub fn move_to(&mut self, x: f32, y: f32, z: f32) {
         self.position = [x, y, z];
     }
 
+    /// Set locomotion mode (walk/fly/etc).
     pub fn set_movement_mode(&mut self, mode: MovementMode) {
         self.movement_mode = mode;
     }
 
+    /// Set avatar model id, height, and scale.
     pub fn set_appearance(&mut self, model_id: &str, height: f32, scale: f32) {
         self.appearance.model_id = Some(model_id.to_string());
         self.appearance.height = height;

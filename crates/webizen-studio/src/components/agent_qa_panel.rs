@@ -2,9 +2,10 @@
 
 use crate::components::settings::host::invoke_json;
 use crate::components::settings::types::{AgentQaModelProbe, AgentQaSnapshot};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `AgentQaPanel` component.
 pub fn AgentQaPanel() -> Element {
     let mut snapshot = use_signal(|| Option::<AgentQaSnapshot>::None);
     let mut probe = use_signal(|| Option::<AgentQaModelProbe>::None);

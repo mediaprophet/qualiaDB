@@ -4,6 +4,7 @@ use super::super::args;
 use crate::specialized_libs::computer_vision::{ahash_u64, GrayView};
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: average-hash.
 pub fn ahash(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let bytes = args::rec(args_v, "bytes")
         .and_then(args::u8s)

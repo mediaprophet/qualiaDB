@@ -15,7 +15,7 @@ use super::host_client::{
     list_consent_credentials, open_owner_payload, owner_envelope_public, record_conduct,
     revoke_consent_credential, seal_and_grant_credential,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// A 32-byte all-zero commitment (64 hex chars) — a usable default until the vault supplies a real one.
 const DEFAULT_COMMITMENT_HEX: &str =
@@ -39,6 +39,7 @@ fn str_field(v: &serde_json::Value, key: &str) -> String {
 }
 
 #[component]
+/// Aether `WellfairAccountabilityPanel` component.
 pub fn WellfairAccountabilityPanel() -> Element {
     // Ledger state.
     let mut ledger = use_signal(Vec::<serde_json::Value>::new);

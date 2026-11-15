@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualia-Audio Showcase · Spatial HRTF &amp; Acoustic Features | QualiaDB</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; background: #070a10; color: #e2e8f0; }
+        .glass { background: rgba(17, 23, 31, 0.78); border: 1px solid rgba(148, 163, 184, 0.14); backdrop-filter: blur(20px); }
+        .code-block { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; background: rgba(5, 8, 14, 0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0.9rem; overflow-x: auto; }
+    </style>
+    <script src="js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8 flex items-center justify-between min-h-[4rem] py-2">
+            <a href="index.html" class="flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 bg-gradient-to-br from-amber-500 to-rose-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">Q</span></div>
+                <span class="font-semibold tracking-tight text-xl hidden sm:inline">Qualia<span class="text-amber-400">Audio</span></span>
+            </a>
+            <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+        </div>
+    </nav>
+
+    <main class="max-w-screen-2xl mx-auto px-4 sm:px-8 py-10 space-y-8">
+        <header class="glass rounded-3xl p-8 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25 text-xs font-semibold mb-4">
+                <i class="fa-solid fa-waveform-lines"></i>
+                <span>qualia-audio · Holosonic HRTF, Ambisonics &amp; Acoustic Features</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-3">Qualia-Audio &amp; Spatial HRTF</h1>
+            <p class="text-white/65 max-w-3xl mx-auto text-sm sm:text-base">
+                Pure-Rust binaural <strong>HRTF</strong> synthesis, spherical-harmonic <strong>Ambisonic B-format</strong> encoding, modal/Woodhouse physical modeling, and zero-heap spectral feature extraction (STFT/CQT/MFCC). Also featured live in <a href="graphics.html" class="text-amber-300 hover:underline">graphics.html (Mode 6)</a>.
+            </p>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass rounded-2xl p-6 space-y-2">
+                <div class="text-amber-400 font-semibold"><i class="fa-solid fa-headphones mr-2"></i>Binaural HRTF</div>
+                <p class="text-sm text-white/70">Spherical coordinate ITD/ILD filtering with biquad pinna-notch modeling for 3D spatial localization in native and WASM.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 space-y-2">
+                <div class="text-rose-400 font-semibold"><i class="fa-solid fa-compass mr-2"></i>Ambisonics &amp; Modal</div>
+                <p class="text-sm text-white/70">First/higher-order Ambisonic B-format soundfields and Woodhouse modal synthesis coupled to <code>etalon-signal</code>.</p>
+            </div>
+            <div class="glass rounded-2xl p-6 space-y-2">
+                <div class="text-cyan-400 font-semibold"><i class="fa-solid fa-chart-area mr-2"></i>Acoustic Features</div>
+                <p class="text-sm text-white/70">Radix-2 FFT/STFT, CQT, and <code>sigma_to_center_frequency_hz</code> mapping from <code>Q42EMF64</code> spectral cells.</p>
+            </div>
+        </section>
+
+        <section class="glass rounded-2xl p-6 space-y-3">
+            <h2 class="text-xl font-semibold">VibeScript Spatial Audio Invocation</h2>
+            <pre class="code-block text-amber-300">requires [capability("hypermedia.acoustics.synthesize_hrtf")];
+let binaural = capability.invoke("hypermedia.acoustics.synthesize_hrtf", {
+    azimuth_deg: 35.0,
+    elevation_deg: 12.0,
+    distance_m: 1.8,
+    sample_rate: 48000
+});</pre>
+        </section>
+    </main>
+</body>
+</html>

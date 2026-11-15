@@ -18,6 +18,9 @@ pub struct JsonLdFlatTriple {
     pub o: String,
 }
 
+/// Parses a JSON array of flat `{s,p,o}` triples and returns them as a JS
+/// array of `{subject,predicate,object}` objects; `JsValue::NULL` on parse
+/// failure.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_json_wasm(payload: &str) -> JsValue {
@@ -74,6 +77,8 @@ pub struct CsvFieldMapping {
     pub datatype: String, // "integer", "float", "datetime", "string"
 }
 
+/// Parses CSV text per `CsvParseParams` field mappings into Quins via
+/// `csv_parser::parse_csv_to_quins`, returning them as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -157,6 +162,8 @@ pub struct JsonFieldMapping {
     pub datatype: String, // "integer", "float", "datetime", "string"
 }
 
+/// Parses JSON records per a mapping profile (JSONPath-ish field → predicate)
+/// into Quins, returned as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_json_mapping_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -231,6 +238,8 @@ pub struct CsvSerializeParams {
     pub datatypes: Vec<String>,
 }
 
+/// Serializes the given Quins to CSV text following the provided column
+/// profile, returned as a JS string.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn serialize_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -293,6 +302,8 @@ pub struct JsonSerializeParams {
     pub datatypes: Vec<String>,
 }
 
+/// Serializes the given Quins to a JSON payload following the provided
+/// mapping profile, returned as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn serialize_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -343,4 +354,457 @@ pub fn serialize_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     Ok(serde_wasm_bindgen::to_value(&SerializeResult {
         json_data: String::from_utf8(json_output).map_err(|e| JsValue::from_str(&e.to_string()))?,
     })?)
+}
+
+/// Parse and compile a yaml-ld-q42 document (workspace pages or HCF HypermediaDocument) into quins and lexicon.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn parse_yaml_ld_q42_wasm(
+    source: &str,
+    namespace: Option<u64>,
+    lamport: Option<u64>,
+) -> Result<JsValue, JsValue> {
+    let (quins, lexicon, variant) = crate::yaml_ld_q42::compile_yaml_ld_q42_auto(
+        source.as_bytes(),
+        namespace.unwrap_or(0),
+        lamport.unwrap_or(0),
+    )
+    .map_err(|e| JsValue::from_str(&e))?;
+
+    #[derive(Serialize)]
+    struct YamlLdResult {
+        variant: String,
+        quin_count: usize,
+        lexicon_count: usize,
+        quins: Vec<[u64; 6]>,
+        lexicon: Vec<(String, String)>,
+    }
+
+    let quins_out: Vec<[u64; 6]> = quins
+        .iter()
+        .map(|q| {
+            [
+                q.subject,
+                q.predicate,
+                q.object,
+                q.context,
+                q.metadata,
+                q.parity,
+            ]
+        })
+        .collect();
+
+    let lexicon_out: Vec<(String, String)> = lexicon
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+
+    Ok(serde_wasm_bindgen::to_value(&YamlLdResult {
+        variant: variant.to_string(),
+        quin_count: quins_out.len(),
+        lexicon_count: lexicon_out.len(),
+        quins: quins_out,
+        lexicon: lexicon_out,
+    })?)
+}
+
+// ─── Canonical HMC Bundle (QBDL) WASM Bridge (QG-01) ───────────────────────
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Serialize)]
+pub struct HmcEntryInfo {
+    pub key: String,
+    pub kind: String,
+    pub offset: u64,
+    pub length: u64,
+}
+
+/// Lists the entries (key, kind, offset, length) of an HMC bundle as a JS
+/// array; errors when the bundle fails to parse.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn list_hmc_bundle_entries_wasm(bundle_bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let reader = crate::bundle::BundleReader::parse(bundle_bytes)
+        .map_err(|e| JsValue::from_str(&format!("HMC parse error: {e}")))?;
+    let entries: Vec<HmcEntryInfo> = reader
+        .entries()
+        .iter()
+        .map(|e| HmcEntryInfo {
+            key: e.key.clone(),
+            kind: e.kind.clone(),
+            offset: e.offset,
+            length: e.length,
+        })
+        .collect();
+    Ok(serde_wasm_bindgen::to_value(&entries)?)
+}
+
+/// Reads entry `key` from an HMC bundle, verifying its checksum before
+/// returning the raw bytes; errors on parse failure, missing key, or checksum
+/// mismatch.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn read_hmc_bundle_entry_wasm(bundle_bytes: &[u8], key: &str) -> Result<Vec<u8>, JsValue> {
+    let reader = crate::bundle::BundleReader::parse(bundle_bytes)
+        .map_err(|e| JsValue::from_str(&format!("HMC parse error: {e}")))?;
+    let slice = reader
+        .get(key)
+        .ok_or_else(|| JsValue::from_str(&format!("HMC entry not found: {key}")))?;
+    if !reader.verify_entry(key) {
+        return Err(JsValue::from_str(&format!(
+            "HMC entry checksum mismatch: {key}"
+        )));
+    }
+    Ok(slice.to_vec())
+}
+
+// ─── Mutable Q42 Session WASM Bridge (QG-15) ────────────────────────────────
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub struct WasmQ42Session {
+    inner: crate::q42::journal::MutableQ42Session<std::io::Cursor<Vec<u8>>>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl WasmQ42Session {
+    /// Creates a new durable Q42 session for `world_did_hash` over an
+    /// in-memory journal; `base_digest_bytes` supplies the 32-byte base digest
+    /// (shorter inputs error).
+    #[wasm_bindgen(constructor)]
+    pub fn new(world_did_hash: u64, base_digest_bytes: &[u8]) -> Result<WasmQ42Session, JsValue> {
+        if base_digest_bytes.len() < 32 {
+            return Err(JsValue::from_str("base_digest must be at least 32 bytes"));
+        }
+        let mut digest = [0u8; 32];
+        digest.copy_from_slice(&base_digest_bytes[0..32]);
+        let header = crate::q42::journal::JournalHeader::new(
+            crate::q42::journal::JournalApplicationProfile::GenericSemantic,
+            world_did_hash,
+            digest,
+            1,
+        );
+        let storage = std::io::Cursor::new(Vec::new());
+        let journal = crate::q42::journal::Q42Journal::create(storage, header)
+            .map_err(|e| JsValue::from_str(&format!("Journal create error: {e}")))?;
+        let session = crate::q42::journal::MutableQ42Session::open(journal, &[])
+            .map_err(|e| JsValue::from_str(&format!("Session open error: {e}")))?;
+        Ok(WasmQ42Session { inner: session })
+    }
+
+    /// Load an existing durable Q42 session from journal bytes and optional base Quin snapshot bytes.
+    pub fn load_from_bytes(
+        journal_bytes: &[u8],
+        base_quins_bytes: &[u8],
+    ) -> Result<WasmQ42Session, JsValue> {
+        let mut base_quins = Vec::new();
+        if !base_quins_bytes.is_empty() {
+            for chunk in base_quins_bytes.chunks_exact(48) {
+                let q = crate::q42::journal::quin_from_bytes(chunk)
+                    .map_err(|e| JsValue::from_str(&format!("Invalid base quin: {e}")))?;
+                base_quins.push(q);
+            }
+        }
+        let storage = std::io::Cursor::new(journal_bytes.to_vec());
+        let journal = crate::q42::journal::Q42Journal::open_any(storage)
+            .map_err(|e| JsValue::from_str(&format!("Failed to open journal: {e}")))?;
+        let session = crate::q42::journal::MutableQ42Session::open(journal, &base_quins)
+            .map_err(|e| JsValue::from_str(&format!("Failed to open session: {e}")))?;
+        Ok(WasmQ42Session { inner: session })
+    }
+
+    /// Stages an add of the quin built from `(s,p,o,c,m)` — parity is computed
+    /// as the XOR fold — into the current transaction.
+    pub fn stage_add_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
+        let parity = s ^ p ^ o ^ c ^ m;
+        self.inner.stage_add(crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: c,
+            metadata: m,
+            parity,
+        });
+    }
+
+    /// Stages a remove of the quin built from `(s,p,o,c,m)` (XOR-fold parity
+    /// computed) in the current transaction.
+    pub fn stage_remove_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
+        let parity = s ^ p ^ o ^ c ^ m;
+        self.inner.stage_remove(crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: c,
+            metadata: m,
+            parity,
+        });
+    }
+
+    /// Discards all staged adds/removes in the open transaction.
+    pub fn rollback_staged(&mut self) {
+        self.inner.rollback_staged();
+    }
+
+    /// Commits staged mutations to the journal under `command_hash`/`actor_did`
+    /// provenance; returns the committed tick/sequence.
+    pub fn commit_transaction(
+        &mut self,
+        command_hash: u64,
+        actor_did: u64,
+    ) -> Result<u32, JsValue> {
+        self.inner
+            .commit_transaction(command_hash, actor_did)
+            .map_err(|e| JsValue::from_str(&format!("Commit error: {e}")))
+    }
+
+    /// Number of quins in the session's active state.
+    pub fn active_quin_count(&self) -> usize {
+        self.inner.active_state.len()
+    }
+
+    /// Exports the underlying journal's raw bytes (durable serialization).
+    pub fn export_journal_bytes(&self) -> Vec<u8> {
+        self.inner.journal.storage.get_ref().clone()
+    }
+
+    /// Export all currently active Quins as a flat contiguous 48-byte buffer.
+    pub fn export_active_quins_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.inner.active_state.len() * 48);
+        for q in &self.inner.active_state {
+            bytes.extend_from_slice(&crate::q42::journal::quin_to_bytes(q));
+        }
+        bytes
+    }
+
+    /// Check if a Quin matching the given pattern exists in the active session (0 = wildcard).
+    pub fn query_has_quin(&self, s: u64, p: u64, o: u64) -> bool {
+        for q in &self.inner.active_state {
+            if (s == 0 || q.subject == s)
+                && (p == 0 || q.predicate == p)
+                && (o == 0 || q.object == o)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Query the object value for a given (subject, predicate) pair.
+    pub fn query_object_for_predicate(&self, s: u64, p: u64) -> Option<u64> {
+        for q in &self.inner.active_state {
+            if q.subject == s && q.predicate == p {
+                return Some(q.object);
+            }
+        }
+        None
+    }
+
+    /// Rewind session state to a specific simulation/historical tick.
+    pub fn rewind_to_tick(
+        &mut self,
+        base_quins_bytes: &[u8],
+        target_tick: u64,
+    ) -> Result<(), JsValue> {
+        let mut base_quins = Vec::new();
+        if !base_quins_bytes.is_empty() {
+            for chunk in base_quins_bytes.chunks_exact(48) {
+                let q = crate::q42::journal::quin_from_bytes(chunk)
+                    .map_err(|e| JsValue::from_str(&format!("Invalid base quin: {e}")))?;
+                base_quins.push(q);
+            }
+        }
+        self.inner
+            .rewind_to_tick(&base_quins, target_tick)
+            .map_err(|e| JsValue::from_str(&format!("Rewind error: {e}")))
+    }
+
+    /// The session's current logical tick.
+    pub fn current_tick(&self) -> u64 {
+        self.inner.current_tick()
+    }
+
+    /// Advances the session clock to `tick` (Lamport-style; must be monotone).
+    pub fn advance_tick(&mut self, tick: u64) {
+        self.inner.advance_tick(tick);
+    }
+}
+
+// ─── Fixed-Tick Simulation Engine WASM Bridge (QG-09) ───────────────────────
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub struct WasmSimulationWorld {
+    inner: crate::simulation::fixed_tick::FixedTickWorld<64, 256>,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+impl WasmSimulationWorld {
+    /// Creates a deterministic fixed-tick simulation world with RNG `seed`.
+    #[wasm_bindgen(constructor)]
+    pub fn new(seed: u64) -> WasmSimulationWorld {
+        WasmSimulationWorld {
+            inner: crate::simulation::fixed_tick::FixedTickWorld::new(seed),
+        }
+    }
+
+    /// Registers `entity_id` at position `(x_mm, y_mm)`; `false` if the entity
+    /// table is full.
+    pub fn register_agent(&mut self, entity_id: u64, x_mm: i64, y_mm: i64) -> bool {
+        self.inner.register_agent(entity_id, x_mm, y_mm)
+    }
+
+    /// Queues a `SimulationCommand` for `target_tick`; rejected commands
+    /// return a JS error describing the rejection reason.
+    pub fn submit_command(
+        &mut self,
+        target_tick: u64,
+        sequence: u32,
+        actor_did: u64,
+        command_opcode: u16,
+        target_entity: u64,
+        arg0: i64,
+        arg1: i64,
+    ) -> Result<(), JsValue> {
+        let cmd = crate::simulation::fixed_tick::SimulationCommand {
+            target_tick,
+            sequence,
+            actor_did,
+            command_opcode,
+            target_entity,
+            arg0,
+            arg1,
+        };
+        self.inner
+            .submit_command(cmd)
+            .map_err(|e| JsValue::from_str(&format!("Command rejected: {e:?}")))
+    }
+
+    /// Advances the simulation one tick, draining the command queue; returns
+    /// the number of receipts produced.
+    pub fn step_tick(&mut self) -> usize {
+        let mut receipts = [crate::simulation::fixed_tick::CommandReceipt::Rejected {
+            tick: 0,
+            command_hash: 0,
+            reason: crate::simulation::fixed_tick::RejectionReason::InvalidTick,
+        }; 16];
+        self.inner.step_tick(&mut receipts)
+    }
+
+    /// Deterministic hash of the world state (for replay verification).
+    pub fn compute_state_hash(&self) -> u64 {
+        self.inner.compute_state_hash()
+    }
+
+    /// The current simulation tick.
+    pub fn current_tick(&self) -> u64 {
+        self.inner.current_tick
+    }
+
+    /// X position of `entity_id` in millimetres, or `None` if unregistered.
+    pub fn get_agent_pos_x_mm(&self, entity_id: u64) -> Option<i64> {
+        self.inner.get_agent_position(entity_id).map(|(x, _)| x)
+    }
+
+    /// Y position of `entity_id` in millimetres, or `None` if unregistered.
+    pub fn get_agent_pos_y_mm(&self, entity_id: u64) -> Option<i64> {
+        self.inner.get_agent_position(entity_id).map(|(_, y)| y)
+    }
+
+    /// Spatial box query returning matching entity IDs as strings (for u64 JS precision).
+    pub fn query_agents_in_bounds(
+        &self,
+        min_x_mm: i64,
+        min_y_mm: i64,
+        max_x_mm: i64,
+        max_y_mm: i64,
+    ) -> Vec<String> {
+        let mut out_ids = [0u64; 64];
+        let count =
+            self.inner
+                .query_agents_in_bounds(min_x_mm, min_y_mm, max_x_mm, max_y_mm, &mut out_ids);
+        out_ids[..count].iter().map(|id| id.to_string()).collect()
+    }
+
+    /// Deterministic 2D grid pathfinder (QG-11).
+    /// Returns interleaved waypoint coordinates: [x0, y0, x1, y1, ...].
+    pub fn find_path_grid(
+        &self,
+        start_x: i32,
+        start_y: i32,
+        target_x: i32,
+        target_y: i32,
+        obstacles: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Vec<i32> {
+        let mut nav = crate::simulation::navigation::NavigationGrid::<128, 128>::new();
+        nav.width = width.min(128);
+        nav.height = height.min(128);
+        let copy_len = obstacles.len().min(nav.width * nav.height);
+        nav.cells[..copy_len].copy_from_slice(&obstacles[..copy_len]);
+
+        let mut out_path = [(0i32, 0i32); 128];
+        let len = nav.find_path((start_x, start_y), (target_x, target_y), &mut out_path);
+        let mut flat = Vec::with_capacity(len * 2);
+        for i in 0..len {
+            flat.push(out_path[i].0);
+            flat.push(out_path[i].1);
+        }
+        flat
+    }
+
+    /// Compute group formation destinations for `count` agents (QG-11).
+    /// Returns interleaved destination coordinates: [x0, y0, x1, y1, ...].
+    pub fn compute_group_formation(
+        &self,
+        target_x: i32,
+        target_y: i32,
+        count: usize,
+        obstacles: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Vec<i32> {
+        let mut nav = crate::simulation::navigation::NavigationGrid::<128, 128>::new();
+        nav.width = width.min(128);
+        nav.height = height.min(128);
+        let copy_len = obstacles.len().min(nav.width * nav.height);
+        nav.cells[..copy_len].copy_from_slice(&obstacles[..copy_len]);
+
+        let mut out_dests = [(0i32, 0i32); 64];
+        let written = nav.compute_group_formation_destinations(
+            target_x,
+            target_y,
+            count.min(64),
+            &mut out_dests,
+        );
+        let mut flat = Vec::with_capacity(written * 2);
+        for i in 0..written {
+            flat.push(out_dests[i].0);
+            flat.push(out_dests[i].1);
+        }
+        flat
+    }
+}
+
+// ─── Ontological Entity Verification (.10d & .hmc) ───────────────────────────
+
+/// Runs ontological entity verification over a `.10d` container and returns
+/// the report as a JS value (`NULL` on serialization failure).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn entity_verify_10d_wasm(bytes: &[u8]) -> JsValue {
+    let report = crate::bundle::entity_verifier::verify_entity_10d(bytes);
+    serde_wasm_bindgen::to_value(&report).unwrap_or(JsValue::NULL)
+}
+
+/// Runs ontological entity verification over an `.hmc` bundle and returns
+/// the report as a JS value (`NULL` on serialization failure).
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn entity_verify_bundle_wasm(bytes: &[u8]) -> JsValue {
+    let report = crate::bundle::entity_verifier::verify_entity_bundle(bytes);
+    serde_wasm_bindgen::to_value(&report).unwrap_or(JsValue::NULL)
 }

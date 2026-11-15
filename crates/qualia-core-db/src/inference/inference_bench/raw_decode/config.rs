@@ -16,6 +16,7 @@ pub struct RawDecodeConfig {
 }
 
 impl RawDecodeConfig {
+    /// Creates `RawDecodeConfig` with the given state.
     pub fn new(
         label: impl Into<String>,
         model_path: impl Into<String>,

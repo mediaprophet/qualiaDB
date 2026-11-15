@@ -9,7 +9,7 @@ use super::host_client::{
     export_backup, fetch_diagnostics, import_backup, pick_file_path, pick_save_path,
     sync_with_relay, DiagnosticsDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default)]
 struct SyncBackupUi {
@@ -20,6 +20,7 @@ struct SyncBackupUi {
 }
 
 #[component]
+/// Aether `WellfairSyncBackupPanel` component.
 pub fn WellfairSyncBackupPanel() -> Element {
     let mut ui = use_signal(SyncBackupUi::default);
 

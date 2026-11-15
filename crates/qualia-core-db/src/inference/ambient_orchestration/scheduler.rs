@@ -80,6 +80,7 @@ impl TaskScheduler {
         self.task_queue.pending_tasks.clone()
     }
 
+    /// Gets `pending-tasks-into`.
     pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
         if out.len() < self.task_queue.pending_tasks.len() {
             return Err(AmbientError::InsufficientResources(
@@ -103,7 +104,10 @@ impl TaskScheduler {
     /// Dispatch the next pending task to a device, moving it to running.
     /// Returns the dispatched task, or `None` if no tasks are pending.
     pub fn dispatch_next(&mut self) -> Option<Task> {
-        let task = self.task_queue.pending_tasks.pop()?;
+        if self.task_queue.pending_tasks.is_empty() {
+            return None;
+        }
+        let task = self.task_queue.pending_tasks.remove(0);
         self.task_queue.running_tasks.push(task.clone());
         Some(task)
     }
@@ -174,6 +178,7 @@ impl TaskScheduler {
 }
 
 impl TaskQueue {
+    /// Creates a default `TaskQueue`.
     pub fn new() -> Self {
         Self {
             pending_tasks: Vec::new(),

@@ -44,6 +44,7 @@ pub enum QPUErrorCode {
 
 impl QPUMetrics {
     #[inline(always)]
+    /// Creates `QPUMetrics` with the given state.
     pub const fn new() -> Self {
         Self {
             total_operations: AtomicU64::new(0),

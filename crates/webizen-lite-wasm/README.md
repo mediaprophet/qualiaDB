@@ -66,7 +66,7 @@ Available tools:
 - `corpus_summarize` — filter a fetched legislation corpus JSON (`titleContains`, `idPrefix`)
 - `export_graph` — ground triples → `jsonld` | `rdfjson` | `turtle` | `n3` | `yamlld`
 - `resolve_dataset_urls` — expand short paths to HTML/N3/TTL/JSON-LD URLs
-- `load_graph` / `load_q42` / `list_graphs` / `unload_graph` / `export_q42lite` — session graphs (Q42L)
+- `load_graph` / `load_q42` / `load_yaml_ld_q42` / `list_graphs` / `unload_graph` / `export_q42lite` — session graphs (Q42L / yaml-ld-q42 HCF)
 - `query_graph` / `query_sparql` — section-style filters (SPARQL SELECT subset)
 - `compile_deontic_norms` / `evaluate_deontic_session` — deontic bridge
 
@@ -75,6 +75,31 @@ to preserve exact values in JavaScript.
 
 For embedding on `ns.webcivics.net`, copy `pkg/` to the site’s
 `public/wasm/webizen-lite/` and publish `agent-mcp-guide.md` + `agent-conformance.md`.
+
+
+## civics.au Writing (yaml-ld-q42 / HCF)
+
+`www.civics.au` Writing ingest uses **`application/yaml-ld-q42`** as the media
+type. The Hypermedia Content Format (**HCF**) `HypermediaDocument` is the
+source of truth for authored pages; Markdown (and HTML/PDF/etc.) remain
+optional projectors, not the store format. See
+[`docs/manuals/standards/hypermedia-content-format-hcf.md`](../../docs/manuals/standards/hypermedia-content-format-hcf.md)
+§3 and
+[`docs/manuals/standards/yaml-ld-q42-specification.md`](../../docs/manuals/standards/yaml-ld-q42-specification.md).
+
+MCP tool: **`load_yaml_ld_q42`** (also `load_graph` with `format=yaml-ld-q42`).
+Pass YAML `source` text; optional `graphId` / `label` / `namespace` /
+`lamportClock`. Auto-dispatch:
+
+- workspace `pages:` → `sourceFormat` `yaml-ld-q42/workspace`
+- HCF `@type: HypermediaDocument` or `content:` sections → `yaml-ld-q42/hcf`
+
+**Rights:** this WASM binary stays **CC BY-NC-ND 4.0** (crate `LICENSE`). Site
+chrome / pages around it on civics.au may use a different licence (e.g. MIT);
+do not assume the binary is MIT.
+
+Build command is unchanged (`wasm-pack build …` above). Do not enable
+portal / GPU / LLM features in this crate.
 
 **Implementation plan:** [docs/plans/wasm-lite-agent-query-plan.md](../../docs/plans/wasm-lite-agent-query-plan.md)
 

@@ -57,10 +57,12 @@ impl BackendSet {
     pub const GPU: u8 = 1 << 2;
     pub const WASM: u8 = 1 << 3;
 
+    /// Creates a default `BackendSet`.
     pub const fn new(bits: u8) -> Self {
         Self(bits)
     }
 
+    /// `BackendSet::contains`.
     pub const fn contains(self, backend: u8) -> bool {
         self.0 & backend == backend
     }
@@ -235,6 +237,7 @@ pub const CALCULUS_CAPABILITIES: &[CalculusCapability] = &[
     },
 ];
 
+/// Capability descriptor.
 pub fn capability(operation_id: u64) -> Option<&'static CalculusCapability> {
     CALCULUS_CAPABILITIES
         .iter()

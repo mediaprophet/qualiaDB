@@ -21,7 +21,7 @@ currently a **semantic projection**, not a dense geometry conversion:
   `qualia_core_db::render::assets::import_asset`;
 - the importer extracts vertex positions and triangle indices;
 - `mesh_to_nquins` writes mesh identity, source format, counts, bounds, and centroid as NQuins;
-- the Q42 writer stores those facts in a unified, indexed, compressed v3 volume; and
+- the Q42 writer stores those facts in a unified, indexed, compressed v4 volume; and
 - the dense vertex/index data is not written into that Q42 volume.
 
 This is a sound separation of concerns, but it is only the first half of the intended
@@ -52,7 +52,7 @@ P64 is the page-aligned model-weight container.
 | OBJ/STL/GLB detection and CLI ingest | Implemented | Input is limited to 256 MiB by the CLI guard. |
 | GLB parser | Implemented subset | Self-contained GLB, `POSITION` as f32 `VEC3`, scalar u8/u16/u32 indices, and triangle primitives. |
 | Q42 mesh facts | Implemented | Type, source format, vertex/triangle counts, AABB, and centroid. |
-| Unified Q42 v3 output | Implemented | Embedded lexicon/index, LZ4 SuperBlocks, mmap reader, graph-oriented lookup. |
+| Unified Q42 v4 output | Implemented | Embedded lexicon/index, LZ4 SuperBlocks, mmap reader, graph-oriented lookup. |
 | Native/WASM mesh renderer | Implemented subset | Positions, per-vertex colours, triangle indices, depth, bloom, picking, offscreen RGBA8. |
 | Physics admission around rendered artefacts | Implemented | AABB transforms, bounds/material-floor refusal, mass/momentum, and PGA kinematic joints. |
 | Full glTF scene preservation | Missing | Normals, tangents, UVs, materials, textures, node hierarchy/transforms, skins, animation, morphs, sparse accessors, and general primitive modes are not preserved. |

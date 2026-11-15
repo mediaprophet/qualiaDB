@@ -508,3 +508,7 @@ impl CryptographicLibrary {
         })
     }
 }
+
+mod paired_signing;
+
+mod managed_object;

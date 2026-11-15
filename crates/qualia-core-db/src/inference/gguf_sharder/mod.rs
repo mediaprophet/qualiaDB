@@ -19,6 +19,7 @@ pub use types::*;
 
 /// FNV-1a hash over raw bytes — same algorithm as `crate::q_hash` but for
 /// byte slices parsed at runtime (e.g. tensor names from the binary header).
+#[allow(dead_code)]
 fn gguf_name_hash(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
     for &b in bytes {

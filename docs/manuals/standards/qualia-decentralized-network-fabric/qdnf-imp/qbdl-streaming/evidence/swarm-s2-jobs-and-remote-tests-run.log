@@ -1,0 +1,43 @@
+# Wave S2 focused tests (substring filters)
+
+Binary: target/debug/deps/qualia_core_db-c4560c081fa48873.exe
+Command family: cargo test -p qualia-core-db --lib --locked --offline -j 1 <filter> -- --test-threads=1
+
+The combined `|` filter matched 0 tests (libtest treated it as a substring). Each module was run separately after the LNK1104 relink.
+
+## bundle::stream::policy::remote
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 10498 filtered out; finished in 0.31s
+EXIT=0
+
+- decision_ticket_codec_roundtrip_and_truncated_trailing_wrong_domain_refuse
+- disclosure_decision_has_no_public_constructor
+- eighth_enrollment_ok_ninth_is_capacity
+- policy_artifact_missing_gap_header_or_index_coverage_is_denied
+- recognition_table_holds_no_key_material
+- rotation_replaces_recognition_and_invalidates_old_decision_ids
+- source_wildcard_and_empty_source_are_denied
+- unknown_principal_is_denied
+- verified_label_consent_ledger_and_sensing_scope_are_not_remote_authority
+- wire_role_flag_cannot_install
+- wrong_purpose_publisher_or_expired_recognition_is_denied
+
+## bundle::stream::runtime::jobs
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 10504 filtered out; finished in 0.02s
+EXIT=0
+
+- cancel_then_complete_is_cancelled_without_double_refund_or_early_reuse
+- job_ticket_from_owner_a_cannot_complete_on_owner_b
+- submit_slow_complete_keeps_live_transfers_charged_until_complete
+- wait_site_does_not_hold_runtime_parents_or_authority_mutex
+- worker_panic_or_error_conserves_charges_and_does_not_free_slot
+
+## bundle::stream::storage::native::job
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10508 filtered out; finished in 0.00s
+EXIT=0
+
+- write_drops_stage_before_simulated_blocking_hook
+
+Total new S2 tests: 17 passed, 0 failed.

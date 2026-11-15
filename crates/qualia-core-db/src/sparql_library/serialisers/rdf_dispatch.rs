@@ -16,6 +16,7 @@ pub enum RdfDispatchError {
     Io(String),
 }
 
+/// Serializes quins to a writer.
 pub fn serialize_quins<W: Write>(
     format: RdfFormat,
     mode: RdfStarMode,

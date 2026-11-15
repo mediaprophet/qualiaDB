@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
@@ -6,6 +6,7 @@ use webizen_studio::tauri_ffi::invoke;
 
 // The engine runs NATIVELY; this wasm UI only reads its lifecycle state over the Tauri invoke bridge.
 #[component]
+/// Aether `ModelLifecycle` component.
 pub fn ModelLifecycle() -> Element {
     let mut step = use_signal(|| 2);
     let mut lifecycle_label_state = use_signal(|| "StreamingVRAM".to_string());

@@ -10,6 +10,7 @@ pub const VIBE_SCHEMA_VERSION: &str = "vibe-metamodel-1";
 pub const LANGUAGE_VERSION_IRI: &str = "https://qualiadb.org/schema/vibe#LanguageVersion-vibe-0.1";
 
 #[inline]
+/// Namespace term.
 pub fn term(local: &str) -> String {
     format!("{VIBE_NS}{local}")
 }

@@ -1,0 +1,29 @@
+{
+  "schema": "qualia.sensing-inspect.distribution.v1",
+  "application": "qualia-sensing-inspect",
+  "source_version": "0.1.0",
+  "entrypoint": "qualia-sensing-inspect.exe",
+  "command": "inspect",
+  "release_admission": {
+    "command": "verify-release",
+    "signature_scheme": "Ed25519 over domain-separated SHA256 of exact package.json bytes",
+    "trusted_key_source": "explicit independently trusted raw 32-byte public key file",
+    "signature_input": "detached raw 64-byte signature file",
+    "checks_all_package_content": true,
+    "executes_or_installs_package": false,
+    "establishes_key_trust_or_revocation": false
+  },
+  "package_layout": ["qualia-sensing-inspect.exe", "README.md", "LICENSE", "distribution.json", "verify-package.ps1", "package.json", ".qualia-package-owner"],
+  "package_verifier": { "script": "verify-package.ps1", "minimum_powershell": "7.4", "executes_binary": false, "establishes_authenticity": false },
+  "runtime_downloads": false,
+  "automatic_capture": false,
+  "automatic_publication": false,
+  "qualified_binary": false,
+  "supported_package_targets": ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc", "x86_64-pc-windows-gnu"],
+  "input_artifacts": ["container.10d", "observation.qes", "observation.scr", "binding.json"],
+  "inputs_bundled_by_default": false,
+  "configuration": "explicit command arguments",
+  "optional_index_verification": "all-or-none index-field-id, index-row, index-kind; explicit binding allow-list; same-resolver canonical record equality; no namespace trust",
+  "integrity": "SHA-256 per packaged file; no signer authenticity claim",
+  "host_requirements": ["protected local artifact and input roots", "no-egress process policy", "platform and dependency qualification"]
+}

@@ -9,6 +9,7 @@ use vibe::{Diagnostic, Span, Value};
 const MAX_STEPS: usize = 4096;
 const MAX_PATHS: usize = 4096;
 
+/// VibeScript seam: GBM VaR simulation.
 pub fn simulate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s0 = args::rec_f64(args_v, "s0").ok_or_else(|| args::bad(span, "gbm_var needs s0"))?;
     let drift = args::rec_f64(args_v, "mu").ok_or_else(|| args::bad(span, "gbm_var needs mu"))?;

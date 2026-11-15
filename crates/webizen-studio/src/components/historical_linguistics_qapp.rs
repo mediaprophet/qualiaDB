@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `HistoricalLinguisticsQapp` component.
 pub fn HistoricalLinguisticsQapp() -> Element {
     rsx! {
         QAppEngine {

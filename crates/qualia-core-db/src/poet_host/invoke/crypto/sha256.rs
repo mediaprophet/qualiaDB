@@ -5,6 +5,7 @@ use super::super::args;
 use sha2::{Digest, Sha256, Sha512};
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: SHA-256 digest.
 pub fn digest(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v).ok_or_else(|| args::bad(span, "sha256 needs a string"))?;
     let hash = Sha256::digest(s.as_bytes());

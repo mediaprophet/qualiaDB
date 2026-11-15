@@ -147,6 +147,7 @@ pub struct TrainingData {
 }
 
 impl PropertyPredictor {
+    /// Creates a predictor with default descriptor calculator and empty model registry.
     pub fn new() -> Self {
         Self {
             property_models: HashMap::new(),
@@ -155,6 +156,7 @@ impl PropertyPredictor {
         }
     }
 
+    /// Initializes the descriptor calculator; `ChemistryError` propagates.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.descriptor_calculator.initialize()?;
         // Register basic QSPR / group-contribution models for common properties.
@@ -284,8 +286,106 @@ impl PropertyPredictor {
                 },
             },
         );
+
+        // Density — empirical group contribution (g/cm³ at standard conditions):
+        self.register_model(
+            "density",
+            PropertyModel {
+                model_id: "qspr_density".to_string(),
+                property_type: PropertyType::Density,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.85);
+                        c.insert("molecular_weight".to_string(), 0.0018);
+                        c.insert("O".to_string(), 0.08);
+                        c.insert("N".to_string(), 0.05);
+                        c.insert("Cl".to_string(), 0.15);
+                        c
+                    },
+                    descriptors: vec![
+                        "molecular_weight".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                        "Cl".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Heat capacity (J/(mol·K)):
+        self.register_model(
+            "heat_capacity",
+            PropertyModel {
+                model_id: "qspr_heat_capacity".to_string(),
+                property_type: PropertyType::HeatCapacity,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 25.0);
+                        c.insert("C".to_string(), 15.0);
+                        c.insert("H".to_string(), 7.5);
+                        c.insert("O".to_string(), 18.0);
+                        c.insert("N".to_string(), 12.0);
+                        c
+                    },
+                    descriptors: vec![
+                        "C".to_string(),
+                        "H".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Surface tension (mN/m):
+        self.register_model(
+            "surface_tension",
+            PropertyModel {
+                model_id: "qspr_surface_tension".to_string(),
+                property_type: PropertyType::SurfaceTension,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 18.0);
+                        c.insert("molecular_weight".to_string(), 0.04);
+                        c.insert("O".to_string(), 4.5);
+                        c
+                    },
+                    descriptors: vec!["molecular_weight".to_string(), "O".to_string()],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Viscosity (mPa·s):
+        self.register_model(
+            "viscosity",
+            PropertyModel {
+                model_id: "qspr_viscosity".to_string(),
+                property_type: PropertyType::Viscosity,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.3);
+                        c.insert("molecular_weight".to_string(), 0.005);
+                        c
+                    },
+                    descriptors: vec!["molecular_weight".to_string()],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
     }
 
+    /// Fails closed on an empty molecule (no atoms).
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
             return Err(ChemistryError::ValidationError(
@@ -341,6 +441,7 @@ impl PropertyPredictor {
         molecule: &Molecule,
         properties: &[PropertyType],
     ) -> Result<PredictedProperties, ChemistryError> {
+        self.validate_molecule(molecule)?;
         // Compute molecular descriptors from the molecule.
         let mut descriptors: HashMap<String, f64> = HashMap::new();
         let mut molecular_weight = 0.0;
@@ -362,6 +463,10 @@ impl PropertyPredictor {
             let name = match property_type {
                 PropertyType::BoilingPoint => "boiling_point",
                 PropertyType::MeltingPoint => "melting_point",
+                PropertyType::Density => "density",
+                PropertyType::HeatCapacity => "heat_capacity",
+                PropertyType::SurfaceTension => "surface_tension",
+                PropertyType::Viscosity => "viscosity",
                 // No registered QSPR model for the remaining property types.
                 _ => continue,
             };
@@ -422,6 +527,7 @@ impl PropertyPredictor {
 }
 
 impl PropertyModel {
+    /// Creates a default `PropertyModel`.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -433,6 +539,7 @@ impl PropertyModel {
 }
 
 impl PropertyModelParameters {
+    /// Creates default `PropertyModelParameters`.
     pub fn new() -> Self {
         Self {
             coefficients: HashMap::new(),
@@ -443,6 +550,7 @@ impl PropertyModelParameters {
 }
 
 impl ReferenceData {
+    /// Creates empty `ReferenceData`.
     pub fn new() -> Self {
         Self {
             molecule_id: "mol_1".to_string(),
@@ -453,6 +561,7 @@ impl ReferenceData {
 }
 
 impl ReferenceConditions {
+    /// Creates default `ReferenceConditions`.
     pub fn new() -> Self {
         Self {
             temperature: 298.15,
@@ -463,6 +572,7 @@ impl ReferenceConditions {
 }
 
 impl DescriptorCalculator {
+    /// Creates a descriptor calculator with default molecular/quantum/topological descriptor state.
     pub fn new() -> Self {
         Self {
             molecular_descriptors: MolecularDescriptors::new(),
@@ -501,12 +611,14 @@ impl DescriptorCalculator {
         &mut self.topological_descriptors
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl MolecularDescriptors {
+    /// Creates a zeroed `MolecularDescriptors`.
     pub fn new() -> Self {
         Self {
             molecular_weight: 16.04,
@@ -519,6 +631,7 @@ impl MolecularDescriptors {
 }
 
 impl QuantumDescriptors {
+    /// Creates a zeroed `QuantumDescriptors`.
     pub fn new() -> Self {
         Self {
             homo_energy: -13.6,
@@ -531,6 +644,7 @@ impl QuantumDescriptors {
 }
 
 impl TopologicalDescriptors {
+    /// Creates a zeroed `TopologicalDescriptors`.
     pub fn new() -> Self {
         Self {
             connectivity_index: 1.0,
@@ -542,6 +656,7 @@ impl TopologicalDescriptors {
 }
 
 impl MLModel {
+    /// Creates a default `MLModel`.
     pub fn new() -> Self {
         Self {
             model_id: "ml_1".to_string(),
@@ -553,6 +668,7 @@ impl MLModel {
 }
 
 impl MLModelParameters {
+    /// Creates default `MLModelParameters`.
     pub fn new() -> Self {
         Self {
             hyperparameters: HashMap::new(),
@@ -563,6 +679,7 @@ impl MLModelParameters {
 }
 
 impl ModelPerformance {
+    /// Creates a zeroed `ModelPerformance`.
     pub fn new() -> Self {
         Self {
             r_squared: 0.95,
@@ -574,12 +691,117 @@ impl ModelPerformance {
 }
 
 impl TrainingData {
+    /// Creates empty `TrainingData`.
     pub fn new() -> Self {
         Self {
             data_id: "data_1".to_string(),
             features: vec![vec![1.0; 10]; 100],
             targets: vec![100.0; 100],
             data_size: 100,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn water_molecule() -> Molecule {
+        let mut m = Molecule::new();
+        m.formula = "H2O".to_string();
+        m.atoms.push(Atom {
+            atom_id: "O1".to_string(),
+            element: "O".to_string(),
+            atomic_number: 8,
+            mass: 15.999,
+            charge: 0.0,
+            coordinates: vec![0.0, 0.0, 0.0],
+        });
+        m.atoms.push(Atom {
+            atom_id: "H1".to_string(),
+            element: "H".to_string(),
+            atomic_number: 1,
+            mass: 1.008,
+            charge: 0.0,
+            coordinates: vec![0.0, 0.757, 0.586],
+        });
+        m.atoms.push(Atom {
+            atom_id: "H2".to_string(),
+            element: "H".to_string(),
+            atomic_number: 1,
+            mass: 1.008,
+            charge: 0.0,
+            coordinates: vec![0.0, -0.757, 0.586],
+        });
+        m.coordinates = m.atoms.iter().map(|atom| atom.coordinates.clone()).collect();
+        m
+    }
+
+    #[test]
+    fn initialized_predictor_uses_registered_group_contribution_formulas() {
+        let uninitialized = PropertyPredictor::new();
+        let mol = water_molecule();
+        assert_eq!(mol.formula, "H2O");
+        assert_eq!(mol.atoms.len(), 3);
+        assert_eq!(mol.coordinates.len(), 3);
+        assert!(!mol.atoms.iter().any(|atom| atom.element == "C"));
+        assert!(matches!(
+            uninitialized.predict_from_molecule(&mol, &[PropertyType::BoilingPoint]),
+            Err(ChemistryError::NotImplemented(_))
+        ));
+
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+        let registered = predictor.list_properties();
+        assert!(registered.iter().any(|name| name == "boiling_point"));
+        assert!(registered.iter().any(|name| name == "density"));
+        assert!(registered.iter().any(|name| name == "heat_capacity"));
+
+        // These assertions pin the implemented group-contribution equations.
+        // They are formula/dispatch checks, not claims of empirical accuracy.
+        let descriptors = HashMap::from([
+            ("C".to_string(), 0.0),
+            ("H".to_string(), 2.0),
+            ("O".to_string(), 1.0),
+            ("N".to_string(), 0.0),
+            ("ring".to_string(), 0.0),
+        ]);
+        assert!((predictor.predict("boiling_point", &descriptors).unwrap() - 253.96).abs() < 1e-12);
+        assert!(matches!(
+            predictor.predict("unknown_property", &descriptors),
+            Err(ChemistryError::NotImplemented(_))
+        ));
+
+        let res = predictor
+            .predict_from_molecule(
+                &mol,
+                &[
+                    PropertyType::BoilingPoint,
+                    PropertyType::Density,
+                    PropertyType::HeatCapacity,
+                ],
+            )
+            .unwrap();
+        assert!(res.properties.contains_key("boiling_point"));
+        assert!(res.properties.contains_key("density"));
+        assert!(res.properties.contains_key("heat_capacity"));
+        // H₂O descriptors yield the implemented equation values exactly:
+        // density = .85 + .0018·18.015 + .08·1; heat capacity = 25 + 7.5·2 + 18·1.
+        assert!((res.properties["density"] - 0.962427).abs() < 1e-12);
+        assert!((res.properties["heat_capacity"] - 58.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn initialized_predictor_rejects_empty_and_formula_only_molecules() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+        for formula in ["", "H2O"] {
+            let mut molecule = Molecule::new();
+            molecule.formula = formula.to_string();
+            assert!(matches!(
+                predictor.predict_from_molecule(&molecule, &[PropertyType::Density]),
+                Err(ChemistryError::ValidationError(_))
+            ));
         }
     }
 }

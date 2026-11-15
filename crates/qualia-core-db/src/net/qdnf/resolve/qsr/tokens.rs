@@ -27,6 +27,7 @@ impl PrivateToken {
     pub const ZERO: Self = Self([0u8; 48]);
 
     #[inline]
+    /// Byte representation.
     pub const fn as_bytes(&self) -> &[u8; 48] {
         &self.0
     }

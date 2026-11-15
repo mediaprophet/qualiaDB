@@ -6,6 +6,7 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_SLICE_PIXELS: usize = 65_536;
 
+/// VibeScript seam: Hounsfield-unit window mapping.
 pub fn hu_window(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let study_uid = args::rec_str(args_v, "study_uid")
         .ok_or_else(|| args::bad(span, "HU windowing needs `study_uid`"))?;

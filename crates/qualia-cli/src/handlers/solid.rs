@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::cli::SolidAction;
 
+/// Handles the subcommand action.
 pub async fn handle(action: SolidAction) {
     match action {
         SolidAction::Serve {

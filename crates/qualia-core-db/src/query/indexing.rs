@@ -56,26 +56,32 @@ impl QuinIndex {
         self.quins.push(quin);
     }
 
+    /// Indexed quins.
     pub fn len(&self) -> usize {
         self.quins.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.quins.is_empty()
     }
 
+    /// All quins with subject `id`.
     pub fn by_subject(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_subject, id)
     }
 
+    /// All quins with predicate `id`.
     pub fn by_predicate(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_predicate, id)
     }
 
+    /// All quins with object `id`.
     pub fn by_object(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_object, id)
     }
 
+    /// All quins with context `id`.
     pub fn by_context(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_context, id)
     }
@@ -138,6 +144,21 @@ impl QuinIndex {
     /// into their own contiguous scratch buffer (pair with `quin_at`).
     pub fn rows_by_subject(&self, s: u64) -> &[usize] {
         self.by_subject.get(&s).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Zero-copy raw backing-store row indices for a predicate, in ascending row order.
+    pub fn rows_by_predicate(&self, p: u64) -> &[usize] {
+        self.by_predicate.get(&p).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Zero-copy raw backing-store row indices for an object, in ascending row order.
+    pub fn rows_by_object(&self, o: u64) -> &[usize] {
+        self.by_object.get(&o).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Zero-copy raw backing-store row indices for a context, in ascending row order.
+    pub fn rows_by_context(&self, c: u64) -> &[usize] {
+        self.by_context.get(&c).map(Vec::as_slice).unwrap_or(&[])
     }
 
     /// The quin at a backing-store row index. Copy, no allocation.

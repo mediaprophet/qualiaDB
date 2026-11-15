@@ -1,51 +1,26 @@
-//! `.10d` Field section encoder — ontology reserved (T32).
+//! FIEL v0 field descriptors and optional raster sample payloads.
 //!
-//! The Field section carries field declarations (pressure, temperature,
-//! EMF, etc.) into the `.10d` container so that "fields live on the
-//! manifold" is a byte-inseparable claim, not just a graph convention.
+//! `encode_field_section` writes a declaration-only payload (12-byte header,
+//! 32-byte descriptors). `encode_field_section_with_rasters` also appends grid
+//! metadata (16 bytes) and little-endian f32 samples, with descriptor sample
+//! offsets locating them inside the same payload. Both existing APIs use the
+//! current version-zero schema; raster support is not a new format version.
 //!
-//! ## Design
+//! `decode_field_section` reads declarations; `decode_field_raster_samples`
+//! resolves the selected raster. Envelope, range, codec and domain validation
+//! are separate obligations. A successful declaration read does not establish
+//! scientific accuracy, meaningful units or authentication of sample data.
 //!
-//! The section starts with a [`FieldSectionHeader`] followed by zero or
-//! more [`FieldDescriptor`] entries. Each descriptor names a field and
-//! records its type, unit IRI, support, and representation. The actual
-//! field sample data (grid values, mesh values, etc.) is NOT stored in
-//! this section — it lives in a separate data section (or out-of-band).
-//! This section is the **ontology table**: it declares what fields exist
-//! and their metadata, not the samples themselves.
-//!
-//! ## Binary layout (v0 — ontology only, no sample bytes)
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────┐
-//! │ FieldSectionHeader (16 bytes)               │
-//! │   magic: u32        = 0x4649454C ("FIEL")   │
-//! │   version: u16      = 0                     │
-//! │   field_count: u16                          │
-//! │   reserved: u32     = 0                     │
-//! ├─────────────────────────────────────────────┤
-//! │ FieldDescriptor[0] (32 bytes each)          │
-//! │   name_hash: u64     (FNV-1a of field name) │
-//! │   unit_hash: u64     (FNV-1a of unit IRI)   │
-//! │   type_kind: u8      (0=scalar,1=vector,...)│
-//! │   support: u8        (0=region,1=point,...) │
-//! │   representation: u8 (0=grid,1=mesh,...)    │
-//! │   reserved: u8       = 0                    │
-//! │   reserved: u32      = 0                    │
-//! │   sample_offset: u64 (into data section)    │
-//! ├─────────────────────────────────────────────┤
-//! │ FieldDescriptor[1] ...                      │
-//! │ ...                                         │
-//! └─────────────────────────────────────────────┘
-//! ```
-//!
-//! **Status: v0 — ontology only.** No sample bytes are encoded yet.
-//! The `sample_offset` field is reserved for future use (always 0 in v0).
-//! This is the "ontology reserved, no bytes yet" state from the plan.
-//!
-//! Reference: `docs/vibescript-full-impl-PLAN.md` §8.5 T32.
+//! Preserve field names, unit hashes, support/representation and sample bytes.
+//! Do not infer that a FIEL unit hash and a MID2 registry identifier are
+//! equivalent without a qualified mapping. See the typed payload companion in
+//! `docs/manuals/standards/10d-typed-field-payloads.md` for coexistence contracts.
 
 use bytemuck::{Pod, Zeroable};
+
+#[path = "field_section/checked.rs"]
+mod checked;
+pub use checked::{inspect_field_section, FieldInspection, FieldInspectionError, FieldInspectionLimits};
 
 /// Magic bytes for the Field section: "FIEL" in little-endian.
 pub const FIELD_SECTION_MAGIC: u32 = 0x4649454C;
@@ -77,6 +52,7 @@ pub enum FieldTypeKind {
 }
 
 impl FieldTypeKind {
+    /// Decode a field-type tag; `None` for values outside 0–3.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Scalar),
@@ -103,6 +79,7 @@ pub enum FieldSupportKind {
 }
 
 impl FieldSupportKind {
+    /// Decode a field-support tag; `None` for values outside 0–3.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Region),
@@ -131,6 +108,7 @@ pub enum FieldRepresentationKind {
 }
 
 impl FieldRepresentationKind {
+    /// Decode a field-representation tag; `None` for values outside 0–4.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Grid),
@@ -265,6 +243,8 @@ pub struct FieldEntry {
 }
 
 impl FieldEntry {
+    /// Create a field descriptor to encode into a Field section.
+    /// `unit_hash` is 0 when the field is unitless.
     pub fn new(
         name_hash: u64,
         unit_hash: u64,
@@ -389,6 +369,127 @@ pub fn decode_field_section(
     }
 
     Ok((header, descriptors))
+}
+
+/// Header preceding raw sample payload for a grid field descriptor.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct RasterGridMetadata {
+    /// Grid width in samples.
+    pub width: u32,
+    /// Grid height in samples.
+    pub height: u32,
+    /// Total sample count (`width * height`).
+    pub sample_count: u32,
+    /// Reserved for alignment / future flags.
+    pub reserved: u32,
+}
+
+pub const RASTER_GRID_METADATA_SIZE: usize = 16;
+
+/// A continuous environmental raster layer with raw sample data for encoding.
+#[derive(Debug, Clone)]
+pub struct ContinuousRasterField<'a> {
+    pub name_hash: u64,
+    pub unit_hash: u64,
+    pub width: u32,
+    pub height: u32,
+    pub samples: &'a [f32],
+}
+
+/// Encode a set of continuous raster fields (including sample payloads) into a `.10d` Field section.
+pub fn encode_field_section_with_rasters(
+    fields: &[ContinuousRasterField],
+    out: &mut [u8],
+) -> Result<usize, FieldSectionError> {
+    if fields.len() > MAX_FIELDS_PER_SECTION {
+        return Err(FieldSectionError::TooManyFields(fields.len()));
+    }
+
+    let header_and_descs_size = FIELD_SECTION_HEADER_SIZE + fields.len() * FIELD_DESCRIPTOR_SIZE;
+    let mut total_sample_bytes = 0usize;
+    for f in fields {
+        total_sample_bytes += RASTER_GRID_METADATA_SIZE + f.samples.len() * 4;
+    }
+    let total_needed = header_and_descs_size + total_sample_bytes;
+    if out.len() < total_needed {
+        return Err(FieldSectionError::BufferTooSmallForHeader);
+    }
+
+    // Write header
+    let header = FieldSectionHeader {
+        magic: FIELD_SECTION_MAGIC,
+        version: FIELD_SECTION_VERSION,
+        field_count: fields.len() as u16,
+        reserved: 0,
+    };
+    out[..FIELD_SECTION_HEADER_SIZE].copy_from_slice(bytemuck::bytes_of(&header));
+
+    // Descriptors and payload layout
+    let mut current_sample_offset = header_and_descs_size as u64;
+    let mut desc_offset = FIELD_SECTION_HEADER_SIZE;
+
+    for f in fields {
+        let desc = FieldDescriptor {
+            name_hash: f.name_hash,
+            unit_hash: f.unit_hash,
+            type_kind: FieldTypeKind::Scalar as u8,
+            support: FieldSupportKind::Region as u8,
+            representation: FieldRepresentationKind::Grid as u8,
+            reserved: 0,
+            reserved2: 0,
+            sample_offset: current_sample_offset,
+        };
+        out[desc_offset..desc_offset + FIELD_DESCRIPTOR_SIZE]
+            .copy_from_slice(bytemuck::bytes_of(&desc));
+        desc_offset += FIELD_DESCRIPTOR_SIZE;
+
+        // Write sample metadata
+        let meta = RasterGridMetadata {
+            width: f.width,
+            height: f.height,
+            sample_count: f.samples.len() as u32,
+            reserved: 0,
+        };
+        let sample_start = current_sample_offset as usize;
+        let sample_data_start = sample_start + RASTER_GRID_METADATA_SIZE;
+        let sample_data_end = sample_data_start + f.samples.len() * 4;
+
+        out[sample_start..sample_data_start].copy_from_slice(bytemuck::bytes_of(&meta));
+        let sample_bytes: &[u8] = bytemuck::cast_slice(f.samples);
+        out[sample_data_start..sample_data_end].copy_from_slice(sample_bytes);
+
+        current_sample_offset += (RASTER_GRID_METADATA_SIZE + f.samples.len() * 4) as u64;
+    }
+
+    Ok(total_needed)
+}
+
+/// Read continuous raster grid samples corresponding to a decoded descriptor.
+pub fn decode_field_raster_samples<'a>(
+    bytes: &'a [u8],
+    descriptor: &FieldDescriptor,
+) -> Result<(RasterGridMetadata, &'a [f32]), FieldSectionError> {
+    let offset = descriptor.sample_offset as usize;
+    if offset == 0 || offset + RASTER_GRID_METADATA_SIZE > bytes.len() {
+        return Err(FieldSectionError::BufferTooSmallForDescriptors);
+    }
+
+    let mut meta_buf = [0u8; RASTER_GRID_METADATA_SIZE];
+    meta_buf.copy_from_slice(&bytes[offset..offset + RASTER_GRID_METADATA_SIZE]);
+    let meta: RasterGridMetadata = *bytemuck::from_bytes(&meta_buf);
+
+    let sample_start = offset + RASTER_GRID_METADATA_SIZE;
+    let sample_bytes_len = (meta.sample_count as usize) * 4;
+    if sample_start + sample_bytes_len > bytes.len() {
+        return Err(FieldSectionError::BufferTooSmallForDescriptors);
+    }
+
+    let raw_slice = &bytes[sample_start..sample_start + sample_bytes_len];
+    let samples: &'a [f32] = bytemuck::try_cast_slice(raw_slice)
+        .map_err(|_| FieldSectionError::BufferTooSmallForDescriptors)?;
+
+    Ok((meta, samples))
 }
 
 /// Compute the byte size needed to encode the given number of fields.
@@ -573,5 +674,48 @@ mod tests {
         assert_eq!(d.support, FieldSupportKind::Region as u8);
         assert_eq!(d.representation, FieldRepresentationKind::Grid as u8);
         assert_eq!(d.sample_offset, 0);
+    }
+
+    #[test]
+    fn continuous_raster_round_trip() {
+        let elev_samples = [100.5f32, 102.0, 105.5, 110.0];
+        let canopy_samples = [12.0f32, 14.5, 0.0, 8.2];
+
+        let fields = [
+            ContinuousRasterField {
+                name_hash: 0xAAAA,
+                unit_hash: 0xBBBB,
+                width: 2,
+                height: 2,
+                samples: &elev_samples,
+            },
+            ContinuousRasterField {
+                name_hash: 0xCCCC,
+                unit_hash: 0xDDDD,
+                width: 2,
+                height: 2,
+                samples: &canopy_samples,
+            },
+        ];
+
+        let mut buf = vec![0u8; 1024];
+        let written = encode_field_section_with_rasters(&fields, &mut buf).unwrap();
+        assert!(written > 0);
+
+        let (header, descs) = decode_field_section(&buf[..written]).unwrap();
+        assert_eq!(header.field_count, 2);
+        assert_eq!(descs.len(), 2);
+
+        let (meta0, samples0) = decode_field_raster_samples(&buf[..written], &descs[0]).unwrap();
+        assert_eq!(meta0.width, 2);
+        assert_eq!(meta0.height, 2);
+        assert_eq!(meta0.sample_count, 4);
+        assert_eq!(samples0, elev_samples);
+
+        let (meta1, samples1) = decode_field_raster_samples(&buf[..written], &descs[1]).unwrap();
+        assert_eq!(meta1.width, 2);
+        assert_eq!(meta1.height, 2);
+        assert_eq!(meta1.sample_count, 4);
+        assert_eq!(samples1, canopy_samples);
     }
 }

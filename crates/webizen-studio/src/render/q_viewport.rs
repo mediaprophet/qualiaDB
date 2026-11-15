@@ -39,6 +39,7 @@ impl Default for ViewportBackend {
 }
 
 impl ViewportBackend {
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "webgpu" => Self::Webgpu,
@@ -48,6 +49,7 @@ impl ViewportBackend {
         }
     }
 
+    /// `true` when gpu.
     pub fn is_gpu(&self) -> bool {
         matches!(self, Self::Webgpu | Self::Webgl2)
     }

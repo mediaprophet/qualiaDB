@@ -19,7 +19,7 @@ pub use n3::evaluate as n3_evaluate;
 pub use shacl::{extensions as shacl_extensions, validate as shacl_validate};
 pub use sparql::query as sparql;
 pub use stats::stats;
-pub use volume::{commit as volume_commit, open as volume_open};
+pub use volume::{admit_pack_slice, commit as volume_commit, open as volume_open};
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use activation::spreading_activation;
@@ -33,6 +33,7 @@ fn missing(span: vibe::Span, family: &str) -> Result<vibe::Value, vibe::Diagnost
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::shortest_path`.
 pub fn shortest_path(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -41,6 +42,7 @@ pub fn shortest_path(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::spreading_activation`.
 pub fn spreading_activation(
     _args: &vibe::Value,
     span: vibe::Span,

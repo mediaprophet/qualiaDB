@@ -25,6 +25,7 @@ pub struct LiveGenerations {
 }
 
 impl BoundGenerations {
+    /// Creates a default `BoundGenerations`.
     pub const fn new(source: Generation, policy: Generation, identity: Generation) -> Self {
         Self {
             source,
@@ -34,6 +35,7 @@ impl BoundGenerations {
     }
 
     #[inline]
+    /// `BoundGenerations::as_live`.
     pub const fn as_live(self) -> LiveGenerations {
         LiveGenerations {
             source: self.source,

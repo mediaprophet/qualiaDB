@@ -14,6 +14,7 @@ pub struct ProviderGrant {
 }
 
 impl ProviderGrant {
+    /// Asserts the grant is live, unrevoked, and authorized for `purpose`.
     pub fn authorize(
         &self,
         purpose: KeyPurpose,

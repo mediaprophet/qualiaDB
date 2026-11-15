@@ -99,12 +99,15 @@ fn extract_profile_dto(args: &Value) -> Result<ConditioningProfileDto, String> {
 
     let budget = match rec.get("budget") {
         Some(Value::Record(bm)) => {
-            let input_tokens =
-                bm.get("input_tokens").and_then(args::as_u64).unwrap_or(4096) as u32;
-            let output_tokens =
-                bm.get("output_tokens").and_then(args::as_u64).unwrap_or(1024) as u32;
-            let tool_rounds =
-                bm.get("tool_rounds").and_then(args::as_u64).unwrap_or(4) as u16;
+            let input_tokens = bm
+                .get("input_tokens")
+                .and_then(args::as_u64)
+                .unwrap_or(4096) as u32;
+            let output_tokens = bm
+                .get("output_tokens")
+                .and_then(args::as_u64)
+                .unwrap_or(1024) as u32;
+            let tool_rounds = bm.get("tool_rounds").and_then(args::as_u64).unwrap_or(4) as u16;
             vibe::conditioning::ConditioningBudgetDto {
                 input_tokens,
                 output_tokens,
@@ -168,7 +171,8 @@ pub fn conditioning_validate(args: &Value, _span: Span) -> Result<Value, Diagnos
 
 /// `Conditioning.compile` — compile against an explicit backend capability and authority snapshot.
 pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let dto = extract_profile_dto(args)
+    let dto = extract_profile_dto(args).map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
+    dto.validate()
         .map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
 
     let req_refs: Vec<RequirementRef> = dto
@@ -203,6 +207,7 @@ pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnosti
             output_tokens: dto.budget.output_tokens,
             tool_rounds: dto.budget.tool_rounds,
             max_bytes: 65536,
+            thinking_token_budget: None,
         },
     };
 
@@ -223,25 +228,21 @@ pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnosti
         qualifier: None,
     }; 64];
 
+    let outcome_len = dto.requirements.len().min(64);
     let mut buffers = CompileBuffers {
-        outcomes: &mut outcome_buf[..dto.requirements.len()],
+        outcomes: &mut outcome_buf[..outcome_len],
         selected_evidence: &mut evidence_buf,
     };
 
-    let summary = crate::inference::conditioning::compile_into(
-        &spec,
-        &authority,
-        &caps,
-        &[],
-        &mut buffers,
-    )
-    .map_err(|e| {
-        Diagnostic::new(
-            DiagCode::E400,
-            span,
-            format!("Conditioning.compile failed: {e:?}"),
-        )
-    })?;
+    let summary =
+        crate::inference::conditioning::compile_into(&spec, &authority, &caps, &[], &mut buffers)
+            .map_err(|e| {
+            Diagnostic::new(
+                DiagCode::E400,
+                span,
+                format!("Conditioning.compile failed: {e:?}"),
+            )
+        })?;
 
     let mut rec = BTreeMap::new();
     rec.insert("plan_id".into(), Value::U64(summary.plan_id));
@@ -276,8 +277,7 @@ pub fn conditioning_compile(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 /// `Conditioning.inspect` — return a redacted requirement/token/evidence trace.
 pub fn conditioning_inspect(args: &Value, span: Span) -> Result<Value, Diagnostic> {
-    let dto = extract_profile_dto(args)
-        .map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
+    let dto = extract_profile_dto(args).map_err(|e| Diagnostic::new(DiagCode::E400, span, e))?;
 
     let req_refs: Vec<RequirementRef> = dto
         .requirements
@@ -311,6 +311,7 @@ pub fn conditioning_inspect(args: &Value, span: Span) -> Result<Value, Diagnosti
             output_tokens: dto.budget.output_tokens,
             tool_rounds: dto.budget.tool_rounds,
             max_bytes: 65536,
+            thinking_token_budget: None,
         },
     };
 

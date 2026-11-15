@@ -117,6 +117,15 @@ pub struct PackReport {
     pub q42_sidecar_path: String,
 }
 
+/// `male` or `female`. Anything else is refused.
+pub fn model_from_token(token: &str) -> Result<AnatomyModel, String> {
+    match token {
+        "male" => Ok(AnatomyModel::Male),
+        "female" => Ok(AnatomyModel::Female),
+        _ => Err("model must be male or female".into()),
+    }
+}
+
 /// Build a curated `.hmc` pack for `model` and write it to `out_path`.
 ///
 /// `curated` is the set of normalised base tokens to include (defaults to
@@ -168,6 +177,11 @@ pub fn build_anatomy_pack(
     }
 
     // Fetch each selected GLB.
+    eprintln!(
+        "atlas {}: {} reference organs",
+        model.as_str(),
+        selected.len()
+    );
     let mut fetched: Vec<(String, Vec<u8>)> = Vec::new();
     let mut failed: Vec<(String, String)> = Vec::new();
     for organ in &selected {
@@ -175,12 +189,24 @@ pub fn build_anatomy_pack(
             Ok(bytes) => fetched.push((organ.filename.clone(), bytes)),
             Err(e) => failed.push((organ.filename.clone(), format!("fetch: {e}"))),
         }
+        let done = fetched.len() + failed.len();
+        if done == selected.len() || done % 25 == 0 {
+            eprintln!(
+                "atlas {}: fetched {done}/{} ({} failed)",
+                model.as_str(),
+                selected.len(),
+                failed.len()
+            );
+        }
     }
 
     // Compile the fetched GLBs to sealed `.10d`.
     let compiled = compile_body(model, &fetched);
     for (k, e) in &compiled.failed {
         failed.push((k.clone(), format!("compile: {e}")));
+    }
+    for organ_key in &compiled.unmapped {
+        failed.push((organ_key.clone(), "unmapped: no body-system mapping".into()));
     }
 
     // Pack each compiled organ as a `.10d` entry with its render meta.
@@ -219,7 +245,7 @@ pub fn build_anatomy_pack(
         .iter()
         .map(|o| (o.filename.clone(), o.glb_url.clone()))
         .collect();
-    let (q42_bytes, q42_quins) = build_pack_q42(model, &compiled.organs, &source_urls);
+    let (q42_bytes, q42_quins) = build_pack_q42(compiled.model, &compiled.organs, &source_urls);
     let q42_graph_bytes = q42_bytes.len();
     // Carried INSIDE the bundle (one attestable unit alongside the `.10d` meshes).
     writer
@@ -240,9 +266,9 @@ pub fn build_anatomy_pack(
         .map_err(|e| format!("write {}: {e}", q42_sidecar.display()))?;
 
     Ok(PackReport {
-        model: model.as_str().to_string(),
+        model: compiled.model.as_str().to_string(),
         out_path: out_path.display().to_string(),
-        organs_packed: compiled.organs.len(),
+        organs_packed: compiled.compiled_count(),
         total_10d_bytes,
         bundle_bytes: bundle.len(),
         curated_not_found,
@@ -395,7 +421,7 @@ mod tests {
         let lex = vol.lex_view().unwrap();
         let vals: Vec<String> = quins
             .iter()
-            .filter_map(|q| lex.lookup_hash(q.object).map(str::to_string))
+            .filter_map(|q| lex.lookup_owned(q.object))
             .collect();
         // Provenance: the licence and the real CDN source URL are in the graph.
         assert!(

@@ -92,6 +92,7 @@ pub struct JobQueue {
 }
 
 impl JobQueue {
+    /// Creates a default `JobQueue`.
     pub fn new() -> Self {
         Self {
             pending: Arc::new(Mutex::new(BinaryHeap::new())),
@@ -194,6 +195,7 @@ impl JobQueue {
         std::mem::take(&mut *self.completed.lock().await)
     }
 
+    /// Queue stats.
     pub async fn stats(&self) -> QueueStats {
         QueueStats {
             pending_count: self.pending.lock().await.len(),
@@ -217,16 +219,19 @@ pub struct Dispatcher {
 }
 
 impl Dispatcher {
+    /// Creates a default `Dispatcher`.
     pub fn new() -> Self {
         Self {
             queue: Arc::new(JobQueue::new()),
         }
     }
 
+    /// Submits a job; returns its id.
     pub async fn submit(&self, job: QpuJob) -> String {
         self.queue.enqueue(job).await
     }
 
+    /// Flushes queued jobs through `dispatch`.
     pub async fn flush<F>(&self, dispatch: F) -> Result<(), QpuError>
     where
         F: Fn(&QpuJob) -> Result<String, String>,
@@ -234,10 +239,12 @@ impl Dispatcher {
         self.queue.process_queue(dispatch).await
     }
 
+    /// Drains completed results.
     pub async fn drain_results(&self) -> Vec<QpuResult> {
         self.queue.take_results().await
     }
 
+    /// Queue stats.
     pub async fn stats(&self) -> QueueStats {
         self.queue.stats().await
     }
@@ -257,10 +264,12 @@ pub struct FallbackHandler {
 }
 
 impl FallbackHandler {
+    /// Creates a default `FallbackHandler`.
     pub fn new(enabled: bool) -> Self {
         Self { enabled }
     }
 
+    /// Classical fallback for a job.
     pub fn simulate_classically(&self, job: &QpuJob) -> Result<QpuResult, QpuError> {
         if !self.enabled {
             return Err(QpuError::Api("Fallback is disabled".into()));

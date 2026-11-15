@@ -182,6 +182,7 @@ impl HmcWriter {
         Ok(out)
     }
 
+    /// Manifest.
     pub fn manifest(&self) -> &HmcManifest {
         &self.manifest
     }
@@ -207,10 +208,12 @@ pub struct HmcContainer {
 }
 
 impl HmcContainer {
+    /// Opens.
     pub fn open(path: &Path) -> Result<Self> {
         Self::from_bytes(std::fs::read(path)?)
     }
 
+    /// Parses bytes.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
         let mut archive = zip::ZipArchive::new(Cursor::new(bytes))?;
         let manifest: HmcManifest = {
@@ -230,6 +233,7 @@ impl HmcContainer {
         Ok(HmcContainer { manifest, archive })
     }
 
+    /// Manifest.
     pub fn manifest(&self) -> &HmcManifest {
         &self.manifest
     }

@@ -22,6 +22,13 @@ use crate::container_10d::{
 use crate::render::assets::Mesh;
 use crate::tensor::Tensor10D;
 
+#[path = "authoring_loft.rs"]
+mod loft;
+pub use loft::{loft_convex_sections_into, ClosedLoftReceipt};
+#[cfg(test)]
+#[path = "authoring_surface_tests.rs"]
+mod surface_tests;
+
 // ───────────────────────────────────────────────────────────────────────────
 //  Error types
 // ───────────────────────────────────────────────────────────────────────────
@@ -42,6 +49,7 @@ pub enum AuthoringError {
 }
 
 impl core::fmt::Display for AuthoringError {
+    /// Formats the error as a human-readable message naming the failing stage.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::InvalidParameters(msg) => write!(f, "authoring: invalid parameters: {msg}"),
@@ -148,7 +156,7 @@ pub fn uv_sphere(
     lat_segments: u32,
     lon_segments: u32,
 ) -> Result<Mesh, AuthoringError> {
-    if radius <= 0.0 {
+    if !radius.is_finite() || radius <= 0.0 {
         return Err(AuthoringError::InvalidParameters("radius must be positive"));
     }
     if lat_segments < 2 || lon_segments < 3 {
@@ -159,8 +167,8 @@ pub fn uv_sphere(
     let mut triangles = Vec::new();
 
     // Vertices: poles + (lat_segments-1) rings of (lon_segments+1) vertices.
-    // South pole
-    positions.push([0.0, -radius, 0.0]);
+    // First ring is near +Y (theta starts at PI / lat_segments).
+    positions.push([0.0, radius, 0.0]);
 
     for lat in 1..lat_segments {
         let theta = core::f32::consts::PI * (lat as f32) / (lat_segments as f32);
@@ -175,17 +183,17 @@ pub fn uv_sphere(
         }
     }
 
-    // North pole
-    positions.push([0.0, radius, 0.0]);
+    // Last ring is near -Y.
+    positions.push([0.0, -radius, 0.0]);
 
-    let south = 0u32;
-    let north = (positions.len() - 1) as u32;
+    let north = 0u32;
+    let south = (positions.len() - 1) as u32;
     let ring_start = 1u32;
     let ring_size = lon_segments + 1;
 
-    // South pole fan
+    // North pole fan
     for lon in 0..lon_segments {
-        triangles.push([south, ring_start + lon, ring_start + lon + 1]);
+        triangles.push([north, ring_start + lon + 1, ring_start + lon]);
     }
 
     // Middle quads
@@ -193,15 +201,15 @@ pub fn uv_sphere(
         let r0 = ring_start + lat * ring_size;
         let r1 = r0 + ring_size;
         for lon in 0..lon_segments {
-            triangles.push([r0 + lon, r1 + lon, r1 + lon + 1]);
-            triangles.push([r0 + lon, r1 + lon + 1, r0 + lon + 1]);
+            triangles.push([r0 + lon, r1 + lon + 1, r1 + lon]);
+            triangles.push([r0 + lon, r0 + lon + 1, r1 + lon + 1]);
         }
     }
 
-    // North pole fan
+    // South pole fan
     let last_ring = ring_start + (lat_segments - 2) * ring_size;
     for lon in 0..lon_segments {
-        triangles.push([north, last_ring + lon + 1, last_ring + lon]);
+        triangles.push([south, last_ring + lon, last_ring + lon + 1]);
     }
 
     Ok(Mesh {
@@ -715,6 +723,7 @@ pub enum BooleanOp {
 }
 
 impl BooleanOp {
+    /// Maps the authoring-layer boolean to the underlying `boolean_3` kernel op.
     fn to_kernel(self) -> super::boolean_3::Boolean3Op {
         match self {
             Self::Union => super::boolean_3::Boolean3Op::Union,
@@ -793,7 +802,11 @@ pub fn torus(
     major_segments: u32,
     minor_segments: u32,
 ) -> Result<Mesh, AuthoringError> {
-    if major_radius <= 0.0 || minor_radius <= 0.0 {
+    if !major_radius.is_finite()
+        || !minor_radius.is_finite()
+        || major_radius <= 0.0
+        || minor_radius <= 0.0
+    {
         return Err(AuthoringError::InvalidParameters("radii must be positive"));
     }
     if major_segments < 3 || minor_segments < 3 {
@@ -827,8 +840,8 @@ pub fn torus(
             let b = i * minor_segments + (j + 1) % minor_segments;
             let c = ((i + 1) % major_segments) * minor_segments + j;
             let d = ((i + 1) % major_segments) * minor_segments + (j + 1) % minor_segments;
-            triangles.push([a, c, b]);
-            triangles.push([b, c, d]);
+            triangles.push([a, b, c]);
+            triangles.push([b, d, c]);
         }
     }
 
@@ -903,6 +916,8 @@ pub struct DragConsent {
 }
 
 impl Default for DragConsent {
+    /// Returns the default consent record: dragging consented, prior t-slices
+    /// sealed (immutable).
     fn default() -> Self {
         Self {
             consent_granted: true,
@@ -923,6 +938,8 @@ pub enum DragError {
 }
 
 impl core::fmt::Display for DragError {
+    /// Formats the drag failure: governance refusal, out-of-bounds vertex, or
+    /// sealed-slice mutation attempt.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::GovernanceRefused => write!(f, "drag refused: governance/consent violation"),

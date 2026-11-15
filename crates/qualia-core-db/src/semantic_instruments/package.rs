@@ -157,18 +157,15 @@ pub fn build_collectable(mut parts: CollectableParts) -> Result<Vec<u8>, Instrum
     }
     let bytes = writer.build()?;
     if bytes.len() > MAX_COLLECTABLE_BYTES {
-        return Err(InstrumentError::BundleTooLarge {
-            bytes: bytes.len(),
-        });
+        return Err(InstrumentError::BundleTooLarge { bytes: bytes.len() });
     }
     Ok(bytes)
 }
 
+/// Opens `collectable`.
 pub fn open_collectable(bytes: &[u8]) -> Result<OpenedCollectable, InstrumentError> {
     if bytes.len() > MAX_COLLECTABLE_BYTES {
-        return Err(InstrumentError::BundleTooLarge {
-            bytes: bytes.len(),
-        });
+        return Err(InstrumentError::BundleTooLarge { bytes: bytes.len() });
     }
     let reader = BundleReader::parse(bytes)?;
     let manifest_bytes = reader
@@ -205,6 +202,7 @@ pub fn open_collectable(bytes: &[u8]) -> Result<OpenedCollectable, InstrumentErr
     })
 }
 
+/// `Ok(())` when the key is not a traversal key.
 pub fn reject_traversal_key(key: &str) -> Result<(), InstrumentError> {
     reject_unsafe_key(key)
 }
@@ -213,9 +211,7 @@ pub fn reject_traversal_key(key: &str) -> Result<(), InstrumentError> {
 mod tests {
     use super::*;
     use crate::semantic_instruments::category::ContentCategory;
-    use crate::semantic_instruments::manifest::{
-        InstrumentManifest, COLLECTABLE_FORMAT_VERSION,
-    };
+    use crate::semantic_instruments::manifest::{InstrumentManifest, COLLECTABLE_FORMAT_VERSION};
 
     fn demo_parts() -> CollectableParts {
         let manifest = InstrumentManifest {

@@ -90,6 +90,7 @@ pub struct LoRATensor {
 }
 
 impl LoRATensor {
+    /// Creates a default `LoRATensor`.
     pub fn new(data: Box<[f32]>, rows: usize, cols: usize) -> Self {
         assert_eq!(data.len(), rows * cols, "LoRATensor data length mismatch");
         Self { data, rows, cols }

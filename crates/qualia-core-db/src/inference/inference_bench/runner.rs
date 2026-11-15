@@ -29,7 +29,13 @@ fn timed_infer(agent: &LocalLlmAgent, prompt: &str) -> RunTiming {
             v.push(Instant::now());
         }
     };
-    let (_text, _prov, tokens, _quin) = agent.infer_local_model_streaming(prompt, "", Some(cb));
+    let (_text, _prov, tokens, _quin) = agent.infer_local_model_with_execution(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        Some(cb),
+    );
     let total = start.elapsed();
     let v = stamps.lock().map(|g| g.clone()).unwrap_or_default();
     let ttft = v.first().map(|f| f.duration_since(start)).unwrap_or(total);
@@ -63,13 +69,23 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
         },
     );
 
-    // Bound decode for a stable, comparable measurement.
-    set_decode_budget_override(cfg.decode_tokens);
+    // Bound decode for a stable, comparable measurement.  This scoped override
+    // has precedence over application-profile bootstrap in the inference
+    // thread; the profile may reset its own normal UI budget without corrupting
+    // this run.
+    let _benchmark_budget = benchmark_decode_budget_scope(cfg.decode_tokens);
 
     // ── COLD: ensure the model is NOT resident, then measure a fresh run. ──
     crate::resident_model::clear_resident_model();
     reset_phase_metrics();
     let cold = timed_infer(&agent, &cfg.prompt);
+    if cold.output_tokens == 0 {
+        crate::resident_model::clear_resident_model();
+        return Err(format!(
+            "native inference produced no tokens during cold run for {} — benchmark aborted",
+            cfg.label
+        ));
+    }
 
     // ── Make resident so warm runs adopt the mmap (skip disk load). ──
     let model_id = crate::q_hash(&cfg.model_path);
@@ -103,6 +119,13 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
     for _ in 0..repeats {
         reset_phase_metrics();
         let w = timed_infer(&agent, &cfg.prompt);
+        if w.output_tokens == 0 {
+            crate::resident_model::clear_resident_model();
+            return Err(format!(
+                "native inference produced no tokens during warm run for {} — benchmark aborted",
+                cfg.label
+            ));
+        }
         let snap = phase_snapshot();
         warm_ttft += w.ttft;
         warm_total += w.total;
@@ -116,8 +139,6 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
     let n = repeats as u32;
 
     crate::resident_model::clear_resident_model();
-    set_decode_budget_override(0); // restore production default
-
     let prompt_tokens = if repeats > 0 {
         acc_prefill_tok / repeats as u64 + 1 // prefill covers prompt_len-1
     } else {

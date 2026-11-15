@@ -32,10 +32,12 @@ pub enum CarrierKind {
 }
 
 impl PathClass {
+    /// `PathClass::discloses_peer_ip`.
     pub const fn discloses_peer_ip(self) -> bool {
         matches!(self, Self::DirectV6 | Self::DirectV4)
     }
 
+    /// `true` when `live_network`.
     pub const fn is_live_network(self) -> bool {
         !matches!(self, Self::Offline)
     }

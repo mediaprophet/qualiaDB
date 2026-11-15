@@ -548,24 +548,24 @@ impl QPUBridgeManager {
     }
 
     /// Serialize quantum circuit to JSON
-    fn serialize_circuit(&self, _circuit: &QuantumCircuit) -> Result<[u8; 1024], QPUBridgeError> {
-        // This would serialize the quantum circuit to JSON format
-        // For now, return a placeholder
+    fn serialize_circuit(&self, circuit: &QuantumCircuit) -> Result<[u8; 1024], QPUBridgeError> {
         let mut json_buffer = [0u8; 1024];
-
-        // In production, this would create proper JSON
-        let json_str = b"{\"backend\":\"ibmq_qasm_simulator\",\"shots\":1000}";
+        let json_str = format!(
+            "{{\"backend\":\"ibmq_qasm_simulator\",\"num_qubits\":{},\"depth\":{},\"circuit_type\":{},\"shots\":1000}}",
+            circuit.num_qubits, circuit.depth, circuit.circuit_type as u8
+        );
         let copy_len = core::cmp::min(json_str.len(), 1024);
-        json_buffer[..copy_len].copy_from_slice(&json_str[..copy_len]);
+        json_buffer[..copy_len].copy_from_slice(&json_str.as_bytes()[..copy_len]);
 
         Ok(json_buffer)
     }
 
     /// Get current timestamp in microseconds
     fn get_timestamp(&self) -> u64 {
-        // Platform-specific timestamp implementation
-        // For now, return a placeholder
-        0
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros() as u64
     }
 
     /// Get performance metrics
@@ -589,6 +589,7 @@ impl QPUBridgeManager {
 
 impl QPUConnectionState {
     #[inline(always)]
+    /// Returns the default `QPUConnectionState`.
     pub const fn default() -> Self {
         Self {
             status: QPUConnectionStatus::Disconnected,
@@ -601,6 +602,7 @@ impl QPUConnectionState {
 
 impl QPUAuthManager {
     #[inline(always)]
+    /// Default state.
     pub fn default() -> Self {
         Self {
             auth_hash: [0u8; 32],
@@ -610,6 +612,7 @@ impl QPUAuthManager {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(
         &mut self,
         api_endpoint: &[u8],
@@ -636,6 +639,7 @@ impl QPUAuthManager {
         Ok(())
     }
 
+    /// Authenticates the QPU connection.
     pub fn authenticate(&mut self) -> Result<(), QPUBridgeError> {
         // This would perform actual authentication
         // For now, simulate success
@@ -643,15 +647,24 @@ impl QPUAuthManager {
         Ok(())
     }
 
+    /// Creates `auth-header`.
     pub fn create_auth_header(&self) -> Result<[u8; 256], QPUBridgeError> {
-        // This would create proper authentication header
-        // For now, return placeholder
-        Ok([0u8; 256])
+        let mut header = [0u8; 256];
+        let mut hex_token = String::with_capacity(64);
+        for byte in &self.auth_hash {
+            use core::fmt::Write;
+            let _ = write!(&mut hex_token, "{:02x}", byte);
+        }
+        let auth_str = format!("Authorization: Bearer qpu_{}", hex_token);
+        let copy_len = core::cmp::min(auth_str.len(), 256);
+        header[..copy_len].copy_from_slice(&auth_str.as_bytes()[..copy_len]);
+        Ok(header)
     }
 }
 
 impl QPUAPIConfig {
     #[inline(always)]
+    /// Default state.
     pub const fn default() -> Self {
         Self {
             endpoint: [0u8; 256],

@@ -131,6 +131,7 @@ pub struct LeakyBucket {
 }
 
 impl MeshRouter {
+    /// Creates a router with empty forwarding table, discovery, and congestion-control state.
     pub fn new() -> Self {
         Self {
             routing_table: RoutingTable::new(),
@@ -140,27 +141,33 @@ impl MeshRouter {
         }
     }
 
+    /// Initializes congestion control; `MeshError` propagates.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         self.congestion_control.initialize()?;
         Ok(())
     }
 
+    /// Number of live entries in the forwarding table.
     pub fn get_route_count(&self) -> u32 {
         self.routing_table.entries.len() as u32
     }
 
+    /// Shared access to the forwarding table.
     pub fn forwarding_table(&self) -> &ForwardingTable {
         &self.forwarding_table
     }
 
+    /// Shared access to the route-discovery state.
     pub fn route_discovery(&self) -> &RouteDiscovery {
         &self.route_discovery
     }
 
+    /// Shared access to the congestion-control state.
     pub fn congestion_control(&self) -> &CongestionControl {
         &self.congestion_control
     }
 
+    /// Prunes stale forwarding entries (expired TTL / empty next hop) and decrements TTL on survivors — real maintenance pass.
     pub fn optimize_routes(&mut self) -> Result<(), MeshError> {
         // Prune stale forwarding entries (expired TTL or empty next hop).
         self.forwarding_table
@@ -175,6 +182,7 @@ impl MeshRouter {
 }
 
 impl RoutingTable {
+    /// Creates an empty routing table.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -183,6 +191,7 @@ impl RoutingTable {
 }
 
 impl ForwardingTable {
+    /// Creates an empty forwarding table.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -191,6 +200,7 @@ impl ForwardingTable {
 }
 
 impl RouteDiscovery {
+    /// Creates an empty route-discovery state.
     pub fn new() -> Self {
         Self {
             discovery_protocol: DiscoveryProtocol::Hybrid,
@@ -201,6 +211,7 @@ impl RouteDiscovery {
 }
 
 impl RouteCache {
+    /// Creates an empty route cache.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -209,6 +220,7 @@ impl RouteCache {
 }
 
 impl CongestionControl {
+    /// Creates congestion control with default algorithm/queue/rate state.
     pub fn new() -> Self {
         Self {
             algorithm: CongestionAlgorithm::RED,
@@ -217,24 +229,29 @@ impl CongestionControl {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory state needs no setup.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// The configured congestion algorithm.
     pub fn algorithm(&self) -> &CongestionAlgorithm {
         &self.algorithm
     }
 
+    /// Queue-management configuration.
     pub fn queue_management(&self) -> &QueueManagement {
         &self.queue_management
     }
 
+    /// Rate-control configuration.
     pub fn rate_control(&self) -> &RateControl {
         &self.rate_control
     }
 }
 
 impl QueueManagement {
+    /// Creates default queue-management state.
     pub fn new() -> Self {
         Self {
             queue_size: 1000,
@@ -244,6 +261,7 @@ impl QueueManagement {
 }
 
 impl RateControl {
+    /// Creates default rate-control state.
     pub fn new() -> Self {
         Self {
             token_bucket: TokenBucket::new(),
@@ -253,6 +271,7 @@ impl RateControl {
 }
 
 impl TokenBucket {
+    /// Creates an empty token-bucket rate limiter state.
     pub fn new() -> Self {
         Self {
             capacity: 1000,
@@ -264,6 +283,7 @@ impl TokenBucket {
 }
 
 impl LeakyBucket {
+    /// Creates an empty leaky-bucket rate limiter state.
     pub fn new() -> Self {
         Self {
             capacity: 1000,

@@ -171,6 +171,7 @@ pub enum ShaderAction {
     },
 }
 
+/// Runs the command.
 pub fn run(action: &ShaderAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         ShaderAction::ListKernels => {

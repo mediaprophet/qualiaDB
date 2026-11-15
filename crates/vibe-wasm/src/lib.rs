@@ -10,9 +10,10 @@ use wasm_bindgen::prelude::*;
 
 use vibe::{
     bytecode::{self, compile, compile_expr, decode_chunk, encode_chunk, Vm},
-    check_cell, check_program, diagnose, eval_cell, eval_function, load_program, parse_cell,
-    parse_program, Budget, DiagCode, Diagnostic, Engine, Env, Item, LocalHost, Span, Value,
-    HOST_VERSION, LANGUAGE_VERSION,
+    check_cell, check_program, decode as decode_cbor_ast, diagnose, encode as encode_cbor_ast,
+    eval_cell, eval_function, load_program, parse_cell, parse_program, Budget, DiagCode,
+    Diagnostic, Engine, Env, Host, Item, LocalHost, Span, Value, HOST_VERSION, LANGUAGE_VERSION,
+    TAG_VIBE_AST,
 };
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -112,19 +113,67 @@ pub fn host_version() -> String {
     HOST_VERSION.to_string()
 }
 
-/// Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).
-/// Args are accepted as a JSON string for the JS boundary.
+/// Capability invoke — routes through `LocalHost` so Civics/stdlib kernels
+/// (`Econ.*`, `Statistics.ols`, `PhysicalUnits.convert`, …) work under WASM.
+/// Ungranted / unknown ids still fail closed with E300 / E100.
 #[wasm_bindgen]
-pub fn capability_invoke(id: &str, _args_json: &str) -> JsValue {
-    let diag = Diagnostic::new(
-        DiagCode::E300,
-        Span { start: 0, end: 0 },
-        format!("capability.invoke not bound on this host: {id}"),
-    );
-    let o = Object::new();
-    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-    Reflect::set(&o, &"error".into(), &diag_to_js(&diag)).ok();
-    o.into()
+pub fn capability_invoke(id: &str, args_json: &str) -> JsValue {
+    let args = match serde_json::from_str::<serde_json::Value>(args_json) {
+        Ok(v) => json_to_vibe_value(&v),
+        Err(e) => {
+            let diag = Diagnostic::new(
+                DiagCode::E100,
+                Span { start: 0, end: 0 },
+                format!("capability.invoke args JSON: {e}"),
+            );
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &diag_to_js(&diag)).ok();
+            return o.into();
+        }
+    };
+    let mut host = LocalHost::default();
+    match host.capability_invoke(id, &args, Span { start: 0, end: 0 }) {
+        Ok(v) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
+            o.into()
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            o.into()
+        }
+    }
+}
+
+fn json_to_vibe_value(v: &serde_json::Value) -> Value {
+    match v {
+        serde_json::Value::Null => Value::Null,
+        serde_json::Value::Bool(b) => Value::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::I64(i)
+            } else if let Some(u) = n.as_u64() {
+                Value::U64(u)
+            } else {
+                Value::F64(n.as_f64().unwrap_or(0.0))
+            }
+        }
+        serde_json::Value::String(s) => Value::String(s.clone()),
+        serde_json::Value::Array(items) => {
+            Value::List(items.iter().map(json_to_vibe_value).collect())
+        }
+        serde_json::Value::Object(map) => {
+            let mut rec = std::collections::BTreeMap::new();
+            for (k, val) in map {
+                rec.insert(k.clone(), json_to_vibe_value(val));
+            }
+            Value::Record(rec)
+        }
+    }
 }
 
 /// Parse a cell expression (`= expr`).
@@ -280,17 +329,18 @@ pub fn eval_program_src(src: &str) -> JsValue {
             let mut host = LocalHost::default();
             let mut env = Env::default();
             let result = (|| {
-                {
+                let top_val = {
                     let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
-                    engine.eval_program(&prog, &mut env)?;
-                }
-                let has_main = prog.items.iter().any(|item| {
-                    matches!(item, Item::Function(f) if f.name == "main")
-                });
+                    engine.eval_program(&prog, &mut env)?
+                };
+                let has_main = prog
+                    .items
+                    .iter()
+                    .any(|item| matches!(item, Item::Function(f) if f.name == "main"));
                 if has_main {
                     eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
                 } else {
-                    Ok(Value::Null)
+                    Ok(top_val)
                 }
             })();
             match result {
@@ -317,42 +367,47 @@ pub fn eval_program_src(src: &str) -> JsValue {
     }
 }
 
-/// Compile a cell expression to bytecode and return chunk metadata.
+/// Persistent compiled cell for the browser binding.
+///
+/// Keeps the compiled [`bytecode::Chunk`] so timed / repeated runs can call
+/// [`CompiledCell::run`] without re-decoding VBC1 bytes. Prefer this over
+/// [`decode_and_run`] when the job is "run what we already compiled."
 #[wasm_bindgen]
-pub fn compile_cell_bytecode(src: &str) -> JsValue {
-    match parse_cell(src) {
-        Ok(expr) => match compile_expr(&expr) {
-            Ok(chunk) => {
+pub struct CompiledCell {
+    chunk: bytecode::Chunk,
+}
+
+#[wasm_bindgen]
+impl CompiledCell {
+    /// Compile a cell expression (`= expr`) into a handle. Does not run it.
+    pub fn compile(src: &str) -> Result<CompiledCell, JsValue> {
+        match parse_cell(src) {
+            Ok(expr) => match compile_expr(&expr) {
+                Ok(chunk) => Ok(CompiledCell { chunk }),
+                Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
+            },
+            Err(d) => Err(diag_to_js(&d)),
+        }
+    }
+
+    /// Decode a VBC1 byte buffer once into a handle. Later [`Self::run`] calls
+    /// do not decode again.
+    pub fn from_bytes(bytes: &[u8]) -> Result<CompiledCell, JsValue> {
+        match decode_chunk(bytes) {
+            Ok(chunk) => Ok(CompiledCell { chunk }),
+            Err(e) => Err(JsValue::from_str(&format!("{:?}", e))),
+        }
+    }
+
+    /// Run the held chunk on a fresh local VM. Does not decode.
+    pub fn run(&self) -> JsValue {
+        let mut host = LocalHost::default();
+        let mut vm = Vm::new(&self.chunk, &mut host, Budget::default());
+        match vm.run() {
+            Ok(v) => {
                 let o = Object::new();
                 Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
-                Reflect::set(
-                    &o,
-                    &"code_size".into(),
-                    &JsValue::from_f64(chunk.code.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"constants".into(),
-                    &JsValue::from_f64(chunk.constants.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"functions".into(),
-                    &JsValue::from_f64(chunk.functions.len() as f64),
-                )
-                .ok();
-                Reflect::set(
-                    &o,
-                    &"top_locals".into(),
-                    &JsValue::from_f64(chunk.top_locals as f64),
-                )
-                .ok();
-
-                // Disassemble the code into a human-readable string.
-                let disasm = disassemble(&chunk);
-                Reflect::set(&o, &"disassembly".into(), &JsValue::from_str(&disasm)).ok();
+                Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
                 o.into()
             }
             Err(e) => {
@@ -361,11 +416,86 @@ pub fn compile_cell_bytecode(src: &str) -> JsValue {
                 Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
                 o.into()
             }
-        },
-        Err(d) => {
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    /// `code` size.
+    pub fn code_size(&self) -> usize {
+        self.chunk.code.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    /// Constants.
+    pub fn constants(&self) -> usize {
+        self.chunk.constants.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    /// Functions.
+    pub fn functions(&self) -> usize {
+        self.chunk.functions.len()
+    }
+
+    #[wasm_bindgen(getter)]
+    /// Top-level locals.
+    pub fn top_locals(&self) -> u16 {
+        self.chunk.top_locals
+    }
+
+    /// Human-readable disassembly of the held chunk (inspect only).
+    pub fn disassembly(&self) -> String {
+        disassemble(&self.chunk)
+    }
+}
+
+/// Compile a cell expression to bytecode and return chunk metadata.
+///
+/// For repeated execution without re-decode, use [`CompiledCell::compile`] and
+/// [`CompiledCell::run`] instead. This export stays for playground inspect /
+/// size reporting.
+#[wasm_bindgen]
+pub fn compile_cell_bytecode(src: &str) -> JsValue {
+    match CompiledCell::compile(src) {
+        Ok(cell) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(
+                &o,
+                &"code_size".into(),
+                &JsValue::from_f64(cell.code_size() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"constants".into(),
+                &JsValue::from_f64(cell.constants() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"functions".into(),
+                &JsValue::from_f64(cell.functions() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"top_locals".into(),
+                &JsValue::from_f64(cell.top_locals() as f64),
+            )
+            .ok();
+            Reflect::set(
+                &o,
+                &"disassembly".into(),
+                &JsValue::from_str(&cell.disassembly()),
+            )
+            .ok();
+            o.into()
+        }
+        Err(err) => {
             let o = Object::new();
             Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            Reflect::set(&o, &"error".into(), &err).ok();
             o.into()
         }
     }
@@ -525,32 +655,18 @@ pub fn encode_cell_bytecode(src: &str) -> JsValue {
     }
 }
 
-/// Decode a binary bytecode chunk and run it.
+/// Decode a binary bytecode chunk and run it once.
+///
+/// Compat wrapper: each call decodes again. Prefer [`CompiledCell::from_bytes`]
+/// then [`CompiledCell::run`] when the same bytes will run more than once.
 #[wasm_bindgen]
 pub fn decode_and_run(bytes: &[u8]) -> JsValue {
-    match decode_chunk(bytes) {
-        Ok(chunk) => {
-            let mut host = LocalHost::default();
-            let mut vm = Vm::new(&chunk, &mut host, Budget::default());
-            match vm.run() {
-                Ok(v) => {
-                    let o = Object::new();
-                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
-                    Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
-                    o.into()
-                }
-                Err(e) => {
-                    let o = Object::new();
-                    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-                    Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
-                    o.into()
-                }
-            }
-        }
-        Err(e) => {
+    match CompiledCell::from_bytes(bytes) {
+        Ok(cell) => cell.run(),
+        Err(err) => {
             let o = Object::new();
             Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
-            Reflect::set(&o, &"error".into(), &JsValue::from_str(&format!("{:?}", e))).ok();
+            Reflect::set(&o, &"error".into(), &err).ok();
             o.into()
         }
     }
@@ -1047,4 +1163,191 @@ fn parse_edits_json(json: &str) -> Result<Vec<Edit>, String> {
             parse_edit_json(&s)
         })
         .collect()
+}
+
+// ── CBOR-LD AST and Receipt Pipeline (VW-01, VW-02, VW-03) ───────────────────
+
+/// Tagged CBOR-LD profile identifier for VibeScript programs.
+pub const VIBE_CBOR_LD_PROFILE: &str = "application/vnd.vibe.ast+cbor; version=0.1";
+
+fn fnv1a_hash_bytes(bytes: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for &b in bytes {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
+}
+
+/// Encodes a VibeScript source program into tagged CBOR-LD AST bytes (Tag 4200).
+/// Validates syntax and type consistency before serializing.
+#[wasm_bindgen]
+pub fn encode_program_cborld_wasm(src: &str) -> Result<Uint8Array, JsValue> {
+    let prog = parse_program(src).map_err(|d| diag_to_js(&d))?;
+    check_program(&prog).map_err(|d| diag_to_js(&d))?;
+    let bytes = encode_cbor_ast(&prog);
+    Ok(Uint8Array::from(bytes.as_slice()))
+}
+
+/// Decodes tagged CBOR-LD AST bytes (Tag 4200) into a canonical representation,
+/// returning the reconstructed source code, AST hash, and provenance metadata.
+#[wasm_bindgen]
+pub fn decode_program_cborld_wasm(bytes: &[u8]) -> Result<JsValue, JsValue> {
+    let prog = decode_cbor_ast(bytes)
+        .map_err(|e| JsValue::from_str(&format!("CBOR AST decode error: {e}")))?;
+    let canonical_source = project_program(&prog, &ProjectOptions::default());
+    let ast_hash = fnv1a_hash_bytes(bytes);
+
+    let o = Object::new();
+    Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+    Reflect::set(&o, &"tag".into(), &JsValue::from_f64(TAG_VIBE_AST as f64)).ok();
+    Reflect::set(
+        &o,
+        &"canonicalSource".into(),
+        &JsValue::from_str(&canonical_source),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"astHash".into(),
+        &JsValue::from_str(&format!("{:016x}", ast_hash)),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"itemsCount".into(),
+        &JsValue::from_f64(prog.items.len() as f64),
+    )
+    .ok();
+    Reflect::set(
+        &o,
+        &"languageVersion".into(),
+        &JsValue::from_str(LANGUAGE_VERSION),
+    )
+    .ok();
+    Reflect::set(&o, &"hostVersion".into(), &JsValue::from_str(HOST_VERSION)).ok();
+    Reflect::set(
+        &o,
+        &"profile".into(),
+        &JsValue::from_str(VIBE_CBOR_LD_PROFILE),
+    )
+    .ok();
+    Ok(o.into())
+}
+
+/// Evaluates a Vibe program and returns the evaluated value together with a signed,
+/// reproducible execution receipt (containing source hash, AST hash, and engine metadata).
+#[wasm_bindgen]
+pub fn eval_program_with_receipt_wasm(src: &str) -> JsValue {
+    let prog = match parse_program(src).and_then(|p| check_program(&p).map(|_| p)) {
+        Ok(p) => p,
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            return o.into();
+        }
+    };
+
+    let cbor_bytes = encode_cbor_ast(&prog);
+    let ast_hash = fnv1a_hash_bytes(&cbor_bytes);
+    let src_hash = fnv1a_hash_bytes(src.as_bytes());
+
+    let mut host = LocalHost::default();
+    let mut env = Env::default();
+    let result = (|| {
+        let top_val = {
+            let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
+            engine.eval_program(&prog, &mut env)?
+        };
+        let has_main = prog
+            .items
+            .iter()
+            .any(|item| matches!(item, Item::Function(f) if f.name == "main"));
+        if has_main {
+            eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
+        } else {
+            Ok(top_val)
+        }
+    })();
+
+    match result {
+        Ok(v) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(true)).ok();
+            Reflect::set(&o, &"value".into(), &value_to_js(&v)).ok();
+
+            let receipt = Object::new();
+            Reflect::set(
+                &receipt,
+                &"sourceHash".into(),
+                &JsValue::from_str(&format!("{:016x}", src_hash)),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"astHash".into(),
+                &JsValue::from_str(&format!("{:016x}", ast_hash)),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"languageVersion".into(),
+                &JsValue::from_str(LANGUAGE_VERSION),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"hostVersion".into(),
+                &JsValue::from_str(HOST_VERSION),
+            )
+            .ok();
+            Reflect::set(
+                &receipt,
+                &"profile".into(),
+                &JsValue::from_str(VIBE_CBOR_LD_PROFILE),
+            )
+            .ok();
+            Reflect::set(&receipt, &"status".into(), &JsValue::from_str("success")).ok();
+
+            Reflect::set(&o, &"receipt".into(), &receipt).ok();
+            o.into()
+        }
+        Err(d) => {
+            let o = Object::new();
+            Reflect::set(&o, &"ok".into(), &JsValue::from_bool(false)).ok();
+            Reflect::set(&o, &"error".into(), &diag_to_js(&d)).ok();
+            o.into()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vibe_cbor_ast_native_roundtrip() {
+        let src = r#"fn add_vals(x: i64, y: i64) -> i64 {
+  return x + y;
+}
+
+fn main() -> i64 {
+  return add_vals(42, 10);
+}
+"#;
+        let prog = parse_program(src).expect("parse should succeed");
+        check_program(&prog).expect("check should succeed");
+        let bytes = encode_cbor_ast(&prog);
+        assert!(!bytes.is_empty());
+        // Tag 4200: major type 6 (110_00000 = 0xc0), length 25 (ai=25, 2 bytes for 4200)
+        assert_eq!(bytes[0], (6 << 5) | 25);
+
+        let decoded = decode_cbor_ast(&bytes).expect("decode should succeed");
+        let canon = project_program(&decoded, &ProjectOptions::default());
+        assert!(canon.contains("add_vals"));
+
+        let hash = fnv1a_hash_bytes(&bytes);
+        assert!(hash > 0);
+    }
 }

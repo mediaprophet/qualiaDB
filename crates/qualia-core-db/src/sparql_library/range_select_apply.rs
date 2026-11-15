@@ -15,6 +15,7 @@ pub struct SelectApplyPage {
     pub limit_reached: bool,
 }
 
+/// Applies select wrappers.
 pub fn apply_select_wrappers(
     ctx: &SparqlQueryContext,
     filters: &[ExpressionId],

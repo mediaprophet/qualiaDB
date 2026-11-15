@@ -52,6 +52,7 @@ pub struct Q42RangeVolumeSetOptionalState {
 }
 
 impl Q42RangeOptionalPlan {
+    /// Builds `Q42RangeOptionalPlan` from `execution_plan`.
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
             return Err("range OPTIONAL requires a non-empty execution plan".into());
@@ -140,6 +141,7 @@ fn triple_scan(plan: &ExecutionPlan, operator: u16) -> Result<Q42RangeTriplePatt
     }
 }
 
+/// Executes a range-optional into `out`.
 pub fn execute_range_optional_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeOptionalPlan,
@@ -237,6 +239,7 @@ pub fn execute_range_optional_page_into<S: crate::q42_volume::Q42RangeSource>(
     }
 }
 
+/// Executes a volume-set range-optional into `out`.
 pub fn execute_range_volume_set_optional_page_into<S: crate::q42_volume::Q42RangeSource>(
     volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
     plan: Q42RangeOptionalPlan,

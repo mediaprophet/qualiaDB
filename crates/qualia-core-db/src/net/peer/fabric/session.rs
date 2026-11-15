@@ -14,6 +14,7 @@ pub struct SessionReady {
 }
 
 impl SessionReady {
+    /// Attempts `new`; error/`None` on failure.
     pub(crate) fn try_new(
         kernel: &Kernel,
         peer: PeerId,

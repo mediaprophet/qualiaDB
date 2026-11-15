@@ -15,6 +15,7 @@
 //! into here for numeric work, but the two are not merged.
 
 pub mod anomaly;
+pub mod cohort_estimator;
 pub mod correlation;
 pub mod descriptive;
 pub mod distributions;
@@ -40,7 +41,10 @@ pub use hypothesis::{
     TwoSampleTTest,
 };
 pub use information::{cross_entropy, entropy, kl_divergence, mutual_information_discrete};
-pub use regression::{simple_linear_regression, LinearRegression};
+pub use regression::{
+    multiple_ols, simple_linear_regression, verify_regression_model, LinearRegression, MultipleOls,
+    VerificationReport,
+};
 pub use robust::{iqr, median_abs_deviation, trimmed_mean, winsorized_mean};
 
 /// Basic bootstrap mean (cold bounded, for calibration/validation).

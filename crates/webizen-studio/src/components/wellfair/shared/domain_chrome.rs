@@ -3,7 +3,7 @@
 //! Keeps product language consistent without per-panel style drift.
 
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Compact domain identity row above a panel title.
 ///

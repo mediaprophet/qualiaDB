@@ -4,13 +4,17 @@
 //! value stack, and dispatching opcodes. Host capability calls are routed
 //! through the `Host` trait, same as the AST interpreter.
 
-use crate::bind::{dispatch, Host};
+use crate::bind::Host;
 use crate::budget::Budget;
 use crate::bytecode::op::{Chunk, Const, Op};
 use crate::error::{DiagCode, Diagnostic};
+use crate::extension_registry::{
+    route_call, CallExecutionContext, DispatchOutcome, ExtensionRegistry, PreparedCallCache,
+};
 use crate::span::Span;
-use crate::value::Value;
+use crate::value::{EnumValue, Value};
 use std::collections::BTreeMap;
+use vibescript_abi::{q_hash_str, ExecutionMode, SentinelPolicyGate};
 
 /// VM execution error.
 #[derive(Debug, Clone, PartialEq)]
@@ -70,30 +74,6 @@ impl From<Diagnostic> for VmError {
 
 const MAX_STACK: usize = 1024;
 
-/// Split a flat argument list into positional args and named args.
-///
-/// Named args are emitted by the compiler as alternating (String, Value) pairs.
-/// We detect this pattern: if the list has even length and every even-indexed
-/// element is a `Value::String`, we treat it as named args.
-fn split_args(args: Vec<Value>) -> (Vec<Value>, Vec<(String, Value)>) {
-    if args.len() >= 2 && args.len() % 2 == 0 {
-        let mut named = Vec::with_capacity(args.len() / 2);
-        let mut is_named = true;
-        for chunk in args.chunks(2) {
-            if let Value::String(k) = &chunk[0] {
-                named.push((k.clone(), chunk[1].clone()));
-            } else {
-                is_named = false;
-                break;
-            }
-        }
-        if is_named {
-            return (Vec::new(), named);
-        }
-    }
-    (args, Vec::new())
-}
-
 /// The virtual machine.
 pub struct Vm<'a, H: Host> {
     chunk: &'a Chunk,
@@ -103,6 +83,16 @@ pub struct Vm<'a, H: Host> {
     stack: Vec<Value>,
     /// Call frames: each frame has its own locals array.
     frames: Vec<Frame>,
+    /// Generational extension registry (`Stage S6`).
+    extension_registry: ExtensionRegistry<'a>,
+    /// Zero-heap prepared call handle cache (`Stage S6`).
+    prepared_cache: PreparedCallCache,
+    /// Active extension execution context.
+    call_context: CallExecutionContext,
+    /// Optional Sentinel policy gate for governed/simulated execution modes.
+    sentinel_gate: Option<&'a mut dyn SentinelPolicyGate>,
+    /// Most recent extension `DispatchOutcome` (receipt + audit `NQuin48`s).
+    last_extension_outcome: Option<DispatchOutcome>,
 }
 
 /// A call frame.
@@ -111,9 +101,6 @@ struct Frame {
     return_pc: usize,
     /// Local variable slots for this frame.
     locals: Vec<Value>,
-    /// Number of arguments passed.
-    #[allow(dead_code)]
-    arg_count: u8,
 }
 
 impl<'a, H: Host> Vm<'a, H> {
@@ -125,18 +112,49 @@ impl<'a, H: Host> Vm<'a, H> {
             budget,
             stack: Vec::with_capacity(256),
             frames: Vec::new(),
+            extension_registry: ExtensionRegistry::with_builtin_providers(),
+            prepared_cache: PreparedCallCache::new(),
+            call_context: CallExecutionContext {
+                actor_did_hash: q_hash_str("did:q42:local_vm"),
+                context_world_hash: 1,
+                lamport_timestamp: 1,
+                mode: ExecutionMode::StandaloneDeveloper,
+            },
+            sentinel_gate: None,
+            last_extension_outcome: None,
         }
+    }
+
+    /// Configures governed extension execution (`CallExecutionContext` + optional `SentinelPolicyGate`).
+    pub fn with_extension_governance(
+        mut self,
+        call_context: CallExecutionContext,
+        sentinel_gate: Option<&'a mut dyn SentinelPolicyGate>,
+    ) -> Self {
+        self.call_context = call_context;
+        self.sentinel_gate = sentinel_gate;
+        self
+    }
+
+    /// Mutable reference to the VM's `ExtensionRegistry`.
+    pub fn extension_registry_mut(&mut self) -> &mut ExtensionRegistry<'a> {
+        &mut self.extension_registry
+    }
+
+    /// Returns the most recent extension `DispatchOutcome` (receipt + audit `NQuin48`s), if any.
+    pub fn last_extension_outcome(&self) -> Option<&DispatchOutcome> {
+        self.last_extension_outcome.as_ref()
     }
 
     /// Execute the chunk's top-level preamble and return the last value on the stack.
     pub fn run(&mut self) -> Result<Value, VmError> {
+        super::task_admission::validate(self.chunk)?;
         let mut pc: usize = 0;
         // Top-level locals.
         let top_locals = vec![Value::Null; self.chunk.top_locals as usize];
         self.frames.push(Frame {
             return_pc: usize::MAX,
-            locals: top_locals.clone(),
-            arg_count: 0,
+            locals: top_locals,
         });
 
         loop {
@@ -151,7 +169,7 @@ impl<'a, H: Host> Vm<'a, H> {
             }
             if op == Op::ReturnNull {
                 self.frames.pop();
-                let _ = self.push(Value::Null);
+                self.push(Value::Null)?;
                 break;
             }
 
@@ -172,6 +190,7 @@ impl<'a, H: Host> Vm<'a, H> {
 
     /// Execute a specific user function by index with the given arguments.
     pub fn call_function(&mut self, fn_idx: u16, args: &[Value]) -> Result<Value, VmError> {
+        super::task_admission::validate(self.chunk)?;
         let meta = self
             .chunk
             .functions
@@ -179,9 +198,13 @@ impl<'a, H: Host> Vm<'a, H> {
             .ok_or(VmError::InvalidFunction(fn_idx))?
             .clone();
 
+        if meta.budget_steps > 0 {
+            self.budget.steps_left = self.budget.steps_left.min(meta.budget_steps);
+        }
+
         let mut locals = vec![Value::Null; meta.local_count as usize];
         for (i, arg) in args.iter().enumerate() {
-            if i < meta.param_count as usize {
+            if i < meta.param_count as usize && i < locals.len() {
                 locals[i] = arg.clone();
             }
         }
@@ -190,7 +213,6 @@ impl<'a, H: Host> Vm<'a, H> {
         self.frames.push(Frame {
             return_pc: usize::MAX,
             locals,
-            arg_count: args.len() as u8,
         });
 
         let mut pc = meta.code_offset as usize;
@@ -362,11 +384,8 @@ impl<'a, H: Host> Vm<'a, H> {
             Op::JumpIfFalse => {
                 let target = self.read_u16(pc)? as usize;
                 let cond = self.pop()?;
-                let is_false = match cond {
-                    Value::Bool(b) => !b,
-                    Value::Null => true,
-                    _ => false,
-                };
+                // Same truthiness as the tree-walking interpreter.
+                let is_false = !cond.is_truthy();
                 if is_false {
                     *pc = target;
                 }
@@ -375,11 +394,7 @@ impl<'a, H: Host> Vm<'a, H> {
             Op::JumpIfTrue => {
                 let target = self.read_u16(pc)? as usize;
                 let cond = self.pop()?;
-                let is_true = match cond {
-                    Value::Bool(b) => b,
-                    Value::Null => false,
-                    _ => true,
-                };
+                let is_true = cond.is_truthy();
                 if is_true {
                     *pc = target;
                 }
@@ -390,7 +405,13 @@ impl<'a, H: Host> Vm<'a, H> {
             Op::CallHost => {
                 let path_idx = self.read_u16(pc)?;
                 let argc = self.read_u8(pc)? as usize;
-                self.call_host(path_idx, argc)
+                self.call_host(path_idx, argc, 0)
+            }
+            Op::CallHostNamed => {
+                let path_idx = self.read_u16(pc)?;
+                let pos_argc = self.read_u8(pc)? as usize;
+                let named_pairs = self.read_u8(pc)? as usize;
+                self.call_host(path_idx, pos_argc, named_pairs)
             }
             Op::CallUser => {
                 let fn_idx = self.read_u16(pc)?;
@@ -462,15 +483,122 @@ impl<'a, H: Host> Vm<'a, H> {
                 }
             }
             Op::TryUnwrap => {
-                // Read catch offset (unused in 0.1 — we just pass through).
-                let _catch = self.read_u16(pc)?;
-                // The value is already on the stack; TryUnwrap is a no-op for now.
-                Ok(())
+                let catch_off = self.read_u16(pc)? as usize;
+                match self.pop()? {
+                    Value::Ok(inner) => self.push(*inner),
+                    Value::Err(err_val) => {
+                        if catch_off != *pc {
+                            self.push(Value::Err(err_val))?;
+                            *pc = catch_off;
+                            Ok(())
+                        } else {
+                            Err(VmError::Diagnostic(Diagnostic::new(
+                                DiagCode::E600,
+                                Span::new(0, 0),
+                                format!("? on Err: {err_val:?}"),
+                            )))
+                        }
+                    }
+                    other => self.push(other),
+                }
             }
             Op::Effect => {
                 // Pop and discard (side effect already happened).
                 self.pop()?;
                 Ok(())
+            }
+            Op::IsOk => {
+                let v = self.pop()?;
+                self.push(Value::Bool(matches!(v, Value::Ok(_))))
+            }
+            Op::UnwrapOk => match self.pop()? {
+                Value::Ok(inner) => self.push(*inner),
+                _ => Err(VmError::TypeMismatch("unwrap Ok")),
+            },
+            Op::IsErr => {
+                let v = self.pop()?;
+                self.push(Value::Bool(matches!(v, Value::Err(_))))
+            }
+            Op::UnwrapErr => match self.pop()? {
+                Value::Err(inner) => self.push(*inner),
+                _ => Err(VmError::TypeMismatch("unwrap Err")),
+            },
+            Op::IsVariant => {
+                let enum_idx = self.read_u16(pc)?;
+                let var_idx = self.read_u16(pc)?;
+                let arity = self.read_u8(pc)? as usize;
+                let enum_name = self.get_string_const(enum_idx)?;
+                let variant_name = self.get_string_const(var_idx)?;
+                let v = self.pop()?;
+                let matched = matches!(
+                    v,
+                    Value::Enum(ref e)
+                        if e.enum_name == enum_name
+                            && e.variant_name == variant_name
+                            && e.payload.len() == arity
+                );
+                self.push(Value::Bool(matched))
+            }
+            Op::GetVariantField => {
+                let idx = self.read_u8(pc)? as usize;
+                match self.pop()? {
+                    Value::Enum(e) => {
+                        let field = e
+                            .payload
+                            .get(idx)
+                            .cloned()
+                            .ok_or(VmError::TypeMismatch("enum field index"))?;
+                        self.push(field)
+                    }
+                    _ => Err(VmError::TypeMismatch("enum variant field")),
+                }
+            }
+            Op::IsRecord => {
+                let v = self.pop()?;
+                self.push(Value::Bool(matches!(v, Value::Record(_))))
+            }
+            Op::HasMember => {
+                let key_idx = self.read_u16(pc)?;
+                let key = self.get_string_const(key_idx)?;
+                let v = self.pop()?;
+                let matched = matches!(v, Value::Record(ref r) if r.contains_key(&key));
+                self.push(Value::Bool(matched))
+            }
+            Op::IsListLen => {
+                let len = self.read_u16(pc)? as usize;
+                let v = self.pop()?;
+                let matched = matches!(v, Value::List(ref xs) if xs.len() == len);
+                self.push(Value::Bool(matched))
+            }
+            Op::TrapMatch => Err(VmError::Diagnostic(Diagnostic::new(
+                DiagCode::E600,
+                Span::new(0, 0),
+                "destructuring let pattern failed to match",
+            ))),
+            Op::MakeVariant => {
+                let enum_idx = self.read_u16(pc)?;
+                let var_idx = self.read_u16(pc)?;
+                let argc = self.read_u8(pc)? as usize;
+                let enum_name = self.get_string_const(enum_idx)?;
+                let variant_name = self.get_string_const(var_idx)?;
+                let mut payload = Vec::with_capacity(argc);
+                for _ in 0..argc {
+                    payload.push(self.pop()?);
+                }
+                payload.reverse();
+                self.push(Value::Enum(EnumValue::with_payload(
+                    &enum_name,
+                    &variant_name,
+                    payload,
+                )))
+            }
+            Op::MakeOk => {
+                let v = self.pop()?;
+                self.push(Value::Ok(Box::new(v)))
+            }
+            Op::MakeErr => {
+                let v = self.pop()?;
+                self.push(Value::Err(Box::new(v)))
             }
             Op::Halt => Ok(()),
         }
@@ -549,20 +677,17 @@ impl<'a, H: Host> Vm<'a, H> {
 
     fn load_local(&self, slot: u16) -> Result<Value, VmError> {
         let frame = self.frames.last().ok_or(VmError::StackUnderflow)?;
-        if slot as usize >= frame.locals.len() {
-            // If the slot is beyond the frame's locals, return Null
-            // (this handles top-level locals in function context).
-            Ok(Value::Null)
-        } else {
-            Ok(frame.locals[slot as usize].clone())
-        }
+        frame
+            .locals
+            .get(slot as usize)
+            .cloned()
+            .ok_or(VmError::InvalidLocal(slot))
     }
 
     fn store_local(&mut self, slot: u16, value: Value) -> Result<(), VmError> {
         let frame = self.frames.last_mut().ok_or(VmError::StackUnderflow)?;
         if slot as usize >= frame.locals.len() {
-            // Extend locals if needed.
-            frame.locals.resize(slot as usize + 1, Value::Null);
+            return Err(VmError::InvalidLocal(slot));
         }
         frame.locals[slot as usize] = value;
         Ok(())
@@ -718,20 +843,31 @@ impl<'a, H: Host> Vm<'a, H> {
         self.push(Value::Bool(result))
     }
 
-    fn call_host(&mut self, path_idx: u16, argc: usize) -> Result<(), VmError> {
-        // Pop arguments in reverse.
-        let mut args = Vec::with_capacity(argc);
-        for _ in 0..argc {
-            args.push(self.pop()?);
+    fn call_host(
+        &mut self,
+        path_idx: u16,
+        pos_argc: usize,
+        named_pairs: usize,
+    ) -> Result<(), VmError> {
+        let mut named_args = Vec::with_capacity(named_pairs);
+        for _ in 0..named_pairs {
+            let val = self.pop()?;
+            let key = match self.pop()? {
+                Value::String(k) => k,
+                _ => return Err(VmError::TypeMismatch("named argument key")),
+            };
+            named_args.push((key, val));
         }
-        args.reverse();
+        named_args.reverse();
+
+        let mut pos_args = Vec::with_capacity(pos_argc);
+        for _ in 0..pos_argc {
+            pos_args.push(self.pop()?);
+        }
+        pos_args.reverse();
 
         if path_idx == 0xFFFF {
-            // Callee on stack — pop it.
-            let callee = self.pop()?;
-            // For 0.1, we don't support dynamic dispatch in the VM.
-            // This is a fallback that pushes null.
-            let _ = callee;
+            let _callee = self.pop()?;
             self.push(Value::Null)?;
             return Ok(());
         }
@@ -739,12 +875,19 @@ impl<'a, H: Host> Vm<'a, H> {
         let path = self.get_string_const(path_idx)?;
         let span = Span::new(0, 0);
 
-        // Separate positional and named arguments.
-        // The compiler emits named args as (String key, Value) pairs.
-        // We detect them by checking if every other element is a String.
-        let (pos_args, named_args) = split_args(args);
-
-        let result = dispatch(self.host, &path, &pos_args, &named_args, span)?;
+        let result = route_call(
+            self.host,
+            &self.extension_registry,
+            &mut self.prepared_cache,
+            &self.call_context,
+            self.sentinel_gate.as_deref_mut(),
+            &mut self.last_extension_outcome,
+            &mut self.budget,
+            &path,
+            &pos_args,
+            &named_args,
+            span,
+        )?;
         self.push(result)
     }
 
@@ -756,6 +899,10 @@ impl<'a, H: Host> Vm<'a, H> {
             .ok_or(VmError::InvalidFunction(fn_idx))?
             .clone();
 
+        if meta.budget_steps > 0 {
+            self.budget.steps_left = self.budget.steps_left.min(meta.budget_steps);
+        }
+
         // Pop arguments in reverse.
         let mut args = Vec::with_capacity(argc);
         for _ in 0..argc {
@@ -766,17 +913,13 @@ impl<'a, H: Host> Vm<'a, H> {
         // Set up new frame.
         let mut locals = vec![Value::Null; meta.local_count as usize];
         for (i, arg) in args.iter().enumerate() {
-            if i < meta.param_count as usize {
+            if i < meta.param_count as usize && i < locals.len() {
                 locals[i] = arg.clone();
             }
         }
 
         let return_pc = *pc;
-        self.frames.push(Frame {
-            return_pc,
-            locals,
-            arg_count: argc as u8,
-        });
+        self.frames.push(Frame { return_pc, locals });
 
         // Jump to function code.
         *pc = meta.code_offset as usize;
@@ -1070,5 +1213,122 @@ mod tests {
     fn vm_quantity_mismatched_units_fail() {
         let err = run_cell("= 500ms + 1s").expect_err("unit mismatch");
         assert!(matches!(err, VmError::TypeMismatch(_)));
+    }
+
+    #[test]
+    fn vm_ast_parity_patterns_letpat_try_budget_and_args() {
+        use crate::eval::{Engine, Env};
+        use crate::parse::parse_program;
+
+        // 1. Destructuring LetPat + Match on Some/None/Ok/Err/List/Record/Enum + Try unwrap
+        let src = r#"
+enum Color { Red, Rgb(i64, i64, i64) }
+fn inspect_all(opt: i64, res: i64, tag: i64) -> i64 {
+    let [a, b] = [10, 20];
+    let { x, y } = { x: 3, y: 4 };
+    let mut v_opt = 0;
+    match opt {
+        Some(n) => { v_opt = n + 1; }
+        None => { v_opt = 0; }
+    }
+    let r_val = if res > 0 { Ok(res * 2) } else { Err("neg") };
+    let mut v_res = 0;
+    match r_val {
+        Ok(k) => { v_res = k; }
+        Err(_e) => { v_res = -1; }
+    }
+    let c = if tag == 1 { Color.Rgb(1, 2, 3) } else { Color.Red() };
+    let mut v_col = 0;
+    match c {
+        Color.Rgb(r, g, bl) => { v_col = r + g + bl; }
+        Color.Red() => { v_col = 9; }
+        _ => { v_col = 0; }
+    }
+    let unwrapped = Ok(5)?;
+    return a + b + x + y + v_opt + v_res + v_col + unwrapped;
+}
+"#;
+        let prog = parse_program(src).expect("parse");
+        let chunk = compile(&prog).expect("compile");
+        let idx = chunk.find_function("inspect_all").expect("fn");
+
+        for (opt, res, tag) in [
+            (Value::I64(7), Value::I64(4), Value::I64(1)),
+            (Value::Null, Value::I64(-1), Value::I64(0)),
+        ] {
+            let mut h1 = LocalHost::default();
+            let mut vm = Vm::new(&chunk, &mut h1, Budget::default());
+            vm.run().expect("preamble");
+            let vm_out = vm
+                .call_function(idx, &[opt.clone(), res.clone(), tag.clone()])
+                .expect("vm call");
+
+            let mut h2 = LocalHost::default();
+            let mut engine = Engine::new(&mut h2, Budget::default());
+            let mut env = Env::default();
+            let ast_out = engine
+                .call_function(&prog, "inspect_all", vec![opt, res, tag], &mut env)
+                .expect("ast call");
+            assert_eq!(vm_out, ast_out);
+        }
+
+        // 2. Try (?) on Err propagates E600
+        let err_try = parse_program(r#"fn fail_try() -> i64 { return Err("boom")?; }"#).unwrap();
+        let err_chunk = compile(&err_try).unwrap();
+        let mut h = LocalHost::default();
+        let mut vm = Vm::new(&err_chunk, &mut h, Budget::default());
+        vm.run().unwrap();
+        let f_idx = err_chunk.find_function("fail_try").unwrap();
+        assert!(matches!(
+            vm.call_function(f_idx, &[]),
+            Err(VmError::Diagnostic(d)) if d.code == DiagCode::E600
+        ));
+
+        // 3. Named + positional args on host call + positional string pairs NOT misclassified
+        let query_src = r#"fn q() -> List { return graph.query("s", "p", take: 3); }"#;
+        let q_prog = parse_program(query_src).unwrap();
+        let q_chunk = compile(&q_prog).unwrap();
+        let mut qh = LocalHost {
+            query_rows: 10,
+            ..LocalHost::default()
+        };
+        let mut qvm = Vm::new(&q_chunk, &mut qh, Budget::default());
+        qvm.run().unwrap();
+        let q_idx = q_chunk.find_function("q").unwrap();
+        let q_res = qvm.call_function(q_idx, &[]).expect("query");
+        assert_eq!(q_res, Value::List(vec![Value::I64(1); 3]));
+
+        // Positional even string pair ("hello", "world") stays positional
+        let str_src = r#"fn eqs() -> bool { return str.eq("hello", "hello"); }"#;
+        let str_prog = parse_program(str_src).unwrap();
+        let str_chunk = compile(&str_prog).unwrap();
+        let mut sh = LocalHost::default();
+        let mut svm = Vm::new(&str_chunk, &mut sh, Budget::default());
+        svm.run().unwrap();
+        let eqs_idx = str_chunk.find_function("eqs").unwrap();
+        assert_eq!(svm.call_function(eqs_idx, &[]).unwrap(), Value::Bool(true));
+
+        // 4. Function budget_steps is enforced by the VM
+        let spin_src = r#"fn spin() budget(steps: 5) -> i64 { let i = 0; while i < 100 { i = i + 1; } return i; }"#;
+        let spin_prog = parse_program(spin_src).unwrap();
+        let spin_chunk = compile(&spin_prog).unwrap();
+        let mut bh = LocalHost::default();
+        let mut bvm = Vm::new(&spin_chunk, &mut bh, Budget::default());
+        bvm.run().unwrap();
+        let s_idx = spin_chunk.find_function("spin").unwrap();
+        assert!(matches!(
+            bvm.call_function(s_idx, &[]),
+            Err(VmError::Diagnostic(d)) if d.code == DiagCode::E400
+        ));
+
+        // 5. Out-of-bounds local load fails closed instead of returning Null
+        let mut bad_chunk = Chunk::new();
+        bad_chunk.top_locals = 0;
+        bad_chunk.emit_op(Op::LoadVar);
+        bad_chunk.emit_u16(0);
+        bad_chunk.emit_op(Op::Halt);
+        let mut bh2 = LocalHost::default();
+        let mut bvm2 = Vm::new(&bad_chunk, &mut bh2, Budget::default());
+        assert!(matches!(bvm2.run(), Err(VmError::InvalidLocal(0))));
     }
 }

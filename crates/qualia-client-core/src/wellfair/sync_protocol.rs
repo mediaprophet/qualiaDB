@@ -75,14 +75,17 @@ pub enum AdmitOutcome {
 }
 
 impl AdmitOutcome {
+    /// `true` when validated.
     pub fn is_validated(&self) -> bool {
         matches!(self, AdmitOutcome::Validated)
     }
+    /// `true` when rejected.
     pub fn is_rejected(&self) -> bool {
         matches!(self, AdmitOutcome::Rejected(_))
     }
 }
 
+/// SHA-256 as hex.
 pub fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
@@ -128,6 +131,7 @@ impl SyncOperation {
         .into_bytes()
     }
 
+    /// Builder — sets signature.
     pub fn with_signature(mut self, signature_hex: impl Into<String>) -> Self {
         self.signature = Some(signature_hex.into());
         self
@@ -223,6 +227,7 @@ pub struct SyncInbox {
 }
 
 impl SyncInbox {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(SYNC_INBOX_FILE);
         if let Some(parent) = path.parent() {
@@ -290,6 +295,7 @@ impl SyncInbox {
         Ok(merge_operations(&ops.split_off(0), &[]))
     }
 
+    /// Lists recent entries.
     pub fn list_recent(&self, limit: usize) -> std::io::Result<Vec<InboxRecord>> {
         let mut all = self.load_all()?;
         if all.len() > limit {

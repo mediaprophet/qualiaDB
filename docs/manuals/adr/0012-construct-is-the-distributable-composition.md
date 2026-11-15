@@ -11,7 +11,7 @@ the world instantiated for the observer, composed of lenses, not a packaged
 app they launch from a store.
 
 ## Context
-The Dioxus QApp catalogue (~333 rows, 200+ academic wrappers, three first-class
+The Aether QApp catalogue (~333 rows, 200+ academic wrappers, three first-class
 routes) mixed three jobs:
 
 1. **A world-scope for someone looking** — what a person or agent *is in*.

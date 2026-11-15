@@ -7,6 +7,7 @@ pub struct DocSpan {
 }
 
 impl DocSpan {
+    /// Creates a default `DocSpan`.
     pub fn new(start_utf8: u32, end_utf8: u32) -> Self {
         Self {
             start_utf8,
@@ -14,10 +15,12 @@ impl DocSpan {
         }
     }
 
+    /// Views `self` as `range`.
     pub fn as_range(self) -> std::ops::Range<usize> {
         self.start_utf8 as usize..self.end_utf8 as usize
     }
 
+    /// Slice view.
     pub fn slice<'a>(self, source: &'a str) -> Option<&'a str> {
         let start = self.start_utf8 as usize;
         let end = self.end_utf8 as usize;

@@ -52,6 +52,7 @@ pub struct OfflineQueue {
 }
 
 impl OfflineQueue {
+    /// Creates a default `OfflineQueue`.
     pub const fn new() -> Self {
         Self {
             packages: [OfflinePackage::EMPTY; MAX_OFFLINE],
@@ -61,10 +62,12 @@ impl OfflineQueue {
     }
 
     #[inline]
+    /// `OfflineQueue::last_seen_unix`.
     pub const fn last_seen_unix(&self) -> u64 {
         self.last_seen_unix
     }
 
+    /// `OfflineQueue::get`.
     pub fn get(&self, slot: u8) -> Result<OfflinePackage, QdnfError> {
         let i = slot as usize;
         if i >= MAX_OFFLINE || !self.occupied[i] {
@@ -157,6 +160,7 @@ pub fn release_queued(
     Ok(())
 }
 
+/// Activates an offline capability.
 pub fn activate_capability(cap: &ScopedCapability, now: u64) -> Result<(), QdnfError> {
     if cap.recipient.is_zero() || cap.purpose.is_zero() {
         return Err(QdnfError::Malformed);

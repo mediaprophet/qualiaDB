@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `BodyStudiesQapp` component.
 pub fn BodyStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

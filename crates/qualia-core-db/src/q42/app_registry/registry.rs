@@ -14,7 +14,7 @@ pub const MAX_INSTALLED_APPS: usize = 32;
 ///
 /// Keep in sync with the workspace release line when bumping; comparison is
 /// the simple dotted numeric helper in `super::compat`.
-pub const DEFAULT_ENGINE_VERSION: &str = "0.0.39";
+pub const DEFAULT_ENGINE_VERSION: &str = "0.0.40";
 
 /// Internal slot payload (record + inspect snapshot).
 #[derive(Debug, Clone)]
@@ -76,18 +76,22 @@ impl AppRegistry {
         reg
     }
 
+    /// Registered engine version.
     pub fn engine_version(&self) -> &str {
         &self.engine_version
     }
 
+    /// Maximum capacity.
     pub fn capacity(&self) -> usize {
         MAX_INSTALLED_APPS
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         self.slots.iter().filter(|s| s.is_some()).count()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

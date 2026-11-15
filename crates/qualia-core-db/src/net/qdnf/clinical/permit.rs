@@ -26,6 +26,7 @@ pub struct PermitTable {
 }
 
 impl PermitTable {
+    /// Creates a default `PermitTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
@@ -91,6 +92,7 @@ impl PermitTable {
         self.live = live;
     }
 
+    /// Revokes.
     pub fn revoke(
         &mut self,
         patient: StrongDigest,

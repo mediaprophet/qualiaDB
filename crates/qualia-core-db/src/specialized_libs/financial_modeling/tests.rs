@@ -337,7 +337,7 @@ fn register_price_feed_and_ingest_uses_cached_prices() {
 }
 
 #[test]
-fn ingest_from_feed_generates_deterministic_series_when_no_cache() {
+fn ingest_from_feed_fails_closed_without_cached_prices() {
     let mut manager = AssetManager::new();
     manager.register_price_feed(PriceFeed {
         feed_id: "seeded_feed".to_string(),
@@ -350,20 +350,11 @@ fn ingest_from_feed_generates_deterministic_series_when_no_cache() {
         cached_prices: Vec::new(),
     });
 
-    manager.ingest_from_feed("B").unwrap();
-    let first = manager
-        .get_price_history("B")
-        .expect("history for B")
-        .clone();
-    // Deterministic: re-ingesting yields the identical series.
-    manager.ingest_from_feed("B").unwrap();
-    let second = manager
-        .get_price_history("B")
-        .expect("history for B")
-        .clone();
-    assert_eq!(first, second);
-    // Enough points for risk computation (need ≥ 3).
-    assert!(first.len() >= 3);
+    assert!(matches!(
+        manager.ingest_from_feed("B"),
+        Err(FinancialError::DataError(_))
+    ));
+    assert!(manager.get_price_history("B").is_none());
 }
 
 #[test]
@@ -1544,4 +1535,75 @@ fn compliance_custom_rule_is_flagged_not_compliant() {
     // Custom rules pass but are flagged for review.
     assert_eq!(result.status, ComplianceStatus::Flagged);
     assert!(result.violations.is_empty());
+}
+
+#[test]
+fn test_data_aggregator_and_reporting_engine_generation() {
+    let mut engine = ReportingEngine::new();
+    engine.initialize().unwrap();
+
+    // Register aggregation rule in the aggregator
+    engine
+        .report_generator_mut()
+        .data_aggregator_mut()
+        .add_aggregation_rule(AggregationRule {
+            rule_id: "sec_returns".to_string(),
+            rule_type: AggregationRuleType::Average,
+            aggregation_function: AggregationFunction {
+                function_id: "avg".to_string(),
+                function_name: "Mean".to_string(),
+                parameters: HashMap::new(),
+            },
+        });
+
+    // Test direct data aggregation
+    let data = vec![0.02, 0.04, 0.06];
+    let avg = engine
+        .report_generator()
+        .data_aggregator()
+        .aggregate_data("sec_returns", &data)
+        .unwrap();
+    assert!((avg - 0.04).abs() < 1e-9);
+
+    // Register generation strategy
+    engine
+        .report_generator_mut()
+        .add_generation_strategy(GenerationStrategy {
+            strategy_id: "strat_monthly".to_string(),
+            strategy_type: GenerationStrategyType::Scheduled,
+            parameters: GenerationStrategyParameters {
+                schedule: Some("0 0 1 * *".to_string()),
+                triggers: vec!["eom".to_string()],
+                recipients: vec!["stakeholders@example.com".to_string()],
+            },
+        });
+
+    // Register report template
+    engine.add_report_template(ReportTemplate {
+        template_id: "monthly_perf".to_string(),
+        template_name: "Monthly Performance Report".to_string(),
+        template_type: ReportTemplateType::Performance,
+        sections: vec![ReportSection {
+            section_id: "sec_returns".to_string(),
+            section_name: "Returns Section".to_string(),
+            section_type: ReportSectionType::Summary,
+            content: SectionContent {
+                content_type: ContentType::Text,
+                data: Vec::new(),
+                format: ContentFormat::JSON,
+            },
+        }],
+    });
+
+    let mut data_map = HashMap::new();
+    data_map.insert("sec_returns".to_string(), data);
+
+    let report = engine
+        .generate_report("monthly_perf", Some("strat_monthly"), &data_map)
+        .unwrap();
+    assert_eq!(report.report_type, ReportTemplateType::Performance);
+    assert_eq!(report.format, ContentFormat::JSON);
+    let json_str = String::from_utf8(report.content).unwrap();
+    assert!(json_str.contains("monthly_perf"));
+    assert!(json_str.contains("aggregate_metric"));
 }

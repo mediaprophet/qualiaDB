@@ -8,6 +8,7 @@ use crate::specialized_libs::financial_modeling::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: portfolio risk.
 pub fn risk(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let prices = args::rec(args_v, "prices")
         .and_then(args::f64s)

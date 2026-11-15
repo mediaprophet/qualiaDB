@@ -31,6 +31,7 @@ pub fn load_catalog(catalog_dir: &Path) -> Result<ResourceCatalog, String> {
 
 // ─── CLI entry point ─────────────────────────────────────────────────────────
 
+/// Handles the subcommand action.
 pub async fn handle(subcommand: &str, arg: Option<&str>) {
     let catalog_dir = resource_catalog::resolve_resources_dir();
     let catalog = match load_catalog(&catalog_dir) {

@@ -1,0 +1,356 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix dns: <urn:qualia:ontology:dns#>.
+
+# ─── Ontology Declaration ───────────────────────────────────────────────────
+dns:Ontology rdf:type owl:Ontology;
+    rdfs:label "QualiaDB Canonical DNS Record Types Ontology";
+    rdfs:comment "Comprehensive RDF schema defining characteristics, wire semantics, RFC references, and zero-heap storage strategies for all standard DNS record types.".
+
+# ─── Classes ─────────────────────────────────────────────────────────────────
+dns:DnsRecordType rdf:type rdfs:Class;
+    rdfs:label "DNS Record Type";
+    rdfs:comment "Base class representing a DNS Resource Record type defined by IANA and RFC standards.".
+
+dns:AddressRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Address Record (A, AAAA)".
+dns:RoutingRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Routing & Mail Record (MX, RT, SRV)".
+dns:DelegationRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Delegation & Alias Record (NS, CNAME, DNAME, PTR)".
+dns:SecurityRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "DNSSEC & Cryptographic Identity Record (DS, DNSKEY, RRSIG, NSEC, NSEC3, TLSA, SMIMEA, SSHFP)".
+dns:ServiceRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Service Binding & Discovery Record (HTTPS, SVCB, URI, CAA)".
+dns:InformationRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Zone & Informational Record (SOA, TXT, LOC, HINFO, CERT)".
+dns:PseudoRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Pseudo / Meta Record (OPT, TSIG, TKEY, AXFR, IXFR, ANY)".
+dns:ExperimentalRecord rdf:type rdfs:Class; rdfs:subClassOf dns:DnsRecordType; rdfs:label "Experimental or Obsolete Record".
+
+# ─── Properties ─────────────────────────────────────────────────────────────
+dns:typeCode rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:integer; rdfs:label "Numeric RR Type Code".
+dns:typeName rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "Mnemonic Record Name".
+dns:definingRfc rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "Defining IETF RFC Specification".
+dns:description rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "Human-readable functional description".
+dns:schemaDefinition rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "RDATA field layout and format specification".
+dns:status rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "Standards track status (Standard, Proposed, Experimental, Historic, Obsolete)".
+dns:qualiaStorageStrategy rdf:type rdf:Property; rdfs:domain dns:DnsRecordType; rdfs:range xsd:string; rdfs:label "Zero-heap QualiaDB storage class (InlineQuin, LosslessQuinChunkChain)".
+
+# ─── Canonical Record Type Instances ────────────────────────────────────────
+
+# 1. Address Records
+dns:RR_A rdf:type dns:AddressRecord;
+    dns:typeCode 1;
+    dns:typeName "A";
+    dns:definingRfc "RFC 1035";
+    dns:description "32-bit IPv4 address";
+    dns:schemaDefinition "ipv4: 4 bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_AAAA rdf:type dns:AddressRecord;
+    dns:typeCode 28;
+    dns:typeName "AAAA";
+    dns:definingRfc "RFC 3596";
+    dns:description "128-bit IPv6 address";
+    dns:schemaDefinition "ipv6: 16 bytes (lossless object[0..8] + context[8..16])";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+# 2. Delegation & Alias Records
+dns:RR_NS rdf:type dns:DelegationRecord;
+    dns:typeCode 2;
+    dns:typeName "NS";
+    dns:definingRfc "RFC 1035";
+    dns:description "Authoritative name server for the zone";
+    dns:schemaDefinition "nsdname: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_CNAME rdf:type dns:DelegationRecord;
+    dns:typeCode 5;
+    dns:typeName "CNAME";
+    dns:definingRfc "RFC 1035";
+    dns:description "Canonical name for an alias";
+    dns:schemaDefinition "cname: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_DNAME rdf:type dns:DelegationRecord;
+    dns:typeCode 39;
+    dns:typeName "DNAME";
+    dns:definingRfc "RFC 6672";
+    dns:description "Delegation Name redirect for an entire subtree";
+    dns:schemaDefinition "target: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_PTR rdf:type dns:DelegationRecord;
+    dns:typeCode 12;
+    dns:typeName "PTR";
+    dns:definingRfc "RFC 1035";
+    dns:description "Pointer to a canonical name (reverse DNS)";
+    dns:schemaDefinition "ptrdname: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+# 3. Zone & Routing Records
+dns:RR_SOA rdf:type dns:InformationRecord;
+    dns:typeCode 6;
+    dns:typeName "SOA";
+    dns:definingRfc "RFC 1035";
+    dns:description "Start of Authority zone parameters";
+    dns:schemaDefinition "mname: domain, rname: domain, serial: u32, refresh: u32, retry: u32, expire: u32, minimum: u32";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_MX rdf:type dns:RoutingRecord;
+    dns:typeCode 15;
+    dns:typeName "MX";
+    dns:definingRfc "RFC 1035, RFC 7505";
+    dns:description "Mail exchange server preference and host";
+    dns:schemaDefinition "preference: u16, exchange: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_SRV rdf:type dns:RoutingRecord;
+    dns:typeCode 33;
+    dns:typeName "SRV";
+    dns:definingRfc "RFC 2782";
+    dns:description "Generalized service location record";
+    dns:schemaDefinition "priority: u16, weight: u16, port: u16, target: domain name";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".
+
+dns:RR_TXT rdf:type dns:InformationRecord;
+    dns:typeCode 16;
+    dns:typeName "TXT";
+    dns:definingRfc "RFC 1035";
+    dns:description "Text strings up to 64KB for machine/human metadata (SPF, DKIM, QDP)";
+    dns:schemaDefinition "txt_data: length-prefixed character strings";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_CERT rdf:type dns:InformationRecord;
+    dns:typeCode 37;
+    dns:typeName "CERT";
+    dns:definingRfc "RFC 4398";
+    dns:description "PKIX, SPKI, PGP certificate container";
+    dns:schemaDefinition "cert_type: u16, key_tag: u16, algorithm: u8, certificate_or_crl: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_LOC rdf:type dns:InformationRecord;
+    dns:typeCode 29;
+    dns:typeName "LOC";
+    dns:definingRfc "RFC 1876";
+    dns:description "Geographic location information (latitude, longitude, altitude, precision)";
+    dns:schemaDefinition "version: u8, size: u8, horiz_pre: u8, vert_pre: u8, latitude: u32, longitude: u32, altitude: u32";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_HINFO rdf:type dns:InformationRecord;
+    dns:typeCode 13;
+    dns:typeName "HINFO";
+    dns:definingRfc "RFC 8482";
+    dns:description "Host information (CPU and Operating System)";
+    dns:schemaDefinition "cpu: character-string, os: character-string";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+# 4. Modern Service & Application Records
+dns:RR_HTTPS rdf:type dns:ServiceRecord;
+    dns:typeCode 65;
+    dns:typeName "HTTPS";
+    dns:definingRfc "RFC 9460";
+    dns:description "Service binding for HTTPS with HTTP/2, HTTP/3, and Encrypted Client Hello (ECH)";
+    dns:schemaDefinition "priority: u16, target_name: domain name, svc_params: key-value parameters";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_SVCB rdf:type dns:ServiceRecord;
+    dns:typeCode 64;
+    dns:typeName "SVCB";
+    dns:definingRfc "RFC 9460";
+    dns:description "General service binding for transport protocols";
+    dns:schemaDefinition "priority: u16, target_name: domain name, svc_params: key-value parameters";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_CAA rdf:type dns:ServiceRecord;
+    dns:typeCode 257;
+    dns:typeName "CAA";
+    dns:definingRfc "RFC 8659";
+    dns:description "Certification Authority Authorization constraint";
+    dns:schemaDefinition "flags: u8, tag: character-string, value: character-string";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_URI rdf:type dns:ServiceRecord;
+    dns:typeCode 256;
+    dns:typeName "URI";
+    dns:definingRfc "RFC 7553";
+    dns:description "Publishing mappings from hostnames to URIs";
+    dns:schemaDefinition "priority: u16, weight: u16, target: string";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+# 5. DNSSEC & Cryptographic Records
+dns:RR_DS rdf:type dns:SecurityRecord;
+    dns:typeCode 43;
+    dns:typeName "DS";
+    dns:definingRfc "RFC 4034";
+    dns:description "Delegation Signer pointing to child DNSKEY";
+    dns:schemaDefinition "key_tag: u16, algorithm: u8, digest_type: u8, digest: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_DNSKEY rdf:type dns:SecurityRecord;
+    dns:typeCode 48;
+    dns:typeName "DNSKEY";
+    dns:definingRfc "RFC 4034";
+    dns:description "DNSSEC public signing key";
+    dns:schemaDefinition "flags: u16, protocol: u8, algorithm: u8, public_key: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_RRSIG rdf:type dns:SecurityRecord;
+    dns:typeCode 46;
+    dns:typeName "RRSIG";
+    dns:definingRfc "RFC 4034";
+    dns:description "DNSSEC cryptographic signature for an RRSet";
+    dns:schemaDefinition "type_covered: u16, algorithm: u8, labels: u8, orig_ttl: u32, sig_exp: u32, sig_inc: u32, key_tag: u16, signer: domain, sig: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_NSEC rdf:type dns:SecurityRecord;
+    dns:typeCode 47;
+    dns:typeName "NSEC";
+    dns:definingRfc "RFC 4034";
+    dns:description "Next Secure denial of existence record";
+    dns:schemaDefinition "next_domain: domain name, type_bit_maps: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_NSEC3 rdf:type dns:SecurityRecord;
+    dns:typeCode 50;
+    dns:typeName "NSEC3";
+    dns:definingRfc "RFC 5155";
+    dns:description "Hashed authenticated denial of existence";
+    dns:schemaDefinition "hash_alg: u8, flags: u8, iterations: u16, salt: bytes, next_hashed_owner: bytes, type_bit_maps: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_NSEC3PARAM rdf:type dns:SecurityRecord;
+    dns:typeCode 51;
+    dns:typeName "NSEC3PARAM";
+    dns:definingRfc "RFC 5155";
+    dns:description "Parameters for NSEC3 records";
+    dns:schemaDefinition "hash_alg: u8, flags: u8, iterations: u16, salt: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_TLSA rdf:type dns:SecurityRecord;
+    dns:typeCode 52;
+    dns:typeName "TLSA";
+    dns:definingRfc "RFC 6698";
+    dns:description "DANE TLS certificate association";
+    dns:schemaDefinition "usage: u8, selector: u8, matching_type: u8, cert_association_data: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_SMIMEA rdf:type dns:SecurityRecord;
+    dns:typeCode 53;
+    dns:typeName "SMIMEA";
+    dns:definingRfc "RFC 8162";
+    dns:description "S/MIME certificate association";
+    dns:schemaDefinition "usage: u8, selector: u8, matching_type: u8, cert_association_data: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_SSHFP rdf:type dns:SecurityRecord;
+    dns:typeCode 44;
+    dns:typeName "SSHFP";
+    dns:definingRfc "RFC 4255";
+    dns:description "SSH Public Key Fingerprint";
+    dns:schemaDefinition "algorithm: u8, fp_type: u8, fingerprint: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_OPENPGPKEY rdf:type dns:SecurityRecord;
+    dns:typeCode 61;
+    dns:typeName "OPENPGPKEY";
+    dns:definingRfc "RFC 7929";
+    dns:description "OpenPGP public key keyring";
+    dns:schemaDefinition "public_keyring: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_IPSECKEY rdf:type dns:SecurityRecord;
+    dns:typeCode 45;
+    dns:typeName "IPSECKEY";
+    dns:definingRfc "RFC 4025";
+    dns:description "IPsec keying material";
+    dns:schemaDefinition "precedence: u8, gateway_type: u8, algorithm: u8, gateway: bytes, public_key: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_CDS rdf:type dns:SecurityRecord;
+    dns:typeCode 59;
+    dns:typeName "CDS";
+    dns:definingRfc "RFC 7344";
+    dns:description "Child DS for automated delegation signer updates";
+    dns:schemaDefinition "key_tag: u16, algorithm: u8, digest_type: u8, digest: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_CDNSKEY rdf:type dns:SecurityRecord;
+    dns:typeCode 60;
+    dns:typeName "CDNSKEY";
+    dns:definingRfc "RFC 7344";
+    dns:description "Child DNSKEY for automated DNSSEC updates";
+    dns:schemaDefinition "flags: u16, protocol: u8, algorithm: u8, public_key: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_CSYNC rdf:type dns:SecurityRecord;
+    dns:typeCode 62;
+    dns:typeName "CSYNC";
+    dns:definingRfc "RFC 7477";
+    dns:description "Child-to-Parent synchronization of NS, A, AAAA records";
+    dns:schemaDefinition "serial: u32, flags: u16, type_bit_maps: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_ZONEMD rdf:type dns:SecurityRecord;
+    dns:typeCode 63;
+    dns:typeName "ZONEMD";
+    dns:definingRfc "RFC 8976";
+    dns:description "Zone digest for complete zone content verification";
+    dns:schemaDefinition "serial: u32, scheme: u8, algorithm: u8, digest: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+# 6. Meta, Pseudo & Experimental Records
+dns:RR_OPT rdf:type dns:PseudoRecord;
+    dns:typeCode 41;
+    dns:typeName "OPT";
+    dns:definingRfc "RFC 6891";
+    dns:description "EDNS0 option pseudo-record for UDP payload size and extended flags";
+    dns:schemaDefinition "udp_payload_size: u16, ext_rcode: u8, version: u8, flags: u16, options: bytes";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_NAPTR rdf:type dns:RoutingRecord;
+    dns:typeCode 35;
+    dns:typeName "NAPTR";
+    dns:definingRfc "RFC 3403";
+    dns:description "Naming Authority Pointer for ENUM/SIP regex rewrite";
+    dns:schemaDefinition "order: u16, pref: u16, flags: string, services: string, regexp: string, replacement: domain";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "LosslessQuinChunkChain".
+
+dns:RR_ANY rdf:type dns:PseudoRecord;
+    dns:typeCode 255;
+    dns:typeName "ANY";
+    dns:definingRfc "RFC 1035, RFC 8482";
+    dns:description "Meta-query type requesting all available records";
+    dns:schemaDefinition "none (query only)";
+    dns:status "Standard";
+    dns:qualiaStorageStrategy "InlineQuin".

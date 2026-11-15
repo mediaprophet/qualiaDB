@@ -1,0 +1,159 @@
+ M AGENTS.md
+ M Cargo.lock
+ M Cargo.toml
+ M crates/qualia-core-db/src/bundle/mod.rs
+ M crates/qualia-core-db/src/bundle/reader.rs
+ M crates/qualia-core-db/src/bundle/reader_limits.rs
+ M crates/qualia-core-db/src/bundle/reader_limits_tests.rs
+ M crates/qualia-core-db/src/bundle/streaming_loader.rs
+ M crates/qualia-core-db/src/container_10d/header.rs
+ M crates/qualia-core-db/src/container_10d/mesh_section.rs
+ M crates/qualia-core-db/src/container_10d/section.rs
+ M crates/qualia-core-db/src/container_10d/section/opaque_preservation.rs
+ M crates/qualia-core-db/src/container_10d/section/table_validation.rs
+ M crates/qualia-core-db/src/crypto/network/mod.rs
+ M crates/qualia-core-db/src/crypto/network/types.rs
+ M crates/qualia-core-db/src/gguf_bridge/forward.rs
+ M crates/qualia-core-db/src/gguf_bridge/gemma4_qwen35.rs
+ M crates/qualia-core-db/src/gguf_bridge/init.rs
+ M crates/qualia-core-db/src/gguf_bridge/load.rs
+ M crates/qualia-core-db/src/gguf_bridge/mod.rs
+ M crates/qualia-core-db/src/gguf_bridge/moe_ffn.rs
+ M crates/qualia-core-db/src/gguf_bridge/output.rs
+ M crates/qualia-core-db/src/gguf_bridge/qwen35/mod.rs
+ M crates/qualia-core-db/src/gguf_bridge/ssm_forward.rs
+ M crates/qualia-core-db/src/gguf_bridge/state.rs
+ M crates/qualia-core-db/src/inference/gguf_sharder/tests.rs
+ M crates/qualia-core-db/src/net/peer/replication/mod.rs
+ M crates/qualia-core-db/src/net/peer/runtime/cancel.rs
+ M crates/qualia-core-db/src/net/peer/runtime/leases.rs
+ M crates/qualia-core-db/src/net/peer/runtime/ledger.rs
+ M crates/qualia-core-db/src/net/peer/runtime/mod.rs
+ M crates/qualia-core-db/src/net/peer/runtime/scheduler.rs
+ M crates/qualia-core-db/src/net/qdnf/authority/mod.rs
+ M crates/qualia-core-db/src/net/qdnf/authority/owner.rs
+ M crates/qualia-core-db/src/net/qdnf/authority/verified.rs
+ M crates/qualia-core-db/src/net/qdnf/bearer/ipc.rs
+ M crates/qualia-core-db/src/net/qdnf/crypto/handshake/shares.rs
+ M crates/qualia-core-db/src/net/qdnf/crypto/schedule.rs
+ M crates/qualia-core-db/src/net/qdnf/session/handshake/mod.rs
+ M crates/qualia-core-db/src/net/qdnf/session/packet_protection.rs
+ M crates/qualia-core-db/src/poet_host/native_authority/journal.rs
+ M crates/qualia-core-db/src/poet_host/native_authority/mod.rs
+ M crates/qualia-core-db/src/poet_host/native_authority/tests.rs
+ M crates/qualia-core-db/src/poet_host/scan.rs
+ M crates/qualia-core-db/src/q42/emf_container/chunk_directory.rs
+ M crates/qualia-core-db/src/q42/emf_container/header.rs
+ M crates/qualia-core-db/src/q42/emf_container/mod.rs
+ M crates/qualia-core-db/src/q42/emf_container/reader.rs
+ M crates/qualia-core-db/src/q42/emf_container/writer.rs
+ M crates/qualia-core-db/src/q42/m64_matter/checked_reader.rs
+ M crates/qualia-core-db/src/q42/m64_matter/chunk_directory.rs
+ M crates/qualia-core-db/src/q42/mod.rs
+ M crates/qualia-core-db/src/render/assets/glb.rs
+ M crates/qualia-core-db/src/render/assets/mod.rs
+ M crates/qualia-core-db/src/render/botanical_anatomy.rs
+ M crates/qualia-core-db/src/render/gpu/mod.rs
+ M crates/qualia-core-db/src/render/mod.rs
+ M crates/qualia-core-db/src/render/portal/mod.rs
+ M crates/qualia-core-db/src/render/portal/recovery.rs
+ M crates/qualia-core-db/src/render/portal_load_emf.rs
+ M crates/qualia-core-db/src/render/vertebrate_anatomy.rs
+ M crates/qualia-core-db/src/semantic_instruments/resolve/mod.rs
+ M crates/qualia-core-db/src/sensing/local_custody/mod.rs
+ M crates/qualia-core-db/src/sensing/local_custody/open_checked.rs
+ M crates/qualia-core-db/src/sensing/local_custody/quota.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/access.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/generator.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/manager.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/mod.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/types.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/library.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/mod.rs
+ M crates/qualia-core-db/src/specialized_libs/cryptographic_library/signing.rs
+ M crates/qualia-core-db/src/storage_driver.rs
+ M crates/qualia-core-db/tests/m64_container_sdk.rs
+ M crates/qualia-mcp/src/authoring/protocol.rs
+ M crates/qualia-mcp/src/authoring/types.rs
+ M crates/qualia-mcp/src/registry.rs
+ M crates/qualia-mcp/src/tools/living_cosmic.rs
+ M crates/qualia-mcp/src/tools/vibe.rs
+ M crates/vibe/src/extension_registry/eval_router.rs
+ M crates/webizen-render/src/lib.rs
+ M crates/webizen-render/src/volumetric_native_preview.rs
+ M docs/js/qualia-shell.js
+ M docs/manuals/standards/10d-container-format.md
+ M docs/manuals/standards/DIRECTORY_INDEX.md
+ M docs/manuals/standards/m64-georaster-v3.md
+ M docs/manuals/standards/m64-matter-container.md
+ M docs/manuals/standards/p64-weight-container-standard.md
+ M docs/manuals/standards/qualia-decentralized-network-fabric/README.md
+ M docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/README.md
+?? crates/qualia-core-db/src/bundle/stream/
+?? crates/qualia-core-db/src/bundle/streaming_loader/
+?? crates/qualia-core-db/src/container_10d/header/
+?? crates/qualia-core-db/src/container_10d/mesh_section/
+?? crates/qualia-core-db/src/container_10d/section/metadata.rs
+?? crates/qualia-core-db/src/crypto/network/authority/
+?? crates/qualia-core-db/src/crypto/network/cose/
+?? crates/qualia-core-db/src/crypto/network/object_stream/
+?? crates/qualia-core-db/src/gguf_bridge/gemma4/
+?? crates/qualia-core-db/src/gguf_bridge/gemma4_qwen35/
+?? crates/qualia-core-db/src/gguf_bridge/qwen35/gguf/
+?? crates/qualia-core-db/src/net/peer/replication/qbdl/
+?? crates/qualia-core-db/src/net/peer/runtime/cancel/
+?? crates/qualia-core-db/src/net/peer/runtime/incarnation.rs
+?? crates/qualia-core-db/src/net/peer/runtime/leases/
+?? crates/qualia-core-db/src/net/peer/runtime/ledger/
+?? crates/qualia-core-db/src/net/peer/runtime/scheduler/
+?? crates/qualia-core-db/src/net/qdnf/authority/current_guard.rs
+?? crates/qualia-core-db/src/net/qdnf/authority/current_guard/
+?? crates/qualia-core-db/src/net/qdnf/authority/owner/
+?? crates/qualia-core-db/src/net/qdnf/authority/verified/
+?? crates/qualia-core-db/src/net/qdnf/crypto/handshake/shares/
+?? crates/qualia-core-db/src/net/qdnf/crypto/schedule/
+?? crates/qualia-core-db/src/net/qdnf/session/handshake/endpoint/
+?? crates/qualia-core-db/src/poet_host/native_authority/graph/
+?? crates/qualia-core-db/src/poet_host/native_authority/graph_tests.rs
+?? crates/qualia-core-db/src/q42/chunk_integrity/
+?? crates/qualia-core-db/src/q42/emf_container/extension/
+?? crates/qualia-core-db/src/render/assets/glb_static_scene.rs
+?? crates/qualia-core-db/src/render/botanical_materials.rs
+?? crates/qualia-core-db/src/render/gpu/emf_present.rs
+?? crates/qualia-core-db/src/render/portal/emf_preview.rs
+?? crates/qualia-core-db/src/render/portal_emf_metadata.rs
+?? crates/qualia-core-db/src/render/portal_emf_state.rs
+?? crates/qualia-core-db/src/render/vertebrate_authored_skin.rs
+?? crates/qualia-core-db/src/render/vertebrate_layer_materials.rs
+?? crates/qualia-core-db/src/render/vertebrate_skin_seal.rs
+?? crates/qualia-core-db/src/semantic_instruments/resolve/bounded_closure/
+?? crates/qualia-core-db/src/sensing/local_custody/quota/recovery.rs
+?? crates/qualia-core-db/src/sensing/local_custody/quota/staging.rs
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/access/
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/generator/
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_control.rs
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_signing.rs
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/library/
+?? crates/qualia-core-db/src/specialized_libs/cryptographic_library/signing_profile.rs
+?? crates/qualia-core-db/src/storage_driver/
+?? crates/vibe/src/extension_registry/native_budget.rs
+?? crates/webizen-render/src/volumetric_shot.rs
+?? docs/graph-theatre-foaf-framed.png
+?? docs/graph-theatre-foaf.png
+?? docs/graph-theatre-star.png
+?? docs/graph-theatre-webgl2.png
+?? docs/manuals/standards/10d-container-standard.md
+?? docs/manuals/standards/e64-compatibility-format.md
+?? docs/manuals/standards/emf-container-format.md
+?? docs/manuals/standards/emf-v3-extension.md
+?? docs/manuals/standards/file-format-conformance.md
+?? docs/manuals/standards/file-formats-overview.md
+?? docs/manuals/standards/file-formats-standards-work-in-progress.md
+?? docs/manuals/standards/hmc-container-format.md
+?? docs/manuals/standards/qbdl-streaming-expert-advisor-brief.md
+?? docs/manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/
+?? docs/manuals/standards/references/
+?? tools/container-format-conformance/
+?? tools/qbdl-stream-conformance/
+?? vendor/etalon-model-6ace6cc/

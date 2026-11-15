@@ -34,6 +34,7 @@ pub struct CompiledFormula {
 }
 
 impl Default for CompiledFormula {
+    /// An empty formula: 8 zeroed triple slots, `len` 0.
     fn default() -> Self {
         Self {
             triples: [CompiledTriple {
@@ -56,6 +57,8 @@ pub struct CompiledRule {
 }
 
 impl CompiledTerm {
+    /// The term's hash payload regardless of variant — callers
+    /// distinguishing roles must check `is_variable` first.
     pub fn as_u64(&self) -> u64 {
         match self {
             CompiledTerm::Uri(h) => *h,
@@ -64,11 +67,16 @@ impl CompiledTerm {
         }
     }
 
+    /// True when the term is a rule variable (unifiable slot) rather
+    /// than a URI or literal.
     pub fn is_variable(&self) -> bool {
         matches!(self, CompiledTerm::Variable(_))
     }
 }
 
+/// Hash-lower a parsed N3 `Term` to a `CompiledTerm`, preserving the
+/// variable/literal/URI distinction. Variables hash their name; an
+/// unhashable non-variable falls back to `q_hash("?")`.
 pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
     let hash =
         crate::modalities::logic::n3_parser::term_uri_hash(term).unwrap_or_else(|| match term {
@@ -82,6 +90,8 @@ pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
     }
 }
 
+/// Compile a parsed triple — each of subject/predicate/object lowered
+/// via [`compile_term`].
 pub fn compile_triple(triple: &Triple<'_>) -> CompiledTriple {
     CompiledTriple {
         subject: compile_term(&triple.subject),
@@ -90,6 +100,8 @@ pub fn compile_triple(triple: &Triple<'_>) -> CompiledTriple {
     }
 }
 
+/// Compile a formula into the fixed 8-triple `CompiledFormula` buffer;
+/// triples beyond the cap are silently truncated.
 pub fn compile_formula(formula: &Formula<'_>) -> CompiledFormula {
     let mut comp = CompiledFormula::default();
     for (i, t) in formula.triples.iter().enumerate().take(8) {
@@ -99,6 +111,8 @@ pub fn compile_formula(formula: &Formula<'_>) -> CompiledFormula {
     comp
 }
 
+/// Compile an entire parsed N3 rule (id, arrow type, weight, premise,
+/// conclusion) into the zero-heap `CompiledRule` form.
 pub fn compile_rule_to_zero_heap(rule: &Rule<'_>) -> CompiledRule {
     CompiledRule {
         id_hash: rule.id.map(q_hash),
@@ -123,6 +137,7 @@ pub enum N3OutputMode {
 }
 
 impl Default for N3OutputMode {
+    /// `FreeText` — the least restrictive output mode.
     fn default() -> Self {
         Self::FreeText
     }
@@ -167,6 +182,10 @@ pub struct AgentIntentFrame {
     pub context_namespaces: [u64; MAX_CONTEXT_NAMESPACE_SLOTS],
 }
 
+/// Strict term hashing for shape validation: URIs and literals hash
+/// their payload, formulas use the dedicated `q_hash_formula`, and
+/// variables are `MalformedTriple` — a shape-gated conclusion cannot
+/// contain unbound variables.
 fn term_hash(term: &Term<'_>) -> Result<u64, N3CompileError> {
     match term {
         Term::Uri(uri) => Ok(q_hash(uri)),
@@ -176,6 +195,9 @@ fn term_hash(term: &Term<'_>) -> Result<u64, N3CompileError> {
     }
 }
 
+/// Pack a compiled triple into an `NQuin` under `context`, computing the
+/// XOR-fold parity. Never fails at present — the `Result` preserves the
+/// signature for future checks.
 pub fn triple_to_quin(triple: &CompiledTriple, context: u64) -> Result<NQuin, N3CompileError> {
     let mut quin = NQuin::default();
     quin.subject = triple.subject.as_u64();
@@ -186,6 +208,9 @@ pub fn triple_to_quin(triple: &CompiledTriple, context: u64) -> Result<NQuin, N3
     Ok(quin)
 }
 
+/// Borrow the formula's first triple; `MalformedTriple` when `len` is
+/// 0 (multi-triple bodies keep only the head per the compiler's current
+/// limitation).
 fn first_triple<'a>(
     f: &'a crate::modalities::logic::n3_compiler::CompiledFormula,
 ) -> Result<&'a crate::modalities::logic::n3_compiler::CompiledTriple, N3CompileError> {
@@ -226,6 +251,9 @@ pub fn validate_rule_against_shapes(
     }
 }
 
+/// Append one opcode to the caller buffer via `count`;
+/// `OpcodeBufferFull` when `out` is exhausted — compile fails closed
+/// rather than truncating a program.
 fn push_opcode(
     out: &mut [SlgOpcode],
     count: &mut usize,
@@ -271,6 +299,10 @@ pub fn compile_rule_to_opcodes(
     Ok(count)
 }
 
+/// Emit a compiled rule as `NQuin`(s): deontic-lowerable rules produce a
+/// single norm quin via `compile_n3_rule_to_norm`; other rules fall back
+/// to one fact quin per formula head triple. `QuinBufferFull` when `out`
+/// can't hold the result.
 pub fn compile_rule_to_quin(
     rule: &CompiledRule,
     contract_hash: u64,

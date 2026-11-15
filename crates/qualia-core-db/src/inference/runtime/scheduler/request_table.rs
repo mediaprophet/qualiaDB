@@ -3,10 +3,14 @@ use crate::inference::runtime::kv::paged::{
     BlockPool, CopyOnWrite, SequenceBlockTable, TableError,
 };
 use crate::inference::runtime::kv::prefix::{PrefixKvError, PrefixKvStore};
+use crate::inference::runtime::memory_guard::{
+    HostMemorySample, MemoryPressureAction, MemoryPressureGuard,
+};
 
 use super::batch::{
     RaggedBackendError, RaggedBatchItem, RaggedBatchOutput, RaggedBatchReceipt, RaggedDecodeBackend,
 };
+use super::drain::{DrainController, DrainError, DrainReason, DrainState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestState {
@@ -38,8 +42,17 @@ pub enum SchedulerError {
     Full,
     UnknownRequest,
     OutputTooSmall,
+    Draining,
+    MemoryPressure,
+    Drain(DrainError),
     Prefix(PrefixKvError),
     Table(TableError),
+}
+
+impl From<DrainError> for SchedulerError {
+    fn from(value: DrainError) -> Self {
+        Self::Drain(value)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,6 +127,8 @@ impl RequestSlot {
 /// Fixed-request-capacity scheduler. `REQUESTS` is the hard concurrent request bound.
 pub struct RequestScheduler<const REQUESTS: usize> {
     slots: [RequestSlot; REQUESTS],
+    drain: DrainController,
+    memory_admission_paused: bool,
 }
 
 impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
@@ -121,9 +136,73 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
     pub fn new(logical_pages: u32) -> Self {
         Self {
             slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
+            drain: DrainController::new(0),
+            memory_admission_paused: false,
         }
     }
 
+    /// Creates a scheduler over `logical_pages` starting at `initial_generation`.
+    pub fn with_generation(logical_pages: u32, initial_generation: u64) -> Self {
+        Self {
+            slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
+            drain: DrainController::new(initial_generation),
+            memory_admission_paused: false,
+        }
+    }
+
+    /// Drain controller for graceful shutdown.
+    pub fn drain(&self) -> &DrainController {
+        &self.drain
+    }
+
+    /// Mutable drain controller.
+    pub fn drain_mut(&mut self) -> &mut DrainController {
+        &mut self.drain
+    }
+
+    /// Initiates/updates drain state.
+    pub fn request_drain(
+        &mut self,
+        reason: DrainReason,
+        current_epoch: u64,
+    ) -> Result<DrainState, DrainError> {
+        self.drain
+            .request_drain(reason, self.active_count(), current_epoch)
+    }
+
+    /// Apply a host-memory policy sample before a new scheduling round.
+    ///
+    /// At critical pressure this transitions the scheduler into its existing
+    /// drain state, so active requests finish only through normal token-boundary
+    /// lifecycle handling. The caller performs cache shedding/checkpointing for
+    /// the returned action; this hot path remains allocation-free.
+    pub fn apply_memory_pressure(
+        &mut self,
+        guard: &MemoryPressureGuard,
+        sample: HostMemorySample,
+        current_epoch: u64,
+    ) -> MemoryPressureAction {
+        let action = guard.evaluate(sample);
+        match action {
+            MemoryPressureAction::Continue => {
+                if self.drain.is_admission_allowed() {
+                    self.memory_admission_paused = false;
+                }
+            }
+            MemoryPressureAction::StopAdmissionAndShedCaches => {
+                self.memory_admission_paused = true;
+            }
+            MemoryPressureAction::DrainAndCheckpoint => {
+                self.memory_admission_paused = true;
+                if self.drain.is_admission_allowed() {
+                    let _ = self.request_drain(DrainReason::MemoryPressure, current_epoch);
+                }
+            }
+        }
+        action
+    }
+
+    /// Currently active requests.
     pub fn active_count(&self) -> usize {
         self.slots
             .iter()
@@ -139,6 +218,12 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         prefixes: &PrefixKvStore<ENTRIES, PAGES>,
         pool: &mut BlockPool,
     ) -> Result<Admission, SchedulerError> {
+        if !self.drain.is_admission_allowed() {
+            return Err(SchedulerError::Draining);
+        }
+        if self.memory_admission_paused {
+            return Err(SchedulerError::MemoryPressure);
+        }
         if self
             .slots
             .iter()
@@ -187,6 +272,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
             .map_err(Into::into)
     }
 
+    /// Transitions `request_id` out of prefill; error when unknown/out-of-state.
     pub fn mark_prefill_complete(&mut self, request_id: u64) -> Result<(), SchedulerError> {
         self.find_mut(request_id)?.state = RequestState::Decode;
         Ok(())
@@ -204,6 +290,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         Ok(())
     }
 
+    /// Records one decoded token for `request_id`; returns its sequence position.
     pub fn record_token(&mut self, request_id: u64) -> Result<u32, SchedulerError> {
         let slot = self.find_mut(request_id)?;
         slot.token_count = slot.token_count.saturating_add(1);
@@ -326,6 +413,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         let slot = self.find_mut(request_id)?;
         slot.blocks.release_all(pool)?;
         slot.clear();
+        self.drain.poll_drain_progress(self.active_count());
         Ok(())
     }
 

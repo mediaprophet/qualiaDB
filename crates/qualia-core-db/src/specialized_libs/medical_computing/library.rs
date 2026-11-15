@@ -172,6 +172,12 @@ impl MedicalComputingLibrary {
     /// `query_smiles` is an optional reference structure for similarity ranking. The
     /// result is honestly labeled (see `ScreeningProposal::epistemic_status`) — it is
     /// NOT a binding-affinity or efficacy prediction.
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "portal",
+        feature = "wasm-logic",
+        feature = "wasm-scientific"
+    ))]
     pub fn screen_compounds(
         &mut self,
         compounds: Vec<Compound>,

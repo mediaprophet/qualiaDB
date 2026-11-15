@@ -70,6 +70,7 @@ impl CorefLimits {
         key_hash: fnv1a64,
     };
 
+    /// `true` when source exceeds the coref budget.
     pub fn source_too_large(self, bytes: usize) -> CorefError {
         CorefError::SourceTooLarge {
             bytes,
@@ -94,6 +95,7 @@ pub struct CancellationToken {
 }
 
 impl CancellationToken {
+    /// Creates a default `CancellationToken`.
     pub const fn new() -> Self {
         Self {
             cancelled: AtomicBool::new(false),
@@ -102,6 +104,7 @@ impl CancellationToken {
         }
     }
 
+    /// Cancels the coref job.
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Relaxed);
     }
@@ -115,6 +118,7 @@ impl CancellationToken {
         }
     }
 
+    /// `true` when `cancelled`.
     pub fn is_cancelled(&self) -> bool {
         if self.cancelled.load(Ordering::Relaxed) {
             return true;

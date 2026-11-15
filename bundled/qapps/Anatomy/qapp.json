@@ -14,6 +14,8 @@
     "app_id": "did:qualia:qapp:anatomy",
     "display_name": "Qualia Anatomy",
     "category": "health-visualization",
+    "did_git": "did:git:github.com/WebizenAI/webizen-health",
+    "export_targets": ["tauri-desktop", "wasm-mobile", "embedded"],
     "launch_modes": [
       "static-web",
       "wasm-local",

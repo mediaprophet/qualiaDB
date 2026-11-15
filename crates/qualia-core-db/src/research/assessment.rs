@@ -23,6 +23,7 @@ pub enum RealityCategory {
 }
 
 impl RealityCategory {
+    /// Stable string form of the category.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Factual => "factual",
@@ -48,6 +49,7 @@ pub struct EpistemicAssessment {
 }
 
 impl EpistemicAssessment {
+    /// Creates an assessment for `content_ref`.
     pub fn new(id: &str, content_ref: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -61,18 +63,22 @@ impl EpistemicAssessment {
         }
     }
 
+    /// Sets the epistemic mode.
     pub fn set_epistemic_mode(&mut self, mode: EpistemicMode) {
         self.mode = mode;
     }
 
+    /// Sets the reality category.
     pub fn set_reality_category(&mut self, category: RealityCategory) {
         self.reality_category = category;
     }
 
+    /// Sets the spatio-temporal context.
     pub fn set_spatio_temporal_context(&mut self, context: &str) {
         self.spatio_temporal_context = Some(context.to_string());
     }
 
+    /// Sets the social context.
     pub fn set_social_context(&mut self, context: &str) {
         self.social_context = Some(context.to_string());
     }

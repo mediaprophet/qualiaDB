@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QBDL Streaming — Mixed HMC over QDNF</title>
+  <meta name="description" content="Selective, governed streaming of a heterogeneous QBDL-profile Hyper Media Container over QDNF: many entries per family, Q42 HTTP Range, native IPC, HTTP, and WSS bearers.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <script src="js/qdnf-map.js" defer></script>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> QBDL · mixed HMC streaming over QDNF · in-tree source</div>
+    <h1 class="q-hero-title font-display mb-5">
+      Stream a mixed habitat, one admitted leaf at a time.
+    </h1>
+    <p class="q-lede mb-6">
+      A <strong>QBDL-profile Hyper Media Container</strong> is the native mux for a living scene: geometry (<code class="q-mono">.10d</code>), knowledge (<code class="q-mono">.q42</code>), electromagnetic fields (<code class="q-mono">.emf</code>), acoustic containers (<code class="q-mono">.qac</code>), matter rasters (<code class="q-mono">.m64</code>), and neural weights (<code class="q-mono">.p64</code>) travel together under one governed session. The product is selective disclosure — planner plus service loop — over the Qualia Decentralized Network Fabric, not a silent container rewrite and not HLS/DASH.
+    </p>
+    <p class="q-note mb-6">
+      <strong>Verification scope (2026-11-15):</strong> Protected-channel service I/O is cargo-proven in process (<code class="q-mono">17/17</code> ProtectedSession). Mixed-HMC planner, EMF/QAC/P64 stream views, Q42 HTTP Range, WSS mixed transfer, and production <code class="q-mono">write_leaf</code> stage-drop are landed in source and await the next locked <code class="q-mono">qualia-core-db --lib</code> cargo pass. ZIP <code class="q-mono">.hmc</code> is a legacy document-archive profile and is not a streaming target. PhysicalNetwork two-host and browser/WASM mux remain later gates. This page showcases the work; it does not promote an unrun cargo log to a release claim.
+    </p>
+    <p class="q-continuity-strip mb-12" role="note">
+      <strong>Many entries per family.</strong>
+      An HMC may hold several EMF volumes, several QAC takes, and several <code class="q-mono">.10d</code> scenes. <code class="q-mono">EntryFamily</code> is a per-entry tag, never a unique slot. Selection is scene or analysis intent over entry identities — optional time and region — not “the EMF file”.
+    </p>
+
+    <section class="q-card p-8 mb-12">
+      <p class="q-kicker mb-2">Layer 1 · Plain-Language Overview</p>
+      <h2 class="text-2xl font-semibold mb-4">What a mixed HMC actually streams</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:52rem">
+        A peer describes a candidate, pages its directory, selects the entries a scene needs, and opens only those leaves the grant authorizes. Shared dependencies are charged once by identity. Control messages are never starved. Ready live families (EMF, QAC, 10D) continue while heavier M64/P64 work waits its turn.
+      </p>
+      <div class="grid md:grid-cols-3 gap-5 text-sm">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <p class="q-kicker text-emerald-300 mb-2">Admit, then tag</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Family matches the bytes</h3>
+          <p style="color:var(--q-muted)">
+            Format admit runs before an entry is tagged <code class="q-mono">Emf</code>, <code class="q-mono">Qac</code>, <code class="q-mono">TenD</code>, <code class="q-mono">Q42</code>, <code class="q-mono">M64</code>, or <code class="q-mono">P64</code>. Unlabeled or unknown-critical blobs stay <code class="q-mono">Opaque</code>. Incomplete and Refused entries never disclose a leaf.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-6">
+          <p class="q-kicker text-cyan-300 mb-2">Governed disclosure</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Grant, credit, then payload</h3>
+          <p style="color:var(--q-muted)">
+            A <code class="q-mono">ProtectedSession</code> binds the handshake transcript into AEAD additional data. Leaf credit is one-shot. <code class="q-mono">WouldBlock</code> drops the authority guard before retry. Native interchange is CBOR or exact-length binary; JSON is exceptional ingest only.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+          <p class="q-kicker text-violet-300 mb-2">Three bearers, one body</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Native, HTTP, WSS</h3>
+          <p style="color:var(--q-muted)">
+            Local IPC, HTTP/1.1 identity encoding with Q42 Range, and TLS WebSocket carry the same QBDL record bodies. HTTP headers are an adapter. Loopback HTTP is Component evidence; two-process framing is a Process fixture. PhysicalNetwork two-host stays <code class="q-mono">false</code>.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="q-card p-8 mb-12 overflow-x-auto" id="honeycomb">
+      <p class="q-kicker mb-3 text-center">Layer 2 · Stream Architecture Honeycomb</p>
+      <p class="hex-hint mb-6 text-center">Select a cell for a plain-language summary and its in-tree technical contract. Press Escape to close.</p>
+      <div class="hex-grid" role="group" aria-label="QBDL streaming layers">
+        <div class="hex-row">
+          <button type="button" class="hex" data-hex="describe" data-name="Describe" data-plain="Ask what a candidate can offer before any leaf moves." data-tech="Kind 1 Describe is a 96-byte body: Limits (64) plus ObjectSelector (32). Kind 1–12 are frozen. DescriptorPage (Kind 2) pages class 8/9 directories up to the 65776-byte record cap; leaf I/O stays on the 18137-byte leaf cap." aria-expanded="false" aria-controls="hex-detail">Describe</button>
+          <button type="button" class="hex" data-hex="planner" data-name="Planner" data-plain="Bind identities, not filenames." data-tech="Inventory holds up to 64 PlanEntry rows and 256 edges. Schedule::compile / next / cancel / acknowledge_complete drives transfer_one_leaf. Shared deps charged once by identity. Delay M64/P64 while Ready EMF, QAC, and 10D continue." aria-expanded="false" aria-controls="hex-detail">Planner</button>
+          <button type="button" class="hex" data-hex="mux" data-name="Mux" data-plain="One session, many families, many entries." data-tech="qbdl/service/mux.rs runs the planner over real QAC and EMF views. mixed/bundle.rs default corpus: TenD 1–2, Emf 10–11, Qac 20–21, Q42 30, M64 40, P64 41, Opaque 50. Calibration of the first EMF depends on Q42." aria-expanded="false" aria-controls="hex-detail">Mux</button>
+        </div>
+        <div class="hex-row">
+          <button type="button" class="hex" data-hex="range" data-name="Q42 Range" data-plain="Query a knowledge volume by byte window." data-tech="Q42AuthenticatedRangeSource binds ordered nonempty nonoverlapping AuthenticatedRange spans. A read that crosses a gap fails UnexpectedEof. HTTP 206 InclusiveRange must match the requested Q42ByteRange. Partial windows never claim a complete query answer." aria-expanded="false" aria-controls="hex-detail">Q42 Range</button>
+          <button type="button" class="hex" data-hex="protect" data-name="Protect" data-plain="Transcript-bound AEAD, one-shot credit." data-tech="ProtectedSession over ProtectedChannel. AAD is the 88-byte ServiceRecordHeader (QBDL-SCT-V1). RuntimeAccess::issue_credit is Ready→InFlight once. WouldBlock drops CurrentAuthorityGuard and the ledger before retry." aria-expanded="false" aria-controls="hex-detail">Protect</button>
+          <button type="button" class="hex" data-hex="write" data-name="write_leaf" data-plain="Short stages around a long wait." data-tech="prepare_leaf_write under a short StorageStage, wait_leaf_write with no stage, commit_leaf_write under a new short stage. recover_leaf_from copies into CopiedLeafMaterial then verifies after the source loan drops." aria-expanded="false" aria-controls="hex-detail">write_leaf</button>
+        </div>
+      </div>
+      <div class="hex-stack" role="group" aria-label="QBDL streaming layers">
+        <button type="button" class="hex-tile" data-hex="describe" data-name="Describe" data-plain="Ask what a candidate can offer before any leaf moves." data-tech="Kind 1 Describe is a 96-byte body: Limits (64) plus ObjectSelector (32). Kind 1–12 are frozen. DescriptorPage (Kind 2) pages class 8/9 directories up to the 65776-byte record cap; leaf I/O stays on the 18137-byte leaf cap." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Describe</span><span class="hex-tile-hint">Ask what a candidate can offer before any leaf moves.</span></button>
+        <button type="button" class="hex-tile" data-hex="planner" data-name="Planner" data-plain="Bind identities, not filenames." data-tech="Inventory holds up to 64 PlanEntry rows and 256 edges. Schedule::compile / next / cancel / acknowledge_complete drives transfer_one_leaf. Shared deps charged once by identity. Delay M64/P64 while Ready EMF, QAC, and 10D continue." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Planner</span><span class="hex-tile-hint">Bind identities, not filenames.</span></button>
+        <button type="button" class="hex-tile" data-hex="mux" data-name="Mux" data-plain="One session, many families, many entries." data-tech="qbdl/service/mux.rs runs the planner over real QAC and EMF views. mixed/bundle.rs default corpus: TenD 1–2, Emf 10–11, Qac 20–21, Q42 30, M64 40, P64 41, Opaque 50. Calibration of the first EMF depends on Q42." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Mux</span><span class="hex-tile-hint">One session, many families, many entries.</span></button>
+        <button type="button" class="hex-tile" data-hex="range" data-name="Q42 Range" data-plain="Query a knowledge volume by byte window." data-tech="Q42AuthenticatedRangeSource binds ordered nonempty nonoverlapping AuthenticatedRange spans. A read that crosses a gap fails UnexpectedEof. HTTP 206 InclusiveRange must match the requested Q42ByteRange. Partial windows never claim a complete query answer." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Q42 Range</span><span class="hex-tile-hint">Query a knowledge volume by byte window.</span></button>
+        <button type="button" class="hex-tile" data-hex="protect" data-name="Protect" data-plain="Transcript-bound AEAD, one-shot credit." data-tech="ProtectedSession over ProtectedChannel. AAD is the 88-byte ServiceRecordHeader (QBDL-SCT-V1). RuntimeAccess::issue_credit is Ready→InFlight once. WouldBlock drops CurrentAuthorityGuard and the ledger before retry." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Protect</span><span class="hex-tile-hint">Transcript-bound AEAD, one-shot credit.</span></button>
+        <button type="button" class="hex-tile" data-hex="write" data-name="write_leaf" data-plain="Short stages around a long wait." data-tech="prepare_leaf_write under a short StorageStage, wait_leaf_write with no stage, commit_leaf_write under a new short stage. recover_leaf_from copies into CopiedLeafMaterial then verifies after the source loan drops." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">write_leaf</span><span class="hex-tile-hint">Short stages around a long wait.</span></button>
+      </div>
+      <div id="hex-detail" class="hex-detail" hidden>
+        <p class="hex-detail-name q-mono" data-hex-name></p>
+        <p class="hex-detail-plain" data-hex-plain></p>
+        <p class="hex-detail-tech" data-hex-tech></p>
+      </div>
+    </section>
+
+    <section class="grid md:grid-cols-2 gap-5 mb-12">
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Inner formats</p>
+        <h2 class="text-xl font-semibold mb-3">Families the mux actually admits</h2>
+        <dl class="text-[1.02rem] space-y-3" style="color:var(--q-muted)">
+          <div><dt class="text-cyan-300 q-mono">TenD</dt><dd>Living <code class="q-mono">.10d</code> scene containers. Geometry edges point EMF and QAC entries at the first TenD they illuminate.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">Q42</dt><dd>Knowledge volumes queried by authenticated HTTP Range. Calibration of the first EMF depends on this Q42.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">Emf</dt><dd><code class="q-mono">EmfStreamView</code> admits Envelope v4 through <code class="q-mono">StructuralView</code>. Region is a chunk, never a field-volume receipt. Unknown critical interpretation stays OpaqueArchival.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">Qac</dt><dd><code class="q-mono">QacStreamView</code> plus <code class="q-mono">admit_signal</code> on canonical v1 magic <code class="q-mono">qac\0\0\0\0\0</code>. Transfer unit is the complete authenticated entry until a partial-QAC contract exists.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">M64 / P64</dt><dd>Matter rasters and neural weights. Ready live families continue while these wait. P64 stream fixtures use <code class="q-mono">page_log2=8</code> so leaves stay under 16384 bytes.</dd></div>
+        </dl>
+      </article>
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Architectural Non-Goals</p>
+        <h2 class="text-xl font-semibold mb-3">What this stream is not</h2>
+        <ul class="text-[1.02rem] space-y-3" style="color:var(--q-muted)">
+          <li><strong>Not ZIP streaming:</strong> The ZIP document-archive <code class="q-mono">.hmc</code> profile is legacy. The platform is unreleased; that profile is not a streaming target. Filename <code class="q-mono">.hmc</code> is never sniffed as QBDL.</li>
+          <li><strong>Not one-of-each:</strong> Review §6 “one of each family” is a minimum mixed-bundle fixture, not a uniqueness invariant.</li>
+          <li><strong>Not HLS / DASH:</strong> Multiplexing belongs in the planner and typed metadata. The container wire does not need a rewrite for this track.</li>
+          <li><strong>Not a browser mux yet:</strong> GitHub Pages documents the contract. Browser/WASM streaming remains a later gate.</li>
+          <li><strong>Not PhysicalNetwork:</strong> Two-host public Internet and MASQUE stay <code class="q-mono">false</code>. WSS is a labelled Transition bearer (<code class="q-mono">TlsWssTransitionV1</code>).</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="q-card p-8 mb-12" id="mechanics">
+      <p class="q-kicker mb-2">Layer 3 · Protocol Mechanics</p>
+      <h2 class="text-2xl font-semibold mb-3">Frozen kinds, lifted pages, short write stages</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        The service IRI is <code class="q-mono">q42:QBDLStream/1</code>. Record prefix is 208 bytes. Descriptor pages use the full 65776-byte record budget so class 8/9 directories (up to 65536 bytes) fit; leaf records stay at 18137 bytes.
+      </p>
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-emerald-300 mb-2">Describe &amp; DescriptorPage</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Kinds 1–12 stay frozen</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            <code class="q-mono">DescribeClient</code> binds a <code class="q-mono">CandidateIdentity</code>. Class 1 requests may carry <code class="q-mono">total=0</code>; class 6 header pages must be exactly 64 bytes; class 7 index may reach 8388608. Header validation forbids a zero descriptor, context, or transfer id.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            <code class="q-mono">recv_control</code> is the 80-byte control path and refuses Describe; use <code class="q-mono">recv_describe</code> / <code class="q-mono">recv_descriptor</code>.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-cyan-300 mb-2">ProtectedSession</p>
+          <h3 class="text-lg font-semibold text-white mb-2">In-process 17/17, two-process framing fixture</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Production I/O is <code class="q-mono">ProtectedSession</code> over <code class="q-mono">ProtectedChannel</code>. <code class="q-mono">Session</code> remains the framing fixture. Both implement public <code class="q-mono">ServiceIo</code>. Two-process evidence uses binary <code class="q-mono">QBDL-PSK1</code> and is class Process, never PhysicalNetwork.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Associate the request independently of Credit. Issue credit after recheck and before LeafData. A second issue is Replay.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-violet-300 mb-2">HTTP Range &amp; WSS</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Adapter headers, exact QBDL bodies</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            HTTP/1.1 identity encoding; multipart is refused. A 206 window must equal the requested inclusive range. <code class="q-mono">Q42RangeVolume::open</code> needs enough bytes — a truncated header or lex window fails closed.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            WSS uses the existing <code class="q-mono">WssBearer</code> under <code class="q-mono">Session</code>. TLS is not post-quantum publisher authority. Loopback tests are Component evidence.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-amber-300 mb-2">write_leaf &amp; recover</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Stage loans do not span wait</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Production <code class="q-mono">write_leaf</code> takes <code class="q-mono">TransferRuntime</code> plus ticket, opens a short stage for prepare, drops it for wait, then a new short stage for commit. Crash tests keep the named <code class="q-mono">WriteStep</code> split path.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Recovery copies payload, proof, and checkpoint into <code class="q-mono">CopiedLeafMaterial</code> (Drop zeros) so verify/arm run after the source loan ends.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="ledger" class="q-card p-8 mb-12">
+      <p class="q-kicker mb-2">Layer 4 · Verification Boundary</p>
+      <h2 class="text-2xl font-semibold mb-3">What is proven, what is in source, what stays later</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:48rem">
+        Evidence classes stay distinct. A green in-tree fixture never upgrades a public-network gate.
+      </p>
+      <div class="grid md:grid-cols-3 gap-4 text-[1.02rem]">
+        <article class="q-soft-rise rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-7">
+          <p class="q-kicker text-emerald-300 mb-2">Cargo-proven in tree</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>ProtectedSession</strong> 17/17 in-process service tests (2026-11-14).</li>
+            <li><strong>Remote wrap</strong> 4/4; recognition lifecycle 22/22; M64 v3 5/5; WSS framing 11/11; native jobs 3/3; two-process framing 2/2.</li>
+            <li>EMF v4 / QAC v1 codecs are admitted at QualiaDB commit <code class="q-mono">91a4c3746</code>; streaming reuses those views.</li>
+          </ul>
+        </article>
+        <article class="q-soft-rise rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-7">
+          <p class="q-kicker text-cyan-300 mb-2">In source · cargo next</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><code class="q-mono">formats/{emf,qac,p64}_stream.rs</code>, <code class="q-mono">qbdl/service/mux.rs</code>, <code class="q-mono">bundle/stream/mixed/</code>, <code class="q-mono">http/mixed.rs</code>, <code class="q-mono">wss_mixed</code>.</li>
+            <li>Describe class 8/9, DescriptorPage lift, production <code class="q-mono">write_leaf</code> stage-drop, <code class="q-mono">CopiedLeafMaterial</code> recover/reverify.</li>
+            <li>Q42 HTTP Range: <code class="q-mono">Q42AuthenticatedRangeSource</code> plus 206 <code class="q-mono">InclusiveRange</code>.</li>
+          </ul>
+        </article>
+        <article class="q-soft-rise q-care rounded-2xl p-7">
+          <p class="q-kicker mb-2" style="color:#94a3b8">Later gates</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>C6 qualification records</strong> after the locked cargo pass (Windows/Unix Process, HTTP Component, WSS).</li>
+            <li><strong>PhysicalNetwork two-host</strong> and public MASQUE remain <code class="q-mono">false</code>.</li>
+            <li><strong>Browser / WASM mux</strong> and ZIP archive streaming are out of this track.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="q-card p-8 mb-12">
+      <h2 class="text-2xl font-semibold mb-3">Explore the streaming record</h2>
+      <p class="text-[1.02rem] mb-5" style="color:var(--q-muted);max-width:46rem">
+        Architecture, formats, EMF/QAC custody, and the engineering tracker live next to this page. VibeScript Pulse/Net are a different language surface; they do not own this protocol.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="qdnf.html">QDNF architecture map</a>
+        <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="data-formats.html#binary-containers">Data formats · HMC families</a>
+        <a class="q-pill" href="emf-qac-showcase.html">EMF &amp; QAC observatory</a>
+        <a class="q-pill" href="emf-qac-architecture.html">EMF &amp; QAC architecture</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/implementation-review-hmc-multiplexing-2026-11-13.md">HMC multiplexing review</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/progress-log.md">Streaming progress log</a>
+        <a class="q-pill" href="progress-0.0.41.html">0.0.41 release progress</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="q-site-footer">
+    QBDL mixed HMC streaming · source in tree 2026-11-15 · ProtectedSession 17/17 · Wave 3 cargo next · ZIP and PhysicalNetwork stay later.
+  </footer>
+</body>
+</html>

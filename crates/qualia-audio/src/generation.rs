@@ -15,6 +15,7 @@ pub struct VoiceConsent {
 }
 
 impl VoiceConsent {
+    /// Synthesis-only consent.
     pub fn synthesis_only(voice_id: &str) -> Self {
         Self {
             voice_asset_hash: q_hash(voice_id),
@@ -24,6 +25,7 @@ impl VoiceConsent {
         }
     }
 
+    /// Denied result.
     pub fn denied(voice_id: &str) -> Self {
         Self {
             voice_asset_hash: q_hash(voice_id),
@@ -41,6 +43,7 @@ impl VoiceConsent {
         self.revoked_before_epoch = epoch;
     }
 
+    /// `true` when allowed-at.
     pub fn is_allowed_at(&self, now_epoch: u32) -> bool {
         self.allow_synthesis
             && (self.revoked_before_epoch == 0 || now_epoch < self.revoked_before_epoch)

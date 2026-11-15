@@ -6,12 +6,14 @@ use sha2::{Digest, Sha256};
 pub const SIGHASH_ALL: u32 = 0x01;
 pub const SIGHASH_FORKID: u32 = 0x40;
 
+/// Double SHA-256.
 pub fn double_sha256(data: &[u8]) -> Vec<u8> {
     let hash1 = Sha256::digest(data);
     let hash2 = Sha256::digest(&hash1);
     hash2.to_vec()
 }
 
+/// HASH160 (SHA-256 then RIPEMD-160).
 pub fn hash160(data: &[u8]) -> Vec<u8> {
     use ripemd::{Digest as _, Ripemd160};
     let sha = Sha256::digest(data);
@@ -19,6 +21,7 @@ pub fn hash160(data: &[u8]) -> Vec<u8> {
     rip.to_vec()
 }
 
+/// Signs a P2PKH input.
 pub fn sign_p2pkh_input(
     tx: &Transaction,
     input_index: usize,

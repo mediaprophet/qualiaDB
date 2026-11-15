@@ -19,6 +19,7 @@ pub struct CommandConfig<'a> {
     pub retain_artifacts: Option<&'a Path>,
 }
 
+/// Runs the command.
 pub fn run(command: CommandConfig<'_>) -> Result<(), String> {
     let mut config = RawDecodeConfig::new(
         command

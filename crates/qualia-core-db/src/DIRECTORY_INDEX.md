@@ -193,6 +193,15 @@ Comprehensive index of functionality for `src`. This document serves as the grou
   - `fn open`
   - `fn view`
   - *(...and 10 more)*
+- 📄 `q42_lex_ns.rs`
+  - `fn namespace_split`
+  - `fn serialize_namespaced_paged_lexicon`
+  - `fn v4_round_trips_multi_ontology_namespaces`
+  - `fn v4_pages_decode_from_isolated_byte_ranges`
+  - `fn v4_is_smaller_than_v2_for_shared_namespaces`
+  - `fn v4_never_grows_a_lexicon`
+  - `fn v2_reader_rejects_namespaced_entries`
+  - `fn v4_rejects_overlong_terms`
 - 📄 `qpu_ingress.rs`
   - `enum QpuIngressError`
   - `fn parse_dwave_samples`

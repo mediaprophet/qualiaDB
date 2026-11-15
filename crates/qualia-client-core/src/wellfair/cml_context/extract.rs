@@ -18,6 +18,7 @@ pub enum DeonticClass {
 }
 
 impl DeonticClass {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Obligation => "obligation",
@@ -28,6 +29,7 @@ impl DeonticClass {
         }
     }
 
+    /// CML type.
     pub fn cml_type(self) -> &'static str {
         match self {
             Self::Obligation => "values:Obligation",
@@ -77,6 +79,7 @@ pub enum PrivacySignal {
 }
 
 impl PrivacySignal {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PersonalData => "personal-data",

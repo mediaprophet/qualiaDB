@@ -360,6 +360,7 @@ pub struct PrivacyMetrics {
 }
 
 impl StatisticalAnalysisEngine {
+    /// Creates the engine with default pattern/anomaly/forecast subsystems.
     pub fn new() -> Self {
         Self {
             analysis_algorithms: vec![
@@ -372,6 +373,7 @@ impl StatisticalAnalysisEngine {
         }
     }
 
+    /// Initializes pattern recognition, anomaly detection, and forecasting; `StatisticalError` propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.pattern_recognition.initialize()?;
         self.anomaly_detection.initialize()?;
@@ -428,6 +430,7 @@ impl StatisticalAnalysisEngine {
 }
 
 impl PatternRecognition {
+    /// Creates pattern recognition with an empty pattern library.
     pub fn new() -> Self {
         Self {
             pattern_types: vec![
@@ -440,6 +443,7 @@ impl PatternRecognition {
         }
     }
 
+    /// Initializes the pattern library; `StatisticalError` propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.pattern_library.initialize()?;
         Ok(())
@@ -481,6 +485,7 @@ impl PatternRecognition {
 }
 
 impl PatternLibrary {
+    /// Creates an empty pattern library.
     pub fn new() -> Self {
         Self {
             patterns: HashMap::new(),
@@ -488,6 +493,7 @@ impl PatternLibrary {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory library needs no setup.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -541,6 +547,7 @@ impl PatternLibrary {
 }
 
 impl AnomalyDetection {
+    /// Creates anomaly detection with default alert system.
     pub fn new() -> Self {
         Self {
             detection_algorithms: vec![DetectionAlgorithm::Statistical],
@@ -549,6 +556,7 @@ impl AnomalyDetection {
         }
     }
 
+    /// Initializes the alert system; `StatisticalError` propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.alert_system.initialize()?;
         Ok(())
@@ -590,6 +598,7 @@ impl AnomalyDetection {
 }
 
 impl AlertSystem {
+    /// Creates a default alert system.
     pub fn new() -> Self {
         Self {
             alert_types: vec![AlertType::Threshold, AlertType::Anomaly],
@@ -598,6 +607,7 @@ impl AlertSystem {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -650,6 +660,7 @@ impl AlertSystem {
 }
 
 impl ForecastingEngine {
+    /// Creates a forecasting engine with default model-selection state.
     pub fn new() -> Self {
         Self {
             forecasting_models: vec![
@@ -668,6 +679,7 @@ impl ForecastingEngine {
         }
     }
 
+    /// Initializes model selection; `StatisticalError` propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.model_selection.initialize()?;
         Ok(())
@@ -712,6 +724,7 @@ impl ForecastingEngine {
 }
 
 impl ModelSelection {
+    /// Creates model selection with default cross-validation and tuning.
     pub fn new() -> Self {
         Self {
             selection_criteria: vec![SelectionCriterion::Accuracy, SelectionCriterion::Speed],
@@ -720,6 +733,7 @@ impl ModelSelection {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -758,6 +772,7 @@ impl ModelSelection {
 }
 
 impl CrossValidation {
+    /// Creates a default `CrossValidation` config.
     pub fn new() -> Self {
         Self {
             cv_method: CVMethod::KFold,
@@ -769,6 +784,7 @@ impl CrossValidation {
 }
 
 impl HyperparameterTuning {
+    /// Creates tuning state with default search space.
     pub fn new() -> Self {
         Self {
             tuning_method: TuningMethod::GridSearch,
@@ -779,6 +795,7 @@ impl HyperparameterTuning {
 }
 
 impl SearchSpace {
+    /// Creates an empty `SearchSpace`.
     pub fn new() -> Self {
         Self {
             parameters: Vec::new(),
@@ -788,6 +805,7 @@ impl SearchSpace {
 }
 
 impl StatisticalPerformanceMonitor {
+    /// Creates a monitor with zeroed system/privacy metrics.
     pub fn new() -> Self {
         Self {
             operation_metrics: HashMap::new(),
@@ -811,6 +829,7 @@ impl StatisticalPerformanceMonitor {
         }
     }
 
+    /// Records one operation: updates running average execution time and accumulates `privacy_cost` into epsilon spent (counts privacy-preserved ops). `_operation_type` and `_memory_usage` are accepted but not yet tracked.
     pub fn record_operation(
         &mut self,
         _operation_type: &str,
@@ -831,6 +850,7 @@ impl StatisticalPerformanceMonitor {
         }
     }
 
+    /// Snapshot of aggregated `SystemMetrics`.
     pub fn get_system_metrics(&self) -> SystemMetrics {
         self.system_metrics.clone()
     }

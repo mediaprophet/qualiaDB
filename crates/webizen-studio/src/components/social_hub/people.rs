@@ -2,7 +2,7 @@
 
 #![allow(non_snake_case)]
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -35,6 +35,7 @@ pub struct PeopleSignals {
     pub tab: Signal<HubTab>,
 }
 
+/// Renders people.
 pub fn render_people(sig: PeopleSignals) -> Element {
     let PeopleSignals {
         mut status,

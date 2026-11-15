@@ -1,6 +1,6 @@
 //! Desktop pairing QR — scan from phone companion to open WS ingest.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
 struct CompanionPairingInfo {
@@ -11,6 +11,7 @@ struct CompanionPairingInfo {
 }
 
 #[component]
+/// Aether `CompanionPairingPanel` component.
 pub fn CompanionPairingPanel() -> Element {
     let mut pairing = use_signal(CompanionPairingInfo::default);
     let mut loaded = use_signal(|| false);

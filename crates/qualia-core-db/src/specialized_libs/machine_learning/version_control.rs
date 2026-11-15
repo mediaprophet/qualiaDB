@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl ModelVersionControl {
+    /// Creates `ModelVersionControl` with the given state.
     pub fn new() -> Self {
         Self {
             versions: HashMap::new(),
@@ -16,6 +17,7 @@ impl ModelVersionControl {
         }
     }
 
+    /// Initializes version storage; `MLError` propagates.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         // Seed the default `main` branch so the controller is usable immediately.
         self.branches
@@ -133,6 +135,7 @@ fn version_key(model_id: &str, version_id: &str) -> String {
 }
 
 impl ModelVersion {
+    /// Creates a default model version.
     pub fn new() -> Self {
         Self {
             version_id: "v1.0.0".to_string(),
@@ -145,6 +148,7 @@ impl ModelVersion {
 }
 
 impl ModelChange {
+    /// Creates a default change record.
     pub fn new() -> Self {
         Self {
             change_id: "change_1".to_string(),
@@ -156,6 +160,7 @@ impl ModelChange {
 }
 
 impl ModelBranch {
+    /// Creates a default branch.
     pub fn new() -> Self {
         Self {
             branch_id: "main".to_string(),
@@ -167,6 +172,7 @@ impl ModelBranch {
 }
 
 impl ModelTag {
+    /// Creates a default tag.
     pub fn new() -> Self {
         Self {
             tag_id: "latest".to_string(),

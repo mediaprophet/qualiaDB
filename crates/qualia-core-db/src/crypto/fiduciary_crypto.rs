@@ -45,7 +45,7 @@ pub struct MlDsaPublicKey {
 }
 
 /// ML-DSA-65 signature — FIPS-204 serialized form (`SIG_LEN` = 3309 bytes).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MlDsaSignature {
     #[serde(with = "serde_bytes")]
     pub sig_bytes: Vec<u8>,

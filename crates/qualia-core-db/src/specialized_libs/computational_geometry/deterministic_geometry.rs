@@ -77,6 +77,9 @@ pub enum DeterministicGeometryError {
     EmptyInput,
 }
 
+/// Exclusive prefix-sum over `input` into `out_prefix` (wrapping
+/// adds); returns the total. `OutputTooSmall` when `out_prefix` is
+/// shorter than `input`.
 pub fn deterministic_scan_u64(
     input: &[u64],
     out_prefix: &mut [u64],
@@ -94,6 +97,9 @@ pub fn deterministic_scan_u64(
     Ok(acc)
 }
 
+/// Deterministic `f64` sum: values sorted by ascending magnitude
+/// before folding, so the result is order-independent and minimises
+/// cancellation error.
 pub fn deterministic_reduce_f64(input: &[f64]) -> f64 {
     let mut vals = input.to_vec();
     vals.sort_by(|a, b| {
@@ -104,6 +110,9 @@ pub fn deterministic_reduce_f64(input: &[f64]) -> f64 {
     vals.into_iter().fold(0.0, |a, b| a + b)
 }
 
+/// Stream-compaction: copy `input[i]` where `keep[i]` into `out` in
+/// order; returns the packed count. `InvalidParameter` on length
+/// mismatch, `OutputTooSmall` when `out` can't hold the kept items.
 pub fn deterministic_pack_u32(
     input: &[u32],
     keep: &[bool],
@@ -126,6 +135,9 @@ pub fn deterministic_pack_u32(
     Ok(n)
 }
 
+/// List-ranking: walk `successors` from `head` assigning ranks;
+/// `u32::MAX` terminates the list. `InvalidParameter` on cycles or
+/// out-of-range successors.
 pub fn list_rank_successors(
     successors: &[u32],
     head: usize,
@@ -153,6 +165,9 @@ pub fn list_rank_successors(
     Ok(rank as usize)
 }
 
+/// Pointer-jumping root contraction: `out_root[i]` = the root of `i`'s
+/// tree (self-parent). Returns the root count; `InvalidParameter` on
+/// cycles or out-of-range parents.
 pub fn tree_contract_roots(
     parents: &[u32],
     out_root: &mut [u32],
@@ -181,6 +196,8 @@ pub fn tree_contract_roots(
     Ok(roots)
 }
 
+/// Closest pair of `points` (O(n²)); index-lexicographic tie-break for
+/// determinism. `EmptyInput` with fewer than 2 points.
 pub fn nearest_pair(points: &[Point3]) -> Result<NearestPair, DeterministicGeometryError> {
     if points.len() < 2 {
         return Err(DeterministicGeometryError::EmptyInput);
@@ -207,6 +224,8 @@ pub fn nearest_pair(points: &[Point3]) -> Result<NearestPair, DeterministicGeome
     Ok(best)
 }
 
+/// Closest `red`↔`blue` pair (O(r·b)); `a` indexes `red`, `b` indexes
+/// `blue`, with index-lexicographic tie-break.
 pub fn bichromatic_nearest_pair(
     red: &[Point3],
     blue: &[Point3],
@@ -236,6 +255,8 @@ pub fn bichromatic_nearest_pair(
     Ok(best)
 }
 
+/// Per-point nearest neighbour into `out[i]` (O(n²)), index tie-break;
+/// `OutputTooSmall` when `out` is shorter than `points`.
 pub fn all_nearest_neighbours(
     points: &[Point3],
     out: &mut [NearestPair],
@@ -269,6 +290,9 @@ pub fn all_nearest_neighbours(
     Ok(points.len())
 }
 
+/// Directed k-NN graph: for each `i`, its `k` closest points as
+/// `WeightedEdge`s (Euclidean weight, distance+index sorted).
+/// `InvalidParameter` for `k == 0` or `k >= n`.
 pub fn knn_graph(
     points: &[Point3],
     k: usize,
@@ -304,6 +328,8 @@ pub fn knn_graph(
     Ok(written)
 }
 
+/// Euclidean MST via Kruskal over the complete distance graph
+/// (weight/index-sorted edges, union-find). Returns n−1 edges.
 pub fn euclidean_mst(
     points: &[Point3],
     out: &mut [WeightedEdge],
@@ -350,6 +376,9 @@ pub fn euclidean_mst(
     Ok(n)
 }
 
+/// 2D convex hull (monotone chain) — CCW vertex indices into
+/// `out_indices`; collinear boundary points excluded.
+/// `EmptyInput` for < 3 points.
 pub fn reservation_batch_hull_2d(
     points: &[Point2],
     out_indices: &mut [u32],
@@ -409,6 +438,9 @@ pub fn reservation_batch_hull_2d(
     Ok(hull.len())
 }
 
+/// All `owners × candidates` conflict edges emitted in a seeded
+/// deterministic order (`seeded_incremental_order` over the flat
+/// index space).
 pub fn conflict_graph_pairs(
     owners: usize,
     candidates: usize,
@@ -430,6 +462,8 @@ pub fn conflict_graph_pairs(
     Ok(required)
 }
 
+/// Gabriel graph (β = 1 β-skeleton): edge (i,j) when no third point
+/// lies strictly inside the diametral sphere of (i,j).
 pub fn gabriel_graph(
     points: &[Point3],
     out: &mut [WeightedEdge],
@@ -437,6 +471,8 @@ pub fn gabriel_graph(
     empty_region_graph(points, 1.0, out)
 }
 
+/// β-skeleton for `beta > 0` — the empty-region test generalising
+/// Gabriel (β=1) and relative-neighbourhood (β=2) graphs.
 pub fn beta_skeleton_graph(
     points: &[Point3],
     beta: f64,
@@ -448,6 +484,9 @@ pub fn beta_skeleton_graph(
     empty_region_graph(points, beta, out)
 }
 
+/// Greedy t-spanner: edges in ascending weight are added when the
+/// current graph's shortest path exceeds `stretch` × edge length.
+/// `InvalidParameter` for non-finite/`stretch < 1`.
 pub fn greedy_spanner(
     points: &[Point3],
     stretch: f64,
@@ -488,6 +527,9 @@ pub fn greedy_spanner(
     Ok(graph.len())
 }
 
+/// Fisher–Yates permutation of `0..count` driven by a splitmix64
+/// stream seeded from `seed` — the deterministic ordering used for
+/// incremental construction and conflict edges.
 pub fn seeded_incremental_order(
     count: usize,
     seed: u64,
@@ -507,6 +549,8 @@ pub fn seeded_incremental_order(
     Ok(count)
 }
 
+/// Welzl-style iterative smallest enclosing ball (≤ 4 support points,
+/// deterministic index order, 1e-12 out-of-ball tolerance).
 pub fn smallest_enclosing_ball(
     points: &[Point3],
 ) -> Result<EnclosingBall, DeterministicGeometryError> {
@@ -548,6 +592,8 @@ pub fn smallest_enclosing_ball(
     Ok(best)
 }
 
+/// Build a `BatchDynamicKdTree` from `points` (sorted record order,
+/// ids = input indices).
 pub fn build_batch_dynamic_kd_tree(points: &[Point3]) -> BatchDynamicKdTree {
     let mut records: Vec<DynamicKdRecord> = points
         .iter()
@@ -562,6 +608,8 @@ pub fn build_batch_dynamic_kd_tree(points: &[Point3]) -> BatchDynamicKdTree {
     BatchDynamicKdTree { records }
 }
 
+/// Append `point` with `id` and re-sort the record list
+/// (batch-dynamic, not amortized incremental).
 pub fn dynamic_kd_insert(tree: &mut BatchDynamicKdTree, point: Point3, id: u64) {
     tree.records.push(DynamicKdRecord {
         point,
@@ -571,6 +619,8 @@ pub fn dynamic_kd_insert(tree: &mut BatchDynamicKdTree, point: Point3, id: u64) 
     tree.records.sort_by(record_order);
 }
 
+/// Tombstone every live record with `id`; `true` when at least one
+/// was marked.
 pub fn dynamic_kd_delete(tree: &mut BatchDynamicKdTree, id: u64) -> bool {
     let mut deleted = false;
     for record in &mut tree.records {
@@ -582,10 +632,13 @@ pub fn dynamic_kd_delete(tree: &mut BatchDynamicKdTree, id: u64) -> bool {
     deleted
 }
 
+/// Drop tombstoned records, reclaiming space.
 pub fn dynamic_kd_compact(tree: &mut BatchDynamicKdTree) {
     tree.records.retain(|r| !r.tombstone);
 }
 
+/// Nearest live record to `query` (linear scan; `a` = record id,
+/// `b` = `u32::MAX`), lowest-id tie-break. `None` when empty.
 pub fn dynamic_kd_nearest(tree: &BatchDynamicKdTree, query: Point3) -> Option<NearestPair> {
     let mut best: Option<NearestPair> = None;
     for record in &tree.records {
@@ -607,6 +660,9 @@ pub fn dynamic_kd_nearest(tree: &BatchDynamicKdTree, query: Point3) -> Option<Ne
     best
 }
 
+/// Well-separated pair decomposition at singleton granularity:
+/// every point pair whose distance ≥ `separation` is emitted as a
+/// 1×1 pair. `InvalidParameter` for non-finite/`≤ 0` separation.
 pub fn well_separated_pairs(
     points: &[Point3],
     separation: f64,
@@ -638,6 +694,9 @@ pub fn well_separated_pairs(
     Ok(written)
 }
 
+/// Tiled nearest-neighbour: `points` processed in `tile_size` blocks
+/// per query, results into `out` per query — bounded working set for
+/// external-memory execution.
 pub fn external_memory_nearest_tiles(
     points: &[Point3],
     queries: &[Point3],
@@ -682,6 +741,9 @@ pub fn external_memory_nearest_tiles(
     Ok(queries.len())
 }
 
+/// Generate `count` deterministic test points of `kind`
+/// (uniform cube, clustered, skew-line, pathological duplicates)
+/// driven by a seeded splitmix64 stream.
 pub fn generate_spatial_points(
     kind: SpatialGeneratorKind,
     count: usize,
@@ -714,6 +776,8 @@ pub fn generate_spatial_points(
     Ok(count)
 }
 
+/// Benchmark receipt: rotate-XOR checksum of `seed`, point count, and
+/// every coordinate's bit pattern — reproducible across runs.
 pub fn reproducible_benchmark_report(points: &[Point3], seed: u64) -> BenchmarkReport {
     let mut checksum = seed ^ points.len() as u64;
     for &p in points {
@@ -728,6 +792,9 @@ pub fn reproducible_benchmark_report(points: &[Point3], seed: u64) -> BenchmarkR
     }
 }
 
+/// Shared empty-region test behind `gabriel_graph`/`beta_skeleton_graph`:
+/// edge (i,j) when no third point lies inside the β-scaled diametral
+/// sphere (1e-12 boundary tolerance).
 fn empty_region_graph(
     points: &[Point3],
     beta: f64,
@@ -764,6 +831,8 @@ fn empty_region_graph(
     Ok(written)
 }
 
+/// Dijkstra shortest path a→b over `edges` (O(n²) scan, INF when
+/// disconnected) — the stretch test inside `greedy_spanner`.
 fn shortest_path(n: usize, edges: &[WeightedEdge], a: u32, b: u32) -> f64 {
     let mut dist = vec![f64::INFINITY; n];
     let mut used = vec![false; n];
@@ -791,6 +860,8 @@ fn shortest_path(n: usize, edges: &[WeightedEdge], a: u32, b: u32) -> f64 {
     dist[b as usize]
 }
 
+/// Union-find root lookup with path compression (recursive halving —
+/// depth-bounded by tree height, cold path).
 fn find(parent: &mut [usize], x: usize) -> usize {
     if parent[x] != x {
         parent[x] = find(parent, parent[x]);
@@ -798,6 +869,8 @@ fn find(parent: &mut [usize], x: usize) -> usize {
     parent[x]
 }
 
+/// Squared Euclidean distance — the ordering metric used everywhere
+/// (sqrt deferred to edge weights so comparisons stay exact).
 fn distance_sq(a: Point3, b: Point3) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
@@ -805,6 +878,7 @@ fn distance_sq(a: Point3, b: Point3) -> f64 {
     dx * dx + dy * dy + dz * dz
 }
 
+/// Degenerate enclosing ball on a single support point (radius 0).
 fn ball_from_one(points: &[Point3], i: usize) -> EnclosingBall {
     EnclosingBall {
         center: points[i],
@@ -814,6 +888,8 @@ fn ball_from_one(points: &[Point3], i: usize) -> EnclosingBall {
     }
 }
 
+/// Enclosing ball on two support points — midpoint centre, half-distance
+/// radius.
 fn ball_from_two(points: &[Point3], i: usize, j: usize) -> EnclosingBall {
     let center = scale(add(points[i], points[j]), 0.5);
     EnclosingBall {
@@ -824,6 +900,9 @@ fn ball_from_two(points: &[Point3], i: usize, j: usize) -> EnclosingBall {
     }
 }
 
+/// Enclosing ball on three support points — circumcentre via the
+/// cross-product formula; `None` when the points are degenerate
+/// (denominator < 1e-18).
 fn ball_from_three(points: &[Point3], i: usize, j: usize, k: usize) -> Option<EnclosingBall> {
     let a = points[i];
     let b = points[j];
@@ -846,6 +925,9 @@ fn ball_from_three(points: &[Point3], i: usize, j: usize, k: usize) -> Option<En
     })
 }
 
+/// Enclosing ball on four support points — sphere through a tetrahedron
+/// solved by Cramer's rule on the edge-vector system; `None` when
+/// coplanar (det < 1e-18).
 fn ball_from_four(
     points: &[Point3],
     i: usize,
@@ -892,6 +974,8 @@ fn ball_from_four(
     })
 }
 
+/// Total order for kd records: lexicographic on (x, y, z) then `id` —
+/// keeps the batch-dynamic tree deterministic under duplicate points.
 fn record_order(a: &DynamicKdRecord, b: &DynamicKdRecord) -> core::cmp::Ordering {
     a.point
         .x
@@ -912,6 +996,8 @@ fn record_order(a: &DynamicKdRecord, b: &DynamicKdRecord) -> core::cmp::Ordering
         .then(a.id.cmp(&b.id))
 }
 
+/// Advance the splitmix64 stream and return the next u64 — the
+/// deterministic RNG behind seeded orderings and point generation.
 fn splitmix64_next(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
     let mut z = *state;
@@ -920,26 +1006,32 @@ fn splitmix64_next(state: &mut u64) -> u64 {
     z ^ (z >> 31)
 }
 
+/// Next stream value scaled to [0, 1) via the top 53 bits.
 fn unit_f64(state: &mut u64) -> f64 {
     ((splitmix64_next(state) >> 11) as f64) / ((1u64 << 53) as f64)
 }
 
+/// Component-wise vector addition.
 fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
+/// Component-wise vector subtraction (a − b).
 fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
+/// Scalar multiplication of a point vector.
 fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 
+/// Dot product of two point vectors.
 fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 
+/// Cross product a × b.
 fn cross(a: Point3, b: Point3) -> Point3 {
     Point3::new(
         a.y * b.z - a.z * b.y,

@@ -55,6 +55,7 @@ pub struct SafeTensorEntry {
 
 impl SafeTensorEntry {
     #[inline]
+    /// `SafeTensorEntry::byte_len`.
     pub fn byte_len(&self) -> usize {
         self.end - self.begin
     }

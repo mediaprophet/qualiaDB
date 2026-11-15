@@ -259,6 +259,7 @@ impl PowerManager {
 }
 
 impl BatteryMonitor {
+    /// Creates a default `BatteryMonitor`.
     pub fn new() -> Self {
         Self {
             current_level: 100.0,
@@ -335,6 +336,7 @@ impl BatteryMonitor {
 }
 
 impl ThermalMonitor {
+    /// Creates a default `ThermalMonitor`.
     pub fn new() -> Self {
         Self {
             cpu_temperature: 45.0,
@@ -436,6 +438,7 @@ impl ThermalMonitor {
 }
 
 impl PowerOptimizer {
+    /// Creates a default `PowerOptimizer`.
     pub fn new() -> Self {
         Self {
             optimization_algorithm: OptimizationAlgorithm::Greedy,

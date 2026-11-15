@@ -42,16 +42,19 @@ pub struct PathHandle {
 
 impl PathHandle {
     #[inline]
+    /// Slot.
     pub const fn slot(self) -> u8 {
         self.slot
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
 }
 
+/// `PathHandle::path_handle_is_budget_token`.
 pub const fn path_handle_is_budget_token() -> bool {
     false
 }
@@ -72,6 +75,7 @@ pub struct PathTable {
 }
 
 impl PathTable {
+    /// Creates a default `PathTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_RACE_CANDIDATES],
@@ -95,6 +99,7 @@ impl PathTable {
         Ok(id)
     }
 
+    /// Path handle for `id`; error when absent.
     pub fn handle_of(&self, id: u8) -> Result<PathHandle, QdnfError> {
         let slot = self.get(id).ok_or(QdnfError::Closed)?;
         Ok(PathHandle {
@@ -115,6 +120,7 @@ impl PathTable {
         Ok(())
     }
 
+    /// Transitions `handle` to `next` state; returns the new handle.
     pub fn mutate(&mut self, handle: PathHandle, next: PathState) -> Result<PathHandle, QdnfError> {
         let idx = self.index_of(handle.slot)?;
         {
@@ -147,6 +153,23 @@ impl PathTable {
             slot: handle.slot,
             generation: new_gen,
         })
+    }
+
+    /// Promote a Racing slot to Active by `(slot_id, generation)` equality (`R04`),
+    /// requiring attested reachability so stale slot IDs fail closed.
+    pub fn activate_generation(&mut self, id: u8, generation: u64) -> Result<PathHandle, QdnfError> {
+        let idx = self.index_of(id)?;
+        let slot = self.slots[idx].as_ref().ok_or(QdnfError::Closed)?;
+        if slot.id != id || slot.generation != generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        self.mutate(
+            PathHandle {
+                slot: id,
+                generation: Generation(generation),
+            },
+            PathState::Active,
+        )
     }
 
     /// Promote a Racing slot to Active. A fourth Active is Capacity.
@@ -193,6 +216,7 @@ impl PathTable {
         self.lose_and_cleanup(id)
     }
 
+    /// Active paths.
     pub fn active_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -217,6 +241,7 @@ impl PathTable {
         false
     }
 
+    /// `PathTable::get`.
     pub fn get(&self, id: u8) -> Option<&PathSlot> {
         let idx = id as usize;
         if idx >= MAX_RACE_CANDIDATES {
@@ -396,5 +421,23 @@ mod tests {
         let active = mutate_path(&mut table, h, PathState::Active).unwrap();
         assert_eq!(table.get(id).unwrap().state, PathState::Active);
         assert_eq!(active.generation(), Generation(2));
+    }
+
+    #[test]
+    fn r04_activate_generation_requires_slot_and_generation_equality() {
+        let mut table = PathTable::new();
+        let id = table.start_race(10).unwrap();
+        let h = table.handle_of(id).unwrap();
+        table.attest_reachability(h).unwrap();
+        assert_eq!(
+            table.activate_generation(id, 9),
+            Err(QdnfError::StaleGeneration)
+        );
+        let next = table.activate_generation(id, 10).unwrap();
+        assert_eq!(next.generation(), Generation(11));
+        assert_eq!(
+            table.activate_generation(id, 10),
+            Err(QdnfError::StaleGeneration)
+        );
     }
 }

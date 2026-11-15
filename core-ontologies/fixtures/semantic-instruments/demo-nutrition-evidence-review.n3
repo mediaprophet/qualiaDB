@@ -1,0 +1,34 @@
+@prefix si: <https://ns.webizen.org/semantic-instrument/> .
+@prefix cml: <https://ns.webcivics.net/cml/> .
+@prefix food: <https://ns.webizen.org/food-evidence/> .
+
+# Demonstrator template derived from food_organ_system_evidence_v2.xlsx.
+# It is a review instrument, not a clinical decision rule.
+
+food:evidence-review a si:SemanticInstrument ;
+    si:instrumentId "https://ns.webizen.org/demo/nutrition-evidence-review" ;
+    si:name "Nutrition evidence review template (demo)" ;
+    si:requiresQualifiedAuthor "nutrition-or-dietetics-subject-matter-expert" .
+
+food:evidence-review-1-0-0 a si:InstrumentRelease ;
+    si:instrument food:evidence-review ;
+    si:releaseId "https://ns.webizen.org/demo/nutrition-evidence-review/releases/1.0.0" ;
+    si:contentCategory si:Demo ;
+    si:entryPoint food:review-evidence ;
+    si:prohibitedInterpretation "diagnosis-treatment-prescription-or-individualised-medical-advice" ;
+    si:requiresInput "food-or-constituent,evidence-tier,evidence-scope,source,caution" ;
+    si:holdsWhenMissing "evidence-tier-or-source-or-caution" ;
+    si:resultKind "evidence-navigation-claim" ;
+    si:authorshipState "template-awaiting-qualified-author" ;
+    si:reviewState "awaiting-independent-review" .
+
+food:review-evidence a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:operationKind "classify-and-trace" ;
+    si:sideEffects "none" ;
+    si:logicApplication food:evidence-logic .
+
+food:evidence-logic a cml:LogicApplication ;
+    cml:modality cml:N3Logic ;
+    cml:logicSummary "Preserves evidence tier, scope, source and caution when relating a food or constituent to a system or focus area." ;
+    cml:curationStatus cml:Proposed .

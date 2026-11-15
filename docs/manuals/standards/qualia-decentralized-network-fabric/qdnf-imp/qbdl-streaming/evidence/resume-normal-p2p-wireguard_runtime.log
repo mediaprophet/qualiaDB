@@ -1,0 +1,7 @@
+
+running 2 tests
+test p2p::wireguard_runtime::tests::endpoint_is_learned_from_authenticated_source ... ok
+test p2p::wireguard_runtime::tests::two_tunnels_handshake_and_carry_data_over_udp ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 10382 filtered out; finished in 0.40s
+

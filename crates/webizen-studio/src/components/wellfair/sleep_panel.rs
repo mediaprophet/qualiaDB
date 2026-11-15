@@ -2,7 +2,7 @@
 
 use super::host_client::{fetch_health_records, fetch_sleep_analytics, SleepAnalyticsDto};
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 struct SleepMetrics {
@@ -65,6 +65,7 @@ fn cell_rem(summary: Option<&String>) -> String {
 }
 
 #[component]
+/// Aether `WellfairSleepPanel` component.
 pub fn WellfairSleepPanel() -> Element {
     let mut sleep_rows = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Loading sleep records…".to_string());

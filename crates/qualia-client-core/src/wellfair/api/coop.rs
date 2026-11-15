@@ -17,6 +17,7 @@ use super::*;
 impl WebizenHostApi {
     // --- Cooperative projects (Phase 5 / COP-01..) ---
 
+    /// Adds project.
     pub fn add_project(&mut self, project: &Project) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
         let hash =
@@ -34,6 +35,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds project-membership.
     pub fn add_project_membership(
         &mut self,
         membership: &ProjectMembership,
@@ -54,6 +56,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds contribution.
     pub fn add_contribution(
         &mut self,
         contribution: &Contribution,
@@ -75,6 +78,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Lists contributions.
     pub fn list_contributions(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("contribution", limit)
     }
@@ -126,6 +130,7 @@ impl WebizenHostApi {
 
     // --- Credentials (Phase 3/7 / CRE-01..) ---
 
+    /// Adds credential.
     pub fn add_credential(
         &mut self,
         credential: &CredentialRecord,
@@ -155,6 +160,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Lists credentials.
     pub fn list_credentials(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("credential", limit)
     }

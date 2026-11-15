@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches symbolic-logic inference.
 pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::solvers::symbolic_logic::{
         BoundedSatSolver, Clause, DefeasibleRule, Fact, ForwardChainingDefeasible, Literal,
@@ -130,6 +131,7 @@ pub fn symbolic_logic_infer(args: &[u8]) -> Result<String, McpSystemError> {
     }
 }
 
+/// MCP tool: dispatches a logic-modality evaluation.
 pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let modality = json_str(&v, "modality", "unknown");

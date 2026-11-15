@@ -1,0 +1,204 @@
+// WGSL Forge Terrain GPU Compute Kernel Compilation and Dispatch Pipeline (GEO-S8 / R8-V).
+// Declares WgslGeoKernelComplex governing shader emission, certification, oracle verification, and GPU dispatch.
+// Demonstrates end-to-end execution across all 10 WgslForge.geo_* GPU compute capabilities:
+// 1. WgslForge.geo_emit_multifractal_noise (multifractal terrain cascades: RidgedMulti, FBM, Jordan, Simplex3D)
+// 2. WgslForge.geo_emit_landform_filters (hydraulic talus, thermal terracing, plateau clamping)
+// 3. WgslForge.geo_emit_6layer_strata_erosion (6-layer stratigraphic regolith column erosion)
+// 4. WgslForge.geo_emit_824_pipe_erosion (8-pipe shallow-water hydrodynamic erosion)
+// 5. WgslForge.geo_emit_d8_dinfinity_flow (D8 and Tarboton D-infinity flow direction)
+// 6. WgslForge.geo_emit_horn_twi_geomorphons (Horn's 3x3 slope/aspect, TWI, and 10 geomorphons)
+// 7. WgslForge.geo_emit_viewshed_hillshade (analytical multi-directional hillshading and line-of-sight viewshed)
+// 8. WgslForge.geo_compile_cell_map_algebra (compilation of pure VibeScript cell formulas to zero-heap WGSL)
+// 9. WgslForge.geo_emit_sentinel2_biome_splat (323-biome Sentinel-2 spectral LUT and Whittaker classification)
+// 10. WgslForge.geo_certify_and_dispatch (Naga AST certification, SHA-256 digest, CPU oracle, and GPU dispatch)
+module <https://qualiadb.org/modules/geography/wgsl_forge_terrain_gpu>;
+using WgslForge;
+using Topology;
+using Poet;
+
+// Declarative WgslGeoKernelComplex governing shader emission, certification, and GPU dispatch
+topology snowy_wgsl_forge_pipeline : WgslGeoKernelComplex {
+    role: "WgslGeoKernelComplex";
+    complex_id: "urn:qualia:topology:snowy-wgsl-geo-kernel";
+    anchors: ["MountKosciuszkoSummit", "CharlottePassLookout", "SpencersCreekBasin", "PerisherValleyMedical"];
+    crs_epsg: 7855;
+    states: [
+        "AstCellProgram",
+        "WgslSourceEmitted",
+        "NagaAndHashCertified",
+        "CpuOracleVerified",
+        "GpuDispatched"
+    ];
+    transitions: [
+        "emit_wgsl_kernel",
+        "certify_shader_hash",
+        "verify_cpu_oracle_parity",
+        "dispatch_gpu_workgroups"
+    ];
+    invariants: [
+        "DeterministicShaderDigest",
+        "ZeroHeapWorkgroupDispatch",
+        "CpuGpuOracleParity",
+        "NagaAstValidationCertified"
+    ];
+    boundary {
+        min_easting: 609000.0;
+        min_northing: 5959000.0;
+        max_easting: 619000.0;
+        max_northing: 5969000.0;
+    }
+}
+
+// Pure domain raster extent and resolution for Snowy Mountains study area (EPSG:7855 / MGA Zone 55)
+pure fn snowy_forge_bbox() -> Record {
+    return {
+        name: "Snowy Mountains Main Range GPU Terrain Study Area",
+        crs: "EPSG:7855",
+        min_x: 609000.0,
+        min_y: 5959000.0,
+        max_x: 619000.0,
+        max_y: 5969000.0,
+        cell_size_m: 25.0,
+        width: 400,
+        height: 400
+    };
+}
+
+// Pure compute shader workgroup dispatch configuration
+pure fn forge_workgroup_config() -> Record {
+    return {
+        workgroup_x: 16,
+        workgroup_y: 16,
+        tile_width: 256,
+        tile_height: 256
+    };
+}
+
+// Pure 6-layer stratigraphic regolith column configuration (.m64 Mode 0x02)
+pure fn strata_column_config() -> Record {
+    return {
+        layer_count: 6,
+        bedrock_depth_m: 800.0,
+        regolith_thickness_m: 10.0,
+        saprolite_thickness_m: 5.0,
+        alluvium_thickness_m: 3.0,
+        colluvium_thickness_m: 1.0,
+        topsoil_thickness_m: 1.0,
+        bioregion_code: 322
+    };
+}
+
+// Pure 323-biome Sentinel-2 spectral LUT and alpine Whittaker lapse rate parameters
+pure fn sentinel2_splat_config() -> Record {
+    return {
+        biome_lut_count: 323,
+        elevation_lapse_rate: 0.0065,
+        moisture_index_bias: 0.12,
+        solar_insol_weight: 0.35
+    };
+}
+
+// Pure VibeScript cell mathematical formula expressions for zero-heap WGSL map algebra compilation
+cell erosion_hazard_formula = "(0.45 * slope_rad) + (0.35 * flow_accum) - (0.20 * vegetation_cover)";
+cell snow_persistence_formula = "(0.50 * elevation_norm) - (0.30 * solar_insolation) + (0.20 * cold_air_drainage)";
+
+// Executes the complete WGSL Forge GPU compute kernel emission, certification, and dispatch pipeline
+effect fn run_snowy_wgsl_forge_terrain_gpu_pipeline() -> Record {
+    let bbox = snowy_forge_bbox();
+    let wg = forge_workgroup_config();
+    let strata = strata_column_config();
+    let s2_config = sentinel2_splat_config();
+
+    // 1. Multifractal Noise Cascade: emit WGSL compute shader for RidgedMulti, FBM, Jordan, Simplex3D warp
+    let multifractal_kernel = WgslForge.geo_emit_multifractal_noise(
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        6,
+        true
+    );
+
+    // 2. Morphological Landform Filters: emit WGSL compute shader for hydraulic talus and thermal terracing
+    let landform_filter_kernel = WgslForge.geo_emit_landform_filters(
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        "thermal_terrace",
+        8.0
+    );
+
+    // 3. 6-Layer Stratigraphic Column Erosion: emit WGSL compute shader for differential regolith weathering
+    let strata_erosion_kernel = WgslForge.geo_emit_6layer_strata_erosion(
+        { width: bbox.width, height: bbox.height },
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        strata.layer_count
+    );
+
+    // 4. Hydrodynamic Pipe Erosion: emit WGSL compute shader for 8-pipe shallow water Q8.24 fixed-point flow
+    let pipe_erosion_kernel = WgslForge.geo_emit_824_pipe_erosion(
+        { width: bbox.width, height: bbox.height, cell_size_m: bbox.cell_size_m },
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        "q8_24_fixed"
+    );
+
+    // 5. D8 & Tarboton D-Infinity Flow: emit WGSL compute shader for hydrological steepest descent routing
+    let flow_routing_kernel = WgslForge.geo_emit_d8_dinfinity_flow(
+        { width: bbox.width, height: bbox.height },
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        "d_infinity"
+    );
+
+    // 6. Horn's Slope, Aspect, TWI & Geomorphons: emit WGSL compute shader for 3x3 finite difference metrics
+    let horn_geomorphons_kernel = WgslForge.geo_emit_horn_twi_geomorphons(
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        bbox.cell_size_m,
+        1.0
+    );
+
+    // 7. Multi-Directional Hillshade & Viewshed: emit WGSL compute shader for solar analytical illumination
+    let viewshed_hillshade_kernel = WgslForge.geo_emit_viewshed_hillshade(
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        315.0,
+        45.0,
+        "combined"
+    );
+
+    // 8. Cell Map Algebra Compilation: compile pure VibeScript cell mathematical formula into zero-heap WGSL
+    let map_algebra_compiled = WgslForge.geo_compile_cell_map_algebra(
+        erosion_hazard_formula,
+        {
+            slope_rad: "field://qualia:snowy-slope-rad",
+            flow_accum: "field://qualia:snowy-flow-accum",
+            vegetation_cover: "field://qualia:snowy-ndvi-cover"
+        },
+        "wgsl"
+    );
+
+    // 9. Sentinel-2 Biome Splatting: emit WGSL compute shader for 323-biome spectral LUT surface classification
+    let biome_splat_kernel = WgslForge.geo_emit_sentinel2_biome_splat(
+        { x: wg.workgroup_x, y: wg.workgroup_y },
+        s2_config.biome_lut_count,
+        s2_config.elevation_lapse_rate
+    );
+
+    // 10. Certify & Dispatch: validate via Naga AST, verify SHA-256 digest & CPU oracle, and dispatch GPU workgroups
+    let dispatch_outcome = WgslForge.geo_certify_and_dispatch(
+        multifractal_kernel.wgsl_source,
+        "main",
+        { x: 25, y: 25, z: 1 },
+        multifractal_kernel.sha256_hash,
+        true
+    );
+
+    return {
+        status: "complete",
+        pipeline: "GEO-S8 WGSL Forge Terrain GPU Compute Pipeline",
+        crs: bbox.crs,
+        multifractal: multifractal_kernel,
+        landform_filters: landform_filter_kernel,
+        strata_erosion: strata_erosion_kernel,
+        pipe_erosion: pipe_erosion_kernel,
+        flow_routing: flow_routing_kernel,
+        horn_geomorphons: horn_geomorphons_kernel,
+        viewshed_hillshade: viewshed_hillshade_kernel,
+        map_algebra: map_algebra_compiled,
+        biome_splat: biome_splat_kernel,
+        dispatch: dispatch_outcome
+    };
+}

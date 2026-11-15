@@ -101,6 +101,7 @@ impl EmbeddingTable {
     }
 
     #[inline]
+    /// `EmbeddingTable::entity`.
     pub fn entity(&self, i: usize) -> Result<&[f64], KgEmbeddingError> {
         if i >= self.n_entities {
             return Err(KgEmbeddingError::IndexOutOfRange);
@@ -109,6 +110,7 @@ impl EmbeddingTable {
     }
 
     #[inline]
+    /// `EmbeddingTable::relation`.
     pub fn relation(&self, i: usize) -> Result<&[f64], KgEmbeddingError> {
         if i >= self.n_relations {
             return Err(KgEmbeddingError::IndexOutOfRange);
@@ -117,12 +119,14 @@ impl EmbeddingTable {
     }
 
     #[inline]
+    /// `EmbeddingTable::entity_mut`.
     pub fn entity_mut(&mut self, i: usize) -> &mut [f64] {
         let d = self.ent_dim;
         &mut self.entities[i * d..(i + 1) * d]
     }
 
     #[inline]
+    /// `EmbeddingTable::relation_mut`.
     pub fn relation_mut(&mut self, i: usize) -> &mut [f64] {
         let d = self.rel_dim;
         &mut self.relations[i * d..(i + 1) * d]

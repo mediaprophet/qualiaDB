@@ -102,6 +102,7 @@ pub struct AttributionResult {
 }
 
 impl PerformanceTracker {
+    /// Creates a tracker with fresh metrics store, benchmark comparator, and attribution analyzer.
     pub fn new() -> Self {
         Self {
             performance_metrics: HashMap::new(),
@@ -110,45 +111,55 @@ impl PerformanceTracker {
         }
     }
 
+    /// Initializes sub-components; currently a pass-through returning `Ok(())` on the in-memory store.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Returns a fresh zeroed `FinancialPerformanceMetrics` — scaffold-level, not measured values.
     pub fn get_metrics(&self) -> FinancialPerformanceMetrics {
         FinancialPerformanceMetrics::new()
     }
 
+    /// Stores `metrics` keyed by its `portfolio_id` (overwrites silently).
     pub fn record_performance_metrics(&mut self, metrics: PerformanceMetrics) {
         self.performance_metrics
             .insert(metrics.portfolio_id.clone(), metrics);
     }
 
+    /// Recorded metrics for `portfolio_id`, or `None`.
     pub fn get_performance_metrics(&self, portfolio_id: &str) -> Option<&PerformanceMetrics> {
         self.performance_metrics.get(portfolio_id)
     }
 
+    /// Portfolio IDs with recorded metrics.
     pub fn list_performance_metrics(&self) -> Vec<String> {
         self.performance_metrics.keys().cloned().collect()
     }
 
+    /// Shared access to the benchmark comparator store.
     pub fn benchmark_comparator(&self) -> &BenchmarkComparator {
         &self.benchmark_comparator
     }
 
+    /// Mutable access to the benchmark comparator store.
     pub fn benchmark_comparator_mut(&mut self) -> &mut BenchmarkComparator {
         &mut self.benchmark_comparator
     }
 
+    /// Shared access to the attribution analyzer store.
     pub fn attribution_analyzer(&self) -> &AttributionAnalyzer {
         &self.attribution_analyzer
     }
 
+    /// Mutable access to the attribution analyzer store.
     pub fn attribution_analyzer_mut(&mut self) -> &mut AttributionAnalyzer {
         &mut self.attribution_analyzer
     }
 }
 
 impl BenchmarkComparator {
+    /// Creates an empty comparator — benchmarks are stored when recorded; no computation engine runs them.
     pub fn new() -> Self {
         Self {
             benchmarks: HashMap::new(),
@@ -175,20 +186,24 @@ impl BenchmarkComparator {
         self.benchmarks.get(name).map(|b| b.returns.as_slice())
     }
 
+    /// Stores `metrics` under `key`.
     pub fn record_comparison(&mut self, key: &str, metrics: ComparisonMetrics) {
         self.comparison_metrics.insert(key.to_string(), metrics);
     }
 
+    /// Stored comparison metrics for `key`, or `None`.
     pub fn get_comparison(&self, key: &str) -> Option<&ComparisonMetrics> {
         self.comparison_metrics.get(key)
     }
 
+    /// All recorded comparison keys.
     pub fn list_comparisons(&self) -> Vec<String> {
         self.comparison_metrics.keys().cloned().collect()
     }
 }
 
 impl AttributionAnalyzer {
+    /// Creates an empty analyzer — models and results are stored registries; no attribution math runs here.
     pub fn new() -> Self {
         Self {
             attribution_models: HashMap::new(),
@@ -196,34 +211,41 @@ impl AttributionAnalyzer {
         }
     }
 
+    /// Registers `model` by `model_id` (overwrites silently).
     pub fn add_attribution_model(&mut self, model: AttributionModel) {
         self.attribution_models
             .insert(model.model_id.clone(), model);
     }
 
+    /// Registered model for `model_id`, or `None`.
     pub fn get_attribution_model(&self, model_id: &str) -> Option<&AttributionModel> {
         self.attribution_models.get(model_id)
     }
 
+    /// All registered model IDs.
     pub fn list_attribution_models(&self) -> Vec<String> {
         self.attribution_models.keys().cloned().collect()
     }
 
+    /// Stores a computed `AttributionResult` by `result_id`.
     pub fn add_attribution_result(&mut self, result: AttributionResult) {
         self.attribution_results
             .insert(result.result_id.clone(), result);
     }
 
+    /// Stored result for `result_id`, or `None`.
     pub fn get_attribution_result(&self, result_id: &str) -> Option<&AttributionResult> {
         self.attribution_results.get(result_id)
     }
 
+    /// All stored result IDs.
     pub fn list_attribution_results(&self) -> Vec<String> {
         self.attribution_results.keys().cloned().collect()
     }
 }
 
 impl PerformanceMetrics {
+    /// Creates a zeroed `PerformanceMetrics`.
     pub fn new() -> Self {
         Self {
             portfolio_id: "portfolio_1".to_string(),
@@ -241,6 +263,7 @@ impl PerformanceMetrics {
 }
 
 impl Benchmark {
+    /// Creates an empty `Benchmark` definition.
     pub fn new() -> Self {
         Self {
             benchmark_id: "benchmark_1".to_string(),
@@ -252,6 +275,7 @@ impl Benchmark {
 }
 
 impl ComparisonMetrics {
+    /// Creates a zeroed `ComparisonMetrics`.
     pub fn new() -> Self {
         Self {
             portfolio_id: "portfolio_1".to_string(),
@@ -266,6 +290,7 @@ impl ComparisonMetrics {
 }
 
 impl AttributionModel {
+    /// Creates an empty `AttributionModel` definition.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -276,6 +301,7 @@ impl AttributionModel {
 }
 
 impl AttributionFactor {
+    /// Creates an empty `AttributionFactor`.
     pub fn new() -> Self {
         Self {
             factor_id: "factor_1".to_string(),
@@ -287,6 +313,7 @@ impl AttributionFactor {
 }
 
 impl AttributionResult {
+    /// Creates a zeroed `AttributionResult`.
     pub fn new() -> Self {
         Self {
             result_id: "result_1".to_string(),

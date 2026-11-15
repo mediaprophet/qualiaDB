@@ -41,6 +41,7 @@ impl ApplicationProfile {
         ApplicationProfile::BatchOvernight,
     ];
 
+    /// Stable string form of the profile.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Interactive => "interactive",
@@ -49,6 +50,7 @@ impl ApplicationProfile {
         }
     }
 
+    /// Parses a profile name; `None` when unknown.
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "interactive" | "chat" | "ui" | "0" => Some(Self::Interactive),
@@ -60,6 +62,7 @@ impl ApplicationProfile {
         }
     }
 
+    /// Human-readable profile description.
     pub fn description(self) -> &'static str {
         match self {
             Self::Interactive => {
@@ -77,6 +80,7 @@ impl ApplicationProfile {
 
 static PROFILE: AtomicU8 = AtomicU8::new(ApplicationProfile::Interactive as u8);
 
+/// Currently active global profile.
 pub fn active_application_profile() -> ApplicationProfile {
     if let Ok(s) = std::env::var("QUALIA_APP_PROFILE") {
         if let Some(p) = ApplicationProfile::parse(&s) {
@@ -97,6 +101,7 @@ pub fn set_application_profile(profile: ApplicationProfile) {
     log::info!("APP_PROFILE|{}|{}", profile.as_str(), profile.description());
 }
 
+/// Activates `profile` globally.
 pub fn apply_application_profile(profile: ApplicationProfile) {
     match profile {
         ApplicationProfile::Interactive => {

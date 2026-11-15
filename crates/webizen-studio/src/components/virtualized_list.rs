@@ -4,7 +4,7 @@
 //! Not a full virtual scroller library — intentionally small and zero-dep.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Default row height (px) when the caller does not specify one.
 pub const DEFAULT_ROW_HEIGHT_PX: f64 = 28.0;
@@ -84,7 +84,7 @@ pub fn VirtualizedListFrame(
         div {
             style: "{base}",
             onscroll: move |e| {
-                // Dioxus scroll event: read via data attributes is limited; keep signal
+                // Aether scroll event: read via data attributes is limited; keep signal
                 // updates best-effort. Parents that need precise scroll can call window_range
                 // themselves with measured values.
                 let _ = e;

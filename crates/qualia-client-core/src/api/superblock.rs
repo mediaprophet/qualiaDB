@@ -107,6 +107,7 @@ fn artifact_block_count(path: &Path, byte_len: u64) -> Result<u64, String> {
     Ok(0)
 }
 
+/// Lists superblock artifacts.
 pub fn list_superblock_artifacts() -> Result<Vec<SuperBlockArtifact>, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -120,6 +121,7 @@ pub fn list_superblock_artifacts() -> Result<Vec<SuperBlockArtifact>, String> {
     Ok(out)
 }
 
+/// Gets superblock-view.
 pub fn get_superblock_view(
     source_path: String,
     block_index: u64,

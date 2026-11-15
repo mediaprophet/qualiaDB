@@ -17,6 +17,7 @@ pub struct PoissonGrid {
 }
 
 impl PoissonGrid {
+    /// Interior point count; `None` on overflow.
     pub fn point_count(self) -> Option<usize> {
         self.width.checked_mul(self.height)
     }
@@ -31,6 +32,7 @@ pub struct PoissonReport {
     pub maximum: f64,
 }
 
+/// Dirichlet Poisson solve on the grid.
 pub fn solve_poisson_dirichlet(
     grid: PoissonGrid,
     source: &[f64],
@@ -116,6 +118,7 @@ pub fn solve_poisson_dirichlet(
     Err(PotentialError::ConvergenceFailed { residual })
 }
 
+/// `true` when the discrete maximum principle holds.
 pub fn discrete_maximum_principle_holds(
     grid: PoissonGrid,
     source: &[f64],

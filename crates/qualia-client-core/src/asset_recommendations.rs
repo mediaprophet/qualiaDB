@@ -17,6 +17,7 @@ pub enum DeviceTier {
 }
 
 impl DeviceTier {
+    /// Constructs from ram-gb.
     pub fn from_ram_gb(ram_gb: f64) -> Self {
         if ram_gb < 6.0 {
             Self::Edge
@@ -27,6 +28,7 @@ impl DeviceTier {
         }
     }
 
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Edge => "edge",
@@ -109,6 +111,7 @@ pub struct AssetRecommendationsResponse {
     pub wiring_notes: Vec<String>,
 }
 
+/// Native device profile.
 pub fn native_device_profile() -> DeviceProfile {
     let mut sys = System::new_all();
     sys.refresh_memory();
@@ -123,6 +126,7 @@ pub fn native_device_profile() -> DeviceProfile {
     }
 }
 
+/// Device profile from input text.
 pub fn device_profile_from_input(input: &DeviceProfileInput) -> DeviceProfile {
     if let Some(ram) = input.ram_gb {
         return DeviceProfile {
@@ -140,6 +144,7 @@ pub fn device_profile_from_input(input: &DeviceProfileInput) -> DeviceProfile {
     native_device_profile()
 }
 
+/// Infers domains from text.
 pub fn infer_domains_from_text(text: &str) -> Vec<String> {
     let lower = text.to_lowercase();
     let mut domains = Vec::new();
@@ -329,6 +334,7 @@ fn score_ontology(
     Some((score.min(100), reasons.join("; ")))
 }
 
+/// Recommends assets.
 pub fn recommend_assets(
     catalog: &ResourceCatalog,
     device: &DeviceProfile,

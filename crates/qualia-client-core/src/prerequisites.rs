@@ -103,6 +103,7 @@ mod win {
         false
     }
 
+    /// Checks.
     pub fn check() -> PrerequisiteStatus {
         let bundled = find_bundled_webview2();
         let webview2_bundled = bundled.is_some();
@@ -122,6 +123,7 @@ mod win {
         }
     }
 
+    /// Configures the WebView2 runtime.
     pub fn configure_webview2_runtime() -> bool {
         let Some(dir) = find_bundled_webview2() else {
             return evergreen_webview2_installed();
@@ -157,6 +159,7 @@ mod win {
         Ok(path)
     }
 
+    /// Installs a prerequisite.
     pub async fn install_prerequisite(kind: &str) -> Result<(), String> {
         let (url, file_name) = match kind {
             "vc_redist" => (VC_REDIST_URL, "vc_redist.x64.exe"),
@@ -172,6 +175,7 @@ mod win {
 mod win {
     use super::PrerequisiteStatus;
 
+    /// Checks.
     pub fn check() -> PrerequisiteStatus {
         PrerequisiteStatus {
             platform_requires_check: false,
@@ -184,23 +188,28 @@ mod win {
         }
     }
 
+    /// Configures the WebView2 runtime.
     pub fn configure_webview2_runtime() -> bool {
         true
     }
 
+    /// Installs a prerequisite.
     pub async fn install_prerequisite(_kind: &str) -> Result<(), String> {
         Ok(())
     }
 }
 
+/// Checks prerequisites.
 pub fn check_prerequisites() -> PrerequisiteStatus {
     win::check()
 }
 
+/// Configures the WebView2 runtime.
 pub fn configure_webview2_runtime() -> bool {
     win::configure_webview2_runtime()
 }
 
+/// Installs a prerequisite.
 pub async fn install_prerequisite(kind: String) -> Result<(), String> {
     win::install_prerequisite(kind.as_str()).await
 }

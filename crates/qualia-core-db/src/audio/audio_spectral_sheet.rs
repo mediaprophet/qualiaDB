@@ -18,11 +18,17 @@ pub const SIDECAR_KIND_CQT: u16 = 1;
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
 pub struct AudioSpectralSidecarHeader {
+    /// Format magic `"Q4AU"` (`SPECTRAL_SIDECAR_MAGIC`).
     pub magic: u32,
+    /// Layout version: `VERSION` (v1) or `VERSION_V2` (appended mel/MFCC planes).
     pub version: u16,
+    /// Carries the `SIDECAR_KIND_*` transform tag (STFT = 0, CQT = 1).
     pub _pad: u16,
+    /// Frequency bins per frame.
     pub bin_count: u32,
+    /// Number of frames in the raster.
     pub frame_count: u32,
+    /// Source sample rate.
     pub sample_rate: u32,
 }
 
@@ -32,6 +38,7 @@ impl AudioSpectralSidecarHeader {
     /// See [`bake_spectral_v2_from_samples`] and the [`SpectralV2SubHeader`] layout.
     pub const VERSION_V2: u16 = 2;
 
+    /// Header initialised with magic + v1, zero frame geometry, 48 kHz.
     #[inline]
     pub const fn empty() -> Self {
         Self {
@@ -44,6 +51,8 @@ impl AudioSpectralSidecarHeader {
         }
     }
 
+    /// Byte size of the frame raster following the header
+    /// (`bin_count × frame_count × 4`, saturating).
     #[inline]
     pub fn payload_bytes(&self) -> usize {
         (self.bin_count as usize)
@@ -51,6 +60,8 @@ impl AudioSpectralSidecarHeader {
             .saturating_mul(4)
     }
 
+    /// True when magic, version (v1 or v2), and non-zero frame geometry are
+    /// all consistent.
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.magic == SPECTRAL_SIDECAR_MAGIC
@@ -75,15 +86,23 @@ pub fn parse_sidecar_header(bytes: &[u8]) -> Option<AudioSpectralSidecarHeader> 
 /// Zero-heap generative sheet view for U3 worklet / parametric DSP.
 #[derive(Debug, Clone, Copy)]
 pub struct AudioSpectralSheetView<'a> {
+    /// Tensor alpha channel (generative gain control).
     pub alpha: f32,
+    /// Tensor mu channel (parametric morph weight).
     pub mu: f32,
+    /// Spectral bins (borrowed — typically a sidecar frame or preview array).
     pub bins: &'a [f32],
+    /// Emitter position from the tensor xyz channels.
     pub position: [f32; 3],
+    /// Track velocity quantized to u8.
     pub track_v: u8,
+    /// Manifold weight quantized to u8.
     pub manifold_w: u8,
 }
 
 impl<'a> AudioSpectralSheetView<'a> {
+    /// Build a view over caller-supplied `bins` from a tensor's scalar
+    /// channels; v/w are clamped to the u8 range.
     #[inline]
     pub fn from_tensor_preview(t: &Tensor10D, bins: &'a [f32]) -> Self {
         Self {
@@ -114,22 +133,38 @@ pub fn preview_bins_from_tensor(t: &Tensor10D) -> [f32; SPECTRAL_PREVIEW_BINS] {
 
 /// Frame column from mmap sidecar at `frame_index` (cold playback).
 #[inline]
-pub fn sidecar_frame_view<'a>(bytes: &'a [u8], frame_index: u32) -> Option<&'a [f32]> {
+pub fn sidecar_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> {
     let header = parse_sidecar_header(bytes)?;
-    let header_bytes = std::mem::size_of::<AudioSpectralSidecarHeader>();
-    let payload = &bytes[header_bytes..];
-    if frame_index >= header.frame_count {
+    let frame_count = usize::try_from(header.frame_count).ok()?;
+    let bins = usize::try_from(header.bin_count).ok()?;
+    let start = std::mem::size_of::<AudioSpectralSidecarHeader>();
+    let end = start.checked_add(spectral_plane_bytes(frame_count, bins)?)?;
+    spectral_frame_view(bytes.get(start..end)?, frame_index, frame_count, bins)
+}
+
+// All reader extents are checked before slicing; borrowed floats require alignment.
+#[inline]
+fn spectral_plane_bytes(frame_count: usize, width: usize) -> Option<usize> {
+    frame_count
+        .checked_mul(width)?
+        .checked_mul(std::mem::size_of::<f32>())
+}
+
+#[inline]
+fn spectral_frame_view(
+    plane: &[u8],
+    frame_index: u32,
+    frame_count: usize,
+    width: usize,
+) -> Option<&[f32]> {
+    let frame_index = usize::try_from(frame_index).ok()?;
+    if frame_index >= frame_count {
         return None;
     }
-    let bins = header.bin_count as usize;
-    let offset = frame_index as usize * bins;
-    let need = offset.saturating_add(bins).saturating_mul(4);
-    if payload.len() < need {
-        return None;
-    }
-    let floats: &[f32] =
-        bytemuck::try_cast_slice(&payload[offset * 4..offset * 4 + bins * 4]).ok()?;
-    Some(floats)
+    let frame_bytes = spectral_plane_bytes(1, width)?;
+    let start = frame_index.checked_mul(frame_bytes)?;
+    let end = start.checked_add(frame_bytes)?;
+    bytemuck::try_cast_slice(plane.get(start..end)?).ok()
 }
 
 /// Copy one sidecar frame into a fixed preview bin array (hot U3 path, zero-heap).
@@ -170,6 +205,8 @@ pub struct SpectralV2SubHeader {
 }
 
 impl SpectralV2SubHeader {
+    /// True when the `"Q4M2"` magic matches and both plane widths are
+    /// non-zero.
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.magic == SPECTRAL_V2_SUBHEADER_MAGIC && self.n_mel > 0 && self.n_mfcc > 0
@@ -185,7 +222,11 @@ fn v2_subheader_offset(bytes: &[u8]) -> Option<(AudioSpectralSidecarHeader, usiz
         return None;
     }
     let header_bytes = std::mem::size_of::<AudioSpectralSidecarHeader>();
-    let plane0_end = header_bytes.checked_add(header.payload_bytes())?;
+    let plane0_bytes = spectral_plane_bytes(
+        usize::try_from(header.frame_count).ok()?,
+        usize::try_from(header.bin_count).ok()?,
+    )?;
+    let plane0_end = header_bytes.checked_add(plane0_bytes)?;
     if bytes.len() < plane0_end.checked_add(std::mem::size_of::<SpectralV2SubHeader>())? {
         return None;
     }
@@ -196,64 +237,83 @@ fn v2_subheader_offset(bytes: &[u8]) -> Option<(AudioSpectralSidecarHeader, usiz
 #[inline]
 pub fn parse_v2_subheader(bytes: &[u8]) -> Option<SpectralV2SubHeader> {
     let (_, off) = v2_subheader_offset(bytes)?;
-    let sub = bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(
-        &bytes[off..off + std::mem::size_of::<SpectralV2SubHeader>()],
-    );
+    let end = off.checked_add(std::mem::size_of::<SpectralV2SubHeader>())?;
+    let sub = bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(bytes.get(off..end)?);
     sub.is_valid().then_some(sub)
+}
+
+/// Validate both declared feature planes before exposing a borrowed frame.
+#[inline]
+fn v2_feature_planes(
+    bytes: &[u8],
+) -> Option<(
+    AudioSpectralSidecarHeader,
+    SpectralV2SubHeader,
+    &[u8],
+    &[u8],
+)> {
+    let (header, sub_off) = v2_subheader_offset(bytes)?;
+    let sub = parse_v2_subheader(bytes)?;
+    let frames = usize::try_from(header.frame_count).ok()?;
+    let mel_bytes = spectral_plane_bytes(frames, usize::try_from(sub.n_mel).ok()?)?;
+    let mfcc_bytes = spectral_plane_bytes(frames, usize::try_from(sub.n_mfcc).ok()?)?;
+    let mel_start = sub_off.checked_add(std::mem::size_of::<SpectralV2SubHeader>())?;
+    let mfcc_start = mel_start.checked_add(mel_bytes)?;
+    let end = mfcc_start.checked_add(mfcc_bytes)?;
+    Some((
+        header,
+        sub,
+        bytes.get(mel_start..mfcc_start)?,
+        bytes.get(mfcc_start..end)?,
+    ))
 }
 
 /// Mel band vector for `frame_index` from a v2 sidecar (`n_mel` f32), or `None`
 /// if the file is not a valid v2 sidecar or the index/planes are out of range.
 #[inline]
 pub fn sidecar_mel_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> {
-    let (header, sub_off) = v2_subheader_offset(bytes)?;
-    let sub_size = std::mem::size_of::<SpectralV2SubHeader>();
-    let sub =
-        bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
-    if !sub.is_valid() || frame_index >= header.frame_count {
-        return None;
-    }
-    let n_mel = sub.n_mel as usize;
-    let mel_base = sub_off + sub_size;
-    let off = mel_base + frame_index as usize * n_mel * 4;
-    let end = off.checked_add(n_mel * 4)?;
-    if bytes.len() < end {
-        return None;
-    }
-    bytemuck::try_cast_slice(&bytes[off..end]).ok()
+    let (header, sub, mel, _) = v2_feature_planes(bytes)?;
+    spectral_frame_view(
+        mel,
+        frame_index,
+        usize::try_from(header.frame_count).ok()?,
+        usize::try_from(sub.n_mel).ok()?,
+    )
 }
 
 /// MFCC coefficient vector for `frame_index` from a v2 sidecar (`n_mfcc` f32), or
 /// `None` if the file is not a valid v2 sidecar or the index/planes are out of range.
 #[inline]
 pub fn sidecar_mfcc_frame_view(bytes: &[u8], frame_index: u32) -> Option<&[f32]> {
-    let (header, sub_off) = v2_subheader_offset(bytes)?;
-    let sub_size = std::mem::size_of::<SpectralV2SubHeader>();
-    let sub =
-        bytemuck::pod_read_unaligned::<SpectralV2SubHeader>(&bytes[sub_off..sub_off + sub_size]);
-    if !sub.is_valid() || frame_index >= header.frame_count {
-        return None;
-    }
-    let n_mel = sub.n_mel as usize;
-    let n_mfcc = sub.n_mfcc as usize;
-    let mel_bytes = header.frame_count as usize * n_mel * 4;
-    let mfcc_base = sub_off + sub_size + mel_bytes;
-    let off = mfcc_base + frame_index as usize * n_mfcc * 4;
-    let end = off.checked_add(n_mfcc * 4)?;
-    if bytes.len() < end {
-        return None;
-    }
-    bytemuck::try_cast_slice(&bytes[off..end]).ok()
+    let (header, sub, _, mfcc) = v2_feature_planes(bytes)?;
+    spectral_frame_view(
+        mfcc,
+        frame_index,
+        usize::try_from(header.frame_count).ok()?,
+        usize::try_from(sub.n_mfcc).ok()?,
+    )
 }
 
 /// Total byte size of a Q4AU-v2 sidecar with the given geometry.
+/// Returns `usize::MAX` if the extent is not representable.
 #[inline]
 pub fn v2_sidecar_size(frame_count: usize, bin_count: usize, n_mel: usize, n_mfcc: usize) -> usize {
+    checked_v2_sidecar_size(frame_count, bin_count, n_mel, n_mfcc).unwrap_or(usize::MAX)
+}
+
+/// Checked byte size of all v2 planes; `None` when any extent overflows.
+#[inline]
+pub fn checked_v2_sidecar_size(
+    frame_count: usize,
+    bin_count: usize,
+    n_mel: usize,
+    n_mfcc: usize,
+) -> Option<usize> {
     std::mem::size_of::<AudioSpectralSidecarHeader>()
-        + frame_count * bin_count * 4
-        + std::mem::size_of::<SpectralV2SubHeader>()
-        + frame_count * n_mel * 4
-        + frame_count * n_mfcc * 4
+        .checked_add(spectral_plane_bytes(frame_count, bin_count)?)?
+        .checked_add(std::mem::size_of::<SpectralV2SubHeader>())?
+        .checked_add(spectral_plane_bytes(frame_count, n_mel)?)?
+        .checked_add(spectral_plane_bytes(frame_count, n_mfcc)?)
 }
 
 /// Bake a Q4AU-**v2** sidecar from REAL audio `samples`.
@@ -297,7 +357,8 @@ pub fn bake_spectral_v2_from_samples(
     }
     let bin_count = frame_size / 2 + 1;
 
-    let need = v2_sidecar_size(frame_count, bin_count, n_mel, n_mfcc);
+    let need = checked_v2_sidecar_size(frame_count, bin_count, n_mel, n_mfcc)
+        .ok_or(StftBakeError::InvalidFrameCount)?;
     if out.len() < need {
         return Err(StftBakeError::OutputTooSmall);
     }
@@ -536,3 +597,7 @@ mod tests {
         assert_eq!(last.len(), bin_count);
     }
 }
+
+#[cfg(test)]
+#[path = "audio_spectral_sheet_view_tests.rs"]
+mod view_tests;

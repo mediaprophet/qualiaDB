@@ -55,41 +55,49 @@ pub struct DerivedTemplate {
 
 impl DerivedTemplate {
     #[inline]
+    /// Biometric object kind.
     pub const fn kind(self) -> BiometricObjectKind {
         BiometricObjectKind::DerivedTemplate
     }
 
     #[inline]
+    /// Cancellable template id.
     pub const fn revocable_id(self) -> CancellableId {
         self.revocable_id
     }
 
     #[inline]
+    /// Modality.
     pub const fn modality(self) -> Modality {
         self.modality
     }
 
     #[inline]
+    /// Algorithm-version digest.
     pub const fn algorithm_version(self) -> StrongDigest {
         self.algorithm_version
     }
 
     #[inline]
+    /// Provenance digest.
     pub const fn provenance(self) -> StrongDigest {
         self.provenance
     }
 
     #[inline]
+    /// Purpose digest.
     pub const fn purpose(self) -> StrongDigest {
         self.purpose
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
 
     #[inline]
+    /// `true` when revoked.
     pub const fn is_revoked(self) -> bool {
         self.revoked
     }

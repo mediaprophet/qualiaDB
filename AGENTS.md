@@ -1,5 +1,5 @@
 # QualiaDB — Multi-Agent Collaboration Ecosystem
-_Branch: `0.0.39` | Last updated: 2026-09-16_
+_Branch: `0.0.40` | Last updated: 2026-09-16_
 
 This document is the coordination layer for concurrent or sequential AI-agent sessions
 working on the QualiaDB engine. Read it before writing a single line of code.
@@ -15,7 +15,7 @@ and the zero-copy ABI used by the WASM, desktop, and edge-native targets.
 |------|--------|
 | **Zero heap in hot paths** | No `Vec`, `String`, or `Box` inside evaluator loops. Caller supplies fixed-size output buffers (`&mut [T]`). Use `[T; N]` stack arrays for local state. |
 | **48-byte Super-Quin** | Every semantic datum fits in `NQuin`. Opcodes are packed into bit-fields of the six `u64` fields. See the Bit Layout table in §1. |
-| **42MB Sentinel** | Any single execution pass must stay within 42 × 1024 × 1024 bytes of memory. `SlgArena` enforces this structurally. |
+| **42MB Sentinel** | Passes executed inside the core `SlgArena` stay within 42 × 1024 × 1024 bytes. Memory-intensive cold geometry/asset construction runs outside that arena with an explicit caller-selected byte budget; it must fail closed on budget exhaustion. |
 | **Deterministic, non-recursive** | No unbounded recursion. LTL/ASP evaluators iterate over slices; they never call themselves. |
 | **q_hash for all URIs** | All string IRIs are FNV-1a–hashed at compile time via `q_hash()` or `q_turtle!`. No runtime string allocation. |
 | **Opcodes above 0x04** | `mini_parser.rs` owns `0x00–0x04`. All new modality opcodes start at `0x10+`. Deontic: `0x10–0x12`. Epistemic: `0x20–0x22`. Paraconsistent: `0x30–0x32`. LTL: `0x40–0x44`. |
@@ -34,7 +34,7 @@ remove the very property that enables the parallelism we want. The two tiers:
 | Tier | Scope | Allocation policy | Enforcement |
 |------|-------|-------------------|-------------|
 | **Tier 1 — mandatory zero-heap** | Per-element predicates, query kernels, and any buffer that crosses the GPU / WASM / edge ABI or lives in the 42 MB Sentinel arena. | No `Vec`/`String`/`Box` in any path. Caller supplies fixed-size `&mut [T]` output buffers; `[T; N]` stack arrays for local state. | `AllocationClass::HotZeroHeap` in `capability_manifests.rs` + real `assert_zero_alloc` measurement in `zero_heap_tests`. The allocation counter is **thread-local** (per-thread counters gated by a thread-local `MEASURING` flag), so these tests are reliable under parallel execution — no `--test-threads=1` requirement. |
-| **Tier 2 — cold construction / authoring** | One-shot builders: hull, Delaunay, triangulation, mesh generation, BVH build, scene assembly, half-plane intersection, LP. | May use bounded internal scratch (`Vec` during construction), as long as the **public output is caller-buffered** and total memory stays under the 42 MB Sentinel ceiling. | `AllocationClass::ColdBounded` in `capability_manifests.rs`. NOT under `zero_heap_tests` — Tier-2 is expected to allocate (bounded). The `hot_zero_heap_ops_are_not_cold_builders` manifest test catches misclassification. |
+| **Tier 2 — cold construction / authoring** | One-shot builders: hull, Delaunay, triangulation, mesh generation, BVH build, scene assembly, half-plane intersection, LP, and high-detail model/asset construction. | May use bounded internal scratch (`Vec` during construction), with **caller-buffered public output**. Cold passes outside `SlgArena` may exceed 42 MiB when an explicit caller-owned byte budget admits them. Use 256 MiB as the default cold geometry budget; callers can choose a larger budget for high-detail assets. Check sizes before allocation and fail closed on exhaustion. | `AllocationClass::ColdBounded` in `capability_manifests.rs`. NOT under `zero_heap_tests` — Tier-2 is expected to allocate (bounded). The `hot_zero_heap_ops_are_not_cold_builders` manifest test catches misclassification. |
 
 **Parallel Tier-2 construction** goes through `geometry_workspace.rs`
 (P10.5): caller-owned arenas with byte budgets, deterministic
@@ -133,6 +133,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 | **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
 | **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 30 device with capability-intersected f16/subgroup/timing features, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
+| **Portal HUD** | `render/hud/` | ✅ bounded WASM canvas document | Panels, color-coded labels/meters, buttons, semantic markers, and a rendered rear-view mirror widget |
 | **Linear-Algebra Privacy Engine** | `specialized_libs/linear_algebra/privacy/` | ✅ BFV HE + calibrated DP | Packed exact add/multiply/dot, 48-byte external ciphertext ref, Laplace/Gaussian, basic/advanced/RDP accounting |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
@@ -1203,3 +1204,396 @@ cargo test
 **Verification:** `did_qi` 33; fabric 49; `cscp_h2` 4; `cscp_wss` 1.
 
 **Not done (human):** CSCP-08 URL; CSCP-12 datatracker. Parent CSCP-09 Internet still open.
+
+### 2026-10-11 — Portal HUD indicators for Australian driving showcase
+
+**Completed:**
+- Extended the bounded Qualia Portal HUD document with opt-in meter colors and a `mirror` item that paints a constrained rear-road scene with following vehicle silhouettes and an obscuring caravan body.
+- Extended opt-in validated label colors so safety-critical game readings can carry a readable text severity as well as a color-coded meter.
+- Game HUD now displays color-coded simulated oil/coolant bars, current ambient temperature, signed grade, surface, dynamic engine load and engine health. The mirror panel shows a traffic queue and a bend-revealed sightline.
+- Built the game WASM package and regenerated the Storybook, Earthlight and Community Grounds HMC packs (566 assets, 40 scene states each); the exporter verified each HMC with Qualia's reader. The same release includes 27 profile-selected Australian flora assets.
+
+**Verification:** `rustfmt --edition 2021` and the game release WASM build succeeded. User requested no tests/browser self-test, so none were run. Visual/browser acceptance remains open. The root `HANDOVER.md` referenced above is absent from this checkout; this inventory and session note are recorded here.
+
+
+### 2026-10-25 — Ecopunk native Poet/Craft authoring and engine failure repair
+
+**Authority and preservation:** Timothy explicitly authorised saving QualiaDB and
+Etalon changes after an earlier repository-boundary approval rejection. Reviewed
+repairs were saved with original/candidate hashes and receipts. Existing user
+changes and the running Poet window were preserved. No commits, pushes,
+publication, payments, Computer Use or Chora source changes were made.
+
+**Saved implementation:** canonical Vibe pre-promotion session validation;
+host-bound cooperative authoring policy and thin MCP transport; durable exact
+source/private-journal HMC checkpoints with fresh authorised activation; native
+Poet shared-session authoring and material factors. Engine repairs cover Q42 v4
+lexicon resolution, local graph SERVICE handling, honest C2PA verification status,
+bounded CML parsing/roundtrip, explicitly authorised host effects, glTF rest/skin
+admission, AO depth precision, and chemistry construction/prediction. Forge WGSL
+consumers now emit the developed Etalon extension spellings; no Etalon source
+defect was established. Invalid tests were corrected against actual contracts;
+unsupported shader fallback paths now report unavailability instead of success.
+
+**Executed verification on saved source snapshot e4e2e18c8cba:** full selected
+native/GPU/Forge/privacy core suite 9,782 passed, zero failed, three explicitly
+ignored dataset/integration probes. Native Poet 62 library plus 15 CLI tests
+passed; its separate actual GPU material readback passed for base colour,
+roughness, metallic and emissive edits. Native library build and WASM library
+check passed. The actual source-linked CLI passed help, no-window source checking
+and strict MCP framing/unbound-authority denial. All owned verification commands
+finished. The final source audit reconciled 94 saved files and 120 guarded source
+transitions. Evidence lives in C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-3.
+
+**Remaining product work:** verified native authentication/admission-provider
+binding and durable contribution/review commit; complete HMC graph/resources and
+editable-master retention; usable contributor/reviewer graphical acceptance;
+high-grade complete embodiments and reviewed game-demo derivatives. The checkpoint
+profile is source-only and rejects overwriting richer resource packages. No GUI
+or human acceptance, complete model, Vibe dialect release, universal Etalon
+capability or mission-delivery claim is made. All 120 production packets remain
+open. HANDOVER.md is absent, so this session note is recorded here under section 7.
+
+
+### 2026-10-25 — RUN09 native authentication and resource-preserving Poet HMC editing
+
+**Saved implementation:** canonical `poet_host::native_authority` verifies a
+host-pinned project authority's signed admissions and a fresh one-use native
+controller-key challenge before issuing a local QDNF execution grant. Current
+qualified identifiers, membership, review scope, expiry and revocation govern
+actions. An exclusively locked bounded native journal retains source successors,
+contributions, source-only reviews and separately attributed package-write audit
+records with expected/result HMC digests. These records never restore a live
+session. One active principal/session per owner is supported in this scope.
+
+Poet's NativeProject composes the real authority with one shared canonical
+editor/session for native UI and MCP. HMC checkpoints retain all inert resources,
+including unknown payloads/metadata and editable masters, across source edits,
+reopen and Save As. Both native controls and MCP support explicit 1–64-entry
+atomic resource plans, with package/resource SHA guards, preflight before imports,
+one aggregate import budget and one canonical save. Known native texture and
+10d/Q42 dependency refusals are implemented; explicit companion-graph updates
+may retain identical authoritative bytes. Immutable origins are not overwritten.
+
+**Executed on frozen source snapshot 130ad0c42d5e:** full selected Core suite
+9,800 passed, zero failed, three ignored in 339.05 seconds. Native Poet 69 library
+and 15 CLI tests passed, including signed project/source/HMC/MCP cooperation,
+revocation and atomic native 10d/Q42 resource edits. The separately invoked actual
+GPU material readback passed. Native library build, WASM library check and actual
+source-linked CLI help/no-window source checking/MCP framing and unbound denial
+passed. All commands finished and source hashes remained unchanged. Independent
+source review covers 51 files; the final qualification snapshot pins 127 inputs.
+
+**Limits and next work:** actual adopted project anchors/admissions and native
+contributor/reviewer key enrollment/signing still require real host inputs. Test
+actors are software-agent fixtures, not enrolled people or human reviewers.
+Native graphical usability, whole-HMC semantic/rights-partition admission,
+complete models and accepted high-grade masters/derivatives remain open. Source
+review does not approve package resources. Unknown dependencies remain unassessed.
+The journal is host-owned local evidence, not an external anti-rollback oracle;
+cross-store persistence failures require reconciliation and withhold publication.
+Windows power-loss directory durability remains unqualified. No GUI/Computer Use,
+commits, pushes, payment, publication or Chora source changes occurred. All 120
+production packets remain open. Evidence and remaining requirements are in
+C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-4/README.md.
+
+
+### RUN10 native contributor enrollment and Poet review — 2026-10-25
+
+Saved canonical signed enrollment requests, explicit steward decisions and
+separate source-review grants, native key-owner signing, retained admission and
+fresh login. Strict Windows native vault selection has no plaintext fallback.
+Poet now exposes `studio --native-project EXISTING_DIRECTORY` in its native
+operator shell, with explicit fingerprint adoption/profile creation/login and
+contributor/reviewer controls sharing one authority/session/editor owner.
+Contributions and decisions target exact source revisions; actor handoff
+preserves private drafts and rejects stale replies. Accepted-source replacement
+requires confirmation. This remains source-only review, not whole-HMC acceptance.
+
+Windows checkpoint installation now retries only bounded OS 5/32/33 refusals,
+retaining the staged file and writer lock and rechecking expected destination
+bytes before every attempt. Real deny-delete tests cover transient release,
+persistent refusal and external destination changes. An earlier full-suite
+OS5 failure and the initial child-selector failure remain in the QA history;
+the original OS5 cause is unproven, and no OS protection was disabled.
+The network-restricted full run is also preserved. The identical hashed
+loopback test failed inside the sandbox and passed with native socket access;
+the final full-suite run uses that native boundary without skips or source edits.
+
+Executed on frozen snapshot 2e7ab1b867bfa3ac4e5ed49f8dd2d99e46e27113a77fdf7a0752cb9a3263f1bc:
+selected Core 9855 passed, zero failed, 3 ignored;
+native Poet 77 library tests and 15 CLI tests passed.
+Native library build, WASM library check, actual source-linked CLI help,
+public-config-only entry and MCP checks, plus actual GPU material readback
+passed. Independent saved-source review and final receipt hashes are recorded
+under C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-5/README.md.
+
+Tests use software-agent fixtures. Real OS credential-provider execution and
+persistence, external anchor adoption, human verification/enrollment and native
+GUI acceptance remain unqualified. Fresh-process encrypted-key possession/login
+is exercised; full operator HMC/source recovery remains separate. IP-03 C1–C8,
+complete HMC semantics/model dossiers, high-grade masters and reviewed film,
+open-world game and cartoon derivatives remain open. All 120 production packets
+remain open. No GUI/Computer Use, commits, pushes, payment, publication or Chora
+source changes were performed. Existing user work and running Poet were preserved.
+
+### 2026-10-30 — Etalon / VibeScript harness modernization (publication checkpoint)
+
+Added native and browser consuming harnesses for canonical Vibe CPU execution and
+Rust Etalon GPU compute/readback, with separate unsupported outcomes and bounded
+JSON diagnostics. The GitHub Pages UI offers downloadable reports and explicit
+file sharing to a mail app; its mailto fallback requires manual JSON attachment.
+No SMTP service, credentials, automatic upload or delivery claim is introduced.
+Source revisions and published asset hashes identify the browser build.
+
+All production Etalon declarations and the accelerator tool pin the immutable
+published revision recorded in tools/accelerator-harness/etalon-revision.txt.
+ORT consumers share the exact rc.15 runtime API and explicit environment lifetime.
+Native inventory distinguishes hardware, runtime, workload and actual execution;
+Windows DXCore found no NPU here. Browser NPU availability remains unknown.
+Rejected submissions and failed completion polls propagate through native callers.
+
+Local browser execution passed two Vibe CPU cases and eleven WebGPU dispatches
+within one GPU case. Download/file-share/draft fallback and bounded server checks
+pass; no email was sent during testing. The actual default-feature core library
+checks successfully on MSVC using the reviewed local Etalon sources. Full core
+library tests and immutable-pin CI/Pages deployment remain pending at this
+checkpoint; this note does not claim release acceptance. Two intermittent Intel
+DX12 multiview failures are still being investigated in Etalon independently.
+The retired Deno WebGPU CTS coverage is not restored by these application tests.
+
+HANDOVER.md is absent in this checkout; module scope and test limits are recorded
+in docs/testing-etalon-vibe.md and the implementation/qualification documents in
+Etalon. The active 0.0.40.8-dev branch is retained instead of the historical branch
+name in the handoff checklist.
+
+### 2026-10-30 — Resident safety and diagnostic isolation follow-up
+
+Replaced the resident substrate's unsynchronized interior mutation with an
+RwLock-owned fixed-capacity state. Loads validate every record before publication;
+poisoned state fails closed. Supplemental actual-source tests passed 53 cases,
+including concurrent publication, malformed-load preservation and zero-allocation
+reads. These do not replace the required default-feature core library suite.
+
+The first full core test build reached linking, then failed because external
+artifact cleanup removed an active dependency archive. No tests executed; the
+production lock was restored unchanged. A protected, immutable-pin retry remains
+required. CPU harness selection now uses exact test names, and lean diagnostics
+retain explicit E300 responses for excluded scientific operations. Pages compile
+and deployment qualification remain pending. The Etalon Intel DX12 multiview
+repair passed focused production GPU readbacks; its full suite is in progress.
+
+### 2026-10-30 — Immutable-pin qualification completed
+
+Consumer a9668cb2123ad05ef64f7ad4c7b2551c4a5d95b8 uses Etalon
+5721ae58285e229a30c0444d41e84f98014912d4 in both production locks without local
+patches. Full default-feature MSVC library testing passed 10,181 cases with three
+existing external-data/network cases ignored; all three consuming harness cases
+passed, including eleven Intel UHD 620 Vulkan dispatch/readbacks. This includes
+the resident publication and Forge evidence regressions. Production locks were
+unchanged by execution.
+
+Two overlapping compiler variants reached approximately 14 GiB combined private
+memory and were deliberately stopped before tests. This scheduling choice cost
+partial compiler work; completed dependencies were preserved and the successful
+retry used one build job. Do not run overlapping monolithic core compilations on
+this 16-GiB host or delete artifacts while an ACTIVE-RUN receipt exists.
+
+Windows/Linux consuming CI, Pages deployment and WASM release passed. The actual
+published HTTPS harness passed two Vibe CPU cases and eleven WebGPU readbacks,
+asset hashes, exact download and mocked email controls at a mobile viewport. No
+mail was sent and physical phone execution remains user-supplied evidence. Fresh
+DXCore inventory found no NPU; --require-npu correctly failed with zero execution
+passes. Browser NPU state remains unknown. See docs/testing-etalon-vibe.md for the
+full scope, ignored cases and build-resource history. Retired CTS coverage remains
+absent. Later Etalon commits change CI and benchmark profiler platform support;
+the consumer's production Rust sources retain the tested immutable revision.
+
+### 2026-10-30 — Pixel Chrome compatibility correction
+
+The Pixel 10 XL report showed CPU success and GPU unsupported. The adapter probe
+requested only the default WebGPU core level. Browser diagnostics now use Etalon's
+explicit compatibility request with compute-sized limits, preserving browser
+validation and the existing numerical oracles. The old request reproduced GPU
+unsupported in a compatibility-only request fixture backed by a real browser GPU.
+The fixture does not emulate Pixel hardware. Compact email drafts now include GPU
+rejection/API details so the summary can explain future unsupported outcomes.
+Full execution and deployment receipts remain under target/qualification; actual
+Pixel confirmation requires another on-device run after the new deployment.
+
+### 2026-11-03 — Initial inference migration contracts and baseline repair
+
+The incremental Qualia branch is `0.0.40.12-etalon-migration`; Etalon uses
+`qualiadb-migration`. The first increment adds dependency-free qualification and
+session contracts in Etalon, plus an independent source test runner in Qualia.
+Developer sessions require no Qualia permissions. Governed session metadata
+requires an embedding-provided verifier and cannot fall back to developer mode
+on controller loss. Actual Webizen integration, inference execution, numerical
+state restoration, P64 ownership and lab extraction remain subsequent work.
+Existing runtime callers and modes remain available.
+
+The user-authorised lock repair aligns 19 Etalon source entries and 18 version
+fields with the manifest's existing immutable `072b4d9` revision. Dependency
+arrays are unchanged. A missing test-only radio permission import was restored.
+Baseline testing then exposed real alpha-mask coverage loss in GPU mip creation;
+explicit alpha-byte quantization now matches the CPU planner without changing
+the cutoff, planner or visibility assertion. The uniform remains 16 bytes.
+
+Independent contract checks passed 51 distinct Rust cases in both debug and
+optimised builds, plus three runner tests. Locked package tests, Clippy and WASM
+compilation passed. Actual-source GPU comparisons on RTX A2000 DX12 and OpenGL
+matched 22 mask mip rows per backend and preserved all checked RGB and non-mask
+outputs. The rebuilt original DX12 visibility regression passed with GPU required.
+The full default-feature core library suite then passed 10,405 tests with zero
+failures and three existing external-data/network tests ignored. It used Rust
+1.96.1, one build job/test thread, disabled debug info/incremental compilation and
+`QUALIA_REQUIRE_GPU_TESTS=1`. The frozen lock and runtime sources were unchanged.
+See `docs/testing-inference-migration.md` for commands, final baseline evidence
+and qualification limits. HANDOVER.md remains absent.
+
+### 2026-11-03 — Candidate provider and incremental library qualification
+
+The next coherent provider candidate is Etalon `5d3bce83`. Compatibility work
+preserves the original nine Forge builtin identities and adds strict delegation
+for its two IQ-power kernels. Unsupported local IQ oracle evaluation returns an
+explicit error. The complete Qualia core suite passes 10,413 tests with zero
+failures and the same three existing ignored tests; eight independent IQ cases
+are included. Actual native Vibe integration, CPU-only package and browser LLM
+WASM compilation checks pass. A baseline worker-target metadata defect was repaired by
+requiring `gpu-runtime` for that binary; its default GPU build still passes.
+Standalone Etalon qualification includes its full suite, cross-platform CI and
+explicit native CUDA/NVCC/Vulkan tests. See `docs/testing-inference-migration.md`
+for exact commands, receipts and hardware/skip distinctions.
+
+Independent author, verifier and supervisor gates have also qualified Etalon's
+reservation accounting, residency governor, P64 layout/reader, prepared-payload
+writer, sized streaming writer and bounded neutral GGUF metadata APIs. Actual
+Qualia caller delegation remains separate work. Normal application governance,
+semantic interpretation and Webizen stay in Qualia; real integrated execution,
+rollback and standalone developer inference are not claimed by metadata contracts
+or these format/resource libraries. Public branches retain their requested names
+and commits contain no assistant bylines. HANDOVER.md remains absent.
+
+
+### 2026-11-03 — First live resource and model consumer delegation
+
+Qualia now forwards classified reservation accounting and residency metadata to
+Etalon resources, and P64 layout/structural/CRC reading to Etalon model. The two
+pure libraries pin f4523adec; all nineteen shared GPU packages remain at `5d3bce83`.
+Qualia retains universe policy, six class identities, drop/mode ordering, owned
+P64 manifests/aliases, environment integrity policy and semantic interpretation.
+The actual core suite passes 10,424 tests with zero failures and three existing
+ignores, including eleven new consumer fixtures. CPU-only and wasm-llm checks
+pass; native Vibe integration passes three tests with real RTX A2000 DX12 dispatch
+and exact readback. See docs/testing-inference-migration.md for evidence/limits.
+
+Separately published Etalon libraries now include contextual P64 planner errors,
+the canonical numerical inference kernel and budget/KV ownership mechanics.
+Their Qualia forwarding and Safetensors writer adoption are next, with separate
+independent fixtures and supervisor gates. Physical KV restoration, real governed
+model execution and standalone developer LLM execution remain open work. Remote
+benchmark-only automation updates were preserved. HANDOVER.md remains absent.
+
+### 2026-11-04 — Canonical inference kernel/storage and P64 writer consumer
+
+The second migration consumer forwards the public numerical-kernel, runtime
+budget and KV/prefix metadata APIs to Etalon at 0f31a701. All nineteen GPU-provider
+packages remain at 5d3bce83; graph identity semantics stay in Qualia. Safetensors
+Verbatim serialization now uses the canonical borrowed planner/streaming writer,
+with legacy APIs/reports and mechanically separated vision/quantized paths.
+The original kernel tests are maintained in the canonical library; core runtime
+and graph tests remain here. New consumer fixtures prove cross-library type and
+prefix-identity interoperability.
+
+The full core passed 10,430 tests with zero failures and three existing ignores.
+An initial run exposed preexisting global context-ring interference; the repaired
+test preserves every original assertion in a fresh native process and verifies
+that exactly one test executes. The production ring lifecycle is unchanged.
+Both the failure and controlled original-library reproduction are retained.
+CPU-only compilation passed, with one unused CRC import warning in the separated
+vision module. WASM/native and final publication evidence belong to the matching
+section of docs/testing-inference-migration.md. These ownership changes do not
+establish physical KV rollback or real Webizen-controlled numerical execution.
+
+### 2026-11-04 — GitHub Actions repair
+
+Repair bd25ae957 removes stale Etalon source-identity assumptions, derives complete
+local harness dependency overrides, aligns the harness with the existing reviewed
+production revision, restores real consent/epistemic modules to all required WASM
+profiles, decouples browser environment reads from optional GPU imports, and retries
+benchmark result pushes with artifact retention on failure. All five hosted workflows
+passed, including Pages deployment. Node tests: 19 passed; all five local WASM profiles
+passed. The full native suite reported 10,164 passed, 6 failed, 3 ignored; physical Qwen
+failures reproduce on the pre-change binary, ring tests pass isolated on both binaries,
+and the socket-address-conflict test passes isolated. See
+`docs/plans/github-actions-repair-2026-11-04.md` for exact runs and limits.
+
+### 2026-11-05 — Six native failures repaired
+
+The complete serial native core suite passes 10,194 tests, zero failures and three
+existing ignores (10,197 total; 1,940.39 seconds). All six previously failing tests
+execute successfully, including both physical Qwen NVFP4 tests on the installed
+model. Twenty-four additional regressions cover numerical equivalence, zero hot
+allocations, source identity, bounded state, cross-shard ownership and lifecycle.
+
+Qwen now has a reviewed, architecture-owned FTW admission/session path with mixed
+recurrent/full attention and complete model execution. The generic unsupported
+architecture guard remains unchanged and tested. Ring tests exercise real request
+activation/cancellation in checked isolated processes; production epoch gates are
+unchanged. TLS/H2 endpoints retain their listener reservation and synchronously
+join owned I/O teardown. The historical Windows socket error was not independently
+reproduced, so the ownership repair is not claimed as proof of that error's cause.
+
+Physical functional qualification selects a scoped finite 30-minute batch deadline;
+all original generation/provenance assertions and complete layers/vocabulary remain.
+The production 30-second interactive deadline is unchanged. This scalar CPU path
+does not establish interactive latency, unreviewed exporter compatibility, or new
+source custody guarantees. See docs/plans/native-test-repair-2026-11-05.md for the
+measured deadline failure, exporter evidence, verification and remaining limits.
+
+The Rust 1.96.1 wasm32 `wasm-llm` locked compile check also passes (120 warnings,
+no errors); this does not qualify browser/mobile execution. Dependencies are unchanged.
+
+Repair commit 9dde4e62e91faeb4718c1652ac5615f3f635faf9 also passes all five hosted
+workflows: Etalon/VibeScript, QDNF, WASM Release, Pages deployment and Comparative
+Benchmarks. Exact run links are in the qualification record. Remote benchmark
+results and independently published qapp changes were preserved by fast-forward;
+these results identify the repair commit rather than qualifying later qapp edits.
+
+
+### 2026-11-12 — Aether native project graph and qualification checkpoint
+
+The Aether continuation adds canonical native-authority signed graph grants,
+session/revocation checks, bounded project-owned graph snapshots and subscriptions,
+and one journal-acknowledged replacement path retaining all six quin lanes. The
+canonical Vibe Host bridge reserves bounded cold scratch through Vibe Budget;
+shared native-query dispatch admits retained result cells before invoking the host.
+Aether keeps UI delivery/cancellation separate from worker execution and joins
+workers after event-loop return. This project-owned graph is separate from the
+daemon-global graph; arbitrary daemon query subscriptions are not qualified.
+
+An actual live-source host run passed 30/30 tests. A later 31-test invocation had
+30 passes and one new bytecode-test parse failure; its parameter annotation was
+corrected, but the corrected invocation has not run. AST transactions are the
+supported application path; current bytecode staging fails closed without an
+admitted transaction and bytecode parity remains a separate engine work item.
+
+Concurrent unrelated canonical work was preserved. A point-in-time source capture
+and explicit derived test-workspace locks now have strict file/inventory/package
+proofs in Aether target/qualification-sources/native-host-20261112-v4. Receipt
+SHA-256: 3bcee7dc35c4882ac02053f7efdf5f45de8024d5aea08a3d4cbf581d175c66b7.
+Both real test-workspace metadata/source gates pass with core default features
+disabled and exact reviewed Etalon sources. This is not a live-tree freshness or
+clean-commit claim. The separately captured existing imap-proto workspace patch
+has its own pre/post hashes and provenance; other implementation bytes remain
+from the original capture.
+
+The fresh locked host build stopped before core compilation/tests when Windows
+Application Control refused the generated getrandom 0.3.4 build helper (OS error
+4551). The approved escalation attempt and its single permitted retry both timed
+out in automatic approval review before execution. No security controls or
+alternative-launch paths were changed. Explicit canonical graph/journal,
+scoped-scan and Vibe-budget unit tests, the corrected host test, and actual native
+fixture execution remain pending. The full core suite was not run in this session.
+See ../Aether/notes/implementation/resume-host.md for exact evidence and boundaries.
+HANDOVER.md remains absent; no unrelated canonical work was reverted or edited.

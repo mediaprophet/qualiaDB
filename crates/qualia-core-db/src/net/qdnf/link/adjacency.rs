@@ -31,6 +31,7 @@ pub struct Adjacency {
 }
 
 impl Adjacency {
+    /// Activates the adjacency.
     pub fn activate(&mut self) -> Result<(), QdnfError> {
         if self.state != AdjacencyState::LinkKeysDerived
             && self.state != AdjacencyState::EphemeralProofVerified
@@ -41,11 +42,13 @@ impl Adjacency {
         Ok(())
     }
 
+    /// `true` when `forwarding`.
     pub fn is_forwarding(&self) -> bool {
         self.state == AdjacencyState::Adjacent
     }
 }
 
+/// Link ID derived from the key.
 pub fn link_id_from_key(public: &[u8], bearer_scope: &[u8], epoch: u64) -> LinkId {
     let mut buf = [0u8; 80];
     let label = b"qdnf:link:v1";

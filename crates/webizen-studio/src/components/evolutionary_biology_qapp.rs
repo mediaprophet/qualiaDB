@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `EvolutionaryBiologyQapp` component.
 pub fn EvolutionaryBiologyQapp() -> Element {
     rsx! {
         QAppEngine {

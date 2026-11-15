@@ -9,7 +9,7 @@ use super::host_client::{
     SanctuaryPrefsDto, SanctuaryVaultNoteDto,
 };
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default)]
 struct SanctuaryUi {
@@ -22,6 +22,7 @@ struct SanctuaryUi {
 }
 
 #[component]
+/// Aether `WellfairSanctuaryPanel` component.
 pub fn WellfairSanctuaryPanel() -> Element {
     let mut ui = use_signal(SanctuaryUi::default);
     let mut loaded = use_signal(|| false);

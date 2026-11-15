@@ -30,6 +30,7 @@ fn is_valid_hash(hash_hex: &str) -> bool {
 }
 
 impl BlobStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let dir = storage_root.as_ref().join(BLOB_DIR);
         fs::create_dir_all(&dir)?;
@@ -89,6 +90,7 @@ impl BlobStore {
         Ok(Some(bytes))
     }
 
+    /// `true` when it exists.
     pub fn exists(&self, hash_hex: &str) -> bool {
         self.path_for(hash_hex).map(|p| p.exists()).unwrap_or(false)
     }

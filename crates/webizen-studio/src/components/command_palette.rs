@@ -1,10 +1,10 @@
 //! Command palette (U6-A) — Ctrl/Cmd+K or Ctrl/Cmd+P to jump to product destinations.
 //!
-//! Mirrors the desktop shell palette (`shell_html.rs`). Studio path uses the Dioxus
+//! Mirrors the desktop shell palette (`shell_html.rs`). Studio path uses the Aether
 //! router; shell path uses `navigate(qappId)` / `createTab`.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use crate::Route;
 
@@ -66,6 +66,12 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         label: "Practice",
         hint: "Projects & work board",
         keywords: "practice work board projects",
+    },
+    PaletteDestination {
+        id: "wallet",
+        label: "Wallet & Commons",
+        hint: "Multi-chain sovereign wallet & SDN commons",
+        keywords: "wallet commerce chains crypto ada cardano bitcoin sdn permissive",
     },
     PaletteDestination {
         id: "instruments",
@@ -139,16 +145,16 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
         "practice" | "work" | "board" => Route::WorkRoute {},
+        "wallet" | "commerce" => Route::WalletRoute {},
         "instruments" | "tools" => Route::ToolsRoute {},
         "sanctuary" | "vault" | "keep" => Route::SanctuaryRoute {},
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},
         "settings" | "prefs" => Route::SettingsRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
-        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => Route::LibraryRoute {},
         "semantic-instrument" | "semantic-instruments" | "instrument-pack" => {
-            Route::PoetInstrumentRoute {}
+            Route::ToolsRoute {}
         }
-        "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
         _ => Route::TalkRoute {},
     }
@@ -312,24 +318,24 @@ pub fn CommandPalette() -> Element {
                             } else {
                                 active().min(count - 1)
                             };
-                            match e.key() {
-                                Key::Escape => {
+                            match e.key().to_string().as_str() {
+                                "Escape" => {
                                     open.set(false);
                                     query.set(String::new());
                                 }
-                                Key::ArrowDown => {
+                                "ArrowDown" => {
                                     e.prevent_default();
                                     if count > 0 {
                                         active.set((idx + 1) % count);
                                     }
                                 }
-                                Key::ArrowUp => {
+                                "ArrowUp" => {
                                     e.prevent_default();
                                     if count > 0 {
                                         active.set((idx + count - 1) % count);
                                     }
                                 }
-                                Key::Enter => {
+                                "Enter" => {
                                     e.prevent_default();
                                     if let Some(dest) = items.get(idx) {
                                         prepare_palette_navigation(dest.id);
@@ -466,15 +472,15 @@ mod tests {
         );
         assert!(matches!(
             route_for_palette_id("catalog"),
-            Route::PoetCatalogRoute {}
+            Route::LibraryRoute {}
         ));
         assert!(matches!(
             route_for_palette_id("lexicon"),
-            Route::PoetCatalogRoute {}
+            Route::LibraryRoute {}
         ));
         assert!(matches!(
             route_for_palette_id("semantic-instrument"),
-            Route::PoetInstrumentRoute {}
+            Route::ToolsRoute {}
         ));
     }
 
@@ -486,7 +492,6 @@ mod tests {
             route_for_palette_id("mail"),
             Route::TalkMailRoute {}
         ));
-        assert_ne!(route_for_palette_id("mail"), Route::PoetRoute {});
         assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
     }
 
@@ -518,7 +523,10 @@ mod tests {
             route_for_palette_id("directory"),
             Route::TalkDirectoryRoute {}
         ));
-        assert!(matches!(route_for_palette_id("dir"), Route::TalkDirectoryRoute {}));
+        assert!(matches!(
+            route_for_palette_id("dir"),
+            Route::TalkDirectoryRoute {}
+        ));
         assert_eq!(
             filter_destinations("directory")
                 .iter()
@@ -527,9 +535,6 @@ mod tests {
                 .label,
             "Directory"
         );
-        assert_eq!(
-            Route::TalkDirectoryRoute {}.to_string(),
-            "/talk/directory"
-        );
+        assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
     }
 }

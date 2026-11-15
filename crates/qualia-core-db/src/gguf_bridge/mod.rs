@@ -12,16 +12,19 @@
 //! and `substrate_parity_tests`). What remains here is plumbing: GPU command encoding, the KV
 //! cache, weight loading, the autoregressive loop, and the GGUF/dequant codec.
 
+#![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
+#![allow(unused_imports, dead_code)]
+
 // pub(crate) so the concern submodules (gemm / ffn / attention / output / embedding / mc8_wasm …)
 // inherit these via `use super::*` — keeps the impl split a pure structural move.
-pub(crate) use crate::gguf_sharder::GgufTensorInfo;
 pub(crate) use crate::NQuin;
+pub(crate) use crate::gguf_sharder::GgufTensorInfo;
 use log;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use memmap2::MmapOptions;
 pub(crate) use std::sync::Arc;
 
-pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
+pub use crate::ggml_quants::{ExecutionError, fetch_token_embedding};
 
 /// Dequantize a mmap embedding row into caller-supplied `out` (no heap allocation).
 pub fn dequantize_token_embedding_into(
@@ -50,6 +53,7 @@ pub struct QTensor {
 }
 
 impl QTensor {
+    /// Creates a tensor descriptor from shape, byte offset into the GGUF, and a Q4_K quantization flag.
     pub fn new(shape: Vec<usize>, byte_offset: u64, is_quantized_q4_k: bool) -> Self {
         Self {
             shape,
@@ -58,20 +62,55 @@ impl QTensor {
         }
     }
 
-    /// Maps the exact bytes from the GGUF using the 60-bit pointer.
+    /// Maps the tensor descriptor from a Quin pointer and a parsed `GgufTensorIndex`.
+    /// Resolves the genuine shape, quantization type, and payload offset by looking up
+    /// the tensor by its subject name hash or relative byte offset.
+    pub fn map_from_pointer_with_index(
+        quin: &NQuin,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> Option<Self> {
+        use crate::QuinPointerExt;
+
+        let flag = quin.extract_modality_flag();
+        if flag != crate::MODALITY_FLAG_LLM_TENSOR && flag != crate::MODALITY_FLAG_VISION_TENSOR {
+            return None;
+        }
+
+        let offset = quin.extract_byte_offset();
+        let subject_hash = quin.subject;
+
+        for (name_hash, info) in &index.entries {
+            if *name_hash == subject_hash || info.byte_offset == offset {
+                let n_dims = (info.n_dims as usize).min(4);
+                let shape: Vec<usize> = info.dims[..n_dims].iter().map(|&d| d as usize).collect();
+                let is_quantized_q4_k = info.ggml_type == 12 || info.ggml_type == 112;
+                let abs_offset = index.tensor_data_start.saturating_add(info.byte_offset);
+                return Some(Self::new(shape, abs_offset, is_quantized_q4_k));
+            }
+        }
+        None
+    }
+
+    /// Maps the tensor's byte offset from the GGUF via the 60-bit pointer.
+    /// Honestly resolves against the currently mounted resident model if available,
+    /// or fails closed (`None`) if no resident model is loaded or the tensor is not found.
     pub fn map_from_pointer(quin: &NQuin) -> Option<Self> {
         use crate::QuinPointerExt;
 
         let flag = quin.extract_modality_flag();
-        if flag != crate::MODALITY_FLAG_LLM_TENSOR {
-            return None; // Not an LLM tensor
+        if flag != crate::MODALITY_FLAG_LLM_TENSOR && flag != crate::MODALITY_FLAG_VISION_TENSOR {
+            return None;
         }
 
-        let offset = quin.extract_byte_offset();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(mmap) = crate::resident_model::current_resident_mmap() {
+                let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+                return Self::map_from_pointer_with_index(quin, &index);
+            }
+        }
 
-        // Mock parsing the GGUF header at the offset to find shape and quantization
-        // For demonstration, we assume a Q4_K tensor representation.
-        Some(Self::new(vec![4096, 4096], offset, true))
+        None
     }
 }
 
@@ -80,6 +119,8 @@ impl QTensor {
 // ElemGpuParams + ELEM_OP_* codes) and the quant-support gates now live in dedicated files.
 mod gpu_params;
 mod quant_support;
+#[cfg(feature = "gpu-runtime")]
+mod submission;
 pub(crate) use gpu_params::*;
 pub(crate) use quant_support::*;
 
@@ -92,12 +133,7 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 #[cfg(target_arch = "wasm32")]
 #[inline]
 pub(crate) fn mc8_bg_hash(parts: &[u64]) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325;
-    for &p in parts {
-        h ^= p;
-        h = h.wrapping_mul(0x100000001b3);
-    }
-    h
+    etalon_inference::browser_prefill::encoding::bg_hash(parts)
 }
 
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
@@ -135,233 +171,47 @@ pub(crate) const MC8_MAX_GEMM_UNIFORM_CHUNK_SLOTS: usize =
 
 /// Part 3v: absolute uniform slot cursors within one encoder chunk.
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8ChunkUniformCursors {
-    attn: usize,
-    elem: usize,
-    gemm: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8ChunkUniformCursors;
 
 /// MC8 Part 3t: disjoint weight staging — eliminates `write_buffer` races within one layer submit.
 #[cfg(target_arch = "wasm32")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Mc8WeightRole {
-    AttnK,
-    AttnV,
-    AttnQ,
-    OProj,
-    Gate,
-    Up,
-    Down,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Mc8WeightRole {
-    /// Stable index into the per-role resident stride table (`mc8_weight_role_stride`).
-    #[inline]
-    pub(crate) fn idx(self) -> usize {
-        match self {
-            Mc8WeightRole::AttnK => 0,
-            Mc8WeightRole::AttnV => 1,
-            Mc8WeightRole::AttnQ => 2,
-            Mc8WeightRole::OProj => 3,
-            Mc8WeightRole::Gate => 4,
-            Mc8WeightRole::Up => 5,
-            Mc8WeightRole::Down => 6,
-        }
-    }
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8WeightRole;
 
 /// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub(crate) struct Mc8WeightArenaBufs {
-    qkv_k: wgpu::Buffer,
-    qkv_v: wgpu::Buffer,
-    qkv_q: wgpu::Buffer,
-    o_proj: wgpu::Buffer,
-    gate: wgpu::Buffer,
-    up: wgpu::Buffer,
-    down: wgpu::Buffer,
+    qkv_k: etalon::Buffer,
+    qkv_v: etalon::Buffer,
+    qkv_q: etalon::Buffer,
+    o_proj: etalon::Buffer,
+    gate: etalon::Buffer,
+    up: etalon::Buffer,
+    down: etalon::Buffer,
 }
 
 /// Part 3u: dynamic offsets for one full prefill layer (staged before encoder dispatches).
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8PrefillLayerUniforms {
-    k_off: u32,
-    v_off: u32,
-    q_off: u32,
-    attn_norm_elem_off: Option<u32>,
-    off_o: Option<u32>,
-    off_attn_res: u32,
-    off_ffn_norm: Option<u32>,
-    off_gate: u32,
-    off_up: u32,
-    off_silu: u32,
-    off_down: u32,
-    off_ffn_res: u32,
-    /// Phase 5.5: dynamic offsets for the Q/K/V projection GEMMs (parallel kernel).
-    off_q_gemm: u32,
-    off_k_gemm: u32,
-    off_v_gemm: u32,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8PrefillLayerUniforms;
 
 /// Strided work-buffer geometry shared by layer dispatches.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) struct Mc8PrefillLayerGeom {
-    row_stride: usize,
-    row_stride_u32: u32,
-    batch_in_bytes: wgpu::BufferAddress,
-    work_span_bytes: wgpu::BufferAddress,
-    emb_bytes: wgpu::BufferAddress,
-    n_embd_bytes: wgpu::BufferAddress,
-    slot_o: wgpu::BufferAddress,
-    slot_gate: wgpu::BufferAddress,
-    slot_up: wgpu::BufferAddress,
-    slot_save: wgpu::BufferAddress,
-    slot_scratch_half: wgpu::BufferAddress,
-    slot_o_f: u32,
-    slot_save_f: u32,
-    slot_gate_f: u32,
-    slot_up_f: u32,
-    slot_scratch_half_f: u32,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8PrefillLayerGeom;
 
 /// Stack arena for batched uniform uploads (one `write_buffer` per layer section).
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8UniformArena {
-    bytes: [u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8UniformArena;
 
 /// Part 3u: larger elem arena for full-layer super-staging.
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8ElemUniformArena {
-    bytes: [u8; MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8ElemUniformArena;
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8AttnUniformArena {
-    bytes: [u8; MC8_MAX_ATTN_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8ElemUniformArena {
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
-            .copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        if base_slot == 0 {
-            self.upload(queue, buf);
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8AttnUniformArena {
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_ATTN_UNIFORM_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
-            .copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        if base_slot == 0 {
-            self.upload(queue, buf);
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8UniformArena {
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_GEMM_UNIFORM_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        let dst = &mut self.bytes[byte_off..byte_off + std::mem::size_of::<T>()];
-        dst.copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Mc8ChunkUniformCursors {
-    pub(crate) fn reset(&mut self) {
-        self.attn = 0;
-        self.elem = 0;
-        self.gemm = 0;
-    }
-
-    pub(crate) fn attn_base_byte(&self) -> u32 {
-        (self.attn * MC8_UNIFORM_ALIGN) as u32
-    }
-
-    pub(crate) fn elem_base_byte(&self) -> u32 {
-        (self.elem * MC8_UNIFORM_ALIGN) as u32
-    }
-
-    pub(crate) fn gemm_base_byte(&self) -> u32 {
-        (self.gemm * MC8_UNIFORM_ALIGN) as u32
-    }
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8AttnUniformArena;
 
 /// MC8: accumulates compute passes; submit + map_async only at pipeline boundary.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) struct WasmGpuPipeline {
-    encoder: wgpu::CommandEncoder,
+pub struct WasmGpuPipeline {
+    encoder: etalon::CommandEncoder,
 }
 
 // ggml_gpu_quant_supported / ggml_gpu_attention_shader_supported / ggml_gpu_gemm_supported moved to
@@ -369,27 +219,25 @@ pub(crate) struct WasmGpuPipeline {
 
 /// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
-    let (tx, rx) = futures_channel::oneshot::channel();
-    slice.map_async(wgpu::MapMode::Read, move |r| {
-        let _ = tx.send(r);
-    });
-    matches!(rx.await, Ok(Ok(())))
+pub(crate) async fn await_wgpu_map(slice: etalon::BufferSlice<'_>) -> bool {
+    etalon_wasm::readback::await_map(slice, etalon_wasm::readback::browser_worker()).await
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 impl WasmGpuPipeline {
+    /// Starts a WASM compute-pipeline encoding session for `engine`.
     pub(crate) fn begin(engine: &QTensorEngine) -> Self {
         Self {
             encoder: engine
                 .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                .create_command_encoder(&etalon::CommandEncoderDescriptor {
                     label: Some("MC8FusedEncoder"),
                 }),
         }
     }
 
-    pub(crate) fn finish(self) -> wgpu::CommandBuffer {
+    /// Finishes encoding and returns the command buffer.
+    pub(crate) fn finish(self) -> etalon::CommandBuffer {
         self.encoder.finish()
     }
 }
@@ -402,7 +250,7 @@ mod mc8_wasm;
 /// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
 pub const MAX_CONTEXT_WINDOW: u32 = 1024;
 /// Maximum bytes for the static KV arena (load-time allocation only).
-pub const KV_CACHE_MAX_BYTES: usize = 448 * 1024 * 1024;
+pub const KV_CACHE_MAX_BYTES: usize = 768 * 1024 * 1024;
 
 /// Static ring-buffer KV layout: `[layer][slot][K | V]` in f32, OR (W5a int8 mode) packed int8 +
 /// per-(slot,kv_head) f32 scale in the same 4-byte-element buffer. `total_f32_elems` counts 4-byte
@@ -429,6 +277,7 @@ pub struct KvCacheLayout {
 }
 
 impl KvCacheLayout {
+    /// Derives the KV-cache ring layout from GGUF hyperparameters; `None` when fields needed are absent/zero.
     pub fn from_hyperparams(h: &crate::gguf_sharder::GgufHyperparams) -> Option<Self> {
         // W5b Phase 4b: sparse-dictionary KV takes precedence over int8/f32 — but only when its toggle is
         // on AND a certified dictionary is installed whose head_dim matches this model. Otherwise it
@@ -506,7 +355,7 @@ impl KvCacheLayout {
     /// Derive the dense f32 device layout used by native CUDA kernels without changing the host
     /// cache representation. Host int8/dictionary compression and the CUDA execution arena are
     /// independent storage decisions.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
     pub(crate) fn dense_device_layout(self) -> Option<Self> {
         let slot_kv_elems = self.n_kv_head.checked_mul(self.head_dim)?;
         let layer_stride = self
@@ -529,11 +378,13 @@ impl KvCacheLayout {
     }
 
     #[inline]
+    /// Ring-buffer slot for `token_idx` modulo capacity.
     pub fn ring_slot(&self, token_idx: u32) -> u32 {
         token_idx % self.max_context
     }
 
     #[inline]
+    /// Flat K-cache index for `(layer, slot, kv_head, dim)`.
     pub fn k_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
         let base = layer as usize * self.layer_stride as usize
             + slot as usize * self.slot_kv_elems as usize * 2;
@@ -541,6 +392,7 @@ impl KvCacheLayout {
     }
 
     #[inline]
+    /// Flat V-cache index for `(layer, slot, kv_head, dim)`.
     pub fn v_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
         let k_base = layer as usize * self.layer_stride as usize
             + slot as usize * self.slot_kv_elems as usize * 2;
@@ -566,8 +418,8 @@ impl KvCacheLayout {
     }
 }
 
-/// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 FFN = 4×2560).
-const MAX_STACK_GEMM_DIM: usize = 10240;
+/// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 E4B double-wide FFN = 8×2560 = 20480).
+const MAX_STACK_GEMM_DIM: usize = 20480;
 const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
 const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
 /// Stack scratch for pre-norm hidden (SmolLM2 n_embd=960; cap supports Gemma-class models).
@@ -578,8 +430,8 @@ pub(crate) const RMS_NORM_EPS: f32 = 1e-5;
 pub const PREFILL_CHUNK_SIZE: usize = 64;
 /// Per-token KV masks uploaded for batched Q-SDPA (`PREFILL_CHUNK_SIZE × mask words`).
 const MAX_ATTN_MASK_UPLOAD_WORDS: usize = PREFILL_CHUNK_SIZE * KV_ATTENTION_MASK_WORDS;
-/// Max stacked embedding floats in a prefill chunk (`MAX_STACK_GEMM_IN × 64`).
-pub const MAX_PREFILL_BATCH_FLOATS: usize = MAX_STACK_GEMM_IN * PREFILL_CHUNK_SIZE;
+/// Max stacked embedding floats in a prefill chunk (`10240 × 64`).
+pub const MAX_PREFILL_BATCH_FLOATS: usize = 10240 * PREFILL_CHUNK_SIZE;
 /// `llm_agent` stack chunk buffer (Gemma 2560 × 64).
 pub const PREFILL_CHUNK_STACK_FLOATS: usize = 2560 * PREFILL_CHUNK_SIZE;
 /// wgpu default max buffer size on many drivers (256 MiB).
@@ -588,14 +440,10 @@ const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
 /// 10240 is the native GEMM output-buffer ceiling and a 256-row multiple, so
 /// resident logits chunk offsets stay storage-binding aligned while the current
 /// 49k-vocab model drops from six output chunks/token to five.
-pub const VOCAB_CHUNK_ROWS: usize = MAX_STACK_GEMM_OUT;
+pub const VOCAB_CHUNK_ROWS: usize = 10240;
 
 /// Streaming argmax result across chunked vocabulary projection.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct StreamingArgmaxResult {
-    pub best_token_id: u32,
-    pub max_logit: f32,
-}
+pub use etalon_inference::projections::StreamingArgmaxResult;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgufLoadReport {
@@ -626,10 +474,20 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+mod attention_adapter;
 #[cfg(target_arch = "wasm32")]
 mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_attention_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_planning_adapter;
+mod projection_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod projection_gpu_adapter;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
 /// `cuda`-gated plan module because the raw-decode harness and the mega-pass guard validate
 /// against it on every target, CUDA or not.
@@ -638,6 +496,17 @@ pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
 mod forward;
+#[cfg(not(target_arch = "wasm32"))]
+mod gemma4;
+mod gemma4_qwen35;
+mod moe_ffn;
+mod moe_gguf;
+mod ssm_forward;
+pub use etalon_inference::ordinary::ssm_layout::SsmStateError;
+/// Conservative legacy default; callers may admit larger external model state.
+pub const DEFAULT_SSM_STATE_BYTE_BUDGET: usize = 128 * 1024 * 1024;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use forward::PrefillDispatchFailure;
 mod gemm;
 mod init;
 mod load;
@@ -983,12 +852,16 @@ async fn mc8_cpu_l0_attn_out(
 // --- PHASE 1 WASM OOB DIAGNOSTIC INSTRUMENTATION (remove once the trap is fixed) ---
 #[cfg(target_arch = "wasm32")]
 #[inline]
+/// Emits a log line to the WASM console (or no-op off-wasm).
 pub(crate) fn wlog(s: &str) {
     web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(s));
 }
 #[cfg(not(target_arch = "wasm32"))]
 #[inline]
-pub(crate) fn wlog(_s: &str) {}
+/// Emits a log line to the WASM console (or no-op off-wasm).
+pub(crate) fn wlog(s: &str) {
+    log::warn!("{s}");
+}
 
 /// Decode-profiler: count of GPU `submit → poll(Maintain::Wait)` round-trips. Incremented by
 /// `QTensorEngine::poll_wait` (every native blocking sync point routes through it); read/reset by
@@ -1010,34 +883,7 @@ pub fn reset_gpu_wait_count() {
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
 /// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
-fn rope_inplace(vec: &mut [f32], n_heads: usize, head_dim: usize, pos: u32, base: f32, scale: f32) {
-    let half = head_dim / 2;
-    if half == 0 {
-        return;
-    }
-    let scale = if scale > 0.0 && scale.is_finite() {
-        scale
-    } else {
-        1.0
-    };
-    let scaled_pos = pos as f32 / scale;
-    for head in 0..n_heads {
-        let off = head * head_dim;
-        if off + head_dim > vec.len() {
-            return;
-        }
-        for i in 0..half {
-            // Interleaved ("normal"/llama) rope: pair adjacent dims (2i, 2i+1). GGUF llama-arch
-            // (SmolLM2) is is_neox=false — weights are permuted for interleaved, NOT split-half.
-            let theta = scaled_pos * base.powf(-2.0 * i as f32 / head_dim as f32);
-            let (s, c) = theta.sin_cos();
-            let x0 = vec[off + 2 * i];
-            let x1 = vec[off + 2 * i + 1];
-            vec[off + 2 * i] = x0 * c - x1 * s;
-            vec[off + 2 * i + 1] = x0 * s + x1 * c;
-        }
-    }
-}
+use etalon_inference::ordinary::rope::rope_inplace;
 
 /// STEM-grounding proof: the LLM's `rope_inplace` is the 2-D rotation defined in
 /// `solvers::rope` — RoPE is trigonometry (a rotation per dimension pair), not a proprietary
@@ -1112,276 +958,25 @@ pub(crate) fn stack_gemm_quant(
             .map(|(w, x)| w * x)
             .sum();
     }
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    etalon_agent::provider_scope::record_route(1);
     true
 }
 
-pub struct QTensorEngine {
-    /// Browser WASM keeps a private device; native reuses `gpu_context::shared_gpu()`.
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    device: wgpu::Device,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    queue: wgpu::Queue,
-    #[cfg(feature = "gpu-runtime")]
-    pub pipeline: wgpu::ComputePipeline,
-    /// WASM multi-row Q8_0 GEMV (llama.cpp-style: 64 thr, 4 rows/WG, u32 packed reads).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    pub mmv_q8_0_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    native_pipeline_cache: Option<wgpu::PipelineCache>,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pipeline_bind_layout: wgpu::BindGroupLayout,
-    /// 0.0.21: cooperative GEMV (one workgroup per output row, shared-memory reduction). Same shader
-    /// MODULE as `pipeline`, entry point `coop_gemv` / `coop_gemv_sg`. Selected per-call when
-    /// `llm_bench::coop_gemv_enabled()`. Native only (the wasm decode path is the MC8 arena).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    coop_gemv_bind_layout: wgpu::BindGroupLayout,
-    /// Multi-row coop GEMV (8 rows/WG) for Q4_K_SOA large n_out — see `coop_gemv_mr`.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_mr_pipeline: wgpu::ComputePipeline,
-    /// GEMV + residual add in one dispatch (O-proj / down-proj in resident mega-pass).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_residual_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    coop_gemv_residual_bind_layout: wgpu::BindGroupLayout,
-    /// Multi-row residual GEMV for Q4_K_SOA.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_residual_mr_pipeline: wgpu::ComputePipeline,
-    /// Warp GEMV (32 thr/row) for Q4_K_SOA.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_warp_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) coop_gemv_residual_warp_pipeline: wgpu::ComputePipeline,
-    /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    mock_pipeline: wgpu::ComputePipeline,
-    /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
-    #[cfg(feature = "gpu-runtime")]
-    pub embedding_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    embedding_bind_layout: wgpu::BindGroupLayout,
-    pub is_initialized: bool,
-    /// DirectML device — Some on Windows when DirectML 1.15 is linked.
-    #[cfg(target_os = "windows")]
-    pub dml: Option<crate::directml_bridge::DmlDevice>,
-    /// Memory-mapped GGUF file (set after `load_gguf`).
-    #[cfg(not(target_arch = "wasm32"))]
-    pub gguf_mmap: Option<Arc<memmap2::Mmap>>,
-    #[cfg(target_arch = "wasm32")]
-    pub gguf_mmap: Option<Arc<[u8]>>,
-    /// WASM: cached tokenizer extracted from gguf_mmap before dropping it.
-    #[cfg(target_arch = "wasm32")]
-    pub cached_tokenizer: Option<crate::gguf_sharder::GgufTokenizer>,
-    /// WASM: cached tensor index extracted from gguf_mmap before dropping it.
-    #[cfg(target_arch = "wasm32")]
-    pub cached_tensor_index: Option<crate::gguf_sharder::GgufTensorIndex>,
-    /// WASM: raw bytes of the token_embd tensor (for embedding lookup after dropping gguf_mmap).
-    #[cfg(target_arch = "wasm32")]
-    pub cached_token_embd: Option<Arc<[u8]>>,
-    /// Resident P64 container bytes.
-    #[cfg(target_arch = "wasm32")]
-    pub p64_resident: Option<Arc<[u8]>>,
-    /// Cached P64 index after `adopt_resident_p64_*` — decode must not re-CRC the container.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub p64_index: Option<crate::p64_weight::P64TensorIndex>,
-    /// Cached synthetic GGUF index built from `p64_index` (or from GGUF parse).
-    #[cfg(not(target_arch = "wasm32"))]
-    pub tensor_index_cache: Option<crate::gguf_sharder::GgufTensorIndex>,
-
-    /// Byte offset into the mmap where tensor data begins.
-    pub tensor_data_offset: u64,
-    pub hyperparams: crate::gguf_sharder::GgufHyperparams,
-    pub max_tensor_bytes: usize,
-    /// Reused layer staging buffers (one layer in VRAM at a time).
-    #[cfg(feature = "gpu-runtime")]
-    gemm_input_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    gemm_weight_buf: Option<wgpu::Buffer>,
-    /// MC8 Part 3t: disjoint per-role weight arena (prefill single-submit).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_weight_arena: Option<Mc8WeightArenaBufs>,
-    /// MC8 Part 3x: when set, the 7 role buffers hold ALL layers' weights (uploaded once);
-    /// hot-path encoders bind a per-layer sub-range instead of re-`write_buffer`ing per forward.
-    #[cfg(target_arch = "wasm32")]
-    mc8_weights_resident: bool,
-    /// Per-role 256-byte-aligned per-layer stride (bytes), indexed by `Mc8WeightRole::idx()`.
-    #[cfg(target_arch = "wasm32")]
-    mc8_weight_role_stride: [u64; 7],
-    /// Legacy decode-path ping-pong (decode tail not on weight arena yet).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    gemm_weight_buf_b: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    gemm_output_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    gemm_params_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    gemm_output_staging: Option<wgpu::Buffer>,
-    // A1a (STELLAR §A): persistent GPU top-k output-projection pipeline + small candidate buffers.
-    // Lets the output logits stay on-GPU (top-k over them, read back only K pairs) instead of the
-    // 196 KB/token full-logit readback. Created once in `ensure_gemm_buffers`.
-    #[cfg(feature = "gpu-runtime")]
-    output_topk_pipeline: Option<wgpu::ComputePipeline>,
-    #[cfg(feature = "gpu-runtime")]
-    output_topk_bind_layout: Option<wgpu::BindGroupLayout>,
-    #[cfg(feature = "gpu-runtime")]
-    topk_cand_val_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    topk_cand_idx_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    topk_cand_staging: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    topk_params_buf: Option<wgpu::Buffer>,
-    /// MC8 FFN / attention scratch (gate, up, o_proj).
-    #[cfg(feature = "gpu-runtime")]
-    gemm_aux_buf: Option<wgpu::Buffer>,
-    /// MC8 SwiGLU up-projection scratch (cannot alias gemm_output/work — in-place GEMM invalid).
-    #[cfg(feature = "gpu-runtime")]
-    gemm_ffn_buf: Option<wgpu::Buffer>,
-    /// Batched prefill RMS output (same span as `gemm_input_buf`; avoids in-place on batch_buf).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    prefill_scratch_buf: Option<wgpu::Buffer>,
-    /// Strided prefill ping-pong rows (`PREFILL_CHUNK_SIZE × row_stride` floats each).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    prefill_work_buf_a: Option<wgpu::Buffer>,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    prefill_work_buf_b: Option<wgpu::Buffer>,
-    /// Phase 5.5: Q/K/V projection scratch (parallel-GEMM output → lightweight attention shader).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_q_proj_buf: Option<wgpu::Buffer>,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_k_proj_buf: Option<wgpu::Buffer>,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_v_proj_buf: Option<wgpu::Buffer>,
-    gemm_max_out_dim: u32,
-    gemm_max_input_floats: usize,
-    /// Static KV ring-buffer (allocated once at `load_gguf`).
-    kv_layout: Option<KvCacheLayout>,
-    #[cfg(feature = "gpu-runtime")]
-    kv_cache_gpu: Option<wgpu::Buffer>,
-    /// CPU mirror for quantized-attention fallback (no growth during decode).
-    kv_cache_cpu: Option<Box<[f32]>>,
-    #[cfg(feature = "gpu-runtime")]
-    attention_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    attention_bind_layout: wgpu::BindGroupLayout,
-    #[cfg(feature = "gpu-runtime")]
-    attention_params_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    attention_mask_buf: Option<wgpu::Buffer>,
-    /// MC8 elementwise GPU ops (RMSNorm / SiLU×mul / residual).
-    #[cfg(feature = "gpu-runtime")]
-    elem_rms_norm_pipeline: wgpu::ComputePipeline,
-    #[cfg(feature = "gpu-runtime")]
-    elem_silu_mul_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    elem_silu_mul_bind_layout: wgpu::BindGroupLayout,
-    #[cfg(feature = "gpu-runtime")]
-    elem_add_residual_pipeline: wgpu::ComputePipeline,
-    #[cfg(feature = "gpu-runtime")]
-    elem_params_buf: Option<wgpu::Buffer>,
-    #[cfg(feature = "gpu-runtime")]
-    norm_weight_buf: Option<wgpu::Buffer>,
-    /// MC8 Part 3s: dynamic-offset bind group layouts (uniform race elimination).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_gemm_bind_layout: wgpu::BindGroupLayout,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_elem_bind_layout: wgpu::BindGroupLayout,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_attn_bind_layout: wgpu::BindGroupLayout,
-    /// Phase 5 dispatch fusion: SwiGLU expansion (gate · SiLU · up) collapsed into one pass.
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_ffn_fused_bind_layout: wgpu::BindGroupLayout,
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_ffn_fused_pipeline: wgpu::ComputePipeline,
-    /// Native T-A1: same fused FFN expansion, static uniform (resident mega-pass).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_bind_layout: wgpu::BindGroupLayout,
-    /// Naive 64-thread/row fused expansion (wasm-style; fallback).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_pipeline: wgpu::ComputePipeline,
-    /// T-A1b: coop 256-thread/row fused expansion (preferred when coop GEMV is on).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_coop_pipeline: wgpu::ComputePipeline,
-    /// Multi-row fused FFN (4 rows/WG) for Q4_K_SOA.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_mr_pipeline: wgpu::ComputePipeline,
-    /// Warp fused FFN (32 thr/row) for Q4_K_SOA.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_warp_pipeline: wgpu::ComputePipeline,
-    /// Dual K+V GEMV (shared act) for resident mega-pass.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    dual_gemv_pipeline: wgpu::ComputePipeline,
-    /// Dual multi-row (4 rows/WG) — default for SoA K+V.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    dual_gemv_mr_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    dual_gemv_bind_layout: wgpu::BindGroupLayout,
-    /// Triple Q+K+V GEMV (shared act, GQA-safe) — one dispatch replaces dual+Q.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    triple_gemv_pipeline: wgpu::ComputePipeline,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    triple_gemv_bind_layout: wgpu::BindGroupLayout,
-    /// Phase 5.3: the output/logits projection (tied `token_embd`, ~50 MB) uploaded to VRAM
-    /// once at init so the per-token argmax binds resident sub-ranges instead of re-uploading
-    /// the whole matrix every token (the decode throughput killer). A1a step-2 ports this to the
-    /// native top-k decode path, so these two fields are available on both targets.
-    #[cfg(feature = "gpu-runtime")]
-    mc8_logits_resident_buf: Option<wgpu::Buffer>,
-    mc8_logits_row_bytes: u32,
-    /// A1b (STELLAR §A): resident 2-bit ternary-FFN GEMM dispatcher, built once at P64 boot from
-    /// the container's base-3 FFN blobs (rebaked to 2-bit, uploaded once). `None` until a ternary
-    /// P64 is adopted; the FFN dispatch branch (`dispatch_ternary_ffn`) uses it when present +
-    /// the toggle is on, else the CPU oracle. Native-only; the wasm ternary path is a later step.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ternary_ffn: Option<crate::ternary_gpu::TernaryFfnResident>,
-    /// Phase 2 (resident weights): resident VRAM weight buffers, keyed by each weight byte-region's
-    /// absolute mmap address (unique per distinct weight — incl. each output-projection vocab chunk,
-    /// which all share one tensor `byte_offset` — and stable across tokens). Populated lazily on the
-    /// first GEMM that touches a region and reused every token, so a weight is uploaded to VRAM ONCE
-    /// instead of re-`write_buffer`ed (up to ~50 MB for a 3B FFN tensor) on every GEMM, every token —
-    /// the decode-bandwidth lever for large models. Mmap bytes are immutable, so the cache is always
-    /// coherent. Native-only (wasm uses the MC8 arena); active when `resident_weights_enabled()`.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    gemm_resident_weights: std::sync::Mutex<std::collections::HashMap<u64, wgpu::Buffer>>,
-    /// Phase 3 (FFN fusion): a small uniform buffer holding the gate/up/down GEMM `GemmGpuParams`
-    /// at 256-aligned sub-ranges (3 slots), so all three GEMMs of one fused FFN submit can bind
-    /// distinct params simultaneously. Lazily created native-only on the first fused FFN.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    ffn_fused_params: Option<wgpu::Buffer>,
-    /// Native attention preproject fusion: two 256-byte-aligned GEMM uniform slots
-    /// (K,V) and two attention uniform slots (K-write,V-write), allowing K/V
-    /// projection + KV-cache writes to share one submit without uniform races.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    attention_kv_gemm_params: Option<wgpu::Buffer>,
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    attention_kv_params: Option<wgpu::Buffer>,
-    /// Phase 5.4: all layers' attn_norm + ffn_norm weights resident (slot 2L = attn, 2L+1 = ffn),
-    /// so RMSNorm binds a per-layer sub-range instead of re-`write_buffer`ing a shared single-layer
-    /// `norm_weight_buf` every layer (the second per-layer write_buffer race blocking single-submit).
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_norm_resident_buf: Option<wgpu::Buffer>,
-    #[cfg(target_arch = "wasm32")]
-    mc8_norm_stride: u32,
-    /// Native GPU-resident single-fence decode plan (see `resident_decode.rs`).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    resident_decode: resident_decode::ResidentDecodeState,
-    /// Cold-built host descriptor for the native CUDA all-layer plan.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
-    cuda_decode_plan: cuda_decode_plan::CudaDecodePlanState,
-    /// W3: native GPU-resident single-fence-per-chunk prefill plan (see `prefill_arena.rs`).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    prefill_arena: prefill_arena::PrefillArenaState,
-    /// W6a: batched speculative-verify forward plan (per-position argmax; see `verify_arena.rs`).
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    verify_arena: verify_arena::VerifyArenaState,
-    /// Bind group cache: eliminates per-token `create_bind_group` calls by caching
-    /// bind groups keyed on (buffer addresses, offsets, weight role, layer). Bind groups
-    /// are identical across tokens for the same layer/op since only dynamic uniform
-    /// offsets change — those are passed at `set_bind_group` time, not baked into the BG.
-    #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-    mc8_bg_cache: std::sync::Mutex<std::collections::HashMap<u64, wgpu::BindGroup>>,
-}
+mod state;
+pub use state::QTensorEngine;
+#[cfg(not(target_arch = "wasm32"))]
+mod provider;
+#[cfg(not(target_arch = "wasm32"))]
+pub use provider::{NativeProviderScope, NativeProviderSnapshot};
+mod model_bytes;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod qwen35;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use model_bytes::ModelByteHandle;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use model_bytes::NativeModelSources;
+pub(crate) mod execution_env;
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
@@ -1396,7 +991,26 @@ thread_local! {
 /// clear status line first (phones will freeze briefly — that is correct).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
+    let stamp = etalon_wasm::readback::begin_browser_model()
+        .map_err(|e| format!("Browser model context: {e:?}"))?;
+    initialize_webgpu_engine_with_stamp(model_data, stamp).await
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub(crate) async fn initialize_webgpu_engine_with_stamp(
+    model_data: std::sync::Arc<[u8]>,
+    stamp: etalon_wasm::worker_steward::CompletionStamp,
+) -> Result<(), String> {
     use wasm_yield::{clear_init_status, phase, set_init_status};
+
+    {
+        let worker = etalon_wasm::readback::browser_worker();
+        let worker = worker.lock().unwrap();
+        if worker.completion_stamp() != stamp || !worker.is_ready() {
+            return Err("Browser model initialization superseded or cancelled".into());
+        }
+        WASM_ENGINE_INSTANCE.with(|slot| *slot.borrow_mut() = None);
+    }
 
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
     // surfaces as a rejected promise the JS layer can display, rather than an
@@ -1425,6 +1039,11 @@ pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Resul
         engine.adopt_resident_mmap(model_data)?;
     }
     phase("Engine resident — ready").await;
+    let worker = etalon_wasm::readback::browser_worker();
+    let current = worker.lock().unwrap();
+    if current.completion_stamp() != stamp || !current.is_ready() {
+        return Err("Browser model initialization superseded or cancelled".into());
+    }
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     clear_init_status();
     Ok(())
@@ -1454,3 +1073,14 @@ impl QTensorEngine {
         gpu_ok && cpu_ok
     }
 }
+
+mod cpu_attention_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod async_attention_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod prefill_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod browser_projection_adapter;

@@ -16,7 +16,7 @@ struct BodyFields<'a> {
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
-named!(body_fields<BodyFields>, do_parse!(
+named_a!(body_fields<'a, BodyFields<'a>>, do_parse!(
     param: body_param >>
     tag!(" ") >>
     // body id seems to refer to the Message-ID or possibly Content-ID header, which
@@ -45,7 +45,7 @@ struct BodyExt1Part<'a> {
 //                   [SP body-fld-loc *(SP body-extension)]]]
 //                     ; MUST NOT be returned on non-extensible
 //                     ; "BODY" fetch
-named!(body_ext_1part<BodyExt1Part>, do_parse!(
+named_a!(body_ext_1part<'a, BodyExt1Part<'a>>, do_parse!(
     // Per RFC 1864, MD5 values are base64-encoded
     md5: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
     disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
@@ -68,7 +68,7 @@ struct BodyExtMPart<'a> {
 //                   [SP body-fld-loc *(SP body-extension)]]]
 //                     ; MUST NOT be returned on non-extensible
 //                     ; "BODY" fetch
-named!(body_ext_mpart<BodyExtMPart>, do_parse!(
+named_a!(body_ext_mpart<'a, BodyExtMPart<'a>>, do_parse!(
     param: opt_opt!(preceded!(tag!(" "), body_param)) >>
     disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
     language: opt_opt!(preceded!(tag!(" "), body_lang)) >>
@@ -78,7 +78,7 @@ named!(body_ext_mpart<BodyExtMPart>, do_parse!(
     (BodyExtMPart { param, disposition, language, location, extension })
 ));
 
-named!(body_encoding<ContentEncoding>, alt!(
+named_a!(body_encoding<'a, ContentEncoding<'a>>, alt!(
     delimited!(char!('"'), alt!(
         map!(tag_no_case!("7BIT"), |_| ContentEncoding::SevenBit) |
         map!(tag_no_case!("8BIT"), |_| ContentEncoding::EightBit) |
@@ -89,13 +89,13 @@ named!(body_encoding<ContentEncoding>, alt!(
     map!(string_utf8, |enc| ContentEncoding::Other(enc))
 ));
 
-named!(body_lang<Option<Vec<&str>>>, alt!(
+named_a!(body_lang<'a, Option<Vec<&'a str>>>, alt!(
     // body language seems to refer to RFC 3066 language tags, which should be ASCII-only
     map!(nstring_utf8, |v| v.map(|s| vec![s])) |
     map!(parenthesized_nonempty_list!(string_utf8), Option::from)
 ));
 
-named!(body_param<BodyParams>, alt!(
+named_a!(body_param<'a, BodyParams<'a>>, alt!(
     map!(nil, |_| None) |
     map!(parenthesized_nonempty_list!(do_parse!(
         key: string_utf8 >>
@@ -105,7 +105,7 @@ named!(body_param<BodyParams>, alt!(
     )), Option::from)
 ));
 
-named!(body_extension<BodyExtension>, alt!(
+named_a!(body_extension<'a, BodyExtension<'a>>, alt!(
     map!(number, |n| BodyExtension::Num(n)) |
     // Cannot find documentation on character encoding for body extension values.
     // So far, assuming UTF-8 seems fine, please report if you run into issues here.
@@ -113,7 +113,7 @@ named!(body_extension<BodyExtension>, alt!(
     map!(parenthesized_nonempty_list!(body_extension), |ext| BodyExtension::List(ext))
 ));
 
-named!(body_disposition<Option<ContentDisposition>>, alt!(
+named_a!(body_disposition<'a, Option<ContentDisposition<'a>>>, alt!(
     map!(nil, |_| None) |
     paren_delimited!(do_parse!(
         ty: string_utf8 >>
@@ -126,7 +126,7 @@ named!(body_disposition<Option<ContentDisposition>>, alt!(
     ))
 ));
 
-named!(body_type_basic<BodyStructure>, do_parse!(
+named_a!(body_type_basic<'a, BodyStructure<'a>>, do_parse!(
     media_type: string_utf8 >>
     tag!(" ") >>
     media_subtype: string_utf8 >>
@@ -155,7 +155,7 @@ named!(body_type_basic<BodyStructure>, do_parse!(
     })
 ));
 
-named!(body_type_text<BodyStructure>, do_parse!(
+named_a!(body_type_text<'a, BodyStructure<'a>>, do_parse!(
     tag_no_case!("\"TEXT\"") >>
     tag!(" ") >>
     media_subtype: string_utf8 >>
@@ -187,7 +187,7 @@ named!(body_type_text<BodyStructure>, do_parse!(
     })
 ));
 
-named!(body_type_message<BodyStructure>, do_parse!(
+named_a!(body_type_message<'a, BodyStructure<'a>>, do_parse!(
     tag_no_case!("\"MESSAGE\" \"RFC822\"") >>
     tag!(" ") >>
     fields: body_fields >>
@@ -223,7 +223,7 @@ named!(body_type_message<BodyStructure>, do_parse!(
     })
 ));
 
-named!(body_type_multipart<BodyStructure>, do_parse!(
+named_a!(body_type_multipart<'a, BodyStructure<'a>>, do_parse!(
     bodies: many1!(body) >>
     tag!(" ") >>
     media_subtype: string_utf8 >>
@@ -244,11 +244,11 @@ named!(body_type_multipart<BodyStructure>, do_parse!(
     })
 ));
 
-named!(pub(crate) body<BodyStructure>, paren_delimited!(
+named_a!(pub(crate) body<'a, BodyStructure<'a>>, paren_delimited!(
     alt!(body_type_text | body_type_message | body_type_basic | body_type_multipart)
 ));
 
-named!(pub(crate) msg_att_body_structure<AttributeValue>, do_parse!(
+named_a!(pub(crate) msg_att_body_structure<'a, AttributeValue<'a>>, do_parse!(
     tag_no_case!("BODYSTRUCTURE ") >>
     body: body >>
     (AttributeValue::BodyStructure(body))

@@ -1,7 +1,7 @@
 //! Sync inbox status — read-only view of quarantined/validated inbound operations (Phase 5).
 
 use super::host_client::{fetch_sync_inbox, SyncInboxRecordDto};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default)]
 struct SyncUi {
@@ -19,6 +19,7 @@ fn outcome_color(state: &str) -> &'static str {
 }
 
 #[component]
+/// Aether `WellfairSyncPanel` component.
 pub fn WellfairSyncPanel() -> Element {
     let mut ui = use_signal(SyncUi::default);
 

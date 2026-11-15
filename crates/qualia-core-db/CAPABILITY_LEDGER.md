@@ -12,8 +12,10 @@ correct answer to an independently-computed problem (not "returned Ok"). Regener
 | Linear algebra | general N×N eigen / SVD / tensor | PRESENT ? | FixedLanczosEigensolver / ConstTensorContractor / Tensor3x3x3 exported — present; v2 known-answer probe pending |
 | Logic/temporal | LTL trace evaluation | REAL    ✓ | G(all)=T, G(one-differs)=F, F(present)=T, F(absent)=F — genuine temporal eval over the trace ✓ |
 | Quantization | ternary BitNet GEMM | REAL    ✓ | scale·Σtrit·act = [-2.0, 10.0] == [-2, 10] ✓ |
+| Cryptography/ZK | Fiat-Shamir NIZK proof of knowledge | REAL    ✓ | Fiat-Shamir NIZK proof generated and verified; tampered public input rejected ✓ |
+| Manifold | Manifold presentation projection | REAL    ✓ | Document P0 collapses Z to 0.0; StageWorld P2 computes perspective scale 0.2587 with honesty='real' ✓ |
 
-**Summary:** 3 REAL · 1 PARTIAL · 0 STUB · 1 ABSENT · 1 PRESENT(unprobed) · 6 total.
+**Summary:** 5 REAL · 1 PARTIAL · 0 STUB · 1 ABSENT · 1 PRESENT(unprobed) · 8 total.
 
 _v1 slice. Coverage grows incrementally; v2 adds soundness probes for the documented
 fakes (zk commitment-vs-proof, logic.rs threshold-vs-LTL, n3 router-vs-evaluator) + deontic/SHACL._

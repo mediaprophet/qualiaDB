@@ -26,6 +26,7 @@ pub enum RetentionClass {
 }
 
 impl RetentionClass {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             RetentionClass::Public => "public",
@@ -34,6 +35,7 @@ impl RetentionClass {
         }
     }
 
+    /// Parses.
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "public" => Some(Self::Public),
@@ -62,6 +64,7 @@ pub struct MediaStore {
 }
 
 impl MediaStore {
+    /// Opens.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, String> {
         let root = root.into();
         fs::create_dir_all(root.join("media/by-hash")).map_err(|e| e.to_string())?;
@@ -69,6 +72,7 @@ impl MediaStore {
         Ok(Self { root })
     }
 
+    /// Root.
     pub fn root(&self) -> &Path {
         &self.root
     }
@@ -149,15 +153,18 @@ impl MediaStore {
         Ok(rec)
     }
 
+    /// Reads record.
     pub fn read_record(&self, digest_hex: &str) -> Result<MediaRecord, String> {
         let s = fs::read_to_string(self.index_path(digest_hex)).map_err(|e| e.to_string())?;
         parse_record_json(&s)
     }
 
+    /// Reads bytes.
     pub fn read_bytes(&self, digest_hex: &str) -> Result<Vec<u8>, String> {
         fs::read(self.blob_path(digest_hex)).map_err(|e| e.to_string())
     }
 
+    /// `true` when it exists.
     pub fn exists(&self, digest_hex: &str) -> bool {
         self.blob_path(digest_hex).is_file() && self.index_path(digest_hex).is_file()
     }

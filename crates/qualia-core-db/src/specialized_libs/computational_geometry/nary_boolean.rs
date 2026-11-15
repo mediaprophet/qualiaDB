@@ -128,14 +128,17 @@ impl BoolExpr {
 pub struct RegionMask(pub u64);
 
 impl RegionMask {
+    /// Empty value.
     pub fn empty() -> Self {
         Self(0)
     }
 
+    /// Builder: sets the operand bit.
     pub fn with(self, operand: usize) -> Self {
         Self(self.0 | (1u64 << operand))
     }
 
+    /// `true` when operand `operand` is in the mask.
     pub fn contains(self, operand: usize) -> bool {
         if operand >= 64 {
             return false;
@@ -143,26 +146,32 @@ impl RegionMask {
         (self.0 & (1u64 << operand)) != 0
     }
 
+    /// `true` when no operands are set.
     pub fn is_empty(self) -> bool {
         self.0 == 0
     }
 
+    /// Bitwise union of two masks.
     pub fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }
 
+    /// Bitwise intersection.
     pub fn intersection(self, other: Self) -> Self {
         Self(self.0 & other.0)
     }
 
+    /// Bitwise complement within the operand universe.
     pub fn complement(self) -> Self {
         Self(!self.0)
     }
 
+    /// `self` minus `other`.
     pub fn difference(self, other: Self) -> Self {
         Self(self.0 & !other.0)
     }
 
+    /// Symmetric difference.
     pub fn xor(self, other: Self) -> Self {
         Self(self.0 ^ other.0)
     }
@@ -206,6 +215,8 @@ pub enum NaryBoolError {
     BinaryFailed(String),
     /// The expression is too complex (too many operands).
     TooManyOperands { count: usize, max: usize },
+    /// Operation is unsupported or geometrically ill-posed.
+    UnsupportedOperation(String),
 }
 
 impl core::fmt::Display for NaryBoolError {
@@ -218,6 +229,9 @@ impl core::fmt::Display for NaryBoolError {
             Self::BinaryFailed(msg) => write!(f, "nary_bool: binary op failed — {msg}"),
             Self::TooManyOperands { count, max } => {
                 write!(f, "nary_bool: {count} operands exceeds max {max}")
+            }
+            Self::UnsupportedOperation(msg) => {
+                write!(f, "nary_bool: unsupported operation — {msg}")
             }
         }
     }
@@ -349,12 +363,12 @@ fn evaluate_tree(
             }
             binary_op(&union, &inter, Boolean3Op::Difference)
         }
-        BoolExpr::Complement(a) => {
-            // Complement requires a universe. Without an explicit universe
-            // mesh, we cannot compute the geometric complement.
-            // Return the operand unchanged — this is a placeholder.
-            // A proper implementation would require a bounding volume mesh.
-            evaluate_tree(inputs, a)
+        BoolExpr::Complement(_a) => {
+            // Complement requires an explicit bounding universe volume.
+            // Unbounded geometric complement in R^3 is ill-posed and fails closed.
+            Err(NaryBoolError::UnsupportedOperation(
+                "Complement requires an explicit bounding universe volume; unbounded 3D geometric complement is ill-posed".into(),
+            ))
         }
     }
 }

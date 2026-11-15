@@ -41,6 +41,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
+    /// Creates a default `Triangle`.
     pub fn new(a: Point2, b: Point2, c: Point2) -> Self {
         Self { a, b, c }
     }

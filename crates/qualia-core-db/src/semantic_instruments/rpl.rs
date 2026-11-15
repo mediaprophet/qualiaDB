@@ -231,8 +231,7 @@ mod tests {
     fn sample_award() -> CapabilityAward {
         CapabilityAward {
             learner: "did:example:learner".into(),
-            assessment_release_id: "https://ns.webizen.org/demo/unit-convert/releases/1.0.0"
-                .into(),
+            assessment_release_id: "https://ns.webizen.org/demo/unit-convert/releases/1.0.0".into(),
             content_digest: DIGEST.into(),
             issuer: "did:example:issuer".into(),
             capability: "https://ns.webizen.org/demo/concepts/units".into(),
@@ -245,16 +244,8 @@ mod tests {
     fn formal_evidence_satisfies() {
         let required = vec![FORMAL.into()];
         let evidence = [item(FORMAL, EvidenceBasis::Formal, true)];
-        let got = evaluate_rpl(
-            &required,
-            &evidence,
-            &[],
-            &[],
-            &[],
-            None,
-            &mut [0u64; 8],
-        )
-        .expect("rpl");
+        let got =
+            evaluate_rpl(&required, &evidence, &[], &[], &[], None, &mut [0u64; 8]).expect("rpl");
         assert_eq!(got.satisfied, vec![FORMAL.to_string()]);
         assert!(got.equivalent.is_empty());
         assert!(got.unresolved.is_empty());
@@ -267,16 +258,8 @@ mod tests {
         let required = vec![FORMAL.into()];
         let evidence = [item(EXPERIENTIAL, EvidenceBasis::Experiential, true)];
         let auth = [(FORMAL.into(), EXPERIENTIAL.into())];
-        let got = evaluate_rpl(
-            &required,
-            &evidence,
-            &auth,
-            &[],
-            &[],
-            None,
-            &mut [0u64; 8],
-        )
-        .expect("rpl");
+        let got =
+            evaluate_rpl(&required, &evidence, &auth, &[], &[], None, &mut [0u64; 8]).expect("rpl");
         assert!(got.satisfied.is_empty());
         assert_eq!(got.equivalent, vec![FORMAL.to_string()]);
         assert!(got.unmet.is_empty());
@@ -305,16 +288,8 @@ mod tests {
     fn unavailable_evidence_is_unresolved_not_unmet() {
         let required = vec![FORMAL.into()];
         let evidence = [item(FORMAL, EvidenceBasis::PriorLearning, false)];
-        let got = evaluate_rpl(
-            &required,
-            &evidence,
-            &[],
-            &[],
-            &[],
-            None,
-            &mut [0u64; 8],
-        )
-        .expect("rpl");
+        let got =
+            evaluate_rpl(&required, &evidence, &[], &[], &[], None, &mut [0u64; 8]).expect("rpl");
         assert_eq!(got.unresolved, vec![FORMAL.to_string()]);
         assert!(!got.unmet.contains(&FORMAL.to_string()));
         assert!(got.satisfied.is_empty());

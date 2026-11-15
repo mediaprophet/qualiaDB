@@ -2,7 +2,7 @@
 
 use crate::canvas_graph::{derive_graph_edges, edge_visual};
 use crate::canvas_model::{Page, PanePlacement};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Pixels per layout point (matches grid and spatial canvases).
 const POINT_SCALE: f64 = 6.0;
@@ -34,6 +34,7 @@ fn cubic_path(x1: f64, y1: f64, x2: f64, y2: f64) -> String {
 }
 
 #[component]
+/// Aether `NodeGraphCanvas` component.
 pub fn NodeGraphCanvas(page: Page) -> Element {
     let layouts: Vec<NodeLayout> = page
         .panes

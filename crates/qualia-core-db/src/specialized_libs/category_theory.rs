@@ -9,6 +9,7 @@ pub trait Object {
     /// Associated properties of this object, if any.
     type Properties;
 
+    /// Category properties.
     fn properties(&self) -> Self::Properties;
 }
 

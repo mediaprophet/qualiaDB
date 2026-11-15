@@ -8,6 +8,7 @@ use vibe::{Diagnostic, Span, Value};
 
 // ── Image editing ────────────────────────────────────────────────────────────
 
+/// `Image.new` invoke seam.
 pub fn image_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.new needs id"))?;
     let width = args::rec_u64(args, "width").unwrap_or(1920) as u32;
@@ -22,6 +23,7 @@ pub fn image_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.add_layer` invoke seam.
 pub fn image_add_layer(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.add_layer needs id"))?;
@@ -32,6 +34,7 @@ pub fn image_add_layer(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.remove_layer` invoke seam.
 pub fn image_remove_layer(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.remove_layer needs id"))?;
@@ -42,6 +45,7 @@ pub fn image_remove_layer(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `Image.set_pixel` invoke seam.
 pub fn image_set_pixel(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.set_pixel needs id"))?;
@@ -62,6 +66,7 @@ pub fn image_set_pixel(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.fill` invoke seam.
 pub fn image_fill(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.fill needs id"))?;
     let r = args::rec_f64(args, "r").unwrap_or(0.0);
@@ -75,6 +80,7 @@ pub fn image_fill(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.brush` invoke seam.
 pub fn image_brush(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.brush needs id"))?;
     let size = args::rec_f64(args, "size").unwrap_or(10.0);
@@ -86,6 +92,7 @@ pub fn image_brush(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.apply_filter` invoke seam.
 pub fn image_apply_filter(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.apply_filter needs id"))?;
@@ -99,6 +106,7 @@ pub fn image_apply_filter(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `Image.set_opacity` invoke seam.
 pub fn image_set_opacity(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.set_opacity needs id"))?;
@@ -110,6 +118,7 @@ pub fn image_set_opacity(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Image.set_blend_mode` invoke seam.
 pub fn image_set_blend_mode(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Image.set_blend_mode needs id"))?;
@@ -121,6 +130,7 @@ pub fn image_set_blend_mode(args: &Value, span: Span) -> Result<Value, Diagnosti
     ]))
 }
 
+/// `Image.set_visible` invoke seam.
 pub fn image_set_visible(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.set_visible needs id"))?;
@@ -131,6 +141,7 @@ pub fn image_set_visible(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Image.set_mask` invoke seam.
 pub fn image_set_mask(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.set_mask needs id"))?;
@@ -147,6 +158,7 @@ pub fn image_set_mask(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.clear_mask` invoke seam.
 pub fn image_clear_mask(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.clear_mask needs id"))?;
@@ -156,6 +168,7 @@ pub fn image_clear_mask(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     )]))
 }
 
+/// `Image.composite` invoke seam.
 pub fn image_composite(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.composite needs id"))?;
@@ -165,6 +178,7 @@ pub fn image_composite(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Image.add_selection` invoke seam.
 pub fn image_add_selection(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Image.add_selection needs id"))?;
@@ -176,6 +190,7 @@ pub fn image_add_selection(args: &Value, span: Span) -> Result<Value, Diagnostic
     ]))
 }
 
+/// `Image.clear_selections` invoke seam.
 pub fn image_clear_selections(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Image.clear_selections needs id"))?;
@@ -187,6 +202,7 @@ pub fn image_clear_selections(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Video ────────────────────────────────────────────────────────────────────
 
+/// `Video.new_project` invoke seam.
 pub fn video_new_project(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.new_project needs id"))?;
@@ -204,6 +220,7 @@ pub fn video_new_project(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Video.add_track` invoke seam.
 pub fn video_add_track(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.add_track needs id"))?;
@@ -214,6 +231,7 @@ pub fn video_add_track(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Video.add_clip` invoke seam.
 pub fn video_add_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.add_clip needs id"))?;
@@ -227,6 +245,7 @@ pub fn video_add_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Video.trim_clip` invoke seam.
 pub fn video_trim_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.trim_clip needs id"))?;
@@ -239,6 +258,7 @@ pub fn video_trim_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Video.set_speed` invoke seam.
 pub fn video_set_speed(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.set_speed needs id"))?;
@@ -250,6 +270,7 @@ pub fn video_set_speed(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Video.colour_grade` invoke seam.
 pub fn video_colour_grade(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.colour_grade needs id"))?;
@@ -264,6 +285,7 @@ pub fn video_colour_grade(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `Video.add_transition` invoke seam.
 pub fn video_add_transition(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Video.add_transition needs id"))?;
@@ -279,6 +301,7 @@ pub fn video_add_transition(args: &Value, span: Span) -> Result<Value, Diagnosti
     ]))
 }
 
+/// `Video.set_render_format` invoke seam.
 pub fn video_set_render_format(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Video.set_render_format needs id"))?;
@@ -290,6 +313,7 @@ pub fn video_set_render_format(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Video.set_render_bitrate` invoke seam.
 pub fn video_set_render_bitrate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Video.set_render_bitrate needs id"))?;
@@ -301,6 +325,7 @@ pub fn video_set_render_bitrate(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Video.remove_clip` invoke seam.
 pub fn video_remove_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Video.remove_clip needs id"))?;
@@ -314,6 +339,7 @@ pub fn video_remove_clip(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 // ── 3D ───────────────────────────────────────────────────────────────────────
 
+/// `ThreeD.add_object` invoke seam.
 pub fn three_d_add_object(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.add_object needs id"))?;
@@ -325,6 +351,7 @@ pub fn three_d_add_object(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `ThreeD.set_transform` invoke seam.
 pub fn three_d_set_transform(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "ThreeD.set_transform needs id"))?;
@@ -338,6 +365,7 @@ pub fn three_d_set_transform(args: &Value, span: Span) -> Result<Value, Diagnost
     ]))
 }
 
+/// `ThreeD.set_material` invoke seam.
 pub fn three_d_set_material(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.set_material needs id"))?;
@@ -349,6 +377,7 @@ pub fn three_d_set_material(args: &Value, span: Span) -> Result<Value, Diagnosti
     ]))
 }
 
+/// `ThreeD.add_camera` invoke seam.
 pub fn three_d_add_camera(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.add_camera needs id"))?;
@@ -360,6 +389,7 @@ pub fn three_d_add_camera(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `ThreeD.add_light` invoke seam.
 pub fn three_d_add_light(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.add_light needs id"))?;
@@ -371,6 +401,7 @@ pub fn three_d_add_light(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `ThreeD.add_rig` invoke seam.
 pub fn three_d_add_rig(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.add_rig needs id"))?;
     let name = args::rec_str(args, "name").unwrap_or("Rig");
@@ -381,6 +412,7 @@ pub fn three_d_add_rig(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `ThreeD.add_animation` invoke seam.
 pub fn three_d_add_animation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "ThreeD.add_animation needs id"))?;
@@ -392,6 +424,7 @@ pub fn three_d_add_animation(args: &Value, span: Span) -> Result<Value, Diagnost
     ]))
 }
 
+/// `ThreeD.set_mesh` invoke seam.
 pub fn three_d_set_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "ThreeD.set_mesh needs id"))?;
@@ -405,6 +438,7 @@ pub fn three_d_set_mesh(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Interactive ──────────────────────────────────────────────────────────────
 
+/// `HbbTV.new_app` invoke seam.
 pub fn hbbtv_new_app(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "HbbTV.new_app needs id"))?;
     let name = args::rec_str(args, "name").unwrap_or("App");
@@ -416,6 +450,7 @@ pub fn hbbtv_new_app(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `HbbTV.add_page` invoke seam.
 pub fn hbbtv_add_page(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "HbbTV.add_page needs id"))?;
@@ -427,6 +462,7 @@ pub fn hbbtv_add_page(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `HbbTV.navigate` invoke seam.
 pub fn hbbtv_navigate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "HbbTV.navigate needs id"))?;
@@ -438,6 +474,7 @@ pub fn hbbtv_navigate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `HbbTV.set_state` invoke seam.
 pub fn hbbtv_set_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "HbbTV.set_state needs id"))?;
@@ -452,6 +489,7 @@ pub fn hbbtv_set_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `SecondScreen.sync` invoke seam.
 pub fn second_screen_sync(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "SecondScreen.sync needs id"))?;
@@ -465,6 +503,7 @@ pub fn second_screen_sync(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `Interactive.add_trigger` invoke seam.
 pub fn interactive_add_trigger(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Interactive.add_trigger needs id"))?;
@@ -478,6 +517,7 @@ pub fn interactive_add_trigger(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Interactive.add_social_post` invoke seam.
 pub fn interactive_add_social_post(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Interactive.add_social_post needs id"))?;
@@ -494,6 +534,7 @@ pub fn interactive_add_social_post(args: &Value, span: Span) -> Result<Value, Di
 
 // ── Portals / worlds ─────────────────────────────────────────────────────────
 
+/// `World.new` invoke seam.
 pub fn world_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "World.new needs id"))?;
     let name = args::rec_str(args, "name").unwrap_or("World");
@@ -505,6 +546,7 @@ pub fn world_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `World.add_object` invoke seam.
 pub fn world_add_object(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "World.add_object needs id"))?;
@@ -515,6 +557,7 @@ pub fn world_add_object(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `World.add_portal` invoke seam.
 pub fn world_add_portal(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "World.add_portal needs id"))?;
@@ -526,6 +569,7 @@ pub fn world_add_portal(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `World.add_avatar` invoke seam.
 pub fn world_add_avatar(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "World.add_avatar needs id"))?;
@@ -537,6 +581,7 @@ pub fn world_add_avatar(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `World.set_gravity` invoke seam.
 pub fn world_set_gravity(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "World.set_gravity needs id"))?;
@@ -550,6 +595,7 @@ pub fn world_set_gravity(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `World.object_apply_force` invoke seam.
 pub fn world_object_apply_force(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "World.object_apply_force needs id"))?;
@@ -566,6 +612,7 @@ pub fn world_object_apply_force(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `World.object_step_physics` invoke seam.
 pub fn world_object_step_physics(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "World.object_step_physics needs id"))?;
@@ -576,6 +623,7 @@ pub fn world_object_step_physics(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Portal.set_target` invoke seam.
 pub fn portal_set_target(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Portal.set_target needs id"))?;
@@ -587,6 +635,7 @@ pub fn portal_set_target(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Portal.activate` invoke seam.
 pub fn portal_activate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Portal.activate needs id"))?;
@@ -596,6 +645,7 @@ pub fn portal_activate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Portal.deactivate` invoke seam.
 pub fn portal_deactivate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Portal.deactivate needs id"))?;
@@ -605,6 +655,7 @@ pub fn portal_deactivate(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Avatar.move` invoke seam.
 pub fn avatar_move(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Avatar.move needs id"))?;
     let pos = args::rec_f64_list(args, "position")
@@ -618,6 +669,7 @@ pub fn avatar_move(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Avatar.set_appearance` invoke seam.
 pub fn avatar_set_appearance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Avatar.set_appearance needs id"))?;
@@ -634,6 +686,7 @@ pub fn avatar_set_appearance(args: &Value, span: Span) -> Result<Value, Diagnost
 
 // ── DMX ──────────────────────────────────────────────────────────────────────
 
+/// `Dmx.new_universe` invoke seam.
 pub fn dmx_new_universe(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_u64(args, "id")
         .ok_or_else(|| args::bad(span, "Dmx.new_universe needs id"))? as u16;
@@ -645,6 +698,7 @@ pub fn dmx_new_universe(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Dmx.set_channel` invoke seam.
 pub fn dmx_set_channel(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_u64(args, "id").ok_or_else(|| args::bad(span, "Dmx.set_channel needs id"))?;
@@ -659,6 +713,7 @@ pub fn dmx_set_channel(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Dmx.add_fixture` invoke seam.
 pub fn dmx_add_fixture(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.add_fixture needs id"))?;
@@ -678,6 +733,7 @@ pub fn dmx_add_fixture(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Dmx.fixture_set_colour` invoke seam.
 pub fn dmx_fixture_set_colour(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Dmx.fixture_set_colour needs id"))?;
@@ -692,6 +748,7 @@ pub fn dmx_fixture_set_colour(args: &Value, span: Span) -> Result<Value, Diagnos
     ]))
 }
 
+/// `Dmx.fixture_set_intensity` invoke seam.
 pub fn dmx_fixture_set_intensity(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Dmx.fixture_set_intensity needs id"))?;
@@ -703,6 +760,7 @@ pub fn dmx_fixture_set_intensity(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Dmx.fixture_set_pan_tilt` invoke seam.
 pub fn dmx_fixture_set_pan_tilt(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Dmx.fixture_set_pan_tilt needs id"))?;
@@ -715,6 +773,7 @@ pub fn dmx_fixture_set_pan_tilt(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Dmx.new_cue` invoke seam.
 pub fn dmx_new_cue(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.new_cue needs id"))?;
     let name = args::rec_str(args, "name").unwrap_or("Cue");
@@ -725,6 +784,7 @@ pub fn dmx_new_cue(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Dmx.cue_set_channel` invoke seam.
 pub fn dmx_cue_set_channel(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.cue_set_channel needs id"))?;
@@ -739,6 +799,7 @@ pub fn dmx_cue_set_channel(args: &Value, span: Span) -> Result<Value, Diagnostic
     ]))
 }
 
+/// `Dmx.cue_set_fade` invoke seam.
 pub fn dmx_cue_set_fade(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.cue_set_fade needs id"))?;
@@ -751,6 +812,7 @@ pub fn dmx_cue_set_fade(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Dmx.new_cue_stack` invoke seam.
 pub fn dmx_new_cue_stack(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.new_cue_stack needs id"))?;
@@ -763,6 +825,7 @@ pub fn dmx_new_cue_stack(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Dmx.cue_stack_add` invoke seam.
 pub fn dmx_cue_stack_add(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.cue_stack_add needs id"))?;
@@ -774,18 +837,21 @@ pub fn dmx_cue_stack_add(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Dmx.cue_stack_go` invoke seam.
 pub fn dmx_cue_stack_go(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.cue_stack_go needs id"))?;
     Ok(args::record([("status", Value::String("go".into()))]))
 }
 
+/// `Dmx.cue_stack_go_back` invoke seam.
 pub fn dmx_cue_stack_go_back(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Dmx.cue_stack_go_back needs id"))?;
     Ok(args::record([("status", Value::String("go_back".into()))]))
 }
 
+/// `Dmx.cue_stack_reset` invoke seam.
 pub fn dmx_cue_stack_reset(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Dmx.cue_stack_reset needs id"))?;

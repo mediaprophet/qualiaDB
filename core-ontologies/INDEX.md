@@ -179,6 +179,10 @@
 
 ---
 
+## Qualia system ontologies  (non-credential modules)
+
+- **Inference Lifecycle & Chat-Graph Stages** — 2026-10-01 · model-architecture classes (`inf:DenseTransformer`, `moe:SparseMoEModel`, `thk:ThinkingModel`, `inf:HybridSsmModel`), chat-graph DAG vocabulary (`cg:ChatFragment`, `cg:ChatGraphEdge`, `cg:branchType`, `cg:wordnetGroundingHash`, `cg:sourceAuthorDid`), and the 15 inference-lifecycle stage individuals (`stage:ChatGraphGrounding` … `stage:OutcomeEvaluation`) · `inference-lifecycle.n3`
+
 ## Governance Gap Report  (generated — PLAN §9.1)
 
 Scanned **102 instruments**.

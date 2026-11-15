@@ -30,13 +30,21 @@ pub mod models;
 pub mod music;
 pub mod pipeline;
 pub mod production;
+pub mod qac_spatial;
 pub mod resample;
 pub mod semantic;
 pub mod session_history;
 pub mod sonify;
+pub mod spatial;
 pub mod speech;
 pub mod types;
 pub mod wav;
+
+pub use spatial::{
+    mix_spatial_voice_into, mix_spatial_voice_occluded_into, DistanceModel, SpatialEmitter,
+    SpatialListener, SpatialOcclusionBridge, SpatialOcclusionFilterState, SpatialVoiceParams,
+    MAX_SPATIAL_VOICES, SPEED_OF_SOUND_AIR,
+};
 
 pub use aed_weights::{AedWeightBundle, WeightedAedModel};
 pub use capture::{CapturePurpose, CaptureSession};
@@ -70,8 +78,8 @@ pub use pipeline::{
     speech_phone_demo, EarsDemoResult,
 };
 pub use production::{
-    apply_comp_sample, apply_eq_sample, DelayLine, ProcessPlan, TrackState, MAX_BLOCK,
-    MAX_DELAY_SAMPLES, MAX_TRACKS,
+    apply_comp_sample, apply_eq_sample, DelayLine, ProcessPlan, StatefulMixer, TrackState, MAX_BLOCK,
+    MAX_DELAY_SAMPLES, MAX_MIX_DELAY, MAX_TRACKS,
 };
 pub use resample::resample_linear_mono;
 pub use semantic::{

@@ -9,8 +9,8 @@
 export const BROWSER_CAPABILITY_SCHEMA = 'qualia.browser-capability.v1';
 
 export const WEBGPU_ADAPTER_ATTEMPTS = Object.freeze([
-  Object.freeze({ id: 'compatibility-default', options: Object.freeze({ featureLevel: 'compatibility' }) }),
   Object.freeze({ id: 'core-high-performance', options: Object.freeze({ featureLevel: 'core', powerPreference: 'high-performance' }) }),
+  Object.freeze({ id: 'compatibility-default', options: Object.freeze({ featureLevel: 'compatibility' }) }),
   Object.freeze({ id: 'core-low-power', options: Object.freeze({ featureLevel: 'core', powerPreference: 'low-power' }) }),
   Object.freeze({ id: 'default', options: Object.freeze({}) }),
 ]);

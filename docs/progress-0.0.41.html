@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038" class="release-040">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualiaDB &amp; Webizen 0.0.41 | Release Overview &amp; Tri-Source Architecture Guide</title>
+    <meta name="description" content="Authoritative 0.0.41 Release Overview &amp; Architecture Guide: Etalon pure-Rust GPU/physics/signal stack, .q42 v4 unified volumes, Four-Plane Identifier Fabric, Omni-Scale Coordinate System (OCS), VibeScript vibe-0.03, and QDNF 384-bit QSR.">
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        #migration-closeout, #ecosystem { overflow-wrap: anywhere; }
+        #migration-closeout .table-scroll, #ecosystem .table-scroll { max-width: 100%; overflow-x: auto; margin: 1.5rem 0; }
+        #migration-closeout .table-scroll table, #ecosystem .table-scroll table { min-width: 640px; margin: 0; }
+        .showcase-hero {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(56, 189, 248, 0.10) 50%, rgba(168, 85, 247, 0.12) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 16px;
+            padding: 3rem 2.5rem;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .showcase-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 420px;
+            height: 420px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .pillar-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 1rem;
+        }
+        .pillar-1 { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+        .pillar-2 { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); }
+        .pillar-3 { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+        .pillar-4 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+        .metric-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 1.25rem;
+            margin: 2rem 0 3rem 0;
+        }
+        .metric-tile {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+        }
+        .metric-tile .val {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--accent-primary, #38bdf8);
+            line-height: 1.1;
+            margin-bottom: 0.35rem;
+            font-family: var(--font-mono, monospace);
+        }
+        .metric-tile .lbl {
+            font-size: 0.85rem;
+            color: var(--text-secondary, #94a3b8);
+        }
+        .arch-diagram {
+            background: #090d16;
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: var(--font-mono, monospace);
+            font-size: 0.82rem;
+            line-height: 1.55;
+            color: #e2e8f0;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        .status-chip {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 14px;
+            padding: 1.5rem;
+        }
+        .card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #f8fafc;
+        }
+        .card p, .card li {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        .card ul {
+            margin-top: 0.75rem;
+            padding-left: 1.2rem;
+            list-style: disc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.9rem 1.1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.9rem;
+        }
+        th {
+            background: rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+        pre {
+            background: #090d16;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 12px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-size: 0.84rem;
+            line-height: 1.55;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.6rem 1.15rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            color: #34d399;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+                <a href="index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 via-cyan-400 to-violet-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">W</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-emerald-400 text-xl"> / QualiaDB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+                <div class="flex items-center gap-3 shrink-0">
+                    <a href="release-matrix.html" class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-xs font-semibold hover:bg-emerald-500/20 transition">
+                        <i class="fa-solid fa-layer-group"></i> 0.0.41 Release Matrix
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+        <div class="showcase-hero">
+            <div class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35);">Release Overview &amp; Architecture Guide · v0.0.41</div>
+            <h1 style="margin-top: 0.75rem; font-size: 2.5rem;">QualiaDB &amp; Webizen 0.0.41: Tri-Source Modular Architecture</h1>
+            <p class="subtitle" style="max-width: 920px; font-size: 1.12rem; line-height: 1.65;">
+                Release <strong>0.0.41</strong> unifies the local-first semantic graph engine, rights-respecting human-centric operating habitat, and pure-Rust GPU/physics accelerator ecosystem across a clean <strong>tri-source architecture</strong> (<code>qualiaDB</code>, <code>etalon</code>, and <code>vibe-script</code>). It delivers <code>.q42</code> v4 Unified Volumes with 5-field <code>NQuin</code> XOR parity, the Four-Plane Identifier Fabric, the Omni-Scale Coordinate System (<code>OCS</code>), 384-bit Qualia Source Routing (<code>QSR</code>), and the canonical Etalon GPU, 3D XPBD physics, and Holosonic spatial audio stack.
+            </p>
+            <p class="subtitle" style="max-width: 920px;">
+                Explore the architectural pillars, crate ownership boundaries, and qualification summary below, or launch an interactive demonstration in the browser.
+            </p>
+            <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                <a href="release-showcase-0.0.41.html" class="btn btn-primary" style="text-decoration: none;">Open 0.0.41 Demos &amp; Showcases →</a>
+                <a href="#ecosystem" class="btn btn-primary" style="text-decoration: none;">Explore Tri-Source Ecosystem →</a>
+                <a href="#migration-closeout" class="btn btn-primary" style="text-decoration: none;">Qualification &amp; Architecture Summary →</a>
+                <a href="wasm-engine.html" class="btn" style="text-decoration: none; background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8;">WASM Volumetric &amp; Portal SDK →</a>
+                <a href="vibe/index.html" class="btn" style="text-decoration: none; background: rgba(168, 85, 247, 0.14); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc;">VibeScript (vibe-0.03) →</a>
+                <a href="progress-0.0.40.html" class="btn" style="text-decoration: none; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1;">View v0.0.40 Baseline →</a>
+            </div>
+        </div>
+
+        <div class="metric-strip" aria-label="0.0.41 Key Architectural Metrics">
+            <div class="metric-tile">
+                <div class="val">29 Crates</div>
+                <div class="lbl">QualiaDB workspace synchronized at v0.0.41</div>
+            </div>
+            <div class="metric-tile">
+                <div class="val">48 B / 5-Field</div>
+                <div class="lbl">NQuin XOR parity (S ^ P ^ O ^ C ^ M) in .q42 v4</div>
+            </div>
+            <div class="metric-tile">
+                <div class="val">4 Planes</div>
+                <div class="lbl">Entity · Claim · Handle · Instrument firewall</div>
+            </div>
+            <div class="metric-tile">
+                <div class="val">27 Opcodes</div>
+                <div class="lbl">Omni-Scale Coordinate System (OCS) &amp; 10D</div>
+            </div>
+            <div class="metric-tile">
+                <div class="val">384-Bit QSR</div>
+                <div class="lbl">Radix-16 source routing &amp; SHA-384 CSCP</div>
+            </div>
+        </div>
+
+        <section id="release-experiences" style="margin-bottom: 4rem;">
+            <span class="pillar-badge pillar-2">Explore · Create · Compute · Connect</span>
+            <h2>Core Capabilities in 0.0.41</h2>
+            <p>Each capability below pairs deterministic zero-heap hot-path execution in Rust with thin semantic adapters in QualiaDB and interactive browser surfaces.</p>
+            <div class="grid">
+                <article class="card"><h3>Build 10D Worlds &amp; Living Scenes</h3><p>Combine <code>etalon-sim</code> (PGA motor skinning, 3D SDF XPBD fracture, EcoPunk continuum) and <code>etalon-render</code> (volumetric raymarching, EMF slicing, Flexbox HUD) with QualiaDB semantic adapters and WebGPU device-loss recovery.</p><a href="release-showcase-0.0.41.html">Explore spatial and creative demos →</a></article>
+                <article class="card"><h3>Omni-Scale Coordinates &amp; Science</h3><p>Transform seamlessly from sub-millimeter local frames to relativistic cosmological horizons using <code>USRI</code> / <code>CB-USRI</code>, 27 cosmic opcodes, exact Lorentz boosts, IAU 2006/2000B <code>ICRS → ITRS</code>, and flat &Lambda;CDM Gauss–Kronrod <em>G</em><sub>7</sub>/<em>K</em><sub>15</sub> integration.</p><a href="spatial.html">Open Spatial &amp; OCS Explorer →</a> · <a href="science-playground.html">Science Playground →</a></article>
+                <article class="card"><h3>Checked Authoring with VibeScript</h3><p>Author deterministic functional programs with explicit <code>effect fn</code> boundaries, reusable <code>CompiledCell</code> bytecode (<code>VBC1</code>), value-producing <code>if-else</code> expressions, and 18 biological/ecological continuum capabilities.</p><a href="poet-app/index.html">Open Poet →</a> · <a href="vibe/playground.html">Try VibeScript →</a></article>
+                <article class="card"><h3>Reusable Etalon GPU &amp; Signal Stack</h3><p>Develop and certify GPU shaders, radix sorters, forward tensor arenas, 3D FDTD electromagnetic solvers, and Holosonic HRTF spatial audio in dedicated Etalon crates with standalone test harnesses.</p><a href="forge-showcase.html">Explore WGSL Forge →</a> · <a href="playground/etalon-vibe-harness.html">Device Harness →</a></article>
+                <article class="card"><h3>Four-Plane Identity &amp; .q42 v4 Volumes</h3><p>Enforce strict separation between natural persons (<code>Entity</code>), signed attestations (<code>Claim</code>), network endpoints (<code>Handle</code>), and tools (<code>Instrument</code>), backed by <code>PCAT</code> prose catalogues and <code>Q42LEX</code> v4 namespaced lexicons.</p><a href="human-centric-authoring.html">Identity Fabric →</a> · <a href="data-formats.html">.q42 v4 Spec →</a></article>
+                <article class="card"><h3>QDNF 384-Bit QSR &amp; Human-Centric Routing</h3><p>Route frames across 384-bit radix-16 topological addresses with Bellman–Ford dual shortest-path witnesses, <code>SHA-384</code>/<code>HKDF-SHA384</code> <code>CSCP</code> sessions, and a 40-scenario egress policy matrix.</p><a href="qdnf.html">QDNF Architecture →</a> · <a href="qdnf-status.html">QDNF Status →</a></article>
+                <article class="card"><h3>QBDL Mixed HMC Streaming</h3><p>Selective, governed streaming of a heterogeneous QBDL-profile Hyper Media Container over QDNF: many entries per family, Q42 HTTP Range, native IPC, HTTP, and WSS. ProtectedSession is cargo-proven 17/17; mixed mux is in source for the next locked cargo pass.</p><a href="qbdl-streaming.html">QBDL Streaming →</a> · <a href="data-formats.html#binary-containers">HMC Families →</a></article>
+            </div>
+            <p style="margin-top: 1.5rem;"><a class="btn btn-primary" href="release-showcase-0.0.41.html">Browse all interactive demos by capability and runtime →</a></p>
+        </section>
+
+        <section id="ecosystem" style="margin-bottom: 4rem; scroll-margin-top: 6rem;">
+            <span class="pillar-badge pillar-1">Tri-Source Ecosystem · Focused Repositories and Libraries</span>
+            <h2>Three Repositories, Clear Ownership Boundaries</h2>
+            <p>Release 0.0.41 organizes the ecosystem into three focused repositories so low-level GPU/physics kernels, semantic graph governance, and language tooling can be developed, tested, and audited with clean dependency boundaries.</p>
+            <div class="grid">
+                <article class="card"><h3>1. QualiaDB · Semantic Graph &amp; Habitat</h3><p>Owns the 48-byte <code>NQuin</code> graph engine, 21 logical modalities, <code>.q42</code> v4 Unified Volumes, Four-Plane Identifier Fabric, Omni-Scale Coordinate System (<code>OCS</code>), QDNF networking, Webizen desktop habitat, Poet host, and MCP server across 29 workspace crates.</p><a href="https://github.com/mediaprophet/qualiaDB">Explore QualiaDB →</a></article>
+                <article class="card"><h3>2. Etalon · Pure-Rust GPU, Sim &amp; Signal</h3><p>Owns <code>wgpu 30.0.0-etalon</code>, <code>etalon-render</code>, <code>etalon-sim</code>, <code>etalon-signal</code>, <code>etalon-nquin</code>, <code>etalon-tensor</code>, <code>etalon-wgsl-forge</code>, <code>etalon-agent</code>, and <code>etalon-wasm</code>. QualiaDB consumes pinned revisions through thin semantic adapters and <code>qualia-etalon-sensing-bridge</code>.</p><a href="https://github.com/mediaprophet/etalon">Explore Etalon →</a> · <a href="forge-showcase.html">Explore Compute →</a></article>
+                <article class="card"><h3>3. VibeScript · Language &amp; Tooling</h3><p>The <code>vibe-script</code> repository provides language specifications, grammar, editor integration, and authoring guides, paired with the in-tree compiler/VM packages (<code>crates/vibe</code>, <code>crates/vibe-wasm</code>, <code>crates/vibe-lsp</code>, and <code>crates/qualia-vibe-compiler</code>).</p><a href="https://github.com/mediaprophet/vibe-script">Explore VibeScript Tooling →</a> · <a href="vibe/playground.html">Try Checked Authoring →</a></article>
+            </div>
+            <h3>Architectural Progression from 0.0.40 to 0.0.41</h3>
+            <div class="table-scroll" role="region" aria-label="Release progression comparison" tabindex="0"><table>
+                <thead><tr><th scope="col">0.0.40 Foundation</th><th scope="col">0.0.41 Architectural Advancement</th><th scope="col">Reference</th></tr></thead>
+                <tbody>
+                    <tr><td>4-field XOR parity and v2 verbatim lexicons in <code>.q42</code> containers.</td><td><strong><code>.q42</code> v4 Unified Volumes:</strong> 5-field <code>NQuin</code> XOR parity (<code>S ^ P ^ O ^ C ^ M</code>), <code>PCAT</code> prose catalogue, namespaced <code>Q42LEX</code> v4, Sanctuary vs. Commons gates, and 256-bit CRT <code>ExactnessProfile</code>.</td><td><a href="data-formats.html">Data Formats</a> · <a href="integrity.html">Q42 Integrity</a></td></tr>
+                    <tr><td>DID resolution across <code>did:q42:</code> and <code>did:qi:</code>.</td><td><strong>Four-Plane Identifier Fabric (<code>IDF-01</code>–<code>IDF-05</code>):</strong> Strict separation of <code>Entity</code>, <code>Claim</code>, <code>Handle</code>, and <code>Instrument</code> with the <code>F5</code>/<code>F6</code> anti-feature firewall and side-by-side <code>did:q42:</code> / <code>did:webizen:</code> / <code>did:qi:</code>.</td><td><a href="human-centric-authoring.html">Human-Centric Authoring</a> · <a href="qdnf-did-qi.html">did:qi &amp; Fabric</a></td></tr>
+                    <tr><td>Terrestrial GIS streaming and 10D manifold projections.</td><td><strong>Omni-Scale Coordinate System (<code>OCS-10</code>–<code>OCS-13</code>):</strong> <code>USRI</code> / 64B <code>CB-USRI</code>, 27 cosmic opcodes, Lorentz boosts, IAU 2006/2000B <code>ICRS → ITRS</code>, flat &Lambda;CDM Gauss–Kronrod <em>G</em><sub>7</sub>/<em>K</em><sub>15</sub>, <code>Container10D</code>, <code>M64</code>, <code>EMF64</code>, and Semantic QEM.</td><td><a href="spatial.html">Spatial &amp; OCS</a> · <a href="universe.html">Knowledge Universe</a></td></tr>
+                    <tr><td>In-tree GPU rendering, physics, and audio modules.</td><td><strong>Canonical Etalon Stack:</strong> Extracted <code>etalon-render</code>, <code>etalon-sim</code>, <code>etalon-signal</code>, <code>etalon-nquin</code>, <code>etalon-tensor</code>, <code>etalon-wgsl-forge</code>, and <code>etalon-wasm</code> with thin QualiaDB semantic adapters and Portal WebGPU device-loss recovery.</td><td><a href="graphics.html">Graphics</a> · <a href="playground/etalon-vibe-harness.html">Device Harness</a></td></tr>
+                    <tr><td>Local CSCP framing and transition bearers.</td><td><strong>QDNF 384-Bit QSR (<code>NET-18</code>–<code>NET-23</code>):</strong> 384-bit radix-16 source routing, Bellman–Ford dual shortest-path witnesses, <code>SHA-384</code>/<code>HKDF-SHA384</code> <code>CSCP</code> sessions, chunk-to-SuperBlock <code>.q42</code> replication, and 40-scenario egress policy matrix. Current engineering track: <strong>QBDL mixed-HMC streaming</strong> (many entries per family, Q42 HTTP Range) is in source; Wave 3 cargo next.</td><td><a href="qdnf.html">QDNF</a> · <a href="qdnf-status.html">QDNF Status</a> · <a href="qbdl-streaming.html">QBDL Streaming</a></td></tr>
+                </tbody>
+            </table></div>
+            <h3>Focused Cargo Workflows Across Repositories</h3>
+            <p>Each repository supports targeted verification without compiling unrelated application layers:</p>
+            <pre><code># From an Etalon checkout: verify bounded resource contracts, simulation, and signal kernels
+cargo test -p etalon-resources --no-default-features
+cargo test -p etalon-sim -p etalon-signal
+
+# From an Etalon checkout: verify tensor and WGSL forge libraries
+cargo check -p etalon-tensor -p etalon-wgsl-forge --lib
+
+# From QualiaDB: verify workspace consumers against pinned Etalon revisions
+cargo check --locked -p qualia-core-db -p qualia-client-core -p qualia-cli -p qualia-mcp</code></pre>
+        </section>
+
+        <!-- PILLAR 1: ETALON PURE-RUST GPU, SIMULATION & SIGNAL STACK -->
+        <section style="margin-bottom: 4rem;">
+            <span class="pillar-badge pillar-1">Pillar I · Pure-Rust GPU, Simulation &amp; Signal Stack</span>
+            <h2>Canonical Etalon Crate Architecture &amp; QualiaDB Semantic Bridges</h2>
+            <p>
+                The Etalon stack provides pure-Rust GPU resource management, shader generation, <code>NQuin</code> graph acceleration, 10D physics simulation, and wavefield signal processing across <code>qualia-core-db</code>, <code>qualia-etalon-sensing-bridge</code>, <code>webizen-render</code>, and <code>webizen-web</code>.
+            </p>
+
+            <div class="arch-diagram">
+<pre style="margin: 0; background: transparent; border: none; padding: 0;">
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                      ETALON PURE-RUST GPU, SIMULATION &amp; SIGNAL ACCELERATOR STACK                     │
+├──────────────────────┬─────────────────────────────────────────────┬─────────────────────────────────┤
+│ Etalon Crate         │ Core Capabilities &amp; Repr(C) Contracts       │ QualiaDB Semantic Adapter       │
+├──────────────────────┼─────────────────────────────────────────────┼─────────────────────────────────┤
+│ etalon               │ wgpu 30.0.0-etalon fork (WebGPU/DX12/Vk)    │ SharedGpuContext, PortalGpu     │
+│ etalon-render        │ EmfPipeline, VolumetricPipeline,            │ render::gpu::{emf_pipeline,     │
+│                      │ FrameCameraPod (160B), UiLayoutTree (HUD)   │ holographic}, render::hud       │
+│ etalon-sim           │ scene_graph_10d (.10d PROC1/EONT1/MRP1/SKL1)│ qualia-core-db::scene_graph_10d │
+│                      │ pga_skinning, physics_3d_xpbd, ecopunk_world│::*, physics_3d_xpbd, ecopunk    │
+│ etalon-signal        │ holosonic_audio (HRTF, modal, Woodhouse),   │ qualia-core-db::holosonic_audio │
+│                      │ 3D FDTD CFL electromagnetics, rPPG sensing  │ + qualia-etalon-sensing-bridge  │
+│ etalon-nquin         │ Single-submit 8-pass GpuRadixSorter +       │ query::graph_accel::gpu         │
+│                      │ Warp-transposed uvec4 GpuQuinSieve (48B)    │ (Zero intermediate readbacks)   │
+│ etalon-wgsl-forge    │ Typed KernelSpec + Schedule IR, Naga AST    │ wgsl_forge::etalon_bridge       │
+│                      │ certification (WGSL / SPIR-V / PTX / HLSL)  │ generate_and_certify_via_...    │
+│ etalon-agent         │ HalComputeLane, QualiaSlabAllocator,        │ gpu_context::SharedGpuContext   │
+│                      │ SubmissionLease, SiliconCapability          │ try_shared_etalon_hal_lane()    │
+│ etalon-tensor        │ ForwardArena, FusedAttentionPipeline,       │ inference::etalon_tensor_...    │
+│                      │ TopkReductionPipeline, PagedKvBlockTable    │ LogitMaskHeader (80B aligned)   │
+│ etalon-wasm          │ WorkerSteward, SharedArrayBufferRing,       │ render::portal::QualiaPortal    │
+│                      │ TransferableMessageTransport, DeviceLoss    │ + webizen-web::QualiaPortal     │
+└──────────────────────┴─────────────────────────────────────────────┴─────────────────────────────────┘</pre>
+            </div>
+
+            <div class="grid" style="margin-top: 1.75rem;">
+                <div class="card">
+                    <h3>1. <code>etalon-nquin</code>: Single-Submit LSD Radix Sort &amp; Coalesced Quin Sieve</h3>
+                    <p>
+                        <code>crates/qualia-core-db/src/query/graph_accel/gpu.rs</code> delegates directly to <code>etalon_nquin::GpuRadixSorter</code> and <code>etalon_nquin::GpuQuinSieve</code>:
+                    </p>
+                    <ul>
+                        <li><strong>Zero Intermediate Readbacks:</strong> <code>GpuRadixSorter::sort_u64_indices</code> encodes all 8 four-bit LSD radix passes (<code>histogram → prefix_scan → scatter</code>) into a <strong>single GPU command submission</strong> with 8 uniform parameter buffers, eliminating per-pass CPU staging readbacks.</li>
+                        <li><strong>Warp-Transposed <code>uvec4</code> Sieve:</strong> <code>GpuQuinSieve::sieve_eq_indices</code> casts <code>&amp;[NQuin]</code> zero-copy to <code>&amp;[NQuinWire]</code> (48-byte <code>Pod</code>) and performs coalesced 16-byte vector loads across workgroups.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>2. <code>etalon-render</code>: Volumetric, EMF &amp; Zero-Heap Flexbox HUD</h3>
+                    <p>
+                        Wired across <code>qualia-core-db::render</code> and re-exported by <code>webizen-render</code> for both native and <code>wasm32</code>:
+                    </p>
+                    <ul>
+                        <li><strong><code>EmfPipeline</code>:</strong> Decoupled 4D electromagnetic field volumetric slicer (52-byte <code>EmfFieldCell</code>, 64-byte <code>EmfSliceUniform</code>) with VRAM ledger reservation guards.</li>
+                        <li><strong><code>EtalonVolumetricPipeline</code>:</strong> 64-byte <code>HolographicNodeGpu</code>, 160-byte <code>FrameCameraPod</code>, and 48-byte <code>ManifoldProjectionPod</code> with bidirectional <code>From</code> conversions.</li>
+                        <li><strong><code>UiLayoutTree</code>:</strong> Zero-heap stack-allocated Flexbox layout engine (<code>MAX_HUD_LAYOUT_NODES = 128</code>) driving <code>QualiaHud::layout_items_flex(viewport_w, viewport_h)</code>.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>3. <code>etalon-tensor</code> &amp; <code>etalon-wgsl-forge</code>: Certified Compute &amp; Inference Kernels</h3>
+                    <p>
+                        <code>inference::etalon_tensor_bridge</code> and <code>wgsl_forge::etalon_bridge</code> connect the pure-Rust tensor and shader compilers to <code>SharedGpuContext</code>:
+                    </p>
+                    <ul>
+                        <li><strong><code>ForwardArena</code> &amp; <code>PagedKvBlockTable</code>:</strong> Pre-allocated zero-heap transformer forward-pass scratch buffers and paged KV cache block tables with device-identity and liveness guards.</li>
+                        <li><strong><code>FusedAttentionPipeline</code> &amp; <code>TopkReductionPipeline</code>:</strong> Online softmax rescaling with an explicit all-masked guard (<code>prev_max == -INFINITY &amp;&amp; block_max == -INFINITY</code>) and 80-byte aligned <code>LogitMaskHeader</code>.</li>
+                        <li><strong><code>generate_and_certify_via_etalon</code>:</strong> Compiles <code>BuiltinKernel</code> + <code>Schedule</code> to WGSL/SPIR-V/PTX/HLSL and runs Naga AST validation before dispatch.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>4. <code>etalon-agent</code> &amp; <code>etalon-wasm</code>: Hardware Lanes &amp; Browser Steward</h3>
+                    <p>
+                        Deterministic resource governance from bare-metal PCIe/UMA to cross-origin isolated browser workers:
+                    </p>
+                    <ul>
+                        <li><strong><code>HalComputeLane</code> &amp; <code>QualiaSlabAllocator</code>:</strong> Exposed via <code>SharedGpuContext::create_etalon_hal_lane()</code> and <code>create_etalon_slab_allocator()</code> with <code>SubmissionLease</code> foreign-queue rejection and <code>SiliconCapability</code> state machines.</li>
+                        <li><strong><code>WorkerSteward</code>:</strong> Automatically negotiates <code>SharedArrayBufferRing</code> (when <code>window.crossOriginIsolated === true</code>) vs. <code>TransferableMessageTransport</code> fallback, tracking device loss and session recovery generations.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- PILLAR 2: CROSS-PLATFORM WASM VOLUMETRIC & CANVAS2D PIPELINE -->
+        <section style="margin-bottom: 4rem;">
+            <span class="pillar-badge pillar-2">Pillar II · Cross-Platform Browser &amp; Edge Runtime</span>
+            <h2>Unified <code>webizen-render</code> &amp; <code>webizen-web</code> WASM Volumetric Pipeline</h2>
+            <p>
+                <code>webizen-render</code>'s <code>volumetric</code>, <code>volumetric_hmc</code>, and <code>volumetric_texture</code> modules integrate across native and <code>wasm32-unknown-unknown</code> targets with <code>webizen-web</code> (<code>qualia-wasm</code>), providing hardware WebGPU volumetric rendering alongside deterministic Canvas2D fallback and live DOM device-loss recovery.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component / Method</th>
+                        <th>Target Scope</th>
+                        <th>0.0.41 Capability &amp; Behaviour</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>VolumetricRenderer::from_canvas(canvas, cap)</code></td>
+                        <td><code>wasm32-unknown-unknown</code></td>
+                        <td>Initializes a hardware WebGPU <code>PortalGpu</code> surface directly on an <code>HtmlCanvasElement</code> with capability-intersected limits.</td>
+                        <td><span class="status-chip">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>VolumetricRenderer::render_scene_frame(...)</code></td>
+                        <td>Native + <code>wasm32</code></td>
+                        <td>Uploads 10D node tensors (<code>Tensor10D</code>) and colored scene meshes from a <code>RenderScene</code>, updates camera matrices, and executes the volumetric pass.</td>
+                        <td><span class="status-chip">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>QualiaPortal::init_webgpu(canvas)</code></td>
+                        <td><code>webizen-web</code> (WASM)</td>
+                        <td>Upgrades <code>QualiaPortal</code> to <strong>Tier 2 (WebGPU Volumetric)</strong>, marks <code>WorkerSteward</code> ready, uploads cached tensor state, and renders the active <code>RenderScene</code>.</td>
+                        <td><span class="status-chip">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>SimpleCanvasRenderer::render_scene(scene, yaw)</code></td>
+                        <td><code>webizen-web</code> (WASM)</td>
+                        <td>Full <strong>Tier 1 (Canvas2D)</strong> fallback for <code>RenderScene</code> contracts—projects and draws translucent faces, directed edges, and labeled nodes before painting the HUD overlay.</td>
+                        <td><span class="status-chip">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td><code>etalon_transport_mode()</code> / <code>etalon_worker_state()</code></td>
+                        <td><code>qualia-core-db</code> + <code>webizen-web</code></td>
+                        <td>Exposes live <code>etalon-wasm</code> transport negotiation (<code>"SharedArrayBuffer"</code> vs <code>"TransferableMessage"</code>), worker state, and session generation to JavaScript.</td>
+                        <td><span class="status-chip">Verified</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <pre><code>// Browser JavaScript: Hardware WebGPU Volumetric Rendering with Automatic Canvas2D Fallback
+import init, { QualiaPortal } from './pkg/qualia/qualia_wasm.js';
+
+await init();
+const canvas = document.getElementById('qualia-viewport');
+const portal = new QualiaPortal(canvas);
+
+// Inspect Etalon-WASM transport negotiation ("SharedArrayBuffer" when COOP/COEP active)
+console.log('Transport:', portal.etalon_transport_mode(), 'Gen:', portal.etalon_session_generation());
+
+// Load a cross-platform RenderScene contract (or 10D tensor manifold)
+portal.load_json_scene(JSON.stringify(renderSceneContract));
+
+// Attempt Tier-2 WebGPU Volumetric upgrade; gracefully stays on Tier-1 Canvas2D if unavailable
+try {
+    const tier = await portal.init_webgpu(canvas);
+    console.log('Upgraded to WebGPU Volumetric Tier:', tier);
+} catch (err) {
+    console.log('Running deterministic Tier-1 Canvas2D scene + HUD renderer');
+}</code></pre>
+        </section>
+
+        <!-- PILLAR 3: 10-EPIC GAME ENGINE & ECOPUNK BIOLOGICAL CONTINUUM -->
+        <section style="margin-bottom: 4rem;">
+            <span class="pillar-badge pillar-3">Pillar III · Etalon Simulation, Spatial Audio &amp; EcoPunk Continuum</span>
+            <h2><code>.10d</code> Living Containers, PGA Motor Skinning, XPBD Fracture &amp; 18 Vibe-0.03 Capabilities</h2>
+            <p>
+                Canonical simulation and wavefield crates in Etalon (<code>etalon-sim</code>, <code>etalon-signal</code>, and <code>etalon-render</code>) provide the 10D spatial scene graph, skeletal kinematics, XPBD fracture, Holosonic audio, and ecological world-building kernels, surfaced in QualiaDB through thin semantic adapters in <code>qualia-core-db</code>, <code>qualia-etalon-sensing-bridge</code>, and <code>qualia-vibe-compiler</code>:
+            </p>
+
+            <div class="grid">
+                <div class="card">
+                    <h3><code>.10d</code> Living Containers (<code>etalon-sim</code> + <code>qualia-core-db</code>)</h3>
+                    <p>
+                        Canonical <code>etalon_sim::scene_graph_10d</code> container primitives paired with <code>qualia_core_db::scene_graph_10d</code> semantic adapters extend 64-byte aligned <code>P64</code> containers with four procedural 10D chunk types:
+                    </p>
+                    <ul>
+                        <li><code>PROC1</code> (<code>0x0010</code>): Deterministic 64-byte CSG + SDF procedural operator nodes.</li>
+                        <li><code>EONT1</code> (<code>0x0011</code>): 48-byte <code>NQuin</code> ontological state machine rules embedded inside spatial assets.</li>
+                        <li><code>MRP1</code> (<code>0x0012</code>): Quantized delta-compressed morph targets for continuous biological growth.</li>
+                        <li><code>SKL1</code> (<code>0x0013</code>): 64-byte Projective Geometric Algebra ($\mathbf{Cl}(3,0,1)$) <code>Motor</code> bone hierarchies.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>GPU PGA Motor Skinning &amp; IK (<code>etalon-sim</code>)</h3>
+                    <p>
+                        Canonical <code>etalon_sim::pga_skinning</code> with <code>qualia-core-db</code> semantic adapters provides artifact-free skeletal animation and procedural locomotion without heap allocation:
+                    </p>
+                    <ul>
+                        <li><strong>PGA Motor Blend Skinning:</strong> <code>pga_skinning</code> blends 8-component motors $\mathbf{M} = \sum w_i \mathbf{M}_i$ with volume-preserving normalization and WGSL compute kernel generation.</li>
+                        <li><strong>2D Delaunay Blend Spaces &amp; ABSM:</strong> Barycentric triangle interpolation and 4-layer Animation Blueprint State Machines with inertialization transitions.</li>
+                        <li><strong>Two-Bone + FABRIK IK:</strong> Analytic hinge/pole knee solver + 8-iteration FABRIK chain solver with foot-placement terrain raycast alignment.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>3D SDF XPBD Fracture &amp; Holosonic Audio (<code>etalon-sim</code> &amp; <code>etalon-signal</code>)</h3>
+                    <p>
+                        Canonical <code>etalon_sim::physics_3d_xpbd</code> and <code>etalon_signal::holosonic_audio</code> kernels bridged through <code>qualia-core-db</code> and <code>qualia-etalon-sensing-bridge</code>:
+                    </p>
+                    <ul>
+                        <li><strong>Substepped Gauss-Seidel XPBD:</strong> Distance, bending, volume-conservation, and 6-DOF Cosserat rod constraints with compliance $\tilde{\alpha} = \alpha / \Delta t^2$.</li>
+                        <li><strong>Rank-2 Stress Tensor Cleavage:</strong> Tracks Cauchy stress $\sigma_{ij}$ per bond and cleaves structural links along principal stress planes when $\sigma_{\max} &gt; \sigma_{\text{yield}}$.</li>
+                        <li><strong>Holosonic 3D Wavefield &amp; FDTD:</strong> <code>etalon-signal</code> synthesizes modal impact resonances, Woodhouse bow-string friction, spherical-harmonic HRTF binaural audio, and 3D FDTD CFL electromagnetic fields.</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>EcoPunk 26.5 km Continuum (<code>etalon-sim</code> &amp; <code>vibe-0.03</code>)</h3>
+                    <p>
+                        Canonical <code>etalon_sim::ecopunk_world</code> coupled with 18 first-class capabilities in <code>qualia-vibe-compiler</code> compiled to <code>VBC1</code> (<code>.qbc</code>) bytecode:
+                    </p>
+                    <ul>
+                        <li><strong>Botanical Anatomy (5):</strong> <code>LSystemCanopy</code>, <code>XylemHydraulicFlow</code>, <code>MycorrhizalCarbonTrade</code>, <code>PhotosyntheticField</code>, <code>RootSoilReinforcement</code>.</li>
+                        <li><strong>Zoological Anatomy (5):</strong> <code>ArticulatedSkeleton</code>, <code>HillMuscleFiber</code>, <code>CardiopulmonaryMetabolism</code>, <code>SensoryReceptiveField</code>, <code>LocomotionGait</code>.</li>
+                        <li><strong>Ontology &amp; Continuum (8):</strong> <code>TaxonomicLineage</code>, <code>TrophicCascade</code>, <code>HomeostaticDrive</code>, <code>WatershedHydrology</code>, <code>MicroclimateCanopy</code>, <code>SoilBiogeochemistry</code>, <code>TensorFieldStream</code>, <code>LivingContainerMount</code>.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- PILLAR 4: WORKSPACE, QAPPS & MCP 2.0 -->
+        <section style="margin-bottom: 3rem;">
+            <span class="pillar-badge pillar-4">Pillar IV · 29-Crate Workspace, QApps &amp; Agent Protocol</span>
+            <h2>29-Crate Workspace Architecture &amp; Continuous Verification</h2>
+            <p>
+                The QualiaDB workspace synchronizes 29 member crates at version <code>0.0.41</code> with shared metadata, zero-heap hot-path enforcement, and automated native and WASM verification:
+            </p>
+            <ul>
+                <li><strong><code>qualia-qapps</code>:</strong> Portable Semantic Application Manifest registry, capability readiness inspector, and surface schema verifier for human-centric QApps.</li>
+                <li><strong><code>qualia-mcp</code>:</strong> JSON-RPC 2.0 Model Context Protocol server exposing 54+ deterministic tools (SPARQL, SHACL, Deontic/Epistemic/Paraconsistent logic, CAS, Chemistry, Bioinformatics, Clinical Risk, Geometry, and <code>mcp_cooperate</code> agent handshakes).</li>
+                <li><strong><code>qualia-sim</code>, <code>qualia-geospatial</code> &amp; <code>qualia-etalon-sensing-bridge</code>:</strong> 64 Hz multi-physics simulation loop, hydro-enforced GeoTIFF / Hilbert 3D / WFS-WMS / diachronic linguistic isogloss streaming, and Etalon signal/sensing adaptation.</li>
+                <li><strong>Continuous WASM &amp; Pages CI:</strong> <code>.github/workflows/release-wasm.yml</code> and <code>pages.yml</code> verify all documentation consistency, lexicon v4, device-harness, and smoke suites alongside native and <code>wasm32-unknown-unknown</code> builds.</li>
+            </ul>
+        </section>
+
+        <!-- AUTHORITATIVE 0.0.41 TRI-SOURCE ARCHITECTURE & QUALIFICATION SUMMARY -->
+        <details id="migration-closeout" open style="margin: 3rem 0; scroll-margin-top: 6rem;">
+            <summary style="cursor: pointer; font-size: 1.25rem; font-weight: 700; padding: 1rem 0;">0.0.41 Tri-Source Architecture &amp; Qualification Summary</summary>
+            <span class="pillar-badge pillar-1">Release 0.0.41 · Tri-Source Architecture &amp; Qualification</span>
+            <h2>Comprehensive Subsystem Ownership &amp; Verification Record</h2>
+            <p>
+                Release 0.0.41 establishes a clean tri-source engineering architecture across <code>qualiaDB</code>, <code>etalon</code>, and <code>vibe-script</code>. The four subsystem groups below summarize the completed architectural deliverables and their verification boundaries.
+            </p>
+
+            <h3>1. Etalon Accelerator &amp; Simulation Stack</h3>
+            <div class="table-scroll" role="region" aria-label="Etalon Accelerator and Simulation Stack table" tabindex="0"><table>
+                <thead><tr><th scope="col">Crate / Bridge</th><th scope="col">Canonical Responsibility</th><th scope="col">QualiaDB Integration &amp; Verification</th></tr></thead>
+                <tbody>
+                    <tr><td><code>etalon</code> &amp; <code>etalon-agent</code></td><td><code>wgpu 30.0.0-etalon</code> WebGPU/Vulkan/DX12/Metal backend, <code>HalComputeLane</code>, <code>QualiaSlabAllocator</code>, <code>SubmissionLease</code> foreign-queue rejection, and retained-device liveness checks.</td><td>Bound through <code>SharedGpuContext</code> and <code>PortalGpu</code> while preserving the 42 MiB Sentinel ceiling and explicit cold-construction budgets.</td></tr>
+                    <tr><td><code>etalon-render</code> &amp; <code>etalon-wasm</code></td><td><code>VolumetricPipeline</code>, <code>EmfPipeline</code>, 128-node zero-heap Flexbox <code>UiLayoutTree</code>, <code>WorkerSteward</code> transport negotiation (<code>SharedArrayBufferRing</code> vs. <code>TransferableMessageTransport</code>), and generation-tracked device-loss recovery.</td><td>Integrated into <code>qualia-core-db::render</code>, <code>webizen-render</code>, and <code>webizen-web::QualiaPortal</code> with verified DOM canvas replacement and WebGPU recovery.</td></tr>
+                    <tr><td><code>etalon-sim</code> &amp; <code>etalon-signal</code></td><td>Canonical <code>scene_graph_10d</code> (<code>.10d</code> living containers), <code>pga_skinning</code> (Motor dual-quaternions, ABSM, Two-Bone/FABRIK IK), <code>physics_3d_xpbd</code> (rank-2 Cauchy stress cleavage), <code>ecopunk_world</code>, <code>holosonic_audio</code> (HRTF/modal/Woodhouse), and 3D FDTD CFL electromagnetics.</td><td>Adapted into QualiaDB semantic graphs and simulation loops via <code>qualia-core-db</code>, <code>qualia-sim</code>, and <code>qualia-etalon-sensing-bridge</code>.</td></tr>
+                    <tr><td><code>etalon-nquin</code>, <code>etalon-tensor</code> &amp; <code>etalon-wgsl-forge</code></td><td>Single-submit 8-pass GPU LSD radix sort, warp-transposed <code>uvec4</code> 48-byte Quin sieve, device-guarded <code>ForwardArena</code> / <code>PagedKvBlockTable</code>, <code>FusedAttentionPipeline</code>, and Naga-certified WGSL/SPIR-V/PTX/HLSL kernel generation.</td><td>Wired through <code>query::graph_accel::gpu</code>, <code>inference::etalon_tensor_bridge</code>, and <code>wgsl_forge::etalon_bridge</code>.</td></tr>
+                </tbody>
+            </table></div>
+
+            <h3>2. Four-Plane Identifier Fabric &amp; <code>.q42</code> v4 Unified Volumes (<code>IDF-01</code>–<code>IDF-05</code>, <code>Q42-00</code>, <code>Q42-06</code>–<code>Q42-08</code>)</h3>
+            <div class="table-scroll" role="region" aria-label="Identifier Fabric and Q42 v4 Volumes table" tabindex="0"><table>
+                <thead><tr><th scope="col">Specification ID</th><th scope="col">Capability</th><th scope="col">Architectural Guarantee</th></tr></thead>
+                <tbody>
+                    <tr><td><code>IDF-01</code> – <code>IDF-05</code></td><td>Four-Plane Identifier Fabric (<code>Entity</code>, <code>Claim</code>, <code>Handle</code>, <code>Instrument</code>) &amp; <code>F5</code>/<code>F6</code> Anti-Feature Firewall</td><td>Enforces cryptographic separation between natural persons/entities (<code>did:webizen:</code>), graph claims (<code>did:q42:</code>), network routing endpoints (<code>did:qi:</code>), and bounded instruments. Handle revocation never erases personal identity, and instruments cannot impersonate human peers.</td></tr>
+                    <tr><td><code>Q42-00</code> &amp; <code>Q42-06</code></td><td><code>.q42</code> v4 Unified Volumes, 5-Field <code>NQuin</code> Parity &amp; <code>PCAT</code> Prose Catalogue</td><td>Upgrades <code>NQuin</code> parity to cover all five payload fields (<code>subject ^ predicate ^ object ^ context ^ metadata</code>) and embeds the length-prefixed <code>PCAT</code> prose catalogue for zero-copy document and literal retrieval.</td></tr>
+                    <tr><td><code>Q42-07</code> &amp; <code>Q42-08</code></td><td>Namespaced <code>Q42LEX</code> v4, Sanctuary vs. Commons Gates &amp; 256-Bit CRT</td><td>Introduces per-page namespace tables (<code>0x04</code> prefix-split entries) for HTTP IRIs, DIDs, and URNs in <code>Q42LEX</code> v4; enforces Sanctuary vs. Commons publication gates; and verifies exact multi-modular arithmetic via <code>ExactnessProfile</code> and 256-bit Chinese Remainder Theorem (CRT) reconstruction.</td></tr>
+                </tbody>
+            </table></div>
+
+            <h3>3. Omni-Scale Coordinate System (<code>OCS-10</code>–<code>OCS-13</code>) &amp; VibeScript <code>vibe-0.03</code></h3>
+            <div class="table-scroll" role="region" aria-label="Omni-Scale Coordinate System and VibeScript table" tabindex="0"><table>
+                <thead><tr><th scope="col">Subsystem</th><th scope="col">Core Primitives</th><th scope="col">Verification &amp; Runtime Scope</th></tr></thead>
+                <tbody>
+                    <tr><td><code>OCS-10</code> – <code>OCS-13</code> · Cosmic &amp; Terrestrial Reference Frames</td><td><code>USRI</code> textual URIs and 64-byte binary <code>CB-USRI</code> descriptors, 27 cosmic opcodes, exact special-relativistic Lorentz boosts, IAU 2006/2000B <code>ICRS → ITRS</code> terrestrial frame transforms, and flat &Lambda;CDM comoving radial distance via adaptive Gauss–Kronrod <em>G</em><sub>7</sub>/<em>K</em><sub>15</sub> quadrature.</td><td>Zero-heap evaluation across astro-geodetic scales, integrated with <code>Container10D</code>, <code>M64</code> matter volumes, <code>EMF64</code> 3D FDTD CFL electromagnetic grids, and Semantic QEM mesh simplification.</td></tr>
+                    <tr><td>VibeScript <code>vibe-0.03</code> &amp; <code>VBC1</code> Bytecode</td><td>Pure functional language core with explicit <code>effect fn</code> host boundaries, reusable <code>CompiledCell::compile</code> execution, value-producing <code>if-else</code> expressions, and 18 EcoPunk biological/ecological capability opcodes.</td><td>Compiled to deterministic <code>VBC1</code> (<code>.qbc</code>) bytecode and exposed in browser WASM (<code>vibe-wasm</code>), LSP (<code>vibe-lsp</code>), and the Poet application host.</td></tr>
+                </tbody>
+            </table></div>
+
+            <h3>4. QDNF 384-Bit QSR, CSCP Security &amp; Tri-Source Qualification (<code>NET-18</code>–<code>EVAL-24</code>)</h3>
+            <div class="table-scroll" role="region" aria-label="QDNF and Tri-Source Qualification table" tabindex="0"><table>
+                <thead><tr><th scope="col">Domain</th><th scope="col">Delivered Specification</th><th scope="col">Qualification Summary</th></tr></thead>
+                <tbody>
+                    <tr><td><code>NET-18</code> – <code>NET-21</code> · 384-Bit QSR &amp; CSCP</td><td>384-bit radix-16 Qualia Source Routing (<code>QSR</code>), Bellman–Ford dual shortest-path witness verification, and <code>SHA-384</code> / <code>HKDF-SHA384</code> <code>CSCP</code> authenticated session framing.</td><td>Deterministic loop-free path attestation, sub-context quarantine on routing anomalies, and authenticated local and transition-bearer transport.</td></tr>
+                    <tr><td><code>NET-22</code> – <code>NET-23</code> · Replication &amp; Egress Policy</td><td>Chunk-to-SuperBlock <code>.q42</code> v4 differential volume replication (<code>QSync</code>) and a 40-scenario egress policy matrix (<code>QPolicy</code>).</td><td>Fail-closed Sanctuary boundaries ensure private context graphs never leak across public or bilateral commons lanes.</td></tr>
+                    <tr><td>QBDL mixed HMC streaming · in-tree source</td><td>Selective disclosure of a heterogeneous QBDL-profile Hyper Media Container over QDNF: Describe / DescriptorPage, planner mux of many entries per family, EMF/QAC/P64 stream views, Q42 authenticated HTTP Range, native IPC plus labelled HTTP/WSS bearers.</td><td>ProtectedSession 17/17 cargo-proven. Mixed mux, Range, and <code>write_leaf</code> stage-drop await the next locked <code>qualia-core-db --lib</code> pass. ZIP <code>.hmc</code> and PhysicalNetwork two-host stay later. See <a href="qbdl-streaming.html">QBDL streaming</a>.</td></tr>
+                    <tr><td><code>EVAL-24</code> · Tri-Source Suite &amp; Browser Harness</td><td>End-to-end verification across the <code>etalon</code> test suite (4,810 passed tests), native Vulkan/DX12 GPU lifecycle checks, locked 29-crate <code>qualiaDB</code> workspace compilation, and isolated browser device diagnostics.</td><td>Interactive browser verification is available via the <a href="playground/etalon-vibe-harness.html">Etalon + Vibe Device Harness</a>, <a href="qdnf-status.html">QDNF Status Matrix</a>, and <a href="release-matrix.html">0.0.41 Release Matrix</a>.</td></tr>
+                </tbody>
+            </table></div>
+
+            <p style="margin-top: 1.5rem;">
+                Explore live browser diagnostics and artifact matrices at:
+                <a href="playground/etalon-vibe-harness.html" class="text-emerald-300 underline">Etalon + Vibe Browser Device Harness</a> ·
+                <a href="qdnf-status.html" class="text-cyan-300 underline">QDNF Implementation Status</a> ·
+                <a href="qbdl-streaming.html" class="text-amber-300 underline">QBDL Mixed HMC Streaming</a> ·
+                <a href="release-matrix.html" class="text-violet-300 underline">0.0.41 Release Matrix</a>.
+            </p>
+        </details>
+
+    </main>
+
+    <footer></footer>
+    <script src="js/nav.js"></script>
+    <script>
+        function revealReleaseRecord() {
+            if (location.hash === '#migration-closeout') document.getElementById('migration-closeout').open = true;
+        }
+        addEventListener('hashchange', revealReleaseRecord);
+        revealReleaseRecord();
+    </script>
+</body>
+</html>

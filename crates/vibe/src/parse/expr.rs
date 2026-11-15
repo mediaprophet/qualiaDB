@@ -1,10 +1,12 @@
 use super::*;
 
 impl<'a> Parser<'a> {
+    /// Parses expr.
     pub(crate) fn parse_expr(&mut self) -> Result<Expr, Diagnostic> {
         self.parse_pipeline()
     }
 
+    /// Parses pipeline.
     pub(crate) fn parse_pipeline(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_tween()?;
         while self.cur.kind == TokenKind::PipeGt {
@@ -22,6 +24,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses tween.
     pub(crate) fn parse_tween(&mut self) -> Result<Expr, Diagnostic> {
         let from = self.parse_or()?;
         if self.cur.kind != TokenKind::Tilde {
@@ -85,6 +88,7 @@ impl<'a> Parser<'a> {
         Ok(out)
     }
 
+    /// Parses or.
     pub(crate) fn parse_or(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_and()?;
         while self.cur.kind == TokenKind::PipePipe {
@@ -162,6 +166,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses and.
     pub(crate) fn parse_and(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_eq()?;
         while self.cur.kind == TokenKind::AmpAmp {
@@ -172,6 +177,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses eq.
     pub(crate) fn parse_eq(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_rel()?;
         loop {
@@ -187,6 +193,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses rel.
     pub(crate) fn parse_rel(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_add()?;
         loop {
@@ -204,6 +211,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses add.
     pub(crate) fn parse_add(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_mul()?;
         loop {
@@ -219,6 +227,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses mul.
     pub(crate) fn parse_mul(&mut self) -> Result<Expr, Diagnostic> {
         let mut left = self.parse_unary()?;
         loop {
@@ -235,6 +244,7 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    /// Parses unary.
     pub(crate) fn parse_unary(&mut self) -> Result<Expr, Diagnostic> {
         if self.kw("await") {
             let start = self.cur.span.start;
@@ -266,8 +276,20 @@ impl<'a> Parser<'a> {
         self.parse_postfix()
     }
 
+    /// Parses postfix.
     pub(crate) fn parse_postfix(&mut self) -> Result<Expr, Diagnostic> {
+        let bare_conditional = self.kw("if");
         let mut expr = self.parse_primary()?;
+        if bare_conditional
+            && matches!(
+                self.cur.kind,
+                TokenKind::Dot | TokenKind::LParen | TokenKind::LBracket | TokenKind::Question
+            )
+        {
+            return Err(self.err(
+                "wrap the conditional expression in parentheses before applying '.', '(', '[' or '?'",
+            ));
+        }
         loop {
             match self.cur.kind {
                 TokenKind::Dot => {
@@ -330,6 +352,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    /// Parses args.
     pub(crate) fn parse_args(&mut self) -> Result<Vec<Arg>, Diagnostic> {
         let mut args = Vec::new();
         if self.cur.kind == TokenKind::RParen {
@@ -341,9 +364,19 @@ impl<'a> Parser<'a> {
                 let name = self.text().to_string();
                 self.bump()?;
                 if self.cur.kind == TokenKind::Colon {
+                    let colon_span = self.cur.span;
                     let start = save_span.start;
                     self.bump()?;
-                    if is_named_arg_key(&name) {
+                    let adjacent_curie = save_span.end == colon_span.start
+                        && colon_span.end == self.cur.span.start
+                        && matches!(
+                            self.cur.kind,
+                            TokenKind::Int | TokenKind::Ident | TokenKind::Keyword
+                        )
+                        && !(self.cur.kind == TokenKind::Keyword && is_stmt_kw(self.text()))
+                        && self.text() != "true"
+                        && self.text() != "false";
+                    if is_named_arg_key(&name) || !adjacent_curie {
                         let value = self.parse_expr()?;
                         args.push(Arg::Named(NamedArg {
                             span: Span::new(start, value.span.end),
@@ -352,10 +385,13 @@ impl<'a> Parser<'a> {
                         }));
                     } else {
                         let local = self.expect_prefixed_local()?;
-                        args.push(Arg::Pos(Expr {
+                        let mut expr = Expr {
                             span: Span::new(start, self.prev_end(save_span.end)),
                             kind: ExprKind::Prefixed(name, local),
-                        }));
+                        };
+                        expr = self.continue_postfix(expr)?;
+                        expr = self.continue_binary(expr)?;
+                        args.push(Arg::Pos(expr));
                     }
                 } else {
                     let mut expr = Expr {
@@ -378,6 +414,7 @@ impl<'a> Parser<'a> {
         Ok(args)
     }
 
+    /// Continues a postfix expression.
     pub(crate) fn continue_postfix(&mut self, mut expr: Expr) -> Result<Expr, Diagnostic> {
         loop {
             match self.cur.kind {
@@ -430,7 +467,11 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
+    /// Parses primary.
     pub(crate) fn parse_primary(&mut self) -> Result<Expr, Diagnostic> {
+        if self.kw("if") {
+            return self.parse_if_expr();
+        }
         if self.cur.kind == TokenKind::Pipe {
             return self.parse_lambda();
         }
@@ -452,15 +493,42 @@ impl<'a> Parser<'a> {
                     let mut depth = 1;
                     let expr_start = i + 1;
                     i += 1;
+                    let mut in_str = false;
+                    let mut esc = false;
                     while i < bytes.len() && depth > 0 {
-                        if bytes[i] == b'{' {
+                        let b = bytes[i];
+                        if in_str {
+                            if esc {
+                                esc = false;
+                            } else if b == b'\\' {
+                                esc = true;
+                            } else if b == b'"' {
+                                in_str = false;
+                            }
+                        } else if b == b'"' {
+                            in_str = true;
+                        } else if b == b'{' {
                             depth += 1;
-                        } else if bytes[i] == b'}' {
+                        } else if b == b'}' {
                             depth -= 1;
                         }
                         i += 1;
                     }
+                    if depth != 0 {
+                        return Err(Diagnostic::new(
+                            DiagCode::E001,
+                            Span::new(start, end),
+                            "unclosed '{' in interpolated string",
+                        ));
+                    }
                     let expr_src = &content[expr_start..i - 1];
+                    if expr_src.trim().is_empty() {
+                        return Err(Diagnostic::new(
+                            DiagCode::E001,
+                            Span::new(start, end),
+                            "empty interpolation expression '{}'",
+                        ));
+                    }
                     let mut p = Parser::new(expr_src)?;
                     let sub_expr = p.parse_expr()?;
                     parts.push(sub_expr);
@@ -604,6 +672,8 @@ impl<'a> Parser<'a> {
                 "always" => Some(ModalKind::LtlGlobally),
                 "eventually" => Some(ModalKind::LtlFinally),
                 "until" => Some(ModalKind::LtlUntil),
+                "subsumes" => Some(ModalKind::DlSubsumes),
+                "defeasible_rule" => Some(ModalKind::N3Defeasible),
                 _ => None,
             };
 
@@ -681,6 +751,7 @@ impl<'a> Parser<'a> {
         Err(self.err("expected expression"))
     }
 
+    /// Peeks a prefixed local after colon.
     pub(crate) fn peek_prefixed_local_after_colon(&self) -> bool {
         let rest = self.lex.source()[self.cur.span.end as usize..].trim_start();
         rest.chars()
@@ -688,6 +759,7 @@ impl<'a> Parser<'a> {
             .is_some_and(|c| c.is_ascii_alphanumeric() || c == '_')
     }
 
+    /// Parses triple.
     pub(crate) fn parse_triple(&mut self) -> Result<Expr, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -707,6 +779,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses reified.
     pub(crate) fn parse_reified(&mut self) -> Result<Expr, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -727,10 +800,12 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses term.
     pub(crate) fn parse_term(&mut self) -> Result<Expr, Diagnostic> {
         self.parse_primary()
     }
 
+    /// Parses list.
     pub(crate) fn parse_list(&mut self) -> Result<Expr, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -752,6 +827,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses record.
     pub(crate) fn parse_record(&mut self) -> Result<Expr, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -776,6 +852,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses named-arg.
     pub(crate) fn parse_named_arg(&mut self) -> Result<NamedArg, Diagnostic> {
         let start = self.cur.span.start;
         // Allow keywords as named arg names (e.g. `yield: 50.0` in material
@@ -810,6 +887,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses type.
     pub(crate) fn parse_type(&mut self) -> Result<TypeExpr, Diagnostic> {
         let start = self.cur.span.start;
         let name = if self.cur.kind == TokenKind::Ident || self.cur.kind == TokenKind::Keyword {
@@ -842,6 +920,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses lambda.
     pub(crate) fn parse_lambda(&mut self) -> Result<Expr, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // |
@@ -867,6 +946,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Canonical text.
     pub(crate) fn canonical_text(&self) -> &str {
         let t = self.text();
         if let Some((_, canonical)) = crate::locale::LocaleRegistry::default().resolve(t) {
@@ -874,5 +954,36 @@ impl<'a> Parser<'a> {
         } else {
             t
         }
+    }
+}
+
+#[cfg(test)]
+mod wp_abi_004_tests {
+    #[test]
+    fn parses_arbitrary_named_args_while_preserving_curies() {
+        let prog = crate::parse_program(
+            "let a = draw(radius: 1.5, color: \"red\", list: [1, 2], flag:true);\n\
+             let b = graph.assert(foaf:Alice, rdf:type, snomed:386661006);\n",
+        )
+        .expect("parse");
+        assert_eq!(prog.items.len(), 2);
+    }
+
+    #[test]
+    fn parses_cold_cell_modal_subsumes_and_field_unknown_prop() {
+        let prog = crate::parse_program(
+            "cold cell c := 1;\n\
+             field f: Scalar custom_prop: [1, 2] support: point;\n\
+             let m = subsumes(Agent, Entity);\n\
+             let n = defeasible_rule { true };\n",
+        )
+        .expect("parse");
+        assert_eq!(prog.items.len(), 4);
+    }
+
+    #[test]
+    fn rejects_unclosed_interpolation_brace() {
+        assert!(crate::parse_program("let s = f\"hello {x\";").is_err());
+        assert!(crate::parse_program("let s = f\"hello {}\";").is_err());
     }
 }

@@ -4,6 +4,7 @@ use crate::modalities::dl::check_subsumption_quin;
 use crate::poet_host::{hash_val, PoetSnapshot};
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
+/// VibeScript seam: subsumption check.
 pub fn check(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let Value::List(xs) = args else {
         return Err(Diagnostic::new(

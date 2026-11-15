@@ -5,6 +5,7 @@ use crate::CAPABILITY_DESCRIPTORS;
 use std::collections::BTreeMap;
 use vibe::Value;
 
+/// VibeScript seam: runtime discovery list.
 pub fn list() -> Value {
     let families: Vec<Value> = CAPABILITY_DESCRIPTORS
         .iter()

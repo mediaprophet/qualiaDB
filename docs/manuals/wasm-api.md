@@ -1,16 +1,21 @@
 # QualiaDB WebAssembly API & Integration Guide
 
-**Version:** 0.0.38 | **Branch:** `0.0.38`
-**Primary artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
+**Version:** 0.0.40.5 | **Branch:** `0.0.40.5`  
+**Civics / agents (preferred):** [`wasm-webcivics-agent-api.md`](wasm-webcivics-agent-api.md) — Solid RDF, device storage/backup, SHACL, receipts  
+**Primary portal artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm` (`--features portal`)  
+**WebCivics artifact:** `docs/pkg/webcivics/qualia.js` + `qualia_webcivics_bg.wasm` (`--features wasm-webcivics`)
 **Playground artifact:** `docs/playground/qualia_core_db.js` (`--features wasm-full`)  
 **Portal manual:** [`qualia-wasm-portal.md`](qualia-wasm-portal.md)
 
-The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with two feature profiles:
+The `qualia-core-db` crate compiles to `wasm32-unknown-unknown` with several feature profiles.
+For **Civics decision-evidence and agent adapters**, use **`wasm-webcivics`** and the
+agent API manual above — not the playground `wasm-full` bundle.
 
 | Profile | Features | Use case |
 |---------|----------|----------|
-| **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 16 MiB raw / 4 MiB gzip |
-| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 16 MiB / 4 MiB sanity cap |
+| **WebCivics** | `wasm-webcivics` | Civics.au / agents — JSON-LD/Turtle/N3 Solid, SHACL, OPFS+backup, stats/econ; **no GPU/LLM** |
+| **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 24 MiB raw / 8 MiB gzip |
+| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 24 MiB / 8 MiB sanity cap |
 
 > The **browser LLM lives in the `wasm-full` playground bundle**, not the portal package.
 > LLM demos (`llmdemo/`, `online-llm-demo.html`, `wasm-llm-test.html`, `benchmark.html`)
@@ -61,8 +66,8 @@ wasm-pack build crates/qualia-core-db \
 ```powershell
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
 node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
-node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
-node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 25165824 8388608
+node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 25165824 8388608
 node docs/tests/wasm-size-check.mjs docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
 ```
 

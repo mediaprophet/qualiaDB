@@ -1,0 +1,41 @@
+ M CHANGELOG.md
+ M Cargo.lock
+ M crates/etalon-inference-kernel/src/moe/routing.rs
+ M crates/etalon-inference/src/gpu_resources/shaders/dequant_template.wgsl
+ M crates/etalon-inference/src/gpu_resources/shaders/fused_attention.wgsl
+ M crates/etalon-inference/src/gpu_resources/shaders/fused_transformer.wgsl
+ M crates/etalon-inference/src/gpu_resources/shaders/wasm/dequant_template.wgsl
+ M crates/etalon-inference/src/gpu_resources/shaders/wasm/fused_transformer.wgsl
+ M crates/etalon-inference/src/ordinary/attention/layer.rs
+ M crates/etalon-inference/src/ordinary/attention/token.rs
+ M crates/etalon-inference/src/ordinary/ffn.rs
+ M crates/etalon-inference/src/ordinary/layer.rs
+ M crates/etalon-inference/src/ordinary/rope.rs
+ M crates/etalon-inference/src/ordinary/ssm_layout.rs
+ M crates/etalon-inference/src/ordinary/ssm_qwen.rs
+ M crates/etalon-model-io/src/lease/platform.rs
+ M crates/etalon-model/src/ggml/blocks.rs
+ M crates/etalon-model/src/ggml/kquants.rs
+ M crates/etalon-model/src/ggml/layout.rs
+ M crates/etalon-model/src/ggml/mod.rs
+ M crates/etalon-model/src/ggml/tests.rs
+ M crates/etalon-model/src/inference/extension.rs
+ M crates/etalon-model/src/inference/hyperparams.rs
+ M crates/etalon-model/src/inference/lookup.rs
+ M crates/etalon-model/src/inference/metadata.rs
+ M crates/etalon-model/src/inference/mod.rs
+ M crates/etalon-model/src/inference/parse.rs
+ M crates/etalon-model/src/inference/types.rs
+ M crates/etalon-model/src/tensor_roles.rs
+ M crates/etalon-render/src/shaders/mesh.wgsl
+ M crates/etalon-render/src/shaders/mod.rs
+ M crates/etalon-render/src/shadow_math.rs
+ M crates/etalon-render/src/shadows.rs
+ M xtask/src/test.rs
+?? crates/etalon-model/src/ggml/tests/
+?? crates/etalon-model/src/inference/tensor_alias_tests.rs
+?? crates/etalon-reconstruct/
+?? crates/etalon-render/src/shaders/shadow_receiver.wgsl
+?? crates/etalon-render/src/shadow_receiver.rs
+?? crates/etalon-render/src/shadow_receiver_tests.rs
+?? target-container-standards/

@@ -9,11 +9,13 @@ use zeroize::Zeroize;
     feature = "wasm-ontology",
     any(
         feature = "portal",
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-llm",
         feature = "wasm-playground",
-        feature = "wasm-full"
+        feature = "wasm-full",
+        feature = "wasm-webcivics"
     )
 ))]
 compile_error!(
@@ -69,6 +71,7 @@ pub use query::ingest;
 pub use query::ingest_job;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -80,6 +83,7 @@ pub use query::mini_parser;
 pub use query::ontology_loader;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -92,6 +96,7 @@ pub use query::resolver;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-ontology",
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -191,6 +196,7 @@ pub use inference::lab::{
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use inference::metal_bridge;
+pub use inference::metal_lane;
 pub use inference::neuro_symbolic_sieve;
 pub use inference::orchestrator;
 pub use inference::post_turn_verify;
@@ -231,8 +237,11 @@ pub use inference::topk_gpu;
 pub mod lora;
 // --- q42/ category (reorg) ---
 pub mod q42;
+pub mod sensing;
 pub use q42::design_encode;
 pub use q42::execution_profile;
+pub use q42::journal;
+pub use q42::journal::{JournalHeader, JournalTransaction, MutableQ42Session, Q42Journal};
 pub use q42::machine_gpu_profile;
 pub use q42::model_helper;
 pub use q42::p64_weight;
@@ -243,7 +252,6 @@ pub use q42::p64_weight as q42_weight;
 pub use q42::q42_lexicon;
 #[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
 pub use q42::q42_volume;
 pub use q42::yaml_ld_q42;
 // --- extensions/ category (reorg) ---
@@ -267,6 +275,15 @@ pub mod gpu_context;
 pub mod shaders;
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 pub mod wgsl_forge;
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_agent;
+pub use etalon_nquin;
+pub use etalon_render;
+pub use etalon_tensor;
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_wasm;
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_wgsl_forge;
 // --- foundation/ category (reorg) ---
 pub mod foundation;
 pub use foundation::crdt;
@@ -292,14 +309,18 @@ pub mod audio;
 /// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
 /// both native and WASM builds (native adds the zero-copy `BundleMmap`).
 pub mod bundle;
-/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
-pub mod semantic_instruments;
+/// Deterministic fixed-tick simulation engine (QG-09).
+pub mod simulation;
+pub use simulation::fixed_tick;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
 /// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
 pub mod container_10d;
+/// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
+pub mod semantic_instruments;
 pub mod tensor;
+pub mod topology;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
 // `solvers` module below — on wasm32 it only exists under the `wasm-scientific` feature.
@@ -320,46 +341,31 @@ pub use governance::webizen_validator;
 pub mod sparql_library;
 pub use sparql_library::*;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_lex;
-#[cfg(target_arch = "wasm32")]
-pub mod q42_lex {
-    pub struct Q42LexMmap<'a> {
-        _marker: std::marker::PhantomData<&'a ()>,
-    }
-    impl<'a> Q42LexMmap<'a> {
-        pub fn from_bytes(_data: &'a [u8]) -> Result<Self, String> {
-            Err("Not supported on WASM".to_string())
-        }
-        pub fn lookup_embedded_triple(&self, _id: u64) -> Option<[u64; 3]> {
-            None
-        }
-        pub fn lookup_hash(&self, _id: u64) -> Option<&'a str> {
-            None
-        }
-    }
-    pub struct Q42LexFile {}
-    impl Q42LexFile {
-        pub fn open(_p: &std::path::Path) -> Result<Self, String> {
-            Err("Not supported on WASM".to_string())
-        }
-        pub fn view(&self) -> Q42LexMmap<'_> {
-            Q42LexMmap {
-                _marker: std::marker::PhantomData,
-            }
-        }
-    }
-}
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 pub mod agent_runtime;
 pub mod clinical_engine;
@@ -375,31 +381,72 @@ pub mod hypermedia;
 pub mod hypermedia_authoring;
 /// Document NLP (tokenize, gazetteer, span plans). Engine capability, not Vibe.
 pub mod nlp;
+/// Q42LEX lexicon format. The byte-view reader ([`q42_lex::Q42LexMmap`]) and
+/// serializers are transport-neutral and compile on wasm32; only the
+/// filesystem/mmap handles ([`q42_lex::Q42LexFile`], [`q42_lex::Q42Lexicon`]
+/// path loaders) stay native.
+pub mod q42_lex;
+/// Q42LEX v4 writer: paged lexicon with per-page namespace dictionaries.
+pub mod q42_lex_ns;
 // The ontology MCP binary deliberately contains only its explicit reasoning
 // kernel (`modalities_lite`); it has no VibeScript runtime. Other WASM
-// profiles retain the full browser capability host.
+// profiles retain the full browser capability host — except `wasm-webcivics`,
+// which is a slim decision-evidence package (typed wasm_bridge only; Vibe
+// LocalHost lives in the separate `vibe-wasm` crate).
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 #[path = "poet_host/mod.rs"]
 pub mod vibe_host;
+#[cfg(any(all(target_arch = "wasm32", feature = "device-harness"), all(test, not(target_arch = "wasm32"))))]
+mod etalon_vibe_browser;
 /// Compatibility name for code written before the Vibe execution layer was
 /// separated from Poet, its current UI/client. New integrations use
 /// [`vibe_host`].
 #[cfg(not(all(
     target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
+    any(
+        all(
+            feature = "wasm-ontology",
+            not(any(
+                feature = "wasm-webcivics",
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        ),
+        all(
+            feature = "wasm-webcivics",
+            not(any(
+                feature = "wasm-logic",
+                feature = "wasm-scientific",
+                feature = "wasm-full",
+                feature = "portal"
+            ))
+        )
+    )
 )))]
 pub use vibe_host as poet_host;
 pub mod qubo_compiler;
@@ -413,10 +460,12 @@ pub mod text_span;
 #[cfg(all(
     target_arch = "wasm32",
     any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     )
 ))]
 pub mod wasm_bridge;
@@ -426,10 +475,12 @@ pub mod wasm_bridge;
     target_arch = "wasm32",
     feature = "portal",
     not(any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     ))
 ))]
 pub mod wasm_bridge_core;
@@ -447,21 +498,28 @@ pub use spatial_wasm::{
 #[cfg(all(
     target_arch = "wasm32",
     any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     )
 ))]
-pub use wasm_bridge::{parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm};
+pub use wasm_bridge::{
+    parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
+    parse_yaml_ld_q42_wasm,
+};
 #[cfg(all(
     target_arch = "wasm32",
     feature = "portal",
     not(any(
+        feature = "wasm-webcivics",
         feature = "wasm-logic",
         feature = "wasm-scientific",
         feature = "wasm-full",
-        feature = "wasm-playground"
+        feature = "wasm-playground",
+        feature = "wasm-webcivics"
     ))
 ))]
 pub use wasm_bridge_core::{parse_cbor_ld_wasm, parse_json_wasm};
@@ -993,7 +1051,7 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
             "delegation/revocation",
             "responsibility",
             "jural chains",
-            "value flow",
+            "socioeconomics",
             "identity fabric",
             "BFT quorum",
             "Lamport/vector clocks",
@@ -1073,6 +1131,7 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
     Copy,
     PartialEq,
     Eq,
+    Hash,
     PartialOrd,
     Ord,
     Zeroize,
@@ -1100,11 +1159,13 @@ impl NQuin {
     const NESTED_BIT_MASK: u64 = 1 << 63;
 
     #[inline(always)]
+    /// `true` when the subject is nested.
     pub fn is_subject_nested(&self) -> bool {
         (self.subject & Self::NESTED_BIT_MASK) != 0
     }
 
     #[inline(always)]
+    /// Subject literal id.
     pub fn get_subject_literal_id(&self) -> u64 {
         self.subject & !Self::NESTED_BIT_MASK
     }
@@ -1123,6 +1184,7 @@ impl NQuin {
     const SHIFT_LANE: u32 = 61;
 
     #[inline(always)]
+    /// PermissiveRoutingLane.
     pub fn identify_routing_lane(&self) -> PermissiveRoutingLane {
         // Since it's packed, taking reference to field might be unsafe in some contexts,
         // but passing self by reference and copying the field is usually fine,
@@ -1144,11 +1206,13 @@ impl NQuin {
     pub const SENSITIVITY_CLASSIFIED: u8 = 0x02;
 
     #[inline(always)]
+    /// Sensitivity byte.
     pub fn get_sensitivity_byte(&self) -> u8 {
         (self.context >> 56) as u8
     }
 
     #[inline(always)]
+    /// Sets the sensitivity byte.
     pub fn set_sensitivity_byte(&mut self, sensitivity: u8) {
         // Clear top 8 bits
         self.context &= 0x00FF_FFFF_FFFF_FFFF;
@@ -1162,6 +1226,7 @@ impl NQuin {
     // intentional, role-exclusive overlay documented in frame_layout). It is NOT
     // relocated lower — every lower slot lands inside the tensor-bake clock [32:60].
     #[inline(always)]
+    /// Quin type tag.
     pub fn get_quin_type(&self) -> u8 {
         crate::frame_layout::quin_type(self.metadata)
     }
@@ -1228,6 +1293,7 @@ impl NQuin {
     }
 
     #[inline(always)]
+    /// `true` when the ECC parity holds.
     pub fn verify_ecc_parity(&self) -> bool {
         self.parity
             == Self::calculate_parity(
@@ -1252,6 +1318,7 @@ impl NQuin {
     }
 
     #[inline(always)]
+    /// Builds a conduct-violation quin.
     pub fn new_conduct_violation(reason: &[u8]) -> Self {
         let mut quin = Self::default();
         quin.predicate = 0x42_0000_0000_0000; // q42:conductViolation
@@ -1276,17 +1343,21 @@ pub const MODALITY_FLAG_DENSE_PHYSICS: u8 = 0b1000;
 pub const MODALITY_FLAG_VISION_TENSOR: u8 = 0b1010;
 
 pub trait QuinPointerExt {
+    /// Extracts the modality flag.
     fn extract_modality_flag(&self) -> u8;
+    /// Extracts the byte offset.
     fn extract_byte_offset(&self) -> u64;
 }
 
 impl QuinPointerExt for NQuin {
     #[inline(always)]
+    /// Extracts the modality flag.
     fn extract_modality_flag(&self) -> u8 {
         (self.object >> 60) as u8
     }
 
     #[inline(always)]
+    /// Extracts the byte offset.
     fn extract_byte_offset(&self) -> u64 {
         self.object & 0x0FFF_FFFF_FFFF_FFFF
     }
@@ -1340,6 +1411,7 @@ pub const MASK_COMMERCIAL_BILLABLE_GATE: u16 = 0b0000_0100;
 pub const MASK_WORK_OBLIGATION_SATISFIED: u16 = 0b0000_1000;
 
 #[inline(always)]
+/// Evaluates the permissive runtime gate.
 pub fn evaluate_permissive_runtime_gate(
     entry_policy_mask: u16,
     requesting_agent_signature_flags: u16,
@@ -1507,12 +1579,7 @@ impl Drop for QualiaSuperBlock {
     feature = "wasm-full"
 ))]
 pub mod deontic_logic;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
+// Sensing association estimates retain their real epistemic classification in every profile.
 pub mod epistemic;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
@@ -1551,6 +1618,7 @@ pub use gguf_bridge as inference_runtime;
 pub mod mcp;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
@@ -1900,6 +1968,7 @@ mod tests {
 #[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
 
+pub mod domain_licence;
 pub mod domains;
 pub mod solvers;
 

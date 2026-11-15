@@ -6,7 +6,7 @@ Recorded 2026-09-09 on branch `cursor/qdnf-enhancement-e00-e01-cb60`.
 
 | Item | Value |
 |---|---|
-| Integration HEAD at start | `5646b818d4e6fa63f0b7c4c6a1a469dca382339a` (`origin/0.0.37`) |
+| Integration HEAD at start | `5646b818d4e6fa63f0b7c4c6a1a469dca382339a` (`origin/0.0.40`) |
 | Review baseline | `17b6b467c8a4548e302f603674dd594a67be7398` |
 | Intervening commits | docs/plan, Pages CI, benchmark stamps — **no QDNF security repairs** |
 | Linux runner | rustc 1.98.1, cargo 1.98.1, `x86_64-unknown-linux-gnu` |

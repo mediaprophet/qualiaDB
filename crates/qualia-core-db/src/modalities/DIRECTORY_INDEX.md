@@ -613,7 +613,7 @@ Comprehensive index of functionality for `modalities`. This document serves as t
   - `fn is_safe`
   - `fn predicate_interval`
   - *(...and 11 more)*
-- 📄 `value_flow.rs`
+- 📄 `socioeconomics.rs`
   - `fn commons_cost`
   - `fn royalty`
   - `fn pool_after`

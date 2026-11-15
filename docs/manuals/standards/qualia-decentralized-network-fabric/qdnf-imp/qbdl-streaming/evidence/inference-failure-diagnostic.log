@@ -1,0 +1,15 @@
+
+running 1 test
+
+thread 'inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers' (13816) panicked at crates\qualia-core-db\src\inference\inference_agent\governed_cpu\runtime_fixture.rs:140:6:
+called `Result::unwrap()` on an `Err` value: UnsupportedBacking
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers ... FAILED
+
+failures:
+
+failures:
+    inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10318 filtered out; finished in 0.02s
+

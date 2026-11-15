@@ -60,6 +60,7 @@ def _us_to_ms_stats(s: dict) -> dict:
 
 
 def _probe_health(timeout: float = 1.0) -> Optional[dict]:
+    """Internal helper."""
     try:
         req = urllib.request.Request(f"{DAEMON_URL}/health", method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -69,6 +70,7 @@ def _probe_health(timeout: float = 1.0) -> Optional[dict]:
 
 
 def _probe_health_ok(timeout: float = 1.0) -> bool:
+    """Internal helper."""
     health = _probe_health(timeout)
     return health is not None and health.get("status") == "active"
 
@@ -91,12 +93,14 @@ def _post_query(query: str, timeout: float = 30.0) -> dict:
 
 
 def _artifact_size_mb(path):
+    """Internal helper."""
     if not path or not os.path.exists(path):
         return None
     return round(os.path.getsize(path) / (1024 * 1024), 3)
 
 
 def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """Benchmark set."""
     if dataset is None:
         dataset = {
             "n_triples": n,

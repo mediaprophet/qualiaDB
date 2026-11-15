@@ -3,6 +3,7 @@
 //! Request-scoped, caller-buffered summaries. Cold construction may allocate
 //! within explicit bounds; Tier-1 decode paths remain elsewhere.
 
+pub mod asset_contract;
 mod authority;
 mod budget;
 mod capabilities;
@@ -10,16 +11,22 @@ mod codec;
 mod compile;
 mod identity;
 pub mod inspector;
+pub mod prepared_request;
 mod receipt;
 pub mod registry;
 mod render;
+pub mod request_parts;
 mod requirement;
 mod select;
 mod spec;
-mod validate;
 #[cfg(test)]
 mod tests;
+mod validate;
 
+pub use asset_contract::{
+    AssetIdentity, ContractDisposition, ContractVerificationReceipt, FunctionalContract,
+    SceneState, FLAG_ACTIVE, FLAG_CONDITIONED, FLAG_DEGRADED, FLAG_SPECIALIST_BOUND,
+};
 pub use authority::AuthorityView;
 pub use budget::ConditioningBudget;
 pub use capabilities::{BackendCapabilities, SupportLevel};
@@ -27,11 +34,13 @@ pub use codec::{decode_plan_cbor, encode_plan_cbor, CODEC_VERSION};
 pub use compile::{compile_into, CompileBuffers, CompiledPlanSummary};
 pub use identity::plan_identity;
 pub use inspector::{inspect_spec, RedactedInspectionTrace, RedactedRequirement};
+pub use prepared_request::PreparedConditioningSnapshot;
 pub use receipt::{RequirementDisposition, RequirementOutcome};
 pub use registry::{
     global_registry, ConditioningRegistry, ProfileLifecycleState, ProfileVersionEntry,
 };
 pub use render::{render_into, RenderTarget, RenderedRequestSummary};
+pub use request_parts::{select_prioritized_parts, RequestPart, RequestPartKind};
 pub use requirement::{RequirementClass, RequirementRef};
 pub use select::{select_evidence_into, EvidencePart};
 pub use spec::{ConditioningError, ConditioningSpec, OutputContractRef};

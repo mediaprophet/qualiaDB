@@ -30,6 +30,7 @@ pub struct RedactedInspectionTrace {
     pub privacy_redaction_applied: bool,
 }
 
+/// Builds a redacted inspection trace for `spec`.
 pub fn inspect_spec(
     spec: &ConditioningSpec,
     plan_identity: Option<u64>,
@@ -98,6 +99,7 @@ mod tests {
                 output_tokens: 512,
                 tool_rounds: 2,
                 max_bytes: 8192,
+                thinking_token_budget: None,
             },
         };
 

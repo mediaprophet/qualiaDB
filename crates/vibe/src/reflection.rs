@@ -174,6 +174,7 @@ pub struct ReflectionLoop {
 pub type ReflectionEngine = ReflectionLoop;
 
 impl ReflectionLoop {
+    /// Creates a new `ReflectionLoop`.
     pub fn new(config: ReflectionConfig) -> Self {
         let mut all_policies = builtin_policies();
         all_policies.extend(config.extra_policies.clone());
@@ -474,13 +475,23 @@ impl ReflectionLoop {
     /// Check a single statement for unbounded loops.
     fn check_stmt_for_unbounded_loops(&self, stmt: &Stmt) -> Option<Diagnostic> {
         match stmt {
-            Stmt::Expr { expr, .. } => self.check_expr_for_unbounded_loops(expr),
+            Stmt::Let { value: Some(v), .. }
+            | Stmt::LetPat { value: v, .. }
+            | Stmt::Assign { value: v, .. }
+            | Stmt::Return { value: Some(v), .. }
+            | Stmt::Yield { value: Some(v), .. }
+            | Stmt::Effect { expr: v, .. }
+            | Stmt::Expr { expr: v, .. } => self.check_expr_for_unbounded_loops(v),
             Stmt::Block(block) => self.check_stmts_for_unbounded_loops(&block.stmts),
             Stmt::If {
+                cond,
                 then_block,
                 else_block,
                 ..
             } => {
+                if let Some(d) = self.check_expr_for_unbounded_loops(cond) {
+                    return Some(d);
+                }
                 if let Some(d) = self.check_stmts_for_unbounded_loops(&then_block.stmts) {
                     return Some(d);
                 }
@@ -527,6 +538,14 @@ impl ReflectionLoop {
                 }
                 None
             }
+            ExprKind::IfElse {
+                cond,
+                then_value,
+                else_value,
+            } => self
+                .check_expr_for_unbounded_loops(cond)
+                .or_else(|| self.check_expr_for_unbounded_loops(then_value))
+                .or_else(|| self.check_expr_for_unbounded_loops(else_value)),
             _ => None,
         }
     }

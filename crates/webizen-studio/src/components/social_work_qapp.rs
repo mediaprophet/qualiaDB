@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `SocialWorkQapp` component.
 pub fn SocialWorkQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -32,6 +32,7 @@ impl PeerHost {
 }
 
 impl ClinicalSession {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             pairings: PairingTable::new(),
@@ -42,6 +43,7 @@ impl ClinicalSession {
         }
     }
 
+    /// Admits a clinical pair (denied when public-index/VIP/discovery flags set).
     pub fn admit_pair(&mut self, pair: ClinicalPair) -> Result<usize, QdnfError> {
         if public_patient_index_allowed()
             || vip_association_indexed()
@@ -52,18 +54,22 @@ impl ClinicalSession {
         self.pairings.admit(pair)
     }
 
+    /// `refuse-public` index.
     pub fn refuse_public_index(&self, pair: ClinicalPair) -> Result<(), QdnfError> {
         self.pairings.index_public(pair)
     }
 
+    /// Adds permit.
     pub fn add_permit(&mut self, permit: StandingPermit) -> Result<usize, QdnfError> {
         self.permits.add(permit)
     }
 
+    /// Sets live.
     pub fn set_live(&mut self, live: LiveGenerations) {
         self.permits.set_live(live);
     }
 
+    /// Authorizes a standing permit.
     pub fn authorize_permit(
         &self,
         permit: &StandingPermit,
@@ -85,10 +91,12 @@ impl ClinicalSession {
         )
     }
 
+    /// Adds grant.
     pub fn add_grant(&mut self, grant: CareGrant) -> Result<usize, QdnfError> {
         self.grants.add(grant)
     }
 
+    /// Seals a payload envelope.
     pub fn seal(
         &self,
         label: &VerifiedLabel,
@@ -114,6 +122,7 @@ impl ClinicalSession {
         )
     }
 
+    /// Stores a mailbox.
     pub fn store_mailbox(
         &mut self,
         ct: &[u8],
@@ -123,6 +132,7 @@ impl ClinicalSession {
         self.mailbox.store_bound(ct, recipient, bound)
     }
 
+    /// Delivers a mailbox.
     pub fn deliver_mailbox(
         &mut self,
         slot: usize,
@@ -132,14 +142,17 @@ impl ClinicalSession {
         self.mailbox.deliver_live(slot, recipient, live)
     }
 
+    /// Revokes clinician.
     pub fn revoke_clinician(&mut self, clinician: StrongDigest) -> Result<(), QdnfError> {
         self.mailbox.revoke_clinician(clinician)
     }
 
+    /// Enqueues for offline delivery.
     pub fn enqueue_offline(&mut self, slot: OfflineSlot, now: u64) -> Result<usize, QdnfError> {
         enqueue_offline(&mut self.offline, slot, now)
     }
 
+    /// Releases offline queue.
     pub fn release_offline(
         &self,
         slot: usize,
@@ -147,13 +160,7 @@ impl ClinicalSession {
         patient_contact: ContactState,
         clinician_contact: ContactState,
     ) -> Result<(), QdnfError> {
-        release_queued(
-            &self.offline,
-            slot,
-            now,
-            patient_contact,
-            clinician_contact,
-        )
+        release_queued(&self.offline, slot, now, patient_contact, clinician_contact)
     }
 }
 
@@ -316,7 +323,7 @@ mod tests {
                 b"sealed-ct",
                 ContactState::Active,
                 ContactState::Active,
-                10
+                10,
             )
             .unwrap();
         assert_eq!(env.recipient_count(), 2);
@@ -391,7 +398,10 @@ mod tests {
             mapping_digest: digest(9),
             retains_full_label: false,
         };
-        assert_eq!(export_interchange(&stored, &adapter), Err(QdnfError::Denied));
+        assert_eq!(
+            export_interchange(&stored, &adapter),
+            Err(QdnfError::Denied)
+        );
         assert_eq!(
             patient_record_associated(patient, digest(4), digest(9)),
             Err(QdnfError::Denied)
@@ -399,8 +409,8 @@ mod tests {
         let pages = digest(5);
         let mut page = [0u8; STREAM_PAGE_BYTES as usize];
         let imaging = [7u8; 64];
-        let expected = qualia_core_db::net::qdnf::clinical::digest_attachment_pages(&imaging)
-            .unwrap();
+        let expected =
+            qualia_core_db::net::qdnf::clinical::digest_attachment_pages(&imaging).unwrap();
         stream_attachment(&imaging, imaging.len() as u32, expected, &mut page).unwrap();
         let _ = pages;
     }

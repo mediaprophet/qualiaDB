@@ -160,6 +160,7 @@ pub struct SlgArena {
 extern crate alloc;
 
 impl SlgArena {
+    /// Creates `SlgArena` with the given state.
     pub fn new() -> Self {
         #[cfg(feature = "alloc_buffers")]
         extern crate alloc;
@@ -224,10 +225,12 @@ impl SlgArena {
         true
     }
 
+    /// Committed rules.
     pub fn rule_count(&self) -> usize {
         self.rule_registry.len()
     }
 
+    /// Staged (uncommitted) rules.
     pub fn staged_rule_count(&self) -> usize {
         self.staged_rules.len()
     }
@@ -260,6 +263,7 @@ impl SlgArena {
     }
 
     #[inline]
+    /// `SlgArena::pass_head`.
     pub fn pass_head(&self) -> usize {
         self.head_pointer
     }
@@ -457,6 +461,7 @@ impl SlgArena {
         self.head_pointer = (self.head_pointer + 1) % MAX_SLOTS;
     }
 
+    /// Mutable quin slot for a key.
     pub(crate) fn find_mutable_quin(
         &mut self,
         subject: u64,

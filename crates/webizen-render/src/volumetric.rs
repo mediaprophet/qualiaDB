@@ -7,19 +7,65 @@
 use crate::scene_contract::{RenderScene, ScenePoint};
 use qualia_core_db::render::gpu::PortalGpu;
 use qualia_core_db::render::telemetry::SystemTelemetry as CoreTelemetry;
+use qualia_core_db::render::texture_stream_policy::TextureStreamBudget;
 use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 use qualia_core_db::tensor::Tensor10D;
+
+pub use crate::volumetric_hmc::{
+    HmcTextureResidencyRequest, HmcTextureStreamApplyRequest, HmcTextureStreamPlan,
+    HmcTextureStreamRequest,
+};
+
+/// Result of best-effort HMC texture admission. Missing or budget-deferred interpretations bind
+/// the renderer's typed fallback texture; they do not prevent the `.10d` mesh from loading.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HmcTextureAdmissionReport {
+    pub requested_interpretations: usize,
+    pub resident_interpretations: usize,
+    pub deferred_interpretations: usize,
+    pub admitted_mips: usize,
+    pub deferred_mips: usize,
+    pub admitted_upload_bytes: u64,
+    pub deferred_upload_bytes: u64,
+    /// KTX2/Basis-like inputs refused by the validated decoder capability set rather than
+    /// silently transcoded. Budget and decode failures are reported separately as deferrals.
+    pub capability_refusals: usize,
+}
 
 /// Cross-platform volumetric renderer SDK. Native instances render offscreen on the same physical
 /// wgpu device as QualiaDB inference and expose caller-buffered RGBA8 readback.
 pub struct VolumetricRenderer {
-    inner: PortalGpu,
+    pub(crate) inner: PortalGpu,
+    pub(crate) texture_stream_state: Option<crate::volumetric_hmc::HmcTextureStreamState>,
 }
 
 impl VolumetricRenderer {
+    /// Create a volumetric renderer from an existing `PortalGpu` instance.
+    pub fn from_portal_gpu(inner: PortalGpu) -> Self {
+        Self {
+            inner,
+            texture_stream_state: None,
+        }
+    }
+
+    /// Create a volumetric renderer targeting a browser HTML canvas element.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn from_canvas(
+        canvas: web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            inner: PortalGpu::try_new_async(&canvas, particle_cap).await?,
+            texture_stream_state: None,
+        })
+    }
+
+    /// New offscreen renderer.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_offscreen(width, height, particle_cap)?,
+            texture_stream_state: None,
         })
     }
 
@@ -28,7 +74,7 @@ impl VolumetricRenderer {
     /// This is the native desktop path — no PNG round-trip, no webview `<img>`.
     /// The surface is created from a raw window handle (HWND on Windows).
     /// Call `render()` to draw a frame; the swapchain present is automatic.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "qualia"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_surface(
         hwnd: isize,
         width: u32,
@@ -37,13 +83,98 @@ impl VolumetricRenderer {
     ) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_surface(hwnd, width, height, particle_cap)?,
+            texture_stream_state: None,
         })
     }
 
+    /// Uploads a tensor buffer.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
         self.inner.upload_tensor_buffer(bytes)
     }
 
+    /// Load one `.10d` scene asset and its digest-verified HMC texture dependencies.
+    /// Texture decode and GPU residency remain cold, bounded asset-boundary work.
+    pub fn load_hmc_asset(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+    ) -> Result<(u32, u32, f32), String> {
+        let (loaded, _) = self.load_hmc_asset_with_texture_budget(
+            hmc_bytes,
+            asset_key,
+            TextureStreamBudget {
+                max_resident_bytes: u64::MAX,
+                max_upload_bytes: u64::MAX,
+            },
+        )?;
+        Ok(loaded)
+    }
+
+    /// Load an HMC `.10d` asset while admitting texture mips according to view footprint
+    /// and streaming budgets. For KTX2 resources with stored coarse levels, the authored
+    /// mip is decoded directly without decompressing level zero or performing CPU filtering.
+    pub fn load_hmc_asset_with_texture_request(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+        request: HmcTextureStreamRequest,
+    ) -> Result<((u32, u32, f32), HmcTextureAdmissionReport), String> {
+        crate::volumetric_hmc::load_hmc_asset_with_texture_request(
+            self, hmc_bytes, asset_key, request,
+        )
+    }
+
+    /// Load an HMC `.10d` asset while admitting only the highest-priority coarse-to-fine texture
+    /// mip prefix that fits the supplied per-load budgets. A texture admitted at mip `m` is
+    /// physically allocated from that mip's dimensions, with its remaining coarser chain generated
+    /// on the GPU. Deferred interpretations use typed fallback maps for this scene load.
+    ///
+    /// These budgets govern incremental HMC residency; they are separate from the 42 MiB semantic
+    /// Sentinel and from graphics reservations owned by earlier scene loads. This API does not
+    /// evict or refine textures already bound into existing material groups.
+    pub fn load_hmc_asset_with_texture_budget(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+        budget: TextureStreamBudget,
+    ) -> Result<((u32, u32, f32), HmcTextureAdmissionReport), String> {
+        self.load_hmc_asset_with_texture_request(
+            hmc_bytes,
+            asset_key,
+            HmcTextureStreamRequest {
+                budget,
+                projected_width: 0,
+                projected_height: 0,
+            },
+        )
+    }
+
+    /// Plan a bounded working-set transition for the active HMC asset. The request list is the
+    /// complete set of interpretations that should remain resident; omitted entries are evicted.
+    pub fn request_texture_stream(
+        &self,
+        request: HmcTextureStreamApplyRequest<'_>,
+    ) -> Result<HmcTextureStreamPlan, String> {
+        crate::volumetric_hmc::request_texture_stream(self, request)
+    }
+
+    /// Apply a previously generated texture plan. A stale generation is rejected before any GPU
+    /// mutation; successful refinement/eviction rebuilds the active material bind groups.
+    pub fn apply_texture_stream(&mut self, plan: HmcTextureStreamPlan) -> Result<(), String> {
+        crate::volumetric_hmc::apply_texture_stream(self, plan)
+    }
+
+    /// Load a verified HMC mesh as the renderer-owned water surface. The
+    /// surface uses shared scene depth and remains outside semantic picking.
+    pub fn load_hmc_water_asset(
+        &mut self,
+        hmc_bytes: &[u8],
+        asset_key: &str,
+    ) -> Result<(u32, u32), String> {
+        crate::volumetric_hmc::load_hmc_water_asset(self, hmc_bytes, asset_key)
+    }
+
+    /// Uploads a mesh.
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
         self.inner.upload_mesh(positions, indices)
     }
@@ -64,6 +195,7 @@ impl VolumetricRenderer {
         Ok(self.inner.upload_mesh(&mesh.positions, &indices))
     }
 
+    /// Uploads a colored mesh.
     pub fn upload_mesh_colored(
         &mut self,
         positions: &[[f32; 3]],
@@ -73,10 +205,48 @@ impl VolumetricRenderer {
         self.inner.upload_mesh_colored(positions, colors, indices)
     }
 
+    /// Sets camera.
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
         self.inner.set_camera(yaw, pitch, zoom);
     }
 
+    /// Toggle the bounded portable directional shadow pass. When its VRAM reservation is refused,
+    /// the renderer keeps the unshadowed material path available.
+    pub fn set_sun_shadows_enabled(&mut self, enabled: bool) {
+        self.inner.set_shadows_enabled(enabled);
+    }
+
+    /// Sun-shadow resolution.
+    pub fn sun_shadow_resolution(&self) -> Option<u32> {
+        self.inner.shadow_resolution()
+    }
+
+    /// Enable the optional half-resolution depth/normal ambient-visibility pass when budget permits.
+    pub fn set_screen_space_ao_enabled(&mut self, enabled: bool) {
+        self.inner.set_screen_space_ao_enabled(enabled);
+    }
+
+    /// Set the world-space AO radius, indirect visibility strength, and normal-offset bias.
+    pub fn set_screen_space_ao(&mut self, radius: f32, strength: f32, bias: f32) {
+        self.inner.set_screen_space_ao(radius, strength, bias);
+    }
+
+    /// Sets screen-space-ao-sample-count.
+    pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
+        self.inner.set_screen_space_ao_sample_count(samples);
+    }
+
+    /// `true` when SSAO is available.
+    pub fn screen_space_ao_available(&self) -> bool {
+        self.inner.screen_space_ao_available()
+    }
+
+    /// SSAO resolution.
+    pub fn screen_space_ao_resolution(&self) -> Option<(u32, u32)> {
+        self.inner.screen_space_ao_resolution()
+    }
+
+    /// Renders.
     pub fn render(
         &mut self,
         time_seconds: f32,
@@ -85,16 +255,60 @@ impl VolumetricRenderer {
         self.inner.render(time_seconds, &core_telemetry(telemetry))
     }
 
+    /// Render a frame of `scene` into the active surface or offscreen target.
+    ///
+    /// Converts scene nodes to Tensor10D instances, compiles faces/edges into a colored mesh,
+    /// updates the camera orientation and distance, and executes the render pass.
+    pub fn render_scene_frame(
+        &mut self,
+        scene: &RenderScene,
+        width: u32,
+        height: u32,
+        time_seconds: f32,
+        telemetry: &crate::telemetry::SystemTelemetry,
+    ) -> Result<(), String> {
+        let tensors: Vec<Tensor10D> = scene.nodes.iter().map(node_tensor).collect();
+        if !tensors.is_empty() {
+            let mut bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
+            write_tensor_buffer(&tensors, &mut bytes).map_err(str::to_owned)?;
+            self.upload_tensor_buffer(&bytes)?;
+        }
+
+        let (positions, colors, indices) = scene_mesh(scene, width, height);
+        if !indices.is_empty() {
+            self.upload_mesh_colored(&positions, &colors, &indices);
+        }
+
+        let eye = scene.camera.position;
+        let target = scene.camera.target;
+        let dx = (eye[0] - target[0]) as f32;
+        let dy = (eye[1] - target[1]) as f32;
+        let dz = (eye[2] - target[2]) as f32;
+        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+        if distance.is_finite() && (0.35..=48.0).contains(&distance) {
+            self.set_camera(dx.atan2(dz), (dy / distance).asin(), distance);
+        }
+
+        self.render(time_seconds, telemetry)
+    }
+
+    /// Required RGBA8 bytes.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn required_rgba8_bytes(&self) -> usize {
         self.inner.required_rgba8_bytes()
     }
 
+    /// Reads rgba8-into.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_rgba8_into(&self, out: &mut [u8]) -> Result<usize, String> {
         self.inner.read_rgba8_into(out)
     }
 
+    /// Resizes.
     pub fn resize(&mut self, width: u32, height: u32) {
-        self.inner.resize(width, height);
+        if let Err(error) = self.inner.resize(width, height) {
+            log::warn!("volumetric renderer resize retained previous targets: {error}");
+        }
     }
 
     /// P9.3 — Queue an integer pick at pixel `(x, y)`. The result is available
@@ -109,10 +323,9 @@ impl VolumetricRenderer {
         self.inner.poll_pick_readback()
     }
 
-    /// P9.3 — CPU picking oracle: returns the nearest projected tensor node
-    /// index at canvas pixel `(pick_x, pick_y)`, or `None` if no node is within
-    /// hit radius. This is the deterministic fallback / differential oracle for
-    /// the GPU picking pass.
+    /// Legacy planar CPU picker retained for callers using the Canvas2D
+    /// projection. The camera-aware WebGPU-equivalent oracle is exposed by
+    /// [`Self::cpu_pick_node_at_camera`].
     pub fn cpu_pick_node_at(
         tensor: &[u8],
         canvas_w: f64,
@@ -127,6 +340,25 @@ impl VolumetricRenderer {
         )
     }
 
+    /// CPU oracle for the Tensor10D WebGPU picking pass. Uses the same camera,
+    /// frame time, observer/PGA transform, clip range, pixel footprint and
+    /// depth ordering as the GPU projector.
+    pub fn cpu_pick_node_at_camera(
+        tensor: &[u8],
+        canvas_w: u32,
+        canvas_h: u32,
+        pick_x: f64,
+        pick_y: f64,
+        frame_time: f32,
+        camera: qualia_core_db::render::camera::CameraState,
+        standpoint: &qualia_core_db::render::telemetry::ObserverStandpoint,
+    ) -> Option<u32> {
+        qualia_core_db::render::navigation::cpu_pick_node_at_camera(
+            tensor, canvas_w, canvas_h, pick_x, pick_y, frame_time, camera, standpoint,
+        )
+    }
+
+    #[cfg(target_arch = "wasm32")]
     /// P9.3 — Load a full `.10d` container asset (not just a mesh section).
     /// Parses the section table, extracts the QuantizedMesh, uploads it to the
     /// GPU, and returns `(vertex_count, triangle_count, provenance_mu)`.
@@ -149,6 +381,8 @@ impl VolumetricRenderer {
             .map_err(|e| format!("10d section table: {e}"))?;
 
         let mut mesh = None;
+        let mut material_payload = None;
+        let mut texture_coordinates_payload = None;
         let mut provenance_mu: f32 = 0.0;
         let mut nodes: Vec<Tensor10D> = Vec::new();
 
@@ -182,6 +416,12 @@ impl VolumetricRenderer {
                         nodes.push(t);
                     }
                 }
+                container_10d::SectionType::Materials => {
+                    material_payload = Some(payload);
+                }
+                container_10d::SectionType::TextureCoordinates => {
+                    texture_coordinates_payload = Some(payload);
+                }
                 _ => {}
             }
         }
@@ -189,18 +429,33 @@ impl VolumetricRenderer {
         let mesh = mesh.ok_or_else(|| "10d: no mesh section".to_string())?;
         let tri_count = mesh.triangles.len() as u32;
         let vert_count = mesh.positions.len() as u32;
+        let texture_coordinates_0 = if let Some(payload) = texture_coordinates_payload {
+            let mut coordinates = vec![[0.0f32; 2]; mesh.positions.len()];
+            let count = container_10d::decode_texture_coordinates_into(
+                payload,
+                mesh.positions.len(),
+                &mut coordinates,
+            )
+            .map_err(|error| format!("10d UV01 decode: {error}"))?;
+            if count != mesh.positions.len() {
+                return Err("10d UV01 vertex count does not match mesh".to_string());
+            }
+            Some(coordinates)
+        } else {
+            None
+        };
 
         let mut indices = Vec::with_capacity(mesh.triangles.len() * 3);
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
         }
 
-        if nodes.is_empty() {
-            self.inner.upload_mesh(&mesh.positions, &indices);
+        let colors: Vec<[f32; 4]> = if nodes.is_empty() {
+            Vec::new()
         } else {
-            // Colour vertices by nearest node σ (spectral paint).
-            let colors: Vec<[f32; 4]> = mesh
-                .positions
+            // Colour vertices by nearest node σ as an explicit observer projection. MAT1's
+            // multiplyVertexColor flag controls whether that projection tints the surface.
+            mesh.positions
                 .iter()
                 .map(|p| {
                     let mut best = 0usize;
@@ -218,7 +473,71 @@ impl VolumetricRenderer {
                     let (r, g, b) = sigma_to_display_rgb(nodes[best].sigma);
                     [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0]
                 })
-                .collect();
+                .collect()
+        };
+
+        if let Some(payload) = material_payload {
+            let (material_count, range_count) = container_10d::material_section_counts(payload)
+                .map_err(|error| format!("10d MAT1 header: {error}"))?;
+            if range_count > qualia_core_db::render::gpu::MAX_GPU_MATERIAL_DRAWS {
+                return Err("10d MAT1 draw count exceeds the active renderer cap".to_string());
+            }
+            let mut materials =
+                vec![container_10d::MaterialRecord::legacy_default(); material_count];
+            let mut ranges = vec![
+                container_10d::SubmeshRange {
+                    first_index: 0,
+                    index_count: 3,
+                    material_id: materials.first().map(|material| material.id).unwrap_or(1),
+                    semantic_id: 0,
+                };
+                range_count
+            ];
+            let index_count = u32::try_from(indices.len())
+                .map_err(|_| "10d mesh index count exceeds u32".to_string())?;
+            container_10d::decode_material_section_into(
+                payload,
+                index_count,
+                &mut materials,
+                &mut ranges,
+            )
+            .map_err(|error| format!("10d MAT1 decode: {error}"))?;
+            self.inner
+                .upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &mesh.positions,
+                    &colors,
+                    None,
+                    None,
+                    texture_coordinates_0.as_deref(),
+                    &indices,
+                    &materials,
+                    &ranges,
+                )
+                .map_err(|error| format!("10d MAT1 GPU upload: {error}"))?;
+        } else if let Some(coordinates) = texture_coordinates_0.as_deref() {
+            let material = container_10d::MaterialRecord::legacy_default();
+            let range = container_10d::SubmeshRange {
+                first_index: 0,
+                index_count: u32::try_from(indices.len())
+                    .map_err(|_| "10d mesh index count exceeds u32".to_string())?,
+                material_id: material.id,
+                semantic_id: 0,
+            };
+            self.inner
+                .upload_mesh_colored_with_frames_and_materials_and_uv0(
+                    &mesh.positions,
+                    &colors,
+                    None,
+                    None,
+                    Some(coordinates),
+                    &indices,
+                    &[material],
+                    &[range],
+                )
+                .map_err(|error| format!("10d UV0 GPU upload: {error}"))?;
+        } else if colors.is_empty() {
+            self.inner.upload_mesh(&mesh.positions, &indices);
+        } else {
             self.inner
                 .upload_mesh_colored(&mesh.positions, &colors, &indices);
         }
@@ -226,6 +545,11 @@ impl VolumetricRenderer {
         Ok((vert_count, tri_count, provenance_mu))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    /// Native shared decode/upload path with the legacy Core compatibility profile.
+    pub fn load_10d_asset(&mut self, bytes: &[u8]) -> Result<(u32, u32, f32), String> {
+        self.load_10d_compat_asset(bytes)
+    }
     /// P9.3 — Colour-by-field: map a scalar field value to a deterministic RGB
     /// colour. The mapping is a simple linear interpolation across a fixed
     /// colour ramp, ensuring the same field value produces the same colour on
@@ -285,6 +609,7 @@ impl VolumetricRenderer {
 /// Nodes become Tensor10D projector instances. Faces and edges become a triangulated depth-tested
 /// mesh. Conversion allocates only on this cold serde/IPC boundary; the renderer draw/readback path
 /// remains caller-buffered.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_rgba8_into(
     scene: &RenderScene,
     width: u32,
@@ -294,35 +619,13 @@ pub fn render_scene_rgba8_into(
     out: &mut [u8],
 ) -> Result<usize, String> {
     let mut renderer = VolumetricRenderer::new_offscreen(width, height, 50_000)?;
-
-    let tensors: Vec<Tensor10D> = scene.nodes.iter().map(node_tensor).collect();
-    if !tensors.is_empty() {
-        let mut bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut bytes).map_err(str::to_owned)?;
-        renderer.upload_tensor_buffer(&bytes)?;
-    }
-
-    let (positions, colors, indices) = scene_mesh(scene, width, height);
-    if !indices.is_empty() {
-        renderer.upload_mesh_colored(&positions, &colors, &indices);
-    }
-
-    let eye = scene.camera.position;
-    let target = scene.camera.target;
-    let dx = (eye[0] - target[0]) as f32;
-    let dy = (eye[1] - target[1]) as f32;
-    let dz = (eye[2] - target[2]) as f32;
-    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-    if distance.is_finite() && (0.35..=48.0).contains(&distance) {
-        renderer.set_camera(dx.atan2(dz), (dy / distance).asin(), distance);
-    }
-
-    renderer.render(time_seconds, telemetry)?;
+    renderer.render_scene_frame(scene, width, height, time_seconds, telemetry)?;
     renderer.read_rgba8_into(out)
 }
 
 /// PNG convenience bridge for native webviews. The render itself still uses caller-buffered core
 /// APIs; allocation here belongs to the explicit image-codec boundary.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_png(
     scene: &RenderScene,
     width: u32,
@@ -485,175 +788,6 @@ fn core_telemetry(value: &crate::telemetry::SystemTelemetry) -> CoreTelemetry {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::scene_contract::{SceneEdge, SceneFace};
-
-    #[test]
-    fn scene_mesh_preserves_css_color_and_alpha() {
-        let mut scene = RenderScene::new();
-        scene.add_face(SceneFace {
-            vertices: vec![
-                ScenePoint {
-                    x: 0.1,
-                    y: 0.1,
-                    z: 0.0,
-                },
-                ScenePoint {
-                    x: 0.9,
-                    y: 0.1,
-                    z: 0.0,
-                },
-                ScenePoint {
-                    x: 0.5,
-                    y: 0.9,
-                    z: 0.0,
-                },
-            ],
-            color: "#ff0000".to_string(),
-            alpha: 0.5,
-        });
-        scene.add_edge(SceneEdge {
-            from: ScenePoint {
-                x: 0.0,
-                y: 0.0,
-                z: 0.1,
-            },
-            to: ScenePoint {
-                x: 1.0,
-                y: 1.0,
-                z: 0.1,
-            },
-            color: "#00ff00".to_string(),
-            width: 2.0,
-            alpha: 0.75,
-        });
-
-        let (positions, colors, indices) = scene_mesh(&scene, 100, 100);
-        assert_eq!(positions.len(), 7);
-        assert_eq!(colors.len(), positions.len());
-        assert_eq!(indices.len(), 9);
-        assert_eq!(colors[0], [1.0, 0.0, 0.0, 0.5]);
-        assert_eq!(colors[3], [0.0, 1.0, 0.0, 0.75]);
-    }
-
-    // ── P9.3 tests ────────────────────────────────────────────────────────
-
-    #[test]
-    fn colour_by_field_is_deterministic() {
-        let a = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        let b = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn colour_by_field_endpoints() {
-        let blue = VolumetricRenderer::colour_by_field(0.0, 0.0, 1.0);
-        assert_eq!(blue, [0.0, 0.0, 1.0]);
-        let red = VolumetricRenderer::colour_by_field(1.0, 0.0, 1.0);
-        assert_eq!(red, [1.0, 0.0, 0.0]);
-    }
-
-    #[test]
-    fn colour_by_field_midpoint_is_green() {
-        let green = VolumetricRenderer::colour_by_field(0.5, 0.0, 1.0);
-        assert!((green[0] - 0.0).abs() < 1e-6);
-        assert!((green[1] - 1.0).abs() < 1e-6);
-        assert!((green[2] - 0.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn colour_by_field_degenerate_range() {
-        let c = VolumetricRenderer::colour_by_field(42.0, 42.0, 42.0);
-        // Degenerate range → t=0.5 → green
-        assert!((c[1] - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn temporal_scrub_returns_in_window_nodes() {
-        use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors = [
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 1.0, 0.0, 0.0),
-        ];
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        // Window around t=0.5 with width 0.6 → [0.2, 0.8] → only node 1 (t=0.5)
-        let result = VolumetricRenderer::temporal_scrub(&buf, 0.5, 0.6).unwrap();
-        assert_eq!(result, vec![1]);
-    }
-
-    #[test]
-    fn temporal_scrub_empty_window() {
-        use qualia_core_db::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors = [
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 1.0, 0.0, 0.0),
-        ];
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        let result = VolumetricRenderer::temporal_scrub(&buf, 5.0, 0.0).unwrap();
-        assert!(
-            result.is_empty(),
-            "zero-width window at t=5 should match no nodes"
-        );
-    }
-
-    #[test]
-    fn temporal_scrub_matches_linear_scan_oracle() {
-        use qualia_core_db::tensor::buffer_export::{
-            read_tensor_at, tensor_node_count, write_tensor_buffer, TensorBufferHeader,
-        };
-        use qualia_core_db::tensor::Tensor10D;
-
-        let tensors: Vec<Tensor10D> = (0..20)
-            .map(|i| {
-                Tensor10D::new(
-                    0.0,
-                    0.0,
-                    0.0,
-                    i as f32 * 0.1,
-                    0.0,
-                    0.0,
-                    i as f32 * 0.3,
-                    1.0,
-                    0.0,
-                    0.0,
-                )
-            })
-            .collect();
-        let mut buf = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut buf).unwrap();
-
-        let t_slice = 3.0f32;
-        let t_window = 2.0f32;
-        let half = t_window * 0.5;
-        let lo = t_slice - half;
-        let hi = t_slice + half;
-
-        // Linear-scan oracle
-        let count = tensor_node_count(&buf).unwrap();
-        let mut oracle = Vec::new();
-        for i in 0..count {
-            let t = read_tensor_at(&buf, i).unwrap();
-            if t.t >= lo && t.t <= hi {
-                oracle.push(i as u32);
-            }
-        }
-
-        let result = VolumetricRenderer::temporal_scrub(&buf, t_slice, t_window).unwrap();
-        assert_eq!(
-            result, oracle,
-            "temporal_scrub must match linear-scan oracle"
-        );
-    }
-}
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "volumetric_tests.rs"]
+mod tests;

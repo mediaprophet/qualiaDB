@@ -10,6 +10,7 @@ pub struct Chart<const N: usize> {
 }
 
 impl<const N: usize> Chart<N> {
+    /// `true` when `point` lies within this chart's domain.
     pub fn contains(&self, point: Vector<N>) -> bool {
         self.coordinate_domain
             .iter()
@@ -26,6 +27,7 @@ pub struct TransitionEvidence {
     pub tolerance: f64,
 }
 
+/// Verifies a chart transition by sampling `forward`∘`backward` agreement.
 pub fn verify_transition<const N: usize, F, G>(
     source: &Chart<N>,
     target: &Chart<N>,
@@ -72,6 +74,7 @@ pub struct RiemannMetric<const N: usize> {
 }
 
 impl<const N: usize> RiemannMetric<N> {
+    /// Creates a metric from a symmetric coefficient map; `AnalysisError` when invalid.
     pub fn new(coefficients: LinearMap<N, N>) -> Result<Self, AnalysisError> {
         coefficients.validate()?;
         for row in 0..N {
@@ -108,23 +111,28 @@ impl<const N: usize> RiemannMetric<N> {
         Ok(Self { coefficients })
     }
 
+    /// Lowers a tangent vector to a covector via `g`.
     pub fn lower(&self, tangent: Vector<N>) -> Result<Vector<N>, AnalysisError> {
         self.coefficients.apply(tangent)
     }
 
+    /// Raises a covector to a tangent via `g⁻¹`.
     pub fn raise(&self, covector: Vector<N>) -> Result<Vector<N>, AnalysisError> {
         self.coefficients.solve(covector)
     }
 
+    /// Metric inner product `g(left, right)`.
     pub fn inner(&self, left: Vector<N>, right: Vector<N>) -> Result<f64, AnalysisError> {
         left.dot(self.lower(right)?)
     }
 
+    /// Volume density `√|det g|`; error when `det g ≤ 0`.
     pub fn volume_density(&self) -> Result<f64, AnalysisError> {
         Ok(self.coefficients.determinant()?.sqrt())
     }
 }
 
+/// Orientation sign (+1/−1) of an ordered basis under `g`.
 pub fn orientation_sign<const N: usize>(
     transition_derivative: &LinearMap<N, N>,
 ) -> Result<i8, AnalysisError> {

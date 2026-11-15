@@ -39,10 +39,12 @@ impl Default for SanctuaryPrefs {
     }
 }
 
+/// Hashes a PIN.
 pub fn hash_pin(pin: &str) -> String {
     hex::encode(Sha256::digest(pin.as_bytes()))
 }
 
+/// Loads prefs.
 pub fn load_prefs(storage_root: impl AsRef<Path>) -> SanctuaryPrefs {
     let path = storage_root.as_ref().join(SANCTUARY_PREFS_FILE);
     if !path.exists() {
@@ -54,6 +56,7 @@ pub fn load_prefs(storage_root: impl AsRef<Path>) -> SanctuaryPrefs {
         .unwrap_or_default()
 }
 
+/// Saves prefs.
 pub fn save_prefs(storage_root: impl AsRef<Path>, prefs: &SanctuaryPrefs) -> std::io::Result<()> {
     let path = storage_root.as_ref().join(SANCTUARY_PREFS_FILE);
     if let Some(parent) = path.parent() {
@@ -64,6 +67,7 @@ pub fn save_prefs(storage_root: impl AsRef<Path>, prefs: &SanctuaryPrefs) -> std
     fs::write(&path, json)
 }
 
+/// Sets up sanctuary.
 pub fn setup_sanctuary(
     storage_root: impl AsRef<Path>,
     real_pin: &str,
@@ -88,6 +92,7 @@ pub fn setup_sanctuary(
     Ok(prefs)
 }
 
+/// Locks sanctuary.
 pub fn lock_sanctuary(storage_root: impl AsRef<Path>) -> Result<SanctuaryPrefs, String> {
     let mut prefs = load_prefs(&storage_root);
     if !prefs.enabled {
@@ -99,6 +104,7 @@ pub fn lock_sanctuary(storage_root: impl AsRef<Path>) -> Result<SanctuaryPrefs, 
     Ok(prefs)
 }
 
+/// Unlocks sanctuary.
 pub fn unlock_sanctuary(
     storage_root: impl AsRef<Path>,
     pin: &str,
@@ -125,10 +131,12 @@ pub fn unlock_sanctuary(
     Err("Incorrect PIN".into())
 }
 
+/// `true` when sanctuary-protected-kind.
 pub fn is_sanctuary_protected_kind(kind: &str) -> bool {
     SANCTUARY_PROTECTED_KINDS.contains(&kind)
 }
 
+/// Applies sanctuary-projection.
 pub fn apply_sanctuary_projection(
     prefs: &SanctuaryPrefs,
     entries: Vec<JournalEntry>,

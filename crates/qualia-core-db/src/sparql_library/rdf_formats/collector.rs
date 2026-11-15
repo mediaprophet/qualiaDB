@@ -15,6 +15,7 @@ pub struct QuinCollector {
 }
 
 impl QuinCollector {
+    /// Creates a default `QuinCollector`.
     pub fn new() -> Self {
         Self {
             buf: [NQuin::default(); MAX_RDF_QUINS],
@@ -24,6 +25,7 @@ impl QuinCollector {
     }
 
     #[inline]
+    /// Pushes an item.
     pub fn push(&mut self, mut q: NQuin) {
         if q.parity == 0 {
             q.parity =
@@ -37,6 +39,7 @@ impl QuinCollector {
         }
     }
 
+    /// Views `self` as `slice`.
     pub fn as_slice(&self) -> &[NQuin] {
         &self.buf[..self.count]
     }

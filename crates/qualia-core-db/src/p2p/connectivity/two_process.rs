@@ -16,6 +16,7 @@ use super::wss::{self, ENV_ADDR, ENV_SECRET};
 
 static DONE: AtomicBool = AtomicBool::new(false);
 
+/// `?::local_wss_two_process_executed`.
 pub fn local_wss_two_process_executed() -> bool {
     DONE.load(Ordering::SeqCst) || std::env::var(ENV_CHILD).ok().as_deref() == Some("1")
 }

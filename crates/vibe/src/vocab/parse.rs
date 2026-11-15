@@ -41,16 +41,19 @@ impl std::fmt::Display for VocabError {
 }
 
 impl VocabChunk {
+    /// Prefix IRI.
     pub fn prefix_iri(&self, prefix: &str) -> Option<&str> {
         self.prefixes.get(prefix).map(String::as_str)
     }
 
+    /// Expands a prefixed name.
     pub fn expand(&self, prefixed: &str) -> Option<String> {
         let (p, local) = prefixed.split_once(':')?;
         let base = self.prefix_iri(p)?;
         Some(format!("{base}{local}"))
     }
 
+    /// `true` when it has local.
     pub fn has_local(&self, prefix: &str, local: &str) -> bool {
         let Some(iri) = self.expand(&format!("{prefix}:{local}")) else {
             return false;
@@ -58,6 +61,7 @@ impl VocabChunk {
         self.terms.iter().any(|t| t.iri == iri)
     }
 
+    /// Hash as hex.
     pub fn hash_hex(&self) -> String {
         self.content_hash
             .iter()
@@ -71,6 +75,7 @@ impl VocabChunk {
     }
 }
 
+/// Parses chunk.
 pub fn parse_chunk(bytes: &[u8]) -> Result<VocabChunk, VocabError> {
     if bytes.len() > MAX_CHUNK_BYTES {
         return Err(VocabError::TooLarge { bytes: bytes.len() });

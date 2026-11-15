@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use js_sys::Uint8ClampedArray;
 #[cfg(target_arch = "wasm32")]
@@ -9,15 +9,15 @@ use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
-use webizen_studio::tauri_ffi::invoke as tauri_invoke;
-#[cfg(target_arch = "wasm32")]
-use webizen_studio::tauri_ffi::listen as tauri_listen;
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData, Response};
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::invoke as tauri_invoke;
+#[cfg(target_arch = "wasm32")]
+use webizen_studio::tauri_ffi::listen as tauri_listen;
 
 const CANVAS_ID: &str = "diffusion-surface";
 
@@ -128,6 +128,7 @@ async fn draw_snapshot(snapshot: RuntimeSnapshotRecord) -> Result<(), String> {
 }
 
 #[component]
+/// Aether `DiffusionVisualizer` component.
 pub fn DiffusionVisualizer() -> Element {
     let latest_epoch = use_signal(|| 0u64);
     let dimensions = use_signal(|| (128u32, 128u32));
@@ -297,7 +298,7 @@ pub fn DiffusionVisualizer() -> Element {
                     }
                     p {
                         style: "margin: 0; font-size: 0.76rem; color: var(--qualia-text-muted); line-height: 1.45;",
-                        "Canvas blits consume completed runtime epochs directly from the native substrate. No RGBA frame bytes pass through the Dioxus Virtual DOM."
+                        "Canvas blits consume completed runtime epochs directly from the native substrate. No RGBA frame bytes pass through the Aether Virtual DOM."
                     }
                 }
                 div {

@@ -358,7 +358,10 @@ fn plan_to_owned(source: &str, plan: PlanView) -> AnnotationPlan {
 
 fn document_analysis_from_layers(source: &str, layers: &YearOneLayers<'_>) -> DocumentAnalysis {
     let mut plans = crate::nlp::emit::emit_from_hits(source, &layers.hits);
-    plans.extend(crate::nlp::emit::emit_from_normalized(source, &layers.norms));
+    plans.extend(crate::nlp::emit::emit_from_normalized(
+        source,
+        &layers.norms,
+    ));
     DocumentAnalysis {
         source_hash: hash60(source.as_bytes()),
         token_count: layers.tokens.len(),

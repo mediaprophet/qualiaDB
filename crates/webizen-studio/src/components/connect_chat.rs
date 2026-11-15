@@ -9,8 +9,8 @@
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
 
-use dioxus::html::input_data::keyboard_types::{Key, Modifiers};
-use dioxus::prelude::*;
+use aether::html::input_data::keyboard_types::Modifiers;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::components::conduct_banner::{
@@ -40,7 +40,10 @@ where
     T: serde::de::DeserializeOwned,
 {
     if !crate::endpoints::is_native_host() {
-        return Err("Talk host is held / not yet in this preview — open the desktop app to send.".to_string());
+        return Err(
+            "Talk host is held / not yet in this preview — open the desktop app to send."
+                .to_string(),
+        );
     }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
@@ -131,7 +134,8 @@ fn auto_select_model_label(list: &[serde_json::Value], current: &str) -> Option<
 /// a local instrument. Plain Send never remote-drives an agent.
 #[cfg(target_arch = "wasm32")]
 async fn reload_session_messages(sid: &str, mut messages: Signal<Vec<serde_json::Value>>) {
-    if let Ok(full) = invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid })).await
+    if let Ok(full) =
+        invoke_json::<serde_json::Value>("load_chat_session", json!({ "id": sid })).await
     {
         let msgs = full
             .get("messages")
@@ -486,6 +490,7 @@ async fn send_chat_turn(
 }
 
 #[component]
+/// Aether `ConnectChat` component.
 pub fn ConnectChat() -> Element {
     let experience_mode = crate::components::experience_mode::use_experience_mode();
     let status = use_signal(String::new);
@@ -669,7 +674,11 @@ pub fn ConnectChat() -> Element {
             }
             if let Ok(st) = invoke_json::<serde_json::Value>("mesh_status", json!({})).await {
                 let running = st.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
-                let n = st.get("peers").and_then(|p| p.as_array()).map(|a| a.len()).unwrap_or(0);
+                let n = st
+                    .get("peers")
+                    .and_then(|p| p.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
                 mesh_running.set(running);
                 mesh_peer_count.set(n);
             }
@@ -782,7 +791,9 @@ pub fn ConnectChat() -> Element {
                                             sessions.set(list);
                                         }
                                     }
-                                    Err(e) => status.set(format!("Could not open conversation: {e}")),
+                                    Err(e) => {
+                                        status.set(format!("Could not open conversation: {e}"))
+                                    }
                                 }
                             }
                         }
@@ -1594,7 +1605,7 @@ pub fn ConnectChat() -> Element {
                             onkeydown: move |e| {
                                 // Enter sends when draft non-empty; Shift+Enter keeps newline.
                                 // Empty draft: still preventDefault on bare Enter (no blank line).
-                                if e.key() == Key::Enter && !e.modifiers().contains(Modifiers::SHIFT) {
+                                if e.key().to_string() == "Enter" && !e.modifiers().contains(Modifiers::SHIFT) {
                                     e.prevent_default();
                                     if draft().trim().is_empty() {
                                         return;

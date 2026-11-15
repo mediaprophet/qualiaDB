@@ -55,10 +55,12 @@ pub const DEFAULT_LEXICON: &[Lexeme] = &[
     },
 ];
 
+/// Looks up a term IRI.
 pub fn lookup_iri(iri: &str) -> Option<&'static Lexeme> {
     DEFAULT_LEXICON.iter().find(|l| l.iri == iri)
 }
 
+/// Known-term IRI.
 pub fn known_iri(iri: &str) -> bool {
     lookup_iri(iri).is_some()
 }

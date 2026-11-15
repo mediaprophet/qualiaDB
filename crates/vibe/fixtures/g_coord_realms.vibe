@@ -27,3 +27,13 @@ effect fn spring_label() -> string {
 effect fn warp(w: f64) -> Record {
     return Cosmic.warp_velocity({ warp: w, scale: "tng" });
 }
+
+pure fn g_coord_realm_manifest() -> Record {
+    return {
+        earth: "urn:omni:v1:physical:observable:standard:sol:earth:wgs84",
+        cosmos: "urn:omni:v1:physical:observable:standard:laniakea:virgo:milkyway",
+        fictional: "urn:omni:v1:fiction:star-trek:prime:earth",
+        speculative: "urn:omni:v1:hypothetical:counterfactual:branch-a:earth",
+        viewpoint: "urn:omni:v1:phenomenology:observer-frame:local"
+    };
+}

@@ -14,7 +14,7 @@
 
 use super::host_client::{body_assets_status, render_body_snapshot, BodyAssetsStatus};
 use crate::components::experience_mode::use_experience_mode;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Anatomy3dUi {
@@ -94,6 +94,7 @@ async fn acquire_assets(mut ui: Signal<Anatomy3dUi>) {
 }
 
 #[component]
+/// Aether `WellfairAnatomy3dPanel` component.
 pub fn WellfairAnatomy3dPanel() -> Element {
     let experience_mode = use_experience_mode();
     let advanced = experience_mode().is_advanced();

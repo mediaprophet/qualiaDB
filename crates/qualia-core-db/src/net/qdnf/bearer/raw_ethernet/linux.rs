@@ -29,6 +29,7 @@ pub struct RawEthernet {
 }
 
 impl RawEthernet {
+    /// Opens the resource.
     pub fn open(interface: &[u8]) -> Result<Self, QdnfError> {
         validate_ifname(interface)?;
         let mut cname = [0 as libc::c_char; IFNAMSIZ];
@@ -81,6 +82,7 @@ impl RawEthernet {
         })
     }
 
+    /// Evidence level of raw-ethernet on Linux.
     pub fn ethernet_evidence_level(&self) -> EthernetEvidence {
         EthernetEvidence::AfPacketAttempt
     }

@@ -1,5 +1,7 @@
 //! `platform` category (reorg).
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub mod accelerator_inventory;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod compute_bridge;
 #[cfg(not(target_arch = "wasm32"))]
@@ -7,7 +9,7 @@ pub mod device_benchmark;
 pub mod git_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod hardware_passport;
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", test))]
 pub mod jni_bridge;
 pub mod kml_bridge;
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
@@ -25,3 +27,8 @@ pub mod host;
 pub mod local_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod platform_scheduler;
+pub mod precision_timer;
+
+pub use precision_timer::{
+    format_duration_human, BenchmarkResult, DurationPrecisionExt, PrecisionTimer,
+};

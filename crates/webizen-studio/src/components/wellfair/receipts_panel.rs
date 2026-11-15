@@ -2,13 +2,14 @@
 
 use super::host_client::fetch_receipts;
 use super::host_dto::ReceiptDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn cp_prefix(hash: &str) -> String {
     hash.chars().take(12).collect()
 }
 
 #[component]
+/// Aether `WellfairReceiptsPanel` component.
 pub fn WellfairReceiptsPanel() -> Element {
     let mut receipts = use_signal(Vec::<ReceiptDto>::new);
     let mut status = use_signal(|| String::new());

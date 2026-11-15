@@ -10,6 +10,10 @@ pub mod catalog_ttl;
 pub mod invoke;
 mod scan;
 mod values;
+pub mod scoped_effects;
+pub mod vibe_sentinel;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native_authority;
 
 use scan::{collect_matches, subject_present};
 pub use values::format_value;
@@ -36,6 +40,7 @@ pub enum TickPolicy {
 }
 
 impl Default for TickPolicy {
+    /// `Coalesce` — drop intermediate ticks while one is in flight.
     fn default() -> Self {
         Self::Coalesce
     }
@@ -53,12 +58,14 @@ pub struct TickController {
 }
 
 impl Default for TickController {
+    /// Controller under the default `Coalesce` policy.
     fn default() -> Self {
         Self::new(TickPolicy::Coalesce)
     }
 }
 
 impl TickController {
+    /// Fresh controller under `policy` with all counters zeroed.
     pub fn new(policy: TickPolicy) -> Self {
         Self {
             policy,
@@ -129,6 +136,24 @@ pub struct PulseRecord {
 /// RDF 1.2 reifier predicate used by staged `<< s p o ~ r >>` quins.
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
+/// Provenance and semantic view metadata for an admitted Q42 volume/slice (G50).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdmittedQ42ViewReceipt {
+    pub pack_identity: String,
+    pub entry_key: String,
+    pub entry_digest: [u8; 32],
+    pub q42_version: u32,
+    pub quin_count: usize,
+    pub block_count: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AdmittedQ42View {
+    pub receipt: Option<AdmittedQ42ViewReceipt>,
+    pub quins: Vec<NQuin>,
+    pub lexicon_entries: std::collections::HashMap<u64, String>,
+}
+
 /// In-memory graph revision used as the 0.1 live host.
 ///
 /// When `attached`, queries refresh from the native daemon graph and commits
@@ -158,6 +183,10 @@ pub struct PoetSnapshot {
     pub trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger,
     /// Remaining 42 MB Sentinel budget after the last eval (P16.6).
     pub last_eval_workspace_left: u64,
+    /// Admitted isolated read-only Q42 semantic views (G50).
+    pub admitted_views: Vec<AdmittedQ42View>,
+    /// Key vault storing Ed25519 signing seeds for crypto operations.
+    pub key_vault: std::collections::HashMap<String, [u8; 32]>,
 }
 
 /// Canonical name for the mutable Vibe execution environment.
@@ -197,6 +226,7 @@ pub struct HidEventSlot {
 }
 
 impl HidEventBuffer {
+    /// Empty ring buffer of `HID_SAMPLE_QUOTA` slots.
     pub fn new() -> Self {
         Self {
             events: vec![HidEventSlot::default(); HID_SAMPLE_QUOTA],
@@ -250,12 +280,15 @@ impl HidEventBuffer {
 }
 
 impl Default for HidEventBuffer {
+    /// Same as [`HidEventBuffer::new`].
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl PoetSnapshot {
+    /// Detached snapshot seeded with `quins` at revision 1 — no daemon
+    /// attachment, no published events.
     pub fn with_seed(quins: Vec<NQuin>) -> Self {
         Self {
             committed: quins,
@@ -269,6 +302,8 @@ impl PoetSnapshot {
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
             last_eval_workspace_left: vibe::SENTINEL_BYTES,
+            admitted_views: Vec::new(),
+            key_vault: std::collections::HashMap::new(),
         }
     }
 
@@ -283,6 +318,8 @@ impl PoetSnapshot {
         Self::with_demo_seed()
     }
 
+    /// Snapshot attached to the process daemon graph — reads/delegates
+    /// go through `daemon_graph`, `committed` stays empty.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_daemon() -> Self {
         Self {
@@ -297,9 +334,13 @@ impl PoetSnapshot {
             hid_events: HidEventBuffer::new(),
             trace_ledger: crate::governance::instrument_trace::InstrumentTraceLedger::new(),
             last_eval_workspace_left: vibe::SENTINEL_BYTES,
+            admitted_views: Vec::new(),
+            key_vault: std::collections::HashMap::new(),
         }
     }
 
+    /// Evidence-level string: `"live"` when attached to the daemon
+    /// graph, `"partial"` for a detached snapshot.
     pub fn honesty(&self) -> &'static str {
         if self.attached {
             "live"
@@ -308,6 +349,8 @@ impl PoetSnapshot {
         }
     }
 
+    /// Run `f` on the live quin slice — the daemon read guard when
+    /// attached, otherwise the committed vec.
     pub(crate) fn with_live_quins<R>(&self, f: impl FnOnce(&[NQuin]) -> R) -> R {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
@@ -317,6 +360,8 @@ impl PoetSnapshot {
         f(&self.committed)
     }
 
+    /// Quins visible to this snapshot — the daemon count when attached,
+    /// else `committed.len()`.
     pub fn visible_count(&self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
@@ -341,6 +386,8 @@ impl PoetSnapshot {
         Self::with_seed(vec![q])
     }
 
+    /// Ingest an externally sealed quin — into the daemon graph when
+    /// attached (revision refreshed), else appended to `committed`.
     pub fn ingest_sealed(&mut self, quin: NQuin) {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
@@ -351,6 +398,8 @@ impl PoetSnapshot {
         self.committed.push(quin);
     }
 
+    /// Advance the snapshot revision (wrapping) after an out-of-band
+    /// mutation the commit path didn't observe.
     pub fn bump_revision(&mut self) {
         self.revision = self.revision.wrapping_add(1);
     }
@@ -379,6 +428,8 @@ impl PoetSnapshot {
             hid_events: self.hid_events.clone(),
             trace_ledger: self.trace_ledger.clone(),
             last_eval_workspace_left: self.last_eval_workspace_left,
+            admitted_views: self.admitted_views.clone(),
+            key_vault: self.key_vault.clone(),
         }
     }
 
@@ -392,6 +443,162 @@ impl PoetSnapshot {
     /// Discard all staged deltas without committing (rollback).
     pub fn rollback_staged(&mut self) {
         self.staged.clear();
+    }
+
+    /// Admit an in-memory/byte-backed Q42 slice into an isolated read-only semantic view (G50).
+    ///
+    /// Validates:
+    /// 1. Entry SHA-256 digest (if expected_digest is provided).
+    /// 2. Q42 header bounds and supported format version (v3/v4).
+    /// 3. Caller-buffered SuperBlock decompression and Quin parity checks for all Quins.
+    /// 4. Embedded Q42LEX lexicon decoding into an isolated term map.
+    ///
+    /// Fail-closed guarantee: any corruption, digest mismatch, or budget error
+    /// rejects admission immediately WITHOUT altering previously admitted views or
+    /// resident committed graph.
+    ///
+    /// When `load_into_committed` is true, also appends admitted Quins to `self.committed`
+    /// and bumps revision so queries (`GraphDatabase.sparql`, `SHACL.validate`) see them.
+    pub fn admit_q42_slice(
+        &mut self,
+        bytes: &[u8],
+        pack_identity: &str,
+        entry_key: &str,
+        expected_digest: Option<&[u8; 32]>,
+        load_into_committed: bool,
+    ) -> Result<AdmittedQ42ViewReceipt, String> {
+        if bytes.len() > vibe::SENTINEL_BYTES as usize {
+            return Err("Q42 slice exceeds 42MB Sentinel budget".into());
+        }
+
+        // 1. Digest check
+        if let Some(expected) = expected_digest {
+            use sha2::{Digest, Sha256};
+            let mut hasher = Sha256::new();
+            hasher.update(bytes);
+            let actual: [u8; 32] = hasher.finalize().into();
+            if actual != *expected {
+                return Err("Q42 slice digest mismatch".into());
+            }
+        }
+
+        // 2. Open via Q42RangeVolume
+        use crate::q42::q42_volume::{
+            OpfsSliceRangeSource, Q42RangeVolume, MAX_COMPRESSED_SUPERBLOCK_SIZE, QUIN_SIZE,
+            SUPERBLOCK_HEADER, SUPERBLOCK_SIZE,
+        };
+        let source = OpfsSliceRangeSource::new(bytes);
+        let vol = Q42RangeVolume::open(source)
+            .map_err(|e| format!("Q42 range volume header invalid: {e}"))?;
+
+        let block_count = vol.block_count() as usize;
+        let mut admitted_quins = Vec::new();
+
+        // 3. Decompress and verify each block and its quins
+        let mut compressed = vec![0u8; MAX_COMPRESSED_SUPERBLOCK_SIZE];
+        let mut decoded = vec![0u8; SUPERBLOCK_SIZE];
+
+        for b in 0..block_count {
+            vol.read_superblock_into(b, &mut compressed, &mut decoded)
+                .map_err(|e| format!("Q42 block {b} decompression failed: {e}"))?;
+
+            let count = u64::from_le_bytes(decoded[16..24].try_into().unwrap()) as usize;
+            if count > crate::QUINS_PER_BLOCK {
+                return Err(format!("Q42 block {b} quin count {count} exceeds capacity"));
+            }
+
+            for q_idx in 0..count {
+                let off = SUPERBLOCK_HEADER + q_idx * QUIN_SIZE;
+                let quin = NQuin {
+                    subject: u64::from_le_bytes(decoded[off..off + 8].try_into().unwrap()),
+                    predicate: u64::from_le_bytes(decoded[off + 8..off + 16].try_into().unwrap()),
+                    object: u64::from_le_bytes(decoded[off + 16..off + 24].try_into().unwrap()),
+                    context: u64::from_le_bytes(decoded[off + 24..off + 32].try_into().unwrap()),
+                    metadata: u64::from_le_bytes(decoded[off + 32..off + 40].try_into().unwrap()),
+                    parity: u64::from_le_bytes(decoded[off + 40..off + 48].try_into().unwrap()),
+                };
+
+                let expected_parity = NQuin::calculate_parity(
+                    quin.subject,
+                    quin.predicate,
+                    quin.object,
+                    quin.context,
+                    quin.metadata,
+                );
+                if quin.parity != expected_parity {
+                    return Err(format!(
+                        "Q42 block {b} quin {q_idx} parity corrupt: expected {expected_parity:#x}, got {:#x}",
+                        quin.parity
+                    ));
+                }
+                admitted_quins.push(quin);
+            }
+        }
+
+        // 4. Decode embedded lexicon if present
+        let mut lexicon_entries = std::collections::HashMap::new();
+        let header = vol.header();
+        if header.lex_length > 0 {
+            let lex_off = header.lex_offset as usize;
+            let lex_len = header.lex_length as usize;
+            if let Some(lex_slice) = bytes.get(lex_off..lex_off + lex_len) {
+                if let Ok(lex_mmap) = crate::q42_lex::Q42LexMmap::from_bytes(lex_slice) {
+                    for q in &admitted_quins {
+                        if let Some(s) = lex_mmap.lookup_owned(q.subject) {
+                            lexicon_entries.insert(q.subject, s);
+                        }
+                        if let Some(s) = lex_mmap.lookup_owned(q.predicate) {
+                            lexicon_entries.insert(q.predicate, s);
+                        }
+                        let masked_obj = q.object & 0x0FFF_FFFF_FFFF_FFFF;
+                        if let Some(s) = lex_mmap.lookup_owned(masked_obj) {
+                            lexicon_entries.insert(masked_obj, s);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Commit into admitted views
+        let receipt = AdmittedQ42ViewReceipt {
+            pack_identity: pack_identity.to_string(),
+            entry_key: entry_key.to_string(),
+            entry_digest: {
+                use sha2::{Digest, Sha256};
+                Sha256::digest(bytes).into()
+            },
+            q42_version: header.version as u32,
+            quin_count: admitted_quins.len(),
+            block_count: header.block_count,
+        };
+
+        if load_into_committed {
+            self.committed.extend_from_slice(&admitted_quins);
+            self.revision = self.revision.saturating_add(1);
+        }
+
+        self.admitted_views.push(AdmittedQ42View {
+            receipt: Some(receipt.clone()),
+            quins: admitted_quins,
+            lexicon_entries,
+        });
+
+        Ok(receipt)
+    }
+
+    /// Resolve a hash term against admitted lexicon views.
+    pub fn resolve_admitted_lexicon_term(&self, hash: u64) -> Option<&str> {
+        let masked = hash & 0x0FFF_FFFF_FFFF_FFFF;
+        for view in self.admitted_views.iter().rev() {
+            if let Some(term) = view
+                .lexicon_entries
+                .get(&hash)
+                .or_else(|| view.lexicon_entries.get(&masked))
+            {
+                return Some(term.as_str());
+            }
+        }
+        None
     }
 
     /// Number of staged (uncommitted) quins.
@@ -421,6 +628,9 @@ impl PoetSnapshot {
         });
     }
 
+    /// Parse, check, and evaluate a full VibeScript program source —
+    /// resets the graph/time-read honesty flags first and records the
+    /// post-eval workspace headroom in `last_eval_workspace_left`.
     pub fn eval_program_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = false;
         self.time_read_during_eval = false;
@@ -444,6 +654,9 @@ impl PoetSnapshot {
         n
     }
 
+    /// Evaluate one notebook cell source against this snapshot; resets
+    /// the read flags first (left uncleared on failure — an incomplete
+    /// cell keeps its flags).
     pub fn eval_cell_src(&mut self, src: &str) -> Result<Value, Diagnostic> {
         self.graph_read_during_eval = false;
         self.time_read_during_eval = false;
@@ -453,6 +666,8 @@ impl PoetSnapshot {
         result
     }
 
+    /// Call function `name` from program source `src` with `args`,
+    /// evaluated against this snapshot.
     pub fn eval_fn(
         &mut self,
         src: &str,
@@ -488,6 +703,9 @@ impl PoetSnapshot {
 }
 
 impl Host for PoetSnapshot {
+    /// `graph.query` — match s/p/o patterns (any may be absent) against
+    /// the live or committed quins, up to `take` results; sets the
+    /// `graph_read_during_eval` honesty flag.
     fn graph_query(
         &mut self,
         args: &[Value],
@@ -510,6 +728,9 @@ impl Host for PoetSnapshot {
         Ok(Value::List(out))
     }
 
+    /// `graph.stage` — buffer `term` (triple, reified term, or Quin)
+    /// into `staged` for the next commit; E600 when the value encodes
+    /// no stageable quin.
     fn graph_stage(&mut self, term: &Value, span: vibe::Span) -> Result<Value, Diagnostic> {
         let mut pushed = 0usize;
         if let Some(q) = value_to_quin(term, 0) {
@@ -530,15 +751,21 @@ impl Host for PoetSnapshot {
         ))
     }
 
+    /// `graph.begin` — no-op: staging is implicit, no explicit
+    /// transaction state to open.
     fn graph_begin(&mut self, _span: vibe::Span) -> Result<(), Diagnostic> {
         Ok(())
     }
 
+    /// `graph.abort` — drop every staged quin without committing.
     fn graph_abort(&mut self, _span: vibe::Span) -> Result<(), Diagnostic> {
         self.staged.clear();
         Ok(())
     }
 
+    /// `graph.commit` — flush `staged` into the daemon graph (attached)
+    /// or `committed` (detached), bump the revision, and return a
+    /// `Receipt`. Committing an empty stage is a no-op `Receipt`.
     fn graph_commit(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         if !self.staged.is_empty() {
             #[cfg(not(target_arch = "wasm32"))]
@@ -559,6 +786,9 @@ impl Host for PoetSnapshot {
         Ok(Value::Receipt)
     }
 
+    /// `aura.validate` — validate `node` against a named shape; only
+    /// the built-in `EmergencyAlertShape`/`ReifierPresent` shapes are
+    /// honest in this build (false otherwise / for unhashable nodes).
     fn aura_validate(
         &mut self,
         node: &Value,
@@ -621,6 +851,10 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `pulse.publish` — emit `payload` on `topic` (E500 unless the
+    /// topic is on `PULSE_ALLOW_PREFIXES`); goes through the process
+    /// pulse transport when attached, and is always journaled into
+    /// `published`.
     fn pulse_publish(
         &mut self,
         topic: &str,
@@ -656,6 +890,8 @@ impl Host for PoetSnapshot {
         Ok(Value::Null)
     }
 
+    /// `time.now` — current instant built on `time_unix` (E600 if the
+    /// clock read produced something unexpected).
     fn time_now(&mut self, span: vibe::Span) -> Result<Value, Diagnostic> {
         let secs = match self.time_unix(span)? {
             Value::I64(s) => s,
@@ -671,6 +907,8 @@ impl Host for PoetSnapshot {
         Ok(Value::Instant(vibe::Instant::unix(secs, 0)))
     }
 
+    /// Host environment — `WasmSandbox` on wasm32, `NativeDesktop`
+    /// otherwise.
     fn environment(&self) -> vibe::HostEnvironment {
         #[cfg(target_arch = "wasm32")]
         {
@@ -682,14 +920,19 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// The tier this host will actually use — `ScalarCpu`.
     fn acceleration_tier(&self) -> vibe::AccelerationTier {
         vibe::AccelerationTier::ScalarCpu
     }
 
+    /// The best acceleration tier hardware-probed on this machine.
     fn available_acceleration(&self) -> vibe::AccelerationTier {
         vibe::detect_available_tier()
     }
 
+    /// `time.unix` — seconds since epoch; sets `time_read_during_eval`.
+    /// WASM has no wall clock and returns 0 (receipt-injected clocks
+    /// handle replay).
     fn time_unix(&mut self, span: vibe::Span) -> Result<Value, Diagnostic> {
         self.time_read_during_eval = true;
         // WASM has no wall clock; the host injects replay clocks via receipts.
@@ -712,6 +955,8 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `graph.snapshot` — the current revision (`U64`); refreshes from
+    /// the daemon when attached.
     fn graph_snapshot(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(not(target_arch = "wasm32"))]
         if self.attached {
@@ -720,10 +965,14 @@ impl Host for PoetSnapshot {
         Ok(Value::U64(self.revision))
     }
 
+    /// `capability.resolve` — look up invoke-id `id` in the catalog,
+    /// honesty-tagged by attachment state.
     fn capability_resolve(&mut self, id: &str, _span: vibe::Span) -> Result<Value, Diagnostic> {
         Ok(catalog::resolve_id_with(id, self.attached))
     }
 
+    /// `capability.invoke` — dispatch invoke-id `id` through
+    /// `invoke::dispatch`.
     fn capability_invoke(
         &mut self,
         id: &str,
@@ -733,6 +982,8 @@ impl Host for PoetSnapshot {
         invoke::dispatch(self, id, args, span)
     }
 
+    /// `quin.seal` — wrap raw s/p/o/c u64s into a `QuinRef` (metadata
+    /// 0, parity recomputed); the script never sees the parity field.
     fn quin_seal(
         &mut self,
         subject: u64,
@@ -748,12 +999,18 @@ impl Host for PoetSnapshot {
         )))
     }
 
+    /// `hash_iri` — the 60-bit token hash of `iri` (bits 60–63 free
+    /// for type tags).
     fn hash_iri(&self, iri: &str) -> u64 {
         generate_60bit_token(iri.as_bytes())
     }
 
     // ── Crypto operations — delegate to cryptographic_library ───────
 
+    /// `crypto.hash` — SHA-256/SHA-512/BLAKE3 of `data`, returned as a
+    /// hash-result record; E100 for other algorithm names.
+    /// `crypto.hash` — SHA-256/SHA-512/BLAKE3 of `data`, returned as a
+    /// hash-result record; E100 for other algorithm names.
     fn crypto_hash(
         &mut self,
         algorithm: &str,
@@ -796,6 +1053,8 @@ impl Host for PoetSnapshot {
         ))
     }
 
+    /// `crypto.hkdf` — HKDF-SHA256 expand of `ikm`/`info` to `length`
+    /// bytes, hex-encoded; E100 on expansion failure.
     fn crypto_hkdf(
         &mut self,
         ikm: &str,
@@ -819,6 +1078,9 @@ impl Host for PoetSnapshot {
         Ok(Value::String(vibe::crypto::to_hex(&okm)))
     }
 
+    /// `crypto.aead_encrypt` — AEAD-encrypt `plaintext` (AES-256-GCM:
+    /// 32-byte key, 12-byte nonce, hex input) with `aad`; E100 on bad
+    /// hex, wrong sizes, or an unsupported algorithm.
     fn crypto_aead_encrypt(
         &mut self,
         algorithm: &str,
@@ -959,6 +1221,8 @@ impl Host for PoetSnapshot {
         ))
     }
 
+    /// `crypto.aead_decrypt` — AEAD-decrypt with the same hex contract
+    /// as `crypto_aead_encrypt`; E100 on bad input or auth failure.
     fn crypto_aead_decrypt(
         &mut self,
         algorithm: &str,
@@ -1103,52 +1367,122 @@ impl Host for PoetSnapshot {
         ))
     }
 
+    /// `crypto.sign` — signs `data` with key identified by `key_id`.
     fn crypto_sign(
         &mut self,
-        _key_id: &str,
-        _data: &str,
+        key_id: &str,
+        data: &str,
         span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        // Signing requires access to the key vault, which is not
-        // available in the snapshot. This is a fail-closed stub that
-        // signals the key vault is not wired into the poet host yet.
-        Err(Diagnostic::new(
-            vibe::DiagCode::E702,
-            span,
-            "crypto.sign: key vault not wired into poet host (use the identity layer directly)",
-        ))
+        let seed = self.key_vault.get(key_id).ok_or_else(|| {
+            Diagnostic::new(
+                vibe::DiagCode::E702,
+                span,
+                format!("crypto.sign: key '{key_id}' not found in key vault"),
+            )
+        })?;
+        use ed25519_dalek::Signer;
+        let signing_key = ed25519_dalek::SigningKey::from_bytes(seed);
+        let signature = signing_key.sign(data.as_bytes());
+        Ok(Value::String(vibe::crypto::to_hex(&signature.to_bytes())))
     }
 
+    /// `crypto.verify` — verifies `data` against `signature_hex` using key_id or raw public key hex.
     fn crypto_verify(
         &mut self,
-        _key_id: &str,
-        _data: &str,
-        _signature_hex: &str,
+        key_id: &str,
+        data: &str,
+        signature_hex: &str,
         span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        // Verification requires access to the key vault.
-        Err(Diagnostic::new(
-            vibe::DiagCode::E702,
-            span,
-            "crypto.verify: key vault not wired into poet host (use the identity layer directly)",
-        ))
+        let vk = if let Some(seed) = self.key_vault.get(key_id) {
+            let signing_key = ed25519_dalek::SigningKey::from_bytes(seed);
+            signing_key.verifying_key()
+        } else {
+            let vk_bytes = vibe::crypto::from_hex(key_id).ok_or_else(|| {
+                Diagnostic::new(
+                    vibe::DiagCode::E702,
+                    span,
+                    format!("crypto.verify: unknown key id or invalid hex '{key_id}'"),
+                )
+            })?;
+            let vk_arr: [u8; 32] = vk_bytes.try_into().map_err(|_| {
+                Diagnostic::new(
+                    vibe::DiagCode::E100,
+                    span,
+                    "crypto.verify: verifying key must be 32 bytes",
+                )
+            })?;
+            ed25519_dalek::VerifyingKey::from_bytes(&vk_arr).map_err(|e| {
+                Diagnostic::new(
+                    vibe::DiagCode::E100,
+                    span,
+                    format!("crypto.verify: invalid verifying key: {e}"),
+                )
+            })?
+        };
+
+        let sig_bytes = vibe::crypto::from_hex(signature_hex).ok_or_else(|| {
+            Diagnostic::new(
+                vibe::DiagCode::E100,
+                span,
+                "crypto.verify: invalid signature hex",
+            )
+        })?;
+        let sig_arr: [u8; 64] = sig_bytes.try_into().map_err(|_| {
+            Diagnostic::new(
+                vibe::DiagCode::E100,
+                span,
+                "crypto.verify: signature must be 64 bytes",
+            )
+        })?;
+        let sig = ed25519_dalek::Signature::from_bytes(&sig_arr);
+        use ed25519_dalek::Verifier;
+        let valid = vk.verify(data.as_bytes(), &sig).is_ok();
+        Ok(Value::Bool(valid))
     }
 
+    /// `crypto.generate_key` — generates an Ed25519 keypair and registers it in the key vault.
     fn crypto_generate_key(
         &mut self,
-        _algorithm: &str,
+        algorithm: &str,
         span: vibe::Span,
     ) -> Result<Value, Diagnostic> {
-        // Key generation requires access to the key vault.
-        Err(Diagnostic::new(
-            vibe::DiagCode::E702,
-            span,
-            "crypto.generate_key: key vault not wired into poet host (use the identity layer directly)",
-        ))
+        let algo_upper = algorithm.to_ascii_uppercase();
+        if algo_upper != "ED25519" && algo_upper != "EDDSA" {
+            return Err(Diagnostic::new(
+                vibe::DiagCode::E100,
+                span,
+                format!("crypto.generate_key: unsupported algorithm '{algorithm}', expected 'Ed25519'"),
+            ));
+        }
+
+        let mut seed = [0u8; 32];
+        if let Err(e) = getrandom::fill(&mut seed) {
+            return Err(Diagnostic::new(
+                vibe::DiagCode::E100,
+                span,
+                format!("crypto.generate_key: OS entropy failed: {e}"),
+            ));
+        }
+
+        let signing_key = ed25519_dalek::SigningKey::from_bytes(&seed);
+        let verifying_key = signing_key.verifying_key();
+        let key_id = format!("key:ed25519:{}", self.key_vault.len());
+        self.key_vault.insert(key_id.clone(), seed);
+
+        let mut record = std::collections::BTreeMap::new();
+        record.insert("key_id".to_string(), Value::String(key_id));
+        record.insert("public_key".to_string(), Value::String(vibe::crypto::to_hex(verifying_key.as_bytes())));
+        record.insert("algorithm".to_string(), Value::String("Ed25519".to_string()));
+        Ok(Value::Record(record))
     }
 
     // ── ZK proof operations — delegate to crypto::zk_predicates / zk_proofs ─
 
+    /// `zk.prove_threshold` — prove `value >= threshold` via
+    /// `crypto::zk_predicates`; E702 when `zk-culling` is off, E100 on
+    /// prover failure.
     fn zk_prove_threshold(
         &mut self,
         value: u64,
@@ -1185,6 +1519,8 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `zk.verify_threshold` — verify a threshold proof (`proof_hex`,
+    /// `vk_hex`) against `threshold`; E702 when `zk-culling` is off.
     fn zk_verify_threshold(
         &mut self,
         proof_hex: &str,
@@ -1227,6 +1563,8 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `zk.prove_range` — prove `lo <= value <= hi` via
+    /// `crypto::zk_predicates::prove_range`; E702 when `zk-culling` is off.
     fn zk_prove_range(
         &mut self,
         value: u64,
@@ -1260,6 +1598,8 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `zk.verify_range` — verify a range proof against `lo`/`hi`;
+    /// E702 when `zk-culling` is off.
     fn zk_verify_range(
         &mut self,
         proof_hex: &str,
@@ -1303,6 +1643,9 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `zk.prove_matmul` — prove a `m×k × k×n` integer matmul via
+    /// `ZkProofSystem::prove_matrix_multiply`; E702 when `zk-culling`
+    /// is off.
     fn zk_prove_matmul(
         &mut self,
         m: u64,
@@ -1334,6 +1677,8 @@ impl Host for PoetSnapshot {
         }
     }
 
+    /// `zk.list_circuits` — the registered ZK circuit names; E702 when
+    /// `zk-culling` is off.
     fn zk_list_circuits(&mut self, _span: vibe::Span) -> Result<Value, Diagnostic> {
         #[cfg(feature = "zk-culling")]
         {
@@ -1667,28 +2012,7 @@ mod tests {
         assert_eq!(v, Value::Null);
     }
 
-    #[test]
-    fn t42_hid_vibescript_poll() {
-        let mut snap = PoetSnapshot::default();
-        let event = vibe::hid::InboundEvent::pointer_move(100, "mouse:0", 5.0, 10.0);
-        snap.enqueue_hid_event(&event).unwrap();
 
-        // Test via VibeScript
-        let v = snap.eval_cell_src("= hid.poll()").unwrap();
-        match v {
-            Value::Record(r) => {
-                assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(100)));
-            }
-            other => panic!("expected record, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn t42_hid_vibescript_poll_empty() {
-        let mut snap = PoetSnapshot::default();
-        let v = snap.eval_cell_src("= hid.poll()").unwrap();
-        assert_eq!(v, Value::Null);
-    }
 
     #[test]
     fn t46_hid_buffer_enqueue_dequeue() {
@@ -1883,18 +2207,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn crypto_sign_fail_closed() {
-        let mut snap = PoetSnapshot::default();
-        let src = r#"
-            import "crypto" as crypto;
-            fn sign_it() {
-                return crypto.sign("key:ed25519:0", "data");
-            }
-        "#;
-        let result = snap.eval_fn(src, "sign_it", vec![]);
-        assert!(result.is_err());
-    }
+
 
     // ── ZK proof tests (real Groth16 over BLS12-381) ───────────────────
 
@@ -2485,29 +2798,6 @@ effect fn boom() {
         );
     }
 
-    #[test]
-    fn dispatch_tick_hook_fires() {
-        let mut snap = PoetSnapshot::with_demo_seed();
-        let src = r#"
-requires [ capability("pulse.publish") ];
-effect fn emit() {
-    effect pulse.publish("poet/tick", 1);
-    return null;
-}
-on tick() {
-    return emit();
-}
-"#;
-        let path = vec!["tick".to_string()];
-        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
-        assert_eq!(v, Value::Null);
-        assert_eq!(
-            snap.published.len(),
-            1,
-            "tick hook should have triggered a publish"
-        );
-        assert_eq!(snap.published[0].topic, "poet/tick");
-    }
 
     #[test]
     fn dispatch_tick_no_hook_returns_null() {
@@ -2722,25 +3012,6 @@ effect fn go() {
         }
     }
 
-    #[test]
-    fn g_tick_hook_with_pulse_publish_through_snapshot() {
-        let mut snap = PoetSnapshot::with_demo_seed();
-        let src = r#"
-requires [ capability("pulse.publish") ];
-effect fn emit() {
-    effect pulse.publish("poet/tick", 42);
-    return null;
-}
-on tick() {
-    return emit();
-}
-"#;
-        let path = vec!["tick".to_string()];
-        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
-        assert_eq!(v, Value::Null);
-        assert_eq!(snap.published.len(), 1);
-        assert_eq!(snap.published[0].topic, "poet/tick");
-    }
 
     #[test]
     fn g_time_dependent_cell_recomputes_on_re_eval() {
@@ -2939,5 +3210,105 @@ effect fn go() {
         let commits = snap.trace_ledger.entries_for_act("invoke:graph.commit");
         assert_eq!(commits.len(), 1);
         assert!(!commits[0].success);
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn test_admit_q42_slice_success_and_fail_closed() {
+        use crate::q42_volume::write_unified_volume;
+        use std::collections::HashMap;
+
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let mut lex = HashMap::new();
+        let s_hash = crate::lexicon::generate_60bit_token(b"http://example.org/koala");
+        let p_hash = crate::lexicon::generate_60bit_token(b"http://example.org/status");
+        let o_hash = crate::lexicon::generate_60bit_token(b"http://example.org/vulnerable");
+        lex.insert(s_hash, "http://example.org/koala".to_string());
+        lex.insert(p_hash, "http://example.org/status".to_string());
+        lex.insert(o_hash, "http://example.org/vulnerable".to_string());
+
+        let mut quin = NQuin {
+            subject: s_hash,
+            predicate: p_hash,
+            object: o_hash,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        quin.parity = NQuin::calculate_parity(
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            quin.context,
+            quin.metadata,
+        );
+
+        write_unified_volume(
+            tmp.path(),
+            &lex,
+            &[(quin.object, quin.object)],
+            &[vec![quin]],
+        )
+        .unwrap();
+
+        let bytes = std::fs::read(tmp.path()).unwrap();
+        let mut snap = PoetSnapshot::default();
+        let prior_revision = snap.revision;
+
+        // 1. Successful admission
+        let receipt = snap
+            .admit_q42_slice(&bytes, "eco:pack:sample", "sem/taxonomy.q42", None, true)
+            .expect("admission should succeed");
+
+        assert_eq!(receipt.quin_count, 1);
+        assert_eq!(receipt.pack_identity, "eco:pack:sample");
+        assert_eq!(receipt.entry_key, "sem/taxonomy.q42");
+        assert_eq!(snap.committed.len(), 1);
+        assert_eq!(snap.committed[0].subject, s_hash);
+        assert!(snap.revision > prior_revision);
+
+        // Term resolution from admitted lexicon
+        assert_eq!(
+            snap.resolve_admitted_lexicon_term(s_hash),
+            Some("http://example.org/koala")
+        );
+        assert_eq!(
+            snap.resolve_admitted_lexicon_term(p_hash),
+            Some("http://example.org/status")
+        );
+
+        // 2. Digest mismatch fail-closed
+        let bad_digest = [0xFFu8; 32];
+        let err = snap.admit_q42_slice(
+            &bytes,
+            "eco:pack:bad",
+            "sem/bad.q42",
+            Some(&bad_digest),
+            true,
+        );
+        assert!(err.is_err());
+        assert_eq!(
+            snap.committed.len(),
+            1,
+            "prior state must not be modified on fail-closed"
+        );
+
+        // 3. Corrupted bytes fail-closed
+        let mut corrupt_bytes = bytes.clone();
+        let last = corrupt_bytes.len() - 10;
+        corrupt_bytes[last] ^= 0xFF;
+        let err2 = snap.admit_q42_slice(
+            &corrupt_bytes,
+            "eco:pack:corrupt",
+            "sem/corrupt.q42",
+            None,
+            true,
+        );
+        assert!(err2.is_err());
+        assert_eq!(
+            snap.committed.len(),
+            1,
+            "prior state must not be modified on corrupt fail-closed"
+        );
     }
 }

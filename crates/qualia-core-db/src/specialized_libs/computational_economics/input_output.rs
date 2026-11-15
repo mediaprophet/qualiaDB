@@ -32,6 +32,7 @@ pub enum InputOutputError {
 }
 
 impl InputOutputError {
+    /// Converts to `status`.
     pub fn to_status(self) -> EconStatus {
         match self {
             InputOutputError::InvalidInput => EconStatus::InvalidInput,

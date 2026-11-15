@@ -17,6 +17,7 @@ pub struct FakeClock {
 }
 
 impl FakeClock {
+    /// Creates a default `FakeClock`.
     pub const fn new(unix_seconds: u64) -> Self {
         Self {
             monotonic_micros: 0,
@@ -42,24 +43,29 @@ impl FakeClock {
         self.wall_uncertain = false;
     }
 
+    /// Marks wall-clock reads uncertain.
     pub fn mark_wall_uncertain(&mut self) {
         self.wall_uncertain = true;
     }
 
+    /// Feeds a measured energy reading (mJ).
     pub fn set_energy_measured(&mut self, milli_joules: u64) {
         self.energy_milli_joules = milli_joules;
         self.energy_quality = ObservationQuality::Measured;
     }
 
+    /// Feeds an estimated energy reading (mJ).
     pub fn set_energy_estimated(&mut self, milli_joules: u64) {
         self.energy_milli_joules = milli_joules;
         self.energy_quality = ObservationQuality::Estimated;
     }
 
+    /// Marks energy unknown.
     pub fn set_energy_unknown(&mut self) {
         self.energy_quality = ObservationQuality::Unknown;
     }
 
+    /// `FakeClock::energy_quality`.
     pub const fn energy_quality(self) -> ObservationQuality {
         self.energy_quality
     }

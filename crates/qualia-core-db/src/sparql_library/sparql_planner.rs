@@ -149,6 +149,7 @@ pub struct ExecutionPlan {
 }
 
 impl ExecutionPlan {
+    /// Creates a default `ExecutionPlan`.
     pub fn new() -> Self {
         Self {
             operators: [PlanOperator {
@@ -160,6 +161,7 @@ impl ExecutionPlan {
         }
     }
 
+    /// Adds `operator`.
     pub fn add_operator(
         &mut self,
         op: PhysicalOperatorType,
@@ -332,6 +334,7 @@ impl QueryPlanner {
         Ok(plan)
     }
 
+    /// Plans a triple pattern.
     pub(crate) fn plan_pattern(
         pattern_id: PatternId,
         ctx: &SparqlQueryContext,

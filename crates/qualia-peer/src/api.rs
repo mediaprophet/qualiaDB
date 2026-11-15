@@ -14,6 +14,7 @@ pub struct PeerHost {
 impl PeerHost {
     pub const ORDINARY_CELL_CEILING: u64 = 512 * 1024 * 1024;
 
+    /// Creates a new instance.
     pub fn new(cell_bytes: u64) -> Result<Self, QdnfError> {
         if cell_bytes == 0 || cell_bytes > Self::ORDINARY_CELL_CEILING {
             return Err(QdnfError::Capacity);

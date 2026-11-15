@@ -50,6 +50,7 @@ pub struct IndependentReviewPacket {
 }
 
 impl IndependentReviewPacket {
+    /// `IndependentReviewPacket::prepared`.
     pub const fn prepared() -> Self {
         Self {
             handshake_transcript: ReviewItem::prepared(
@@ -75,6 +76,7 @@ impl IndependentReviewPacket {
         }
     }
 
+    /// `IndependentReviewPacket::items`.
     pub const fn items(self) -> [ReviewItem; 5] {
         [
             self.handshake_transcript,

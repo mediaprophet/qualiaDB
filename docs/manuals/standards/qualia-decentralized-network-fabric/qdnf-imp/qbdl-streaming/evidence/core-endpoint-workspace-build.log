@@ -1,0 +1,101 @@
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\vibe-0wj2fpl55hix7\s-ho3729a5kj-0u09cpd-working`
+
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 2 warnings (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\qualia_core_db-3s9uaxl9buefz\s-ho39qwxtpc-1gak02p-working`
+
+warning: unused imports: `SparseWorkspaceKey` and `WorkspacePageAttempt`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:24
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                        ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\inference_bench\prepared_domino.rs:51:14
+   |
+51 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+51 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+51 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\compute_universe_epoch.rs:36:10
+   |
+36 |         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+36 -         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+36 +         .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\qwen\retained.rs:74:37
+   |
+74 |         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+   |                                     ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+74 -         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+74 +         let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:58:14
+   |
+58 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+58 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+58 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: fields `source` and `entry_page` are never read
+  --> crates\qualia-core-db\src\bundle\stream\policy\tests.rs:31:5
+   |
+25 | pub(crate) struct Fixture {
+   |                   ------- fields in this struct
+...
+31 |     source: Vec<u8>,
+   |     ^^^^^^
+32 |     entry_page: Vec<u8>,
+   |     ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `source`, `body`, `entry_page`, and `identity` are never used
+  --> crates\qualia-core-db\src\bundle\stream\policy\tests.rs:40:19
+   |
+39 | impl Fixture {
+   | ------------ methods in this implementation
+40 |     pub(crate) fn source(&self) -> &[u8] { &self.source }
+   |                   ^^^^^^
+41 |     pub(crate) fn body(&self) -> &[u8] { &self.body }
+   |                   ^^^^
+42 |     pub(crate) fn entry_page(&self) -> &[u8] { &self.entry_page }
+   |                   ^^^^^^^^^^
+43 |     pub(crate) fn identity(&self) -> CandidateIdentity { self.identity }
+   |                   ^^^^^^^^
+
+warning: `qualia-core-db` (lib test) generated 8 warnings (run `cargo fix --lib -p qualia-core-db --tests` to apply 5 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 19m 44s
+  Executable unittests src\lib.rs (target\debug\deps\qualia_core_db-2fd3c7938591223b.exe)

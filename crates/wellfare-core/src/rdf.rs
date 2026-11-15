@@ -1,6 +1,7 @@
 use crate::models::{HeartRateRecord, SleepRecord, StepRecord, WeightRecord};
 use serde_json::Value;
 
+/// Generates RDF prefixes.
 pub fn generate_rdf_prefixes() -> String {
     format!(
         "@prefix schema:   <http://schema.org/> .\n\
@@ -119,6 +120,7 @@ pub fn vault_biometrics_to_turtle(json: &str) -> Result<String, String> {
     Ok(out)
 }
 
+/// Converts  to Turtle.
 pub fn weight_to_turtle(records: &[WeightRecord]) -> String {
     let mut out = generate_rdf_prefixes();
     for rec in records {
@@ -184,6 +186,7 @@ pub fn weight_to_turtle(records: &[WeightRecord]) -> String {
     out
 }
 
+/// Converts  to Turtle.
 pub fn sleep_to_turtle(records: &[SleepRecord]) -> String {
     let mut out = generate_rdf_prefixes();
     for rec in records {
@@ -243,6 +246,7 @@ pub fn sleep_to_turtle(records: &[SleepRecord]) -> String {
     out
 }
 
+/// Converts  to Turtle.
 pub fn heart_rate_to_turtle(records: &[HeartRateRecord]) -> String {
     let mut out = generate_rdf_prefixes();
     for rec in records {
@@ -287,6 +291,7 @@ pub fn heart_rate_to_turtle(records: &[HeartRateRecord]) -> String {
     out
 }
 
+/// Converts  to Turtle.
 pub fn steps_to_turtle(records: &[StepRecord]) -> String {
     let mut out = generate_rdf_prefixes();
     for rec in records {

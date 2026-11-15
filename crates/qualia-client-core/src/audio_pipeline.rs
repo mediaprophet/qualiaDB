@@ -56,6 +56,7 @@ impl From<EarsDemoResult> for EarsDemoDto {
     }
 }
 
+/// EARS pipeline demo (self-marking synthetic input).
 pub fn ears_demo(storage_root: Option<&std::path::Path>) -> Result<EarsDemoDto, String> {
     run_ears_demo(storage_root, 440.0, 16000, 300).map(Into::into)
 }
@@ -95,6 +96,7 @@ pub struct CrossModalDemoDto {
     pub note: String,
 }
 
+/// Cross-modal pipeline demo.
 pub fn cross_modal_demo() -> CrossModalDemoDto {
     let v = [TimeIntervalMs {
         start_ms: 0,
@@ -124,6 +126,7 @@ pub fn cross_modal_demo() -> CrossModalDemoDto {
     }
 }
 
+/// Reference-tone synth gated on voice consent.
 pub fn synth_with_consent(allow: bool) -> Result<u32, String> {
     let c = if allow {
         VoiceConsent::synthesis_only("demo-voice")
@@ -136,6 +139,7 @@ pub fn synth_with_consent(allow: bool) -> Result<u32, String> {
     Ok(r.frames)
 }
 
+/// EARS pipeline over a WAV file.
 pub fn ears_from_wav(
     storage_root: Option<&std::path::Path>,
     path: &std::path::Path,
@@ -143,10 +147,12 @@ pub fn ears_from_wav(
     run_ears_on_wav_file(storage_root, path).map(Into::into)
 }
 
+/// Section-18 smoke result as DTO.
 pub fn section18_smoke_dto() -> Result<String, String> {
     section18_smoke()
 }
 
+/// Appends a human-reject attestation quin for an audio instance.
 pub fn audio_reject_instance(instance_hex: &str) -> Result<String, String> {
     let inst = parse_hex(instance_hex)?;
     let q = human_reject_quin(qualia_audio::q_hash("did:webizen:local-principal"), inst, 0);
@@ -156,6 +162,7 @@ pub fn audio_reject_instance(instance_hex: &str) -> Result<String, String> {
     ))
 }
 
+/// Appends a human-correct attestation quin for an audio instance.
 pub fn audio_correct_instance(instance_hex: &str, new_class_hex: &str) -> Result<String, String> {
     let inst = parse_hex(instance_hex)?;
     let cls = parse_hex(new_class_hex)?;
@@ -175,6 +182,7 @@ fn parse_hex(s: &str) -> Result<u64, String> {
     u64::from_str_radix(t, 16).map_err(|e| e.to_string())
 }
 
+/// Weighted EARS demo.
 pub fn ears_weighted_demo(storage_root: Option<&std::path::Path>) -> Result<EarsDemoDto, String> {
     run_ears_weighted(storage_root, 440.0, 16000, 300).map(Into::into)
 }
@@ -203,6 +211,7 @@ pub fn sonify_ears_demo(
     }))
 }
 
+/// Greedy phone-decode demo over seed speech weights (not full ASR).
 pub fn speech_demo(supported: bool) -> Result<serde_json::Value, String> {
     let (n, model) = speech_phone_demo(supported)?;
     Ok(serde_json::json!({
@@ -254,6 +263,7 @@ pub fn ensure_aed_weights(storage_root: &std::path::Path) -> Result<String, Stri
     ))
 }
 
+/// Ensures speech-weights.
 pub fn ensure_speech_weights(storage_root: &std::path::Path) -> Result<String, String> {
     let path = storage_root.join("models").join("speech_seed.qspk");
     if path.is_file() {
@@ -273,6 +283,7 @@ pub fn ensure_speech_weights(storage_root: &std::path::Path) -> Result<String, S
     ))
 }
 
+/// DAW history demo.
 pub fn daw_history_demo() -> Result<serde_json::Value, String> {
     use qualia_audio::{OpKind, ProcessPlan, SessionHistory, SessionOp, TrackState};
     let mut plan = ProcessPlan::new(48000, 64);

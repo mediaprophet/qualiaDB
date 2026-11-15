@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>04 — Command wheel chrome (polished)</title>
+<style>
+:root{
+  --void:#03060c; --fog:#0a1420; --ink:#eaf3fa; --mute:#7f95a8;
+  --teal:#2fe0c8; --cyan:#4db8ff; --violet:#8b7cff; --live:#3dffb0; --plan:#8a9aab;
+  --rose:#f87171; --amber:#fbbf24; --glass:rgba(12,20,32,.62); --line:rgba(255,255,255,.10); --focus:#ffd27a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.45 system-ui,sans-serif;color:var(--ink);background:var(--void);overflow:hidden}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .volume,.wheel-root{transform:none!important}
+}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:100;padding:10px 14px;background:var(--focus);color:#111;border-radius:8px}
+
+.field{
+  position:relative;height:100%;
+  background:
+    radial-gradient(1200px 700px at 12% 18%, #143a4ecc 0%, transparent 50%),
+    radial-gradient(900px 600px at 88% 78%, #2a1f66aa 0%, transparent 48%),
+    radial-gradient(700px 500px at 50% 110%, #0d3d3a88 0%, transparent 45%),
+    linear-gradient(180deg,#040810 0%,#071018 40%,#050c14 100%);
+}
+.field::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.3;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.07) 1px, transparent 0);
+  background-size:28px 28px;mask-image:radial-gradient(ellipse at center,black 25%,transparent 75%);
+}
+
+.banner{
+  position:absolute;top:0;left:0;right:0;z-index:5;
+  padding:.55rem 1.1rem;font-size:12px;color:var(--mute);
+  background:rgba(6,10,18,.82);border-bottom:1px solid var(--line);backdrop-filter:blur(12px);
+}
+.banner strong{color:var(--teal)}
+
+.stage{position:absolute;inset:2.75rem 0 0;padding:2.25rem 2.5rem}
+
+/* Volume — elevated glass, hub replaces traffic lights */
+.volume{
+  position:absolute;top:2.5rem;left:2.5rem;width:min(520px,90vw);
+  border-radius:20px;border:1px solid var(--line);background:var(--glass);
+  backdrop-filter:blur(20px) saturate(1.15);
+  box-shadow:0 36px 90px #000b, inset 0 1px 0 rgba(255,255,255,.06);
+  overflow:hidden;
+  transform:perspective(1200px) rotateX(2deg);transform-origin:50% 100%;
+}
+.titlebar{
+  display:flex;align-items:center;gap:.7rem;padding:.6rem .9rem;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);
+  border-bottom:1px solid var(--line);user-select:none;
+}
+.hub{
+  width:30px;height:30px;border-radius:50%;border:1px solid rgba(47,224,200,.5);
+  background:radial-gradient(circle at 35% 28%,#4a7a8e,#152636);
+  box-shadow:0 0 16px rgba(47,224,200,.4),0 4px 12px #0006;
+  color:var(--teal);font:700 13px system-ui;letter-spacing:-.02em;
+  display:grid;place-items:center;cursor:pointer;padding:0;
+  transition:box-shadow .15s, transform .15s, background .15s;
+}
+.hub:hover{box-shadow:0 0 22px rgba(47,224,200,.55),0 4px 12px #0006;transform:scale(1.06)}
+.hub:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.hub[aria-expanded="true"]{
+  background:radial-gradient(circle at 35% 28%,rgba(47,224,200,.35),#1a3038);
+  box-shadow:0 0 24px rgba(47,224,200,.6);
+}
+.title{flex:1;font:650 13px system-ui;letter-spacing:.01em}
+.live{
+  font:650 10px system-ui;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;background:rgba(61,255,176,.14);color:var(--live);
+}
+.hint{font-size:11px;color:var(--mute)}
+.body{padding:1.35rem 1.2rem 1.6rem;color:var(--mute)}
+.body h2{margin:0 0 .45rem;font-size:1.1rem;color:var(--ink);font-weight:650}
+.body p{margin:0;max-width:42ch}
+
+.legend{
+  position:absolute;right:2rem;bottom:2rem;max-width:270px;
+  padding:1rem 1.05rem;border-radius:16px;font-size:12px;color:var(--mute);line-height:1.5;
+  background:rgba(6,12,20,.82);border:1px solid var(--line);backdrop-filter:blur(14px);
+}
+.legend strong{display:block;color:var(--cyan);margin-bottom:.4rem;font-size:12px}
+
+/* Wheel overlay */
+.wheel-root{
+  display:none;position:fixed;z-index:60;width:268px;height:268px;
+  transform:translate(-50%,-50%) scale(.92);opacity:0;
+  transition:opacity .16s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+.wheel-root.open{
+  display:block;opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;
+}
+.wheel-root svg{width:100%;height:100%;filter:drop-shadow(0 20px 50px #000c)}
+.sector{cursor:pointer;outline:none}
+.sector path{
+  fill:rgba(10,16,26,.9);stroke:rgba(255,255,255,.1);stroke-width:1;
+  transition:fill .12s, stroke .12s, filter .12s;
+}
+.sector:hover path,.sector:focus path,.sector[aria-current="true"] path{
+  fill:rgba(18,28,42,.96);stroke:var(--accent, var(--teal));
+  filter:drop-shadow(0 0 10px color-mix(in srgb, var(--accent, var(--teal)) 45%, transparent));
+}
+.sector .glyph{font-size:17px;pointer-events:none}
+.sector .label{
+  font:650 9px system-ui;letter-spacing:.02em;pointer-events:none;
+}
+.core-ring{fill:rgba(6,10,18,.94);stroke:rgba(47,224,200,.45);stroke-width:2}
+.core-glow{fill:url(#coreGrad);opacity:.9}
+.core-text{fill:var(--teal);font:650 12px system-ui;letter-spacing:.04em}
+
+.scrim{
+  display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.28);
+  backdrop-filter:blur(2px);
+}
+.scrim.open{display:block}
+
+.toast{
+  position:fixed;bottom:1.35rem;left:50%;transform:translateX(-50%) translateY(8px);
+  padding:.5rem 1rem;border-radius:999px;font-size:12px;font-weight:600;
+  background:rgba(10,16,26,.94);border:1px solid var(--line);color:var(--ink);
+  opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:70;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:720px){
+  .volume{left:1rem;right:1rem;width:auto;transform:none}
+  .legend{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#vol-talk">Skip to volume</a>
+<div class="field">
+  <div class="banner"><strong>Polished lock</strong> — Poet 8-sector command wheel replaces Apple traffic lights. Hub ◉ or right-click. Soften ≠ OS minimize theatre. Spec: crates/poet radial_menu · POET-SPEC-011.</div>
+  <div class="stage">
+    <section class="volume" id="vol-talk" aria-label="Talk volume">
+      <div class="titlebar">
+        <button type="button" class="hub" id="hub" aria-label="Open volume command wheel" aria-expanded="false" aria-haspopup="menu" title="Command wheel">◉</button>
+        <div class="title">Talk</div>
+        <span class="live">Live</span>
+        <span class="hint">hub · right-click</span>
+      </div>
+      <div class="body">
+        <h2>Person waiting for a person</h2>
+        <p>Volume chrome is the wheel — not red · yellow · green dots. Continuity stays on the shell ribbon; handle ≠ human.</p>
+      </div>
+    </section>
+    <aside class="legend" aria-hidden="true">
+      <strong>Volume chrome</strong>
+      Hub or right-click opens the wheel.<br/><br/>
+      Close · Soften · Full · Float · Keep · Share · Inspect · More.<br/><br/>
+      Desktop: Tauri decorations off — OS traffic lights never paint product identity.
+    </aside>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="wheel-root" id="wheel" role="menu" aria-label="Volume commands" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  const SECTORS = [
+    { id: "close",   label: "Close",   glyph: "✕", color: "#f87171", say: "Close volume" },
+    { id: "soften",  label: "Soften",  glyph: "—", color: "#fbbf24", say: "Soften into orbit" },
+    { id: "full",    label: "Full",    glyph: "▢", color: "#3dffb0", say: "Full stage" },
+    { id: "float",   label: "Float",   glyph: "◎", color: "#4db8ff", say: "Float volume" },
+    { id: "keep",    label: "Keep",    glyph: "📁", color: "#2fe0c8", say: "Send to Keep" },
+    { id: "share",   label: "Share",   glyph: "↗", color: "#8b7cff", say: "Share…" },
+    { id: "inspect", label: "Inspect", glyph: "🔍", color: "#38bdf8", say: "Inspect continuity" },
+    { id: "more",    label: "More",    glyph: "···", color: "#94a3b8", say: "More…" },
+  ];
+
+  const wheel = document.getElementById("wheel");
+  const scrim = document.getElementById("scrim");
+  const hub = document.getElementById("hub");
+  const toast = document.getElementById("toast");
+  const vol = document.getElementById("vol-talk");
+  let open = false;
+  let active = 0;
+
+  const polar = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  function sectorPath(i, n, inner, outer) {
+    const a0 = -Math.PI / 2 + (i * Math.PI * 2) / n;
+    const a1 = a0 + (Math.PI * 2) / n;
+    const [x0, y0] = polar(134, 134, outer, a0);
+    const [x1, y1] = polar(134, 134, outer, a1);
+    const [x2, y2] = polar(134, 134, inner, a1);
+    const [x3, y3] = polar(134, 134, inner, a0);
+    return `M${x0} ${y0} A${outer} ${outer} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${inner} ${inner} 0 0 0 ${x3} ${y3} Z`;
+  }
+
+  function paint() {
+    wheel.innerHTML = "";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 268 268");
+    svg.setAttribute("role", "presentation");
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.innerHTML = `
+      <radialGradient id="coreGrad" cx="40%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#2fe0c8" stop-opacity=".35"/>
+        <stop offset="100%" stop-color="#0a1420" stop-opacity=".95"/>
+      </radialGradient>
+      <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="3" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>`;
+    svg.appendChild(defs);
+
+    // subtle outer ring
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", "134"); ring.setAttribute("cy", "134"); ring.setAttribute("r", "122");
+    ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "rgba(47,224,200,.18)"); ring.setAttribute("stroke-width", "1.5");
+    svg.appendChild(ring);
+
+    SECTORS.forEach((s, i) => {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "sector");
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "menuitem");
+      g.setAttribute("aria-label", s.label);
+      g.style.setProperty("--accent", s.color);
+      if (i === active) g.setAttribute("aria-current", "true");
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", sectorPath(i, 8, 46, 116));
+      path.setAttribute("stroke", s.color);
+
+      const mid = -Math.PI / 2 + ((i + 0.5) * Math.PI * 2) / 8;
+      const [gx, gy] = polar(134, 134, 84, mid);
+      const [lx, ly] = polar(134, 134, 102, mid);
+
+      const glyph = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      glyph.setAttribute("class", "glyph");
+      glyph.setAttribute("x", gx); glyph.setAttribute("y", gy);
+      glyph.setAttribute("text-anchor", "middle"); glyph.setAttribute("dominant-baseline", "middle");
+      glyph.setAttribute("fill", s.color);
+      glyph.textContent = s.glyph;
+
+      const lab = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      lab.setAttribute("class", "label");
+      lab.setAttribute("x", lx); lab.setAttribute("y", ly + 12);
+      lab.setAttribute("text-anchor", "middle"); lab.setAttribute("fill", s.color);
+      lab.textContent = s.label;
+
+      const go = () => { run(s); closeWheel(); };
+      g.addEventListener("click", go);
+      g.addEventListener("mouseenter", () => setActive(i));
+      g.addEventListener("focus", () => setActive(i));
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); setActive((i + 1) % 8, true); }
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); setActive((i + 7) % 8, true); }
+      });
+
+      g.appendChild(path); g.appendChild(glyph); g.appendChild(lab);
+      svg.appendChild(g);
+    });
+
+    const core = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    core.setAttribute("class", "core-glow");
+    core.setAttribute("cx", "134"); core.setAttribute("cy", "134"); core.setAttribute("r", "40");
+    const coreStroke = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    coreStroke.setAttribute("class", "core-ring");
+    coreStroke.setAttribute("cx", "134"); coreStroke.setAttribute("cy", "134"); coreStroke.setAttribute("r", "40");
+    const ct = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    ct.setAttribute("class", "core-text");
+    ct.setAttribute("x", "134"); ct.setAttribute("y", "134");
+    ct.setAttribute("text-anchor", "middle"); ct.setAttribute("dominant-baseline", "middle");
+    ct.textContent = "Talk";
+
+    svg.appendChild(core); svg.appendChild(coreStroke); svg.appendChild(ct);
+    wheel.appendChild(svg);
+  }
+
+  function setActive(i, focus) {
+    active = i;
+    wheel.querySelectorAll(".sector").forEach((el, idx) => {
+      if (idx === i) el.setAttribute("aria-current", "true");
+      else el.removeAttribute("aria-current");
+    });
+    if (focus) {
+      const el = wheel.querySelectorAll(".sector")[i];
+      if (el) el.focus();
+    }
+  }
+
+  function openWheel(cx, cy) {
+    paint();
+    wheel.style.left = cx + "px";
+    wheel.style.top = cy + "px";
+    wheel.hidden = false;
+    wheel.removeAttribute("hidden");
+    scrim.hidden = false;
+    scrim.removeAttribute("hidden");
+    // force reflow for transition
+    void wheel.offsetWidth;
+    wheel.classList.add("open");
+    scrim.classList.add("open");
+    open = true;
+    hub.setAttribute("aria-expanded", "true");
+    active = 0;
+    setTimeout(() => {
+      const first = wheel.querySelector(".sector");
+      if (first) first.focus();
+    }, 20);
+  }
+
+  function closeWheel() {
+    wheel.classList.remove("open");
+    scrim.classList.remove("open");
+    open = false;
+    hub.setAttribute("aria-expanded", "false");
+    setTimeout(() => {
+      if (!open) {
+        wheel.hidden = true;
+        scrim.hidden = true;
+      }
+    }, 160);
+  }
+
+  function run(s) {
+    toast.textContent = s.say;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1700);
+  }
+
+  hub.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (open) { closeWheel(); return; }
+    const r = hub.getBoundingClientRect();
+    openWheel(r.left + r.width / 2, r.top + r.height / 2 + 8);
+  });
+
+  vol.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    openWheel(e.clientX, e.clientY);
+  });
+
+  scrim.addEventListener("click", closeWheel);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && open) closeWheel();
+  });
+})();
+</script>
+</body>
+</html>

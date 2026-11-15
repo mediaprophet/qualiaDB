@@ -6,10 +6,12 @@ pub struct DiffusionConfig {
 }
 
 impl DiffusionConfig {
+    /// `cell` count.
     pub fn cell_count(&self) -> usize {
         self.width as usize * self.height as usize
     }
 
+    /// `raw-byte` length.
     pub fn raw_byte_len(&self) -> u64 {
         (self.cell_count() * std::mem::size_of::<f32>()) as u64
     }
@@ -22,6 +24,7 @@ pub struct DiffusionField {
 }
 
 impl DiffusionField {
+    /// Creates a new instance.
     pub fn new(dimensions: (u32, u32)) -> Self {
         Self {
             dimensions,

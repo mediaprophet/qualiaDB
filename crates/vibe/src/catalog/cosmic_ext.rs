@@ -8,6 +8,7 @@ use crate::value::Value;
 
 use super::cosmic::{bad, rec_f64, rec_str, record, utf8_fold};
 
+/// Tauri `invoke` FFI seam.
 pub fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     match id {
         "Cosmic.ecef_to_enu" => ecef_to_enu(args, span),

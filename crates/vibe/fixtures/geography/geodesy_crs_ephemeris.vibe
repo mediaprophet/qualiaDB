@@ -1,0 +1,104 @@
+// Geodesy, CRS reprojection, and solar ephemeris fixture (GEO-S1 / R1-V).
+// Demonstrates pure geodetic helpers, EPSG:7855 (GDA2020 / MGA zone 55) Kosciuszko
+// coordinate transformations, and topographic solar insolation modeling.
+module <https://qualiadb.org/modules/geography/geodesy_crs_ephemeris>;
+using Geodesy;
+
+// Pure geodetic angle conversions
+pure fn deg_to_rad(deg: f64) -> f64 {
+    return deg * 0.017453292519943295;
+}
+
+pure fn rad_to_deg(rad: f64) -> f64 {
+    return rad * 57.29577951308232;
+}
+
+// Pure Kosciuszko summit geographic and CRS configuration parameters
+pure fn kosciuszko_summit_params() -> Record {
+    return {
+        name: "Mount Kosciuszko Summit",
+        lat_deg: -36.45598,
+        lon_deg: 148.26333,
+        alt_m: 2228.0,
+        src_epsg: 7844,
+        dst_epsg: 7855
+    };
+}
+
+// Pure solar geometry: zenith angle from solar elevation
+pure fn solar_zenith_deg(elevation_deg: f64) -> f64 {
+    return 90.0 - elevation_deg;
+}
+
+// Reprojects Kosciuszko coordinates from GDA2020 geographic (EPSG:7844) to MGA Zone 55 (EPSG:7855)
+effect fn project_kosciuszko_to_mga55() -> Record {
+    let params = kosciuszko_summit_params();
+    return Geodesy.crs_transform({
+        src_epsg: params.src_epsg,
+        dst_epsg: params.dst_epsg,
+        x: params.lon_deg,
+        y: params.lat_deg
+    });
+}
+
+// Converts Kosciuszko geodetic coordinates to Earth-Centered Earth-Fixed (ECEF) XYZ
+effect fn kosciuszko_to_ecef() -> Record {
+    let params = kosciuszko_summit_params();
+    return Geodesy.geodetic_to_ecef({
+        lat_deg: params.lat_deg,
+        lon_deg: params.lon_deg,
+        alt_m: params.alt_m
+    });
+}
+
+// Evaluates AUSGeoid2020 undulation (N value) at Mount Kosciuszko
+effect fn kosciuszko_ausgeoid_undulation() -> f64 {
+    let params = kosciuszko_summit_params();
+    return Geodesy.ausgeoid_undulation({
+        lat_deg: params.lat_deg,
+        lon_deg: params.lon_deg
+    });
+}
+
+// Computes geodesic distance and azimuth from Kosciuszko to Mount Townsend (-36.42583, 148.26528)
+effect fn distance_kosciuszko_to_townsend() -> Record {
+    return Geodesy.wgs84_inverse({
+        lat1_deg: -36.45598,
+        lon1_deg: 148.26333,
+        lat2_deg: -36.42583,
+        lon2_deg: 148.26528
+    });
+}
+
+// Computes solar position at Mount Kosciuszko for a specific Unix epoch
+effect fn kosciuszko_solar_ephemeris(unix_secs: f64) -> Record {
+    let params = kosciuszko_summit_params();
+    return Geodesy.sun_ephemeris({
+        unix_secs: unix_secs,
+        lat_deg: params.lat_deg,
+        lon_deg: params.lon_deg
+    });
+}
+
+// Models topographic solar insolation on Kosciuszko's north-facing alpine slopes
+effect fn kosciuszko_solar_insolation(unix_secs: f64, slope_deg: f64, aspect_deg: f64) -> Record {
+    let params = kosciuszko_summit_params();
+    return Geodesy.topographic_insolation({
+        unix_secs: unix_secs,
+        lat_deg: params.lat_deg,
+        lon_deg: params.lon_deg,
+        alt_m: params.alt_m,
+        slope_deg: slope_deg,
+        aspect_deg: aspect_deg
+    });
+}
+
+// Encodes Mount Kosciuszko into an A5 DGGS cell at target resolution
+effect fn kosciuszko_a5_cell(resolution: u64) -> u64 {
+    let params = kosciuszko_summit_params();
+    return Geodesy.lonlat_to_a5({
+        lon_deg: params.lon_deg,
+        lat_deg: params.lat_deg,
+        resolution: resolution
+    });
+}

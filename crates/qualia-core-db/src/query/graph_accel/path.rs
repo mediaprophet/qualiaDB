@@ -13,6 +13,7 @@ pub enum AccelPath {
 }
 
 impl AccelPath {
+    /// Stable string form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Gpu => "gpu",
@@ -37,6 +38,7 @@ pub enum AccelPolicy {
 }
 
 impl AccelPolicy {
+    /// Builds `AccelPolicy` from `env`.
     pub fn from_env() -> Self {
         match std::env::var("QUALIA_GRAPH_ACCEL")
             .ok()

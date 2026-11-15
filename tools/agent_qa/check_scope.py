@@ -14,6 +14,7 @@ import subprocess
 
 
 def main() -> int:
+    """CLI entry point."""
     tool_dir = pathlib.Path(__file__).resolve().parent
     root = tool_dir.parents[1]
     manifest = json.loads((tool_dir / "scope.json").read_text("utf-8"))

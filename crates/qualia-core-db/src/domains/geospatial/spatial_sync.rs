@@ -29,6 +29,7 @@ pub struct SpatialSyncCell {
 }
 
 impl SpatialSyncCell {
+    /// Creates a default `SpatialSyncCell`.
     pub fn new(cell_id: u64, planted_assets: Vec<PlantedAsset>) -> Self {
         Self {
             cell_id,

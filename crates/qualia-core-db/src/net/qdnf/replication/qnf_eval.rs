@@ -158,6 +158,7 @@ pub fn open_qnf_magic(magic: &[u8; 8]) -> Result<(), QdnfError> {
 }
 
 #[inline]
+/// `?::decision_matches_flag`.
 pub fn decision_matches_flag(record: &FormatRecord) -> bool {
     record.decision.adopted == QnfExtensionAdopted
         && (record.decision.adopted

@@ -57,10 +57,12 @@ pub fn tx_from_operation_id(id: &StrongDigest) -> TxId {
     TxId { bytes }
 }
 
+/// Honest probe: `false` — transport acks are not durable.
 pub fn transport_ack_is_durable() -> bool {
     false
 }
 
+/// Honest probe: `false` — signatures are not reusable after redaction.
 pub fn source_signature_reusable_after_redaction() -> bool {
     false
 }
@@ -79,6 +81,7 @@ pub struct OpTable {
 }
 
 impl OpTable {
+    /// Creates a default `OpTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -91,6 +94,7 @@ impl OpTable {
         }
     }
 
+    /// Submits an operation for replication.
     pub fn submit(
         &mut self,
         desc: OperationDesc,
@@ -133,6 +137,7 @@ impl OpTable {
         Ok(id)
     }
 
+    /// Commits an operation durably.
     pub fn commit(
         &mut self,
         id: StrongDigest,
@@ -154,6 +159,7 @@ impl OpTable {
         Ok(())
     }
 
+    /// Fetches the committed op for `id`.
     pub fn get_committed(&self, id: &StrongDigest) -> Result<OperationDesc, QdnfError> {
         match self.find_id(id) {
             Some(idx) if self.slots[idx].committed => Ok(self.slots[idx].desc),

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMF v4 &amp; QAC v1 Cross-Workspace Architecture &amp; Standards Conformance — QualiaDB 0.0.41</title>
+    <meta name="description" content="Normative Cross-Workspace Architecture, 15 International Standards Families Conformance Matrix, and V01/C04 Qualification Gates for EMF v4 and QAC v1.">
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-subtle { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(148, 163, 184, 0.16); }
+        pre, code { font-family: 'Fira Code', 'JetBrains Mono', monospace; }
+        .layer-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.2rem 0.6rem; border-radius: 9999px; }
+        .spec-table th, .spec-table td { padding: 0.65rem 0.85rem; text-align: left; vertical-align: top; font-size: 0.825rem; }
+        .spec-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #67e8f9; background: rgba(255, 255, 255, 0.04); }
+        .badge-pass { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.35); padding: 0.12rem 0.45rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+        .badge-gate { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.12rem 0.4rem; border-radius: 5px; font-family: monospace; font-size: 0.7rem; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">Q</span></div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="hidden sm:inline-flex text-xs font-mono px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">v0.0.41 · EMF v4 &amp; QAC v1</span>
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors"><i class="fab fa-github"></i><span>GitHub</span></a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-10 pb-20">
+        <!-- Navigation & Sibling Cross-Links Banner -->
+        <div class="glass-strong rounded-2xl p-4 mb-8 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/30">
+            <div class="flex items-center gap-3">
+                <span class="layer-pill bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"><i class="fas fa-network-wired"></i> Architecture &amp; Standards</span>
+                <span class="text-sm text-slate-300">Normative Cross-Workspace Boundary for QualiaDB &amp; Etalon</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+                <a href="emf-qac-showcase.html" class="px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 transition-colors flex items-center gap-2"><i class="fas fa-satellite-dish"></i> Interactive Observatory</a>
+                <a href="data-formats.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-database"></i> Data Formats (.q42 v4)</a>
+                <a href="qbdl-streaming.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-layer-group"></i> QBDL Streaming</a>
+                <a href="release-showcase-0.0.41.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-rocket"></i> Release 0.0.41</a>
+            </div>
+        </div>
+
+        <!-- Document Header -->
+        <header class="mb-12">
+            <div class="layer-pill bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 mb-4"><i class="fas fa-microchip"></i> System Architecture &amp; Standards Conformance</div>
+            <h1 class="text-4xl lg:text-5xl font-semibold tracking-tight mb-4">EMF v4 &amp; QAC v1 Cross-Workspace Architecture</h1>
+            <p class="text-lg text-slate-300 max-w-5xl leading-relaxed mb-3">
+                Electromagnetic Field v4 (<code class="text-cyan-300">Q42EMF64</code>) and Qualia Acoustic Container v1 (<code class="text-cyan-300">qac\0\0\0\0\0</code>) establish a unified binary envelope across QualiaDB and Etalon. This architecture enforces strict custody/compute separation: QualiaDB owns immutable storage, TLV metadata graphs, SI dimensional algebra, byte-exact DICOM/sensor preservation, and <a href="qbdl-streaming.html" class="text-cyan-300 underline">QBDL mixed-HMC HTTP range streaming</a>; Etalon provides GPU/CPU Maxwell-Yee FDTD, elastodynamic wave solvers, spherical harmonic HOA DSP, and WGSL compute kernels. An HMC may hold many EMF and QAC entries; family tags follow format admit.
+            </p>
+            <div class="flex flex-wrap gap-3 text-xs font-mono text-slate-400">
+                <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10"><i class="fas fa-cube text-cyan-400 mr-1"></i> Envelope: 128B Header + 128B Directory</span>
+                <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10"><i class="fas fa-shield-halved text-emerald-400 mr-1"></i> Root Commitment: BLAKE3-256 INDEX_DOMAIN</span>
+                <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10"><i class="fas fa-check-double text-blue-400 mr-1"></i> Conformance: 15 Standards Families · 236 V01 Vectors</span>
+            </div>
+        </header>
+
+        <!-- SECTION 1: QualiaDB <-> Etalon Cross-Workspace Ownership Matrix -->
+        <section id="section-workspace-matrix" class="mb-16">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-2xl font-semibold text-cyan-300 flex items-center gap-2"><i class="fas fa-sitemap text-cyan-400"></i> Section 1 — QualiaDB ↔ Etalon Cross-Workspace Ownership Matrix</h2>
+                    <p class="text-sm text-slate-400">Clear division of authority between immutable scientific custody and high-performance physics compute.</p>
+                </div>
+                <span class="layer-pill bg-purple-500/15 text-purple-300 border border-purple-500/30">Zero-Heap Hot Paths</span>
+            </div>
+
+            <!-- Architectural Pipeline Visual Flow -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- QualiaDB Workspace Card -->
+                <div class="glass-strong rounded-2xl p-6 border border-cyan-500/30">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span><h3 class="text-lg font-semibold text-white">QualiaDB Workspace (<code class="text-cyan-300">C:/github/qualiaDB</code>)</h3></div>
+                        <span class="text-xs font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded">Custody &amp; Semantics</span>
+                    </div>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li class="flex items-start gap-2"><i class="fas fa-folder-open text-cyan-400 mt-0.5"></i><div><strong class="text-white">q42::field_envelope:</strong> 128B header, 128B directory stride, 64B/4096B alignment, BLAKE3 <code class="text-cyan-300">INDEX_DOMAIN</code> index commitment, CRC-32C Castagnoli.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-tags text-cyan-400 mt-0.5"></i><div><strong class="text-white">q42::field_semantics:</strong> Shared TLV Schemas 1..=11 (Clock, Frame, Descriptor, Provenance, Instant, AcquisitionView, Derivation), SI 7-tuple dimensional algebra, TAI/UTC rational clocks, epistemic lattice.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-bolt text-cyan-400 mt-0.5"></i><div><strong class="text-white">q42::emf_profiles &amp; science_validation:</strong> EMF v4 Modes <code class="text-cyan-300">0x0100..=0x0107</code> (Instantaneous E/B, Polarimetric Ray, Yee FDTD, Sampled Spectrum, Mueller, IQ Baseband, Ionizing Dose, Biofield Dipole), Schemas 100..=137.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-wave-square text-cyan-400 mt-0.5"></i><div><strong class="text-white">audio::qac &amp; qualia-audio:</strong> QAC v1 Modes <code class="text-cyan-300">0x0100..=0x0107</code> (PCM, STFT/CQT, Wavelet, Modal, Perceptual, Haptic, Ultrasound), 67 zero-heap registered audio capabilities.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-heart-pulse text-cyan-400 mt-0.5"></i><div><strong class="text-white">medical::dicom_codecs &amp; sensing::acquisition:</strong> Byte-exact Part 10 custody in Mode 0x0104, native J2K/HTJ2K/JPEG-LS/JXL/RLE/Deflate, LPS/Cartesian geometry, NIfTI-1/2 RAS+ affine orientation bridge.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-cloud-arrow-down text-cyan-400 mt-0.5"></i><div><strong class="text-white">bundle::range &amp; render::portal_load_emf:</strong> HTTP 206 range planner (<code class="text-cyan-300">T01/T02</code>), RangeVerified integrity, Portal EMF v4/v3 rendering bridge, feeding Hypermedia (148 morphisms) and Synth.</div></li>
+                    </ul>
+                </div>
+
+                <!-- Etalon Workspace Card -->
+                <div class="glass-strong rounded-2xl p-6 border border-blue-500/30">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 animate-pulse"></span><h3 class="text-lg font-semibold text-white">Etalon Workspace (<code class="text-blue-300">C:/github/etalon</code>)</h3></div>
+                        <span class="text-xs font-mono text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded">Compute &amp; Solvers</span>
+                    </div>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li class="flex items-start gap-2"><i class="fas fa-atom text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-sim (FDTD &amp; Wave Solvers):</strong> 3D staggered Yee Maxwell FDTD, discrete Poynting energy balance, Virieux elastodynamics, Kramers-Kronig causal dispersion (Drude, Lorentz, Debye, Cole-Cole).</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-circle-nodes text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-sim (Polarimetry &amp; Tomography):</strong> Stokes-Mueller polarimetry, Cloude Hermitian Pauli coherency matrix eigen-decomposition, tomographic reconstruction (FBP, ART, SART, OSEM, MLEM).</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-headphones text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-signal (Spatial &amp; Perceptual DSP):</strong> ITU-R BS.1770-5 K-weighted loudness &amp; 4x True-Peak, HOA ACN/SN3D/N3D spherical harmonics, Wigner-D 3D rotation, STFT/Goertzel, Mel/MFCC filterbanks.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-display text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-render (GPU Field Display ABI):</strong> 64-byte <code class="text-blue-300">EmfSliceUniform</code> GPU display layout and <code class="text-blue-300">EmfFieldCell</code> preview adapter without reinterpreting scientific f64 arrays.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-code text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-wgsl-forge (Certified GPU Shaders):</strong> WGSL compute shaders (<code class="text-blue-300">acoustic_fdtd.rs</code>, <code class="text-blue-300">maxwell_yee.rs</code>) enforcing bit-exact CPU-GPU numerical parity budgets.</div></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-tower-broadcast text-blue-400 mt-0.5"></i><div><strong class="text-white">etalon-sense-* &amp; etalon-tensor:</strong> Real-time hardware acquisition drivers (core, NFC, SDR) bound to QualiaDB custody through <code class="text-blue-300">qualia-etalon-sensing-bridge</code>.</div></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Ownership Matrix Table -->
+            <div class="glass-subtle rounded-2xl overflow-hidden border border-white/10">
+                <table class="w-full spec-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/5">Subsystem / Domain</th>
+                            <th class="w-2/5">QualiaDB Responsibility (Custody &amp; Semantics)</th>
+                            <th class="w-2/5">Etalon Responsibility (Compute &amp; Shaders)</th>
+                            <th class="w-1/5">Boundary Invariant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5 text-slate-300">
+                        <tr><td class="font-semibold text-white">Staggered Maxwell Yee FDTD</td><td>Mode <code class="text-cyan-300">0x0102</code> serialization, Schema 133 constitutive models, PML boundary state storage, Morton/Hilbert brick indexing.</td><td>Yee leapfrog temporal update, CFL stability check, discrete Poynting divergence, dispersive media convolution in <code class="text-blue-300">etalon-sim</code>.</td><td><span class="badge-gate">G-SCIENCE</span> No solver state mutation inside DB</td></tr>
+                        <tr><td class="font-semibold text-white">Polarimetry &amp; Mueller Transfer</td><td>Mode <code class="text-cyan-300">0x0101</code> / <code class="text-cyan-300">0x0104</code>, Schema 135 deterministic transverse Stokes basis, passivity &amp; Cloude eigenvalues $\ge -10^{-12}$.</td><td>Jones-to-Mueller matrix conversion, active Hamilton quaternion frame rotation, Hermitian Pauli decomposition in <code class="text-blue-300">etalon-sim</code>.</td><td><span class="badge-gate">G-SCIENCE</span> Realizability verified before admission</td></tr>
+                        <tr><td class="font-semibold text-white">Continuous Spectral Radiometry</td><td>Mode <code class="text-cyan-300">0x0103</code>, Schema 132 Jacobian-conserving frequency/wavelength conversions ($\int F_f df = \int F_\lambda d\lambda$), radiometric units.</td><td>Bruton false-color projection, CIE 1931 observer tristimulus integrals, GPU radiance mapping in <code class="text-blue-300">etalon-render</code>.</td><td><span class="badge-gate">G-CONTRACT</span> Scientific coordinates never lossy-projected</td></tr>
+                        <tr><td class="font-semibold text-white">Higher-Order Ambisonics (HOA)</td><td>QAC Mode <code class="text-cyan-300">0x0102</code>, Schema 204 ACN indexing up to order $L \le 3$, SN3D/N3D normalization, coordinate reference frame binding.</td><td>Real spherical harmonic evaluation, Wigner-D 3D rotation matrices, binaural HRIR decoding filters in <code class="text-blue-300">etalon-signal</code>.</td><td><span class="badge-gate">G-REALTIME</span> Max rotation residual $\le 10^{-5}$</td></tr>
+                        <tr><td class="font-semibold text-white">Perceptual Audio &amp; Loudness</td><td>QAC Mode <code class="text-cyan-300">0x0105</code>, Schema 203 metadata (K-weighting, 400ms gating, true-peak bounds, integrated LUFS, SPL references).</td><td>ITU-R BS.1770-5 stage-1 high-shelf + RLB biquads, 4x polyphase FIR true-peak interpolation, Mel/MFCC in <code class="text-blue-300">etalon-signal</code>.</td><td><span class="badge-gate">G-SCIENCE</span> Loudness oracle budget $\le 0.1\text{ LU}$</td></tr>
+                        <tr><td class="font-semibold text-white">Medical Imaging &amp; Tomography</td><td>Mode <code class="text-cyan-300">0x0104</code> byte-exact DICOM Part 10 custody, lossless J2K/HTJ2K/JPEG-LS/JXL codecs, LPS patient geometry, NIfTI RAS+ bridge.</td><td>FBP (Filtered Backprojection), iterative ART/SART/OSEM reconstruction kernels, WGSL tomographic projection in <code class="text-blue-300">etalon-sim</code>.</td><td><span class="badge-gate">G-BYTES</span> Zero inferred cross-series registration</td></tr>
+                        <tr><td class="font-semibold text-white">Actuation Authority Separation</td><td>Role separation (<code class="text-cyan-300">Role::Measured</code> vs <code class="text-cyan-300">Role::Command</code>), authority receipts, consent references, expiry verification.</td><td>Physical pulse synthesis, transducer wave generation, RF hardware transmission gates in <code class="text-blue-300">etalon-sense-*</code>.</td><td><span class="badge-gate">G-AUTHORITY</span> Stored files never grant transmit power</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 2: 15 International Standards Families & Conformance Matrix (R03) -->
+        <section id="section-standards-matrix" class="mb-16">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-semibold text-cyan-300 flex items-center gap-2"><i class="fas fa-certificate text-cyan-400"></i> Section 2 — 15 International Standards Families &amp; Conformance Matrix</h2>
+                    <p class="text-sm text-slate-400">Complete verification coverage across electromagnetic, acoustic, medical, and metrological normative bodies.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="std-search" placeholder="Search standard or clause..." class="px-3 py-1.5 text-xs rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                </div>
+            </div>
+
+            <!-- Category Filter Buttons (100% Client-Side Pure JS, Zero Fetch) -->
+            <div class="flex flex-wrap gap-2 mb-4" id="std-filters">
+                <button class="std-btn active px-3 py-1 rounded-lg text-xs font-medium bg-cyan-500 text-black transition-all" data-filter="all">All Standards (15)</button>
+                <button class="std-btn px-3 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all" data-filter="em">Electromagnetics &amp; Optics</button>
+                <button class="std-btn px-3 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all" data-filter="audio">Acoustics &amp; Spatial Audio</button>
+                <button class="std-btn px-3 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all" data-filter="medical">Medical Imaging &amp; DICOM</button>
+                <button class="std-btn px-3 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all" data-filter="metrology">Metrology &amp; Uncertainty</button>
+            </div>
+
+            <!-- Standards Conformance Table -->
+            <div class="glass-subtle rounded-2xl overflow-hidden border border-white/10">
+                <table class="w-full spec-table" id="standards-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/6">Standard / Body</th>
+                            <th class="w-2/6">Normative Scope &amp; Mathematical Clauses</th>
+                            <th class="w-2/6">QualiaDB &amp; Etalon Implementation Binding</th>
+                            <th class="w-1/6">Gate &amp; Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5 text-slate-300" id="standards-tbody">
+                        <tr class="std-row" data-cat="em"><td class="font-semibold text-white">IEEE Std 1785<br><span class="text-xs text-slate-400 font-normal">Waveguide &amp; EM Field</span></td><td>Precision rectangular/circular waveguide dimensions, waveguide boundary conditions, TE/TM propagation constants, and cutoff frequencies.</td><td><code class="text-cyan-300">q42::emf_profiles</code> Modes 0x0100 &amp; 0x0102; Yee FDTD waveguide meshes in <code class="text-blue-300">etalon-sim</code>.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-CONTRACT</span></td></tr>
+                        <tr class="std-row" data-cat="metrology"><td class="font-semibold text-white">CIPM / JCGM 100 (GUM)<br><span class="text-xs text-slate-400 font-normal">Measurement Uncertainty</span></td><td>SI 7-tuple dimensional algebra ($L, M, T, I, \Theta, N, J$); Type A/B standard absolute ($k=1$), expanded ($k=2$, ~95.45%), and covariance matrices.</td><td><code class="text-cyan-300">q42::field_semantics</code> Schemas 134/202; single-target rule enforces target quantity/unit; covariance $\Sigma_p = R \Sigma R^T$.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="em"><td class="font-semibold text-white">CIE 1931 2° / 1964 10°<br><span class="text-xs text-slate-400 font-normal">Colorimetry &amp; Tristimulus</span></td><td>Standard observer color matching functions $\bar{x}, \bar{y}, \bar{z}$; continuous spectral Jacobian conservation $F_\lambda(\lambda) = F_f(c/\lambda)(c/\lambda^2)$.</td><td><code class="text-cyan-300">q42::field_spectrum</code> Schema 132; bin integrals conserved within $64 \cdot 2^{-52} \cdot Q$; <code class="text-blue-300">etalon-render</code> display projection.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="em"><td class="font-semibold text-white">Stokes / Mueller / Cloude<br><span class="text-xs text-slate-400 font-normal">Optical Polarimetry</span></td><td>$4\times 4$ Mueller scattering matrices; physical realizability requires Hermitian Pauli coherency matrix eigenvalues $\lambda_i \ge -10^{-12}$ and $M_{00} \ge 0$.</td><td><code class="text-cyan-300">q42::emf_profiles::mueller</code> Mode 0x0104; Schema 135 deterministic transverse Stokes basis; oracle validation in <code class="text-blue-300">etalon-sim</code>.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="audio"><td class="font-semibold text-white">ITU-R BS.2076-3 (ADM)<br><span class="text-xs text-slate-400 font-normal">Audio Definition Model</span></td><td>XML-free binary serialization of channel formats, object tracks, HOA beds, and audio stream definitions without runtime string parsing.</td><td><code class="text-cyan-300">audio::qac</code> Schema 204; maps ADM block formats to deterministic 128B directory entries and typed descriptor blocks.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-CONTRACT</span></td></tr>
+                        <tr class="std-row" data-cat="audio"><td class="font-semibold text-white">ITU-R BS.2127-1<br><span class="text-xs text-slate-400 font-normal">Spatial Audio Metadata</span></td><td>Standard rendering metadata for advanced sound systems; object coordinates, divergence, room acoustics, and listener reference orientation.</td><td><code class="text-cyan-300">audio::qac</code> Schema 2; active Hamilton local-to-parent unit quaternions with norm residual $\le 10^{-12}$.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="audio"><td class="font-semibold text-white">ITU-R BS.1770-5 / EBU R128<br><span class="text-xs text-slate-400 font-normal">Loudness &amp; True-Peak</span></td><td>Stage 1 high-shelf + Stage 2 RLB biquad filter; 400ms rectangular gating (75% overlap, -70 LUFS / -10 LU gates); $\ge 4\times$ oversampled True-Peak (dBTP).</td><td><code class="text-cyan-300">audio::qac::spatial_dsp</code> Schema 203; numerical oracle error $\le 0.1\text{ LU}$ on reference vectors; zero-signal marks silence, never NaN.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="audio"><td class="font-semibold text-white">AES69-2022 (SOFA)<br><span class="text-xs text-slate-400 font-normal">Spatially Oriented Audio</span></td><td>SimpleFreeFieldHRIR and SingleRoomDRIR measurement-receiver-tap structures; right-handed $X$-ahead, $Y$-left, $Z$-up listener orientation convention.</td><td><code class="text-cyan-300">audio::qac::profiles::hrir</code> Mode 0x0103, Schema 204; fractional/integer tap delay applied exactly once; original HDF5 in Mode 0x0104.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-BYTES</span></td></tr>
+                        <tr class="std-row" data-cat="audio"><td class="font-semibold text-white">ACN / SN3D / N3D / FuMa<br><span class="text-xs text-slate-400 font-normal">Higher-Order Ambisonics</span></td><td>Ambisonic Channel Number $\text{ACN} = l(l+1)+m$; Schmidt semi-normalized SN3D ($W=1$) and orthonormal N3D; Wigner-D rotation matrices.</td><td><code class="text-cyan-300">audio::qac</code> Mode 0x0102; record strides 4B ($L=0$), 16B ($L=1$), 36B ($L=2$), 64B ($L=3$); rotation residual $\le 10^{-5}$ in <code class="text-blue-300">etalon-signal</code>.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-REALTIME</span></td></tr>
+                        <tr class="std-row" data-cat="medical"><td class="font-semibold text-white">DICOM PS3.5 &amp; PS3.10<br><span class="text-xs text-slate-400 font-normal">Medical Image Storage</span></td><td>128B preamble + magic <code class="text-cyan-300">DICM</code>; Group 0002 File Meta Info; Explicit/Implicit VR Little Endian; encapsulated multi-frame BOT/EOT; LPS coordinate space.</td><td><code class="text-cyan-300">sensing::acquisition::storage</code> Mode 0x0104; original byte retention verified by BLAKE3-256; zero mutation on ingest; FrameOfReferenceUID binding.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-BYTES</span></td></tr>
+                        <tr class="std-row" data-cat="medical"><td class="font-semibold text-white">ISO/IEC 14495-1 (JPEG-LS)<br><span class="text-xs text-slate-400 font-normal">Near/Lossless Compression</span></td><td>LOCO-I context modeling; Transfer Syntaxes 1.2.840.10008.1.2.4.80 (Lossless, NEAR=0) and .81 (Near-Lossless, NEAR &gt; 0 with declared loss codes).</td><td><code class="text-cyan-300">medical::dicom_codecs</code>; native bit-exact integer reconstruction; Schema 7 registers loss when NEAR &gt; 0.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="medical"><td class="font-semibold text-white">ISO/IEC 15444-1 (JPEG 2000)<br><span class="text-xs text-slate-400 font-normal">Wavelet Medical Codec</span></td><td>Reversible 5/3 wavelet (lossless) and irreversible 9/7 wavelet (lossy); HTJ2K Part 15 Syntaxes 1.2.840.10008.1.2.4.201..203 with high throughput decoding.</td><td><code class="text-cyan-300">medical::dicom_codecs</code>; encapsulated codestreams stored bit-identically in Mode 0x0104; derived views tag loss code 1.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-BYTES</span></td></tr>
+                        <tr class="std-row" data-cat="medical"><td class="font-semibold text-white">ISO/IEC 18181-1 (JPEG XL)<br><span class="text-xs text-slate-400 font-normal">Next-Gen Image Codec</span></td><td>Transfer Syntaxes 1.2.840.10008.1.2.4.110..112; Modular mode reversible squeezing/RCT transforms for 8..16-bit signed/unsigned medical pixels.</td><td><code class="text-cyan-300">medical::dicom_codecs</code>; lossless multi-channel bit-depth preservation; direct mapping to AcquisitionView tensor tensors.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-SCIENCE</span></td></tr>
+                        <tr class="std-row" data-cat="medical"><td class="font-semibold text-white">NIfTI-1 / NIfTI-2<br><span class="text-xs text-slate-400 font-normal">Neuroimaging Geometry</span></td><td>348B/540B headers; <code class="text-cyan-300">qform_code</code> and <code class="text-cyan-300">sform_code</code> affine matrices mapping voxel indices $(i,j,k)$ to scanner/standard RAS+ millimeter coordinates.</td><td><code class="text-cyan-300">medical::nifti</code> bridge; transforms NIfTI affine matrices into Schema 2 CoordinateFrame with metre scaling and Hamilton quaternions.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-CONTRACT</span></td></tr>
+                        <tr class="std-row" data-cat="metrology"><td class="font-semibold text-white">ICNIRP 2020 &amp; IEEE C95.1<br><span class="text-xs text-slate-400 font-normal">EMF Human Safety Limits</span></td><td>Basic restrictions &amp; reference levels for 100 kHz–300 GHz exposure; Specific Absorption Rate (SAR in W/kg) and incident power density ($S_{inc}$ in W/m²).</td><td><code class="text-cyan-300">q42::emf_profiles</code> Mode 0x0106/0x0107; evaluated purely as passive observational thresholds; strict epistemic isolation forbids transmit authorization.</td><td><span class="badge-pass">Admitted</span><br><span class="badge-gate">G-AUTHORITY</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 3: Producer/Consumer Cutover, Legacy Rejection & 236-Vector Qualification -->
+        <section id="section-cutover-qualification" class="mb-12">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-2xl font-semibold text-cyan-300 flex items-center gap-2"><i class="fas fa-filter-circle-xmark text-cyan-400"></i> Section 3 — Producer/Consumer Cutover, Legacy Rejection &amp; 236-Vector Qualification</h2>
+                    <p class="text-sm text-slate-400">Fail-closed migration rules, collision-free two-stage dispatch, and independent adversarial gate results.</p>
+                </div>
+                <span class="layer-pill bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">236/236 Vectors Passing</span>
+            </div>
+
+            <!-- Cutover Rules Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-strong rounded-2xl p-5 border border-red-500/30">
+                    <div class="flex items-center gap-2 text-red-400 font-semibold text-sm mb-2"><i class="fas fa-ban"></i> Legacy UA4Q Rejection</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">Legacy <code class="text-red-300">UA4Q</code> envelopes (magics <code class="text-red-300">[0x55, 0x41, 0x34, 0x51]</code>, versions 1..3, and <code class="text-red-300">.q4au</code> dev suffixes) are strictly rejected on all production paths. Readers fail closed without allocating memory or synthesizing metadata.</p>
+                </div>
+                <div class="glass-strong rounded-2xl p-5 border border-amber-500/30">
+                    <div class="flex items-center gap-2 text-amber-400 font-semibold text-sm mb-2"><i class="fas fa-code-compare"></i> EMF v1..v3 Bridge Policy</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">Legacy <code class="text-amber-300">Q42EMF64</code> v1..v2 envelopes are strictly rejected. EMF v3 64-byte display bricks are supported via <code class="text-amber-300">EmfContainerReader</code> &amp; <code class="text-amber-300">portal_load_emf</code> display bridge, while v4 powers full multi-mode scientific custody.</p>
+                </div>
+                <div class="glass-strong rounded-2xl p-5 border border-cyan-500/30">
+                    <div class="flex items-center gap-2 text-cyan-400 font-semibold text-sm mb-2"><i class="fas fa-arrows-split-up-and-left"></i> Two-Stage Disambiguation</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">Modes 0x0100..0x0107 are collision-free: Stage 1 branches on 8-byte magic (<code class="text-cyan-300">Q42EMF64</code> vs <code class="text-cyan-300">qac\0\0\0\0\0</code>); Stage 2 verifies nonzero <code class="text-cyan-300">descriptor_id</code> referencing domain TLV Schemas (103 vs 205..208).</p>
+                </div>
+            </div>
+
+            <!-- Vector Test Suite Statistics Card -->
+            <div class="glass-strong rounded-2xl p-6 mb-8 border border-white/10">
+                <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><i class="fas fa-vial-circle-check text-emerald-400"></i> Independent Adversarial Conformance Suite (<code class="text-emerald-300">V01</code>) &amp; Parity (<code class="text-emerald-300">C04</code>)</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-4">
+                    <div class="bg-white/5 rounded-xl p-3 border border-white/5"><div class="text-2xl font-bold text-white">236</div><div class="text-xs text-slate-400">Total V01 Vectors</div></div>
+                    <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20"><div class="text-2xl font-bold text-emerald-400">30</div><div class="text-xs text-emerald-300">Admitted Golden Fixtures</div></div>
+                    <div class="bg-red-500/10 rounded-xl p-3 border border-red-500/20"><div class="text-2xl font-bold text-red-400">206</div><div class="text-xs text-red-300">Rejected Adversarial Vectors</div></div>
+                    <div class="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20"><div class="text-2xl font-bold text-blue-400">0</div><div class="text-xs text-blue-300">C04 Checker Discrepancies</div></div>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    The 206 adversarial fixtures systematically stress test: magic/version spoofing (18 vectors), truncations and alignment corruptions (22 vectors), Castagnoli CRC-32C and BLAKE3-256 tamper injections (28 vectors), cyclic and bounded DAG reference traps (32 vectors), IEEE-754 non-finite float injection (<code class="text-cyan-300">NaN</code>, <code class="text-cyan-300">±Inf</code> in 24 vectors), and domain schema boundary violations (82 vectors).
+                </p>
+            </div>
+
+            <!-- 7 Standalone Integration Test Gates Table -->
+            <div class="glass-subtle rounded-2xl overflow-hidden border border-white/10">
+                <div class="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-white">The Seven Standalone Integration Test Gates</h3>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">7 Gate Binaries</span>
+                </div>
+                <table class="w-full spec-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/4">Integration Gate</th>
+                            <th class="w-2/4">Target Scope &amp; Verified Invariants</th>
+                            <th class="w-1/4">Test Crate &amp; Scope</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5 text-slate-300">
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">emf_qac_envelope_vectors_gate</code></td><td>128B header/directory alignment, BLAKE3 <code class="text-cyan-300">INDEX_DOMAIN</code> index commitment, 236 independent V01 test vectors, IEEE-754 signed zero preservation.</td><td><code class="text-xs">crates/qualia-core-db/tests/emf_qac_envelope_vectors_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">emf_profiles_science_coupling_gate</code></td><td>EMF v4 Modes 0x0100..0x0107, Schemas 100..137, Yee FDTD leapfrog, Stokes passivity, IQ analytic baseband, biofield epistemic separation.</td><td><code class="text-xs">crates/qualia-core-db/tests/emf_profiles_science_coupling_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">qac_signal_profiles_dsp_gate</code></td><td>QAC v1 Modes 0x0100..0x0107, Schemas 200..210, ITU-R BS.1770-5 LUFS/True-Peak, HOA SN3D/N3D Wigner-D rotation, SOFA HRIR, STFT/CQT filterbanks.</td><td><code class="text-xs">crates/qualia-core-db/tests/qac_signal_profiles_dsp_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">dicom_recon_conformance_gate</code></td><td>Byte-exact DICOM Part 10 custody, native J2K/HTJ2K/JPEG-LS/JXL/RLE/Deflate codecs, LPS-to-Cartesian orientation, NIfTI RAS+ bridge, tomographic solvers.</td><td><code class="text-xs">crates/qualia-core-db/tests/dicom_recon_conformance_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">sensing_portal_range_gate</code></td><td>Raw TDC/TCSPC event custody, rank-3 correlation tensors, selective range planner (<code class="text-cyan-300">T01/T02</code>), RangeVerified integrity, Portal EMF v4/v3 rendering bridge.</td><td><code class="text-xs">crates/qualia-core-db/tests/sensing_portal_range_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">emf_qac_perf_realtime_gate</code></td><td>Zero-heap hot-path contracts, CPU-GPU numerical parity budgets, sub-millisecond preflight envelope admission, real-time audio/EM stream throughput.</td><td><code class="text-xs">crates/qualia-core-db/tests/emf_qac_perf_realtime_gate.rs</code></td></tr>
+                        <tr><td class="font-semibold text-white"><code class="text-cyan-300">emf_qac_evolution_gate</code></td><td>HOA SN3D/N3D normalization &amp; science authority, JBRD fail-closed boundary, and deterministic EMF v4 / QAC v1 roundtrip &amp; profile admission.</td><td><code class="text-xs">crates/qualia-core-db/tests/emf_qac_evolution_gate.rs</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="pt-8 border-t border-white/10 text-slate-500 text-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div><span>QualiaDB 0.0.41 Architecture &amp; Standards Specification · Copyright &copy; 2026 Timothy Charles Holborn</span></div>
+            <div class="flex items-center gap-4">
+                <a href="emf-qac-showcase.html" class="hover:text-cyan-400 transition-colors">Observatory Showcase</a>
+                <a href="data-formats.html" class="hover:text-cyan-400 transition-colors">Data Formats</a>
+                <a href="release-showcase-0.0.41.html" class="hover:text-cyan-400 transition-colors">Release 0.0.41</a>
+                <a href="index.html" class="hover:text-cyan-400 transition-colors">Docs Home</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Client-Side Vanilla JS Interactive Filter (Pure DOM, ZERO Fetch Calls) -->
+    <script>
+        (function() {
+            var filterBtns = document.querySelectorAll('.std-btn');
+            var searchInput = document.getElementById('std-search');
+            var rows = document.querySelectorAll('.std-row');
+
+            function applyFilters() {
+                var activeBtn = document.querySelector('.std-btn.active');
+                var activeCat = activeBtn ? activeBtn.getAttribute('data-filter') : 'all';
+                var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+                rows.forEach(function(row) {
+                    var rowCat = row.getAttribute('data-cat');
+                    var text = row.textContent.toLowerCase();
+                    var catMatch = (activeCat === 'all' || rowCat === activeCat);
+                    var searchMatch = (!query || text.indexOf(query) !== -1);
+                    row.style.display = (catMatch && searchMatch) ? '' : 'none';
+                });
+            }
+
+            filterBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    filterBtns.forEach(function(b) {
+                        b.classList.remove('active', 'bg-cyan-500', 'text-black');
+                        b.classList.add('bg-white/5', 'text-slate-300');
+                    });
+                    this.classList.add('active', 'bg-cyan-500', 'text-black');
+                    this.classList.remove('bg-white/5', 'text-slate-300');
+                    applyFilters();
+                });
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFilters);
+            }
+        })();
+    </script>
+</body>
+</html>

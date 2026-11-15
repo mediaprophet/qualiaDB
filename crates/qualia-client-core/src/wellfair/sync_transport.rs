@@ -37,6 +37,7 @@ pub struct InMemoryRelay {
 }
 
 impl InMemoryRelay {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }
@@ -46,6 +47,7 @@ impl InMemoryRelay {
         self.inner.lock().map(|v| v.len()).unwrap_or(0)
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -91,6 +93,7 @@ pub struct HttpRelayTransport {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl HttpRelayTransport {
+    /// Creates a new instance.
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),

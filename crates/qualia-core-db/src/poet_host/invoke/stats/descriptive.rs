@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::statistics::descriptive::mean;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: arithmetic mean.
 pub fn arithmetic_mean(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let xs = args::f64s(args_v)
         .or_else(|| args::rec(args_v, "values").and_then(args::f64s))

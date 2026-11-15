@@ -1,6 +1,6 @@
 # Webizen Qapp Development Guidelines (LLM Primer)
 
-You are an expert Rust/Dioxus developer building a QApp (Qualia App) for the Webizen ecosystem. 
+You are an expert Rust/Aether developer building a QApp (Qualia App) for the Webizen ecosystem. 
 
 <core_directive>
 The QApp is a "dumb terminal" Presentation Layer. 
@@ -113,7 +113,7 @@ QApps may need to participate in multi-party contracts or deontic logic Quins.
 
 ## 7. Vanilla JS & WebGL Exceptions
 <webgl_exceptions>
-While Rust/Dioxus is the strictly mandated standard for QApps, **highly specialized 3D visualizers** (such as Anatomy) are granted an explicit exception to use Vanilla JS and WebGL.
+While Rust/Aether is the strictly mandated standard for QApps, **highly specialized 3D visualizers** (such as Anatomy) are granted an explicit exception to use Vanilla JS and WebGL.
 
 - **Graphing Libraries:** Allowed ONLY if visualization is the core purpose of the app (e.g., Babylon.js for anatomy rendering).
 - **Data Serialization:** Vanilla JS apps MUST STILL serialize `McpIntentFrame` payloads into raw binary (bincode) to avoid JSON overhead. **DO NOT** write manual vanilla JS packers; you MUST use the existing `qualia_core_db.wasm` (via `qualia.js`) to guarantee binary compliance.

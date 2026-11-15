@@ -65,6 +65,7 @@ pub fn drop_cover_for_cost(profile: ProtectionProfile) -> Result<(), QdnfError> 
     }
 }
 
+/// `true` when cover may drop for controls.
 pub fn drop_cover_for_controls(controls: &ControlSet) -> Result<(), QdnfError> {
     if cover_mandatory_controls(controls) {
         Err(QdnfError::Downgrade)
@@ -73,6 +74,7 @@ pub fn drop_cover_for_controls(controls: &ControlSet) -> Result<(), QdnfError> {
     }
 }
 
+/// Cover class.
 pub fn cover_class(profile: ProtectionProfile) -> CoverClass {
     let pad_bucket = record_bucket(profile) as u32;
     match profile {
@@ -100,6 +102,7 @@ pub fn approved_relay_required(profile: ProtectionProfile) -> bool {
     catalog_entry(profile).contains_predicate(ControlPredicate::ApprovedRelay)
 }
 
+/// `CoverClass::isolated_bearer_required`.
 pub fn isolated_bearer_required(profile: ProtectionProfile) -> bool {
     catalog_entry(profile).contains_predicate(ControlPredicate::IsolatedBearer)
 }
@@ -134,14 +137,17 @@ pub fn cover_oracle_observed_bytes(
     }
 }
 
+/// `CoverClass::p1_padding_bucket`.
 pub const fn p1_padding_bucket() -> u64 {
     P1_PADDING_BUCKET
 }
 
+/// `CoverClass::p3_cell_bytes`.
 pub const fn p3_cell_bytes() -> u64 {
     P3_CELL_BYTES
 }
 
+/// `CoverClass::p2_record_bytes`.
 pub const fn p2_record_bytes() -> u64 {
     P2_RECORD_BYTES
 }

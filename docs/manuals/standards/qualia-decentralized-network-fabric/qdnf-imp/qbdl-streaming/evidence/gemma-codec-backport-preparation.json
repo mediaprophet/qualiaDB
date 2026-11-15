@@ -1,0 +1,48 @@
+{
+  "vendor": "vendor/etalon-model-6ace6cc",
+  "manifest_sha256": "20da06de29ef02285cbfa704cbb8f29f212293c9309ac5c9b05527caf91b0323",
+  "hash_manifest_sha256": "fa5db53da2a93ff49342c35809c1c98bdf86bc50f00cfd17c7b86acbf4c1b3b9",
+  "original_file_count": 113,
+  "unchanged_original_file_count": 108,
+  "changed_original_paths": [
+    "Cargo.toml",
+    "src/ggml/blocks.rs",
+    "src/ggml/layout.rs",
+    "src/ggml/mod.rs",
+    "src/ggml/tests.rs"
+  ],
+  "added_paths": [
+    "LICENSE",
+    "LICENSE-QUALIA",
+    "src/ggml/tests/mxfp4.rs",
+    "src/ggml/tests/q5_1.rs",
+    "upstream-licenses/LICENSE-APACHE",
+    "upstream-licenses/LICENSE-MIT",
+    "upstream-licenses/README.md",
+    "PROVENANCE.md",
+    "BACKPORT-SHA256.json",
+    "Cargo.lock",
+    ".gitignore"
+  ],
+  "kernel_git": {
+    "url": "https://github.com/mediaprophet/etalon.git",
+    "revision": "6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e",
+    "package": "crates/etalon-model"
+  },
+  "execution": {
+    "unit": {
+      "passed": 17,
+      "failed": 0,
+      "log": "etalon-vendor-ggml-tests.log",
+      "sha256": "bb44601e15b2d2cdaca0800d4fdeb7b19f9156624803297f9090a0c43f00eb61"
+    },
+    "contract": {
+      "passed": 6,
+      "failed": 0,
+      "log": "etalon-vendor-ggml-contract-tests.log",
+      "sha256": "cde73a840209d47b91ce43e7a2330193dd0dd6e9026be874446556ab248bc13e"
+    },
+    "lock_sha256": "22dd6549051c46ca39b31bb0c440904a4d3801b0ff5263eca3d1df36dc2160bd",
+    "kernel_identity": "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+  }
+}

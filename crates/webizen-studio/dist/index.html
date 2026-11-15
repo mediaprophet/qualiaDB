@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Webizendioxus | ⛺</title>
+  <title>Webizenaether | ⛺</title>
   <!-- CSS needed for the loading screen -->
   <style>
     body, html {
@@ -66,11 +66,11 @@
     .boot-error p { color: #a1a1aa; font-size: 0.85rem; line-height: 1.5; margin: 0.25rem 0; }
     .boot-error code { color: #06b6d4; }
   </style>
-<link rel="preload" as="script" href="/./assets/webizen-studio-dxhc0e89879ccb9a34e.js" crossorigin></head>
+<link rel="preload" as="script" href="/./assets/webizen-studio-dxh694c9dada6441ab.js" crossorigin></head>
 <body>
   <div id="main"></div>
 
-  <!-- Boot loader lives OUTSIDE #main. Dioxus mounts the app INTO #main (it
+  <!-- Boot loader lives OUTSIDE #main. Aether mounts the app INTO #main (it
        appends its root node rather than clearing the element), so the loader is
        removed explicitly once the app node appears — otherwise it lingered as a
        banner above the app. -->
@@ -87,7 +87,7 @@
       var main = document.getElementById('main');
 
       function appMounted() {
-        // Dioxus mounts its root as a child of #main.
+        // Aether mounts its root as a child of #main.
         return main && main.children.length > 0;
       }
       function removeLoader() {
@@ -124,6 +124,6 @@
       }, BOOT_TIMEOUT_MS);
     })();
   </script>
-<script type="module" async src="/./assets/webizen-studio-dxhc0e89879ccb9a34e.js"></script>
+<script type="module" async src="/./assets/webizen-studio-dxh694c9dada6441ab.js"></script>
             </body>
 </html>

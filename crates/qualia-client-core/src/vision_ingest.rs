@@ -125,6 +125,7 @@ fn provenance_quin(image_path: &str, typology: &str, timestamp: u64) -> NQuin {
     }
 }
 
+/// Resolves the active multimodal backend.
 pub fn resolve_active_multimodal(
     storage_root: &Path,
     active: &ActiveModelRecord,
@@ -149,6 +150,7 @@ pub fn resolve_active_multimodal(
     Ok((manifest, mmproj_path))
 }
 
+/// Ingests an image file.
 pub fn ingest_image_file(
     storage_root: &Path,
     active: &ActiveModelRecord,
@@ -205,6 +207,7 @@ pub fn ingest_image_file(
     })
 }
 
+/// Ingests an image with the active record.
 pub fn ingest_image_with_active_record(
     storage_root: &Path,
     active: Option<ActiveModelRecord>,

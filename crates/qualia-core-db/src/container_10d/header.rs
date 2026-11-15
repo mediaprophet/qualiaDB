@@ -17,25 +17,27 @@
 //! - `reserved[8]` — zero, future use (governance default-disposition flags,
 //!   capability bits, time-base selector — all P0.2+ territory).
 //!
-//! The header is the foundation every later P0 task writes into, so its byte
-//! layout is frozen at v1 and asserted by `header_is_pod_with_exact_size`:
-//! `size_of::<Container10dHeader>() == 64` and the named pad/reserved fields
-//! are zero.
+//! The header is the foundation every later P0 task writes into. Its 64-byte
+//! physical layout stays fixed across v1 and v2; v2 changes the file contract
+//! while preserving a dual-version reader. `header_is_pod_with_exact_size`
+//! asserts the exact layout and zero padding.
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::container_10d::axis_role::{AxisRole, PROPOSED_AXIS_ROLES};
+use crate::container_10d::axis_role::PROPOSED_AXIS_ROLES;
 use crate::container_10d::metric_check::{
-    proposed_metric_descriptor, verify_descriptor_against_reality, MetricCompletenessDescriptor,
+    proposed_metric_descriptor, MetricCompletenessDescriptor,
 };
 
 /// `.10d` container magic — ASCII `"10d\0"`.
 pub const MAGIC_10D: [u8; 4] = *b"10d\0";
 
-/// `.10d` header version. Increment only when the POD layout or
-/// caller-buffer contract changes (forward-compat is by version, not by
-/// flag bits).
-pub const HEADER_VERSION: u16 = 1;
+/// Current `.10d` writer version. V2 formalizes the single-envelope, typed-parts
+/// contract while retaining the v1 header's 64-byte physical layout.
+pub const HEADER_VERSION: u16 = 2;
+/// V1 remains readable for existing assets. New writers emit [`HEADER_VERSION`].
+pub const LEGACY_HEADER_VERSION: u16 = 1;
+pub const SUPPORTED_HEADER_VERSIONS: [u16; 2] = [LEGACY_HEADER_VERSION, HEADER_VERSION];
 
 /// Header flag bit 0: default disposition = Refuse. A reader that ignores the
 /// Governance section still fails closed. Always set in v1 headers produced by
@@ -53,7 +55,7 @@ pub enum HeaderParseError {
     TooShort { got: usize },
     /// Magic bytes do not match `MAGIC_10D`.
     BadMagic { got: [u8; 4] },
-    /// Version is not `HEADER_VERSION`.
+    /// Version is not recognized by this reader.
     UnknownVersion { got: u16 },
     /// A padding/reserved field is non-zero (the "zero padding" gate).
     NonZeroPadding { field: &'static str },
@@ -77,9 +79,10 @@ impl std::fmt::Display for HeaderParseError {
                 "10d header too short: got {got} bytes, need {HEADER_BYTE_SIZE}"
             ),
             Self::BadMagic { got } => write!(f, "10d bad magic: got {got:?}, need {MAGIC_10D:?}"),
-            Self::UnknownVersion { got } => {
-                write!(f, "10d unknown version: got {got}, need {HEADER_VERSION}")
-            }
+            Self::UnknownVersion { got } => write!(
+                f,
+                "10d unknown version: got {got}, supported versions are {SUPPORTED_HEADER_VERSIONS:?}"
+            ),
             Self::NonZeroPadding { field } => write!(f, "10d non-zero padding in field {field:?}"),
             Self::UndefinedAxisRole { axis_index, got } => write!(
                 f,
@@ -102,7 +105,7 @@ impl std::error::Error for HeaderParseError {}
 /// keeping the table trivially small.
 pub const MAX_SECTION_COUNT: u32 = 1024;
 
-/// The normative `.10d` v1 header — 64 bytes, `repr(C)`, naturally aligned.
+/// The normative `.10d` header — v1/v2 are 64 bytes, `repr(C)`, naturally aligned.
 ///
 /// Field layout (offsets):
 /// ```text
@@ -149,10 +152,9 @@ impl Default for Container10dHeader {
 }
 
 impl Container10dHeader {
-    /// The proposed (not-yet-frozen) v1 header: Option A axis-role taxonomy +
-    /// option (b) metric-completeness descriptor (the documented limitation
-    /// matching current `full_distance` reality) + default-disposition-Refuse
-    /// flag set. CRC left zero (P0.3 wires the shared CRC-32C).
+    /// Construct the current v2 header: v1 physical layout, shared typed-part
+    /// envelope semantics, axis-role taxonomy and metric descriptor. CRC is
+    /// sealed by the enclosing writer after the section table is encoded.
     pub fn proposed() -> Self {
         let mut axis_roles = [0u8; 10];
         for (i, role) in PROPOSED_AXIS_ROLES.iter().enumerate() {
@@ -169,6 +171,15 @@ impl Container10dHeader {
             section_table_offset: 0,
             section_count: 0,
         }
+    }
+
+    /// Construct a v1 header for compatibility fixtures and migration tests.
+    /// Production writers should use [`Self::proposed`] so newly written files
+    /// advertise the current format revision.
+    pub fn legacy_v1() -> Self {
+        let mut header = Self::proposed();
+        header.version = LEGACY_HEADER_VERSION;
+        header
     }
 
     /// Encode the header into a caller-supplied 64-byte buffer (little-endian
@@ -193,56 +204,7 @@ impl Container10dHeader {
     /// role, metric-completeness divergence from `full_distance` reality, and
     /// (P0.2) a consistent section-table pointer.
     pub fn parse(data: &[u8]) -> Result<Container10dHeader, HeaderParseError> {
-        if data.len() < HEADER_BYTE_SIZE {
-            return Err(HeaderParseError::TooShort { got: data.len() });
-        }
-        let mut buf = [0u8; HEADER_BYTE_SIZE];
-        buf.copy_from_slice(&data[..HEADER_BYTE_SIZE]);
-        // SAFETY: Container10dHeader is repr(C) + Pod + size 64; the buffer is
-        // exactly 64 bytes and initialised.
-        let header: Container10dHeader = *bytemuck::from_bytes(&buf);
-
-        if header.magic != MAGIC_10D {
-            return Err(HeaderParseError::BadMagic { got: header.magic });
-        }
-        if header.version != HEADER_VERSION {
-            return Err(HeaderParseError::UnknownVersion {
-                got: header.version,
-            });
-        }
-        if header.pad0 != [0, 0] {
-            return Err(HeaderParseError::NonZeroPadding { field: "pad0" });
-        }
-        // Section-table pointer consistency (P0.2). Either both zero (no
-        // table — a bare header) or both non-zero with offset >= header size,
-        // offset within the file, and count <= MAX_SECTION_COUNT. The
-        // table-bytes-within-file and per-descriptor validation is done by
-        // the section-table reader in `section.rs`; here we only gate the
-        // header-level pointer.
-        let (off, cnt) = (header.section_table_offset, header.section_count);
-        let both_zero = off == 0 && cnt == 0;
-        let both_nonzero = off != 0 && cnt != 0;
-        let valid_nonzero = both_nonzero
-            && off as usize >= HEADER_BYTE_SIZE
-            && off as usize <= data.len()
-            && cnt <= MAX_SECTION_COUNT;
-        if !both_zero && !valid_nonzero {
-            return Err(HeaderParseError::BadSectionTablePointer {
-                offset: off,
-                count: cnt,
-            });
-        }
-        for (i, &raw) in header.axis_roles.iter().enumerate() {
-            if AxisRole::from_u8(raw).is_none() || raw == AxisRole::Undefined as u8 {
-                return Err(HeaderParseError::UndefinedAxisRole {
-                    axis_index: i,
-                    got: raw,
-                });
-            }
-        }
-        verify_descriptor_against_reality(&header.metric_descriptor)
-            .map_err(|d| HeaderParseError::MetricDivergence(d.to_string()))?;
-        Ok(header)
+        prefix::parse_header_prefix(data, data.len() as u64).map_err(prefix::PrefixError::into_legacy)
     }
 }
 
@@ -277,6 +239,7 @@ mod tests {
         assert_eq!(std::mem::offset_of!(Container10dHeader, section_count), 60);
         // The proposed (bare) header has zero pad and no section table.
         let h = Container10dHeader::proposed();
+        assert_eq!(h.version, HEADER_VERSION);
         assert_eq!(h.pad0, [0, 0]);
         assert_eq!(h.section_table_offset, 0);
         assert_eq!(h.section_count, 0);
@@ -301,6 +264,15 @@ mod tests {
         let bytes = h.encode_to_vec64();
         let parsed = Container10dHeader::parse(&bytes).expect("proposed header must parse");
         assert_eq!(parsed, h);
+    }
+
+    #[test]
+    fn v1_header_remains_readable_and_round_trips_without_rewriting_its_version() {
+        let legacy = Container10dHeader::legacy_v1();
+        let bytes = legacy.encode_to_vec64();
+        let parsed = Container10dHeader::parse(&bytes).expect("v1 header remains supported");
+        assert_eq!(parsed.version, LEGACY_HEADER_VERSION);
+        assert_eq!(parsed, legacy);
     }
 
     #[test]
@@ -509,3 +481,6 @@ mod tests {
         );
     }
 }
+
+/// Allocation-free structural prefix validation for bounded selective readers.
+pub mod prefix;

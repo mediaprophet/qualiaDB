@@ -3,7 +3,7 @@
 **Date:** 2026-09-12 · **Host ABI:** `vibe-host-0.1` (outcome, not an `ALL_BOUND` freeze)
 **Live list:** `crates/qualia-core-db/src/poet_host/invoke/ids.rs` `ALL_BOUND`
 **Language list:** `crates/vibe/src/catalog/ids.rs` `ALL_INVOKE_IDS`
-**Tip count:** `ALL_BOUND` length **1121** on branch `0.0.38` at this edit (count the tip in `ids.rs`; do not hardcode ~885).
+**Tip count:** `ALL_BOUND` length **1121** on branch `0.0.40` at this edit (count the tip in `ids.rs`; do not hardcode ~885).
 
 ## Diff result (2026-09-12)
 

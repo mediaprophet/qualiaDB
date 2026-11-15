@@ -13,7 +13,16 @@ use crate::qapp_registry::QAPP_PACKAGE_MANIFEST;
 use crate::qapp_version::{is_version_newer, normalize_version_label};
 
 /// Default qapps copied on first launch when absent from user storage.
-pub const DEFAULT_BUNDLED_QAPPS: &[&str] = &["Anatomy"];
+pub const DEFAULT_BUNDLED_QAPPS: &[&str] = &[
+    "Anatomy",
+    "Poet",
+    "Wallet",
+    "Projects",
+    "Library",
+    "LlmAgents",
+    "CommsDirectory",
+    "Browser",
+];
 
 /// Version + update offer for an installed qapp.
 #[derive(Debug, Clone, Serialize)]
@@ -83,6 +92,7 @@ pub fn resolve_bundled_qapp_source(qapp_name: &str) -> Option<PathBuf> {
     None
 }
 
+/// Installed qapp version.
 pub fn installed_qapp_version(storage_path: &Path, qapp_name: &str) -> Option<String> {
     let dir = qapps_dir(storage_path).join(qapp_name);
     if dir.join(QAPP_PACKAGE_MANIFEST).is_file() {
@@ -92,8 +102,21 @@ pub fn installed_qapp_version(storage_path: &Path, qapp_name: &str) -> Option<St
     }
 }
 
+/// Bundled offered version.
 pub fn bundled_offered_version(qapp_name: &str) -> Option<String> {
     resolve_bundled_qapp_source(qapp_name).and_then(|p| read_qapp_version_from_dir(&p))
+}
+
+/// Read `did_git` multi-repo identifier and `export_targets` from a bundled qapp manifest.
+pub fn bundled_qapp_repo_info(qapp_name: &str) -> Option<(String, Vec<String>)> {
+    let source_dir = resolve_bundled_qapp_source(qapp_name)?;
+    let manifest_path = resolve_package_manifest_path(&source_dir)?;
+    let content = fs::read_to_string(manifest_path).ok()?;
+    let manifest: crate::qapp_registry::QappPackageManifest =
+        serde_json::from_str(&content).ok()?;
+    let x_qualia = manifest.x_qualia?;
+    let did_git = x_qualia.did_git?;
+    Some((did_git, x_qualia.export_targets))
 }
 
 fn build_version_status(
@@ -336,5 +359,29 @@ mod tests {
         }
         let v = read_qapp_version_from_dir(&anatomy);
         assert_eq!(v.as_deref(), Some("0.0.12"));
+    }
+
+    #[test]
+    fn default_bundled_qapps_manifests_resolve_and_validate() {
+        for name in DEFAULT_BUNDLED_QAPPS {
+            let src = resolve_bundled_qapp_source(name)
+                .unwrap_or_else(|| panic!("expected bundled source for {name}"));
+            let manifest_path = src.join("qapp.json");
+            assert!(manifest_path.is_file(), "qapp.json missing for {name}");
+            let content = fs::read_to_string(&manifest_path)
+                .unwrap_or_else(|e| panic!("failed to read qapp.json for {name}: {e}"));
+            let manifest: crate::qapp_registry::QappPackageManifest = serde_json::from_str(&content)
+                .unwrap_or_else(|e| panic!("failed to parse qapp.json for {name}: {e}"));
+            assert_eq!(&manifest.name, *name, "manifest name mismatch for {name}");
+            assert!(!manifest.version.is_empty(), "version empty for {name}");
+            let x = manifest
+                .x_qualia
+                .as_ref()
+                .unwrap_or_else(|| panic!("missing x_qualia for {name}"));
+            if *name != "Anatomy" {
+                assert!(x.did_git.is_some(), "missing did_git for {name}");
+                assert!(!x.export_targets.is_empty(), "missing export_targets for {name}");
+            }
+        }
     }
 }

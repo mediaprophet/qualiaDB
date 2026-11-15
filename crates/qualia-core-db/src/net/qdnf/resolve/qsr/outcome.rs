@@ -24,6 +24,7 @@ pub enum QsrOutcome {
 
 impl QsrOutcome {
     #[inline]
+    /// `QsrOutcome::found_count`.
     pub const fn found_count(self) -> Option<u8> {
         match self {
             Self::Found { count } => Some(count),

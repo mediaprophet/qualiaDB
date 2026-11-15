@@ -1,5 +1,5 @@
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const DASHBOARD_CSS: &str = r#"
     .home-tab { 
@@ -78,6 +78,7 @@ pub struct SocialEvent {
 use crate::components::qapp_engine::invoke_json;
 
 #[component]
+/// Aether `Dashboard` component.
 pub fn Dashboard() -> Element {
     let mut snapshot = use_signal(|| DashboardSnapshot::default());
 

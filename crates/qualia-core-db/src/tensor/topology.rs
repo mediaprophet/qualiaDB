@@ -1,59 +1,74 @@
-//! Topological classes (v) for geometric physics rules
+//! Topological classes (v) for geometric physics rules (`RM-18` re-export from `etalon-tensor`).
 
-use serde::{Deserialize, Serialize};
+pub use etalon_tensor::topology::*;
 
-/// Topological class variants
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum TopologyClass {
-    /// Euclidean (flat semantic proximity, standard distance)
-    Euclidean = 0,
-    /// Cyclic / Toroidal (feedback loops, circadian rhythms, periodic states)
-    Cyclic = 1,
-    /// Hyperbolic / Tree (hierarchies, family trees, taxonomies)
-    Hyperbolic = 2,
-    /// Self-contained Boundary Cliques / Community Classes
-    BoundaryCliques = 3,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl Default for TopologyClass {
-    fn default() -> Self {
-        TopologyClass::Euclidean
-    }
-}
+    #[test]
+    fn test_all_seven_topology_classes_round_trip() {
+        let variants = [
+            TopologyClass::Euclidean,
+            TopologyClass::Cyclic,
+            TopologyClass::Hyperbolic,
+            TopologyClass::BoundaryCliques,
+            TopologyClass::SphericalHealpix,
+            TopologyClass::LorentzianSpacetime,
+            TopologyClass::MultiplyConnectedPortal,
+        ];
 
-impl TopologyClass {
-    /// Calculate distance between two points based on topology class
-    pub fn calculate_distance(&self, p1: (f32, f32, f32), p2: (f32, f32, f32)) -> f32 {
-        match self {
-            TopologyClass::Euclidean => {
-                let dx = p1.0 - p2.0;
-                let dy = p1.1 - p2.1;
-                let dz = p1.2 - p2.2;
-                (dx * dx + dy * dy + dz * dz).sqrt()
-            }
-            TopologyClass::Cyclic => {
-                // Modulo-based distance for cyclic topology
-                let dx = (p1.0 - p2.0).abs().min(1.0 - (p1.0 - p2.0).abs());
-                let dy = (p1.1 - p2.1).abs().min(1.0 - (p1.1 - p2.1).abs());
-                let dz = (p1.2 - p2.2).abs().min(1.0 - (p1.2 - p2.2).abs());
-                (dx * dx + dy * dy + dz * dz).sqrt()
-            }
-            TopologyClass::Hyperbolic => {
-                // Exponential distance for tree/hierarchy topology
-                let dx = (p1.0 - p2.0).abs();
-                let dy = (p1.1 - p2.1).abs();
-                let dz = (p1.2 - p2.2).abs();
-                (dx.exp() + dy.exp() + dz.exp()).ln()
-            }
-            TopologyClass::BoundaryCliques => {
-                // Byte comparison for clique membership
-                if p1 == p2 {
-                    0.0
-                } else {
-                    1.0
-                }
-            }
+        for (expected_idx, variant) in variants.iter().enumerate() {
+            assert_eq!(*variant as u32, expected_idx as u32);
+            assert_eq!(variant.to_v_value(), expected_idx as f32);
+            assert_eq!(
+                TopologyClass::from_v_value(expected_idx as f32),
+                *variant
+            );
         }
+    }
+
+    #[test]
+    fn test_spherical_healpix_distance() {
+        let topo = TopologyClass::SphericalHealpix;
+        // Two points on unit sphere separated by 90 degrees on equator: (1, 0, 0) and (0, 1, 0)
+        let p1 = (1.0, 0.0, 0.0);
+        let p2 = (0.0, 1.0, 0.0);
+        let d = topo.calculate_distance(p1, p2);
+        let expected = std::f32::consts::FRAC_PI_2; // pi / 2
+        assert!((d - expected).abs() < 1e-4);
+
+        // Near origin fallback
+        let p_origin = (0.0, 0.0, 0.0);
+        let p_near = (0.0, 0.0, 0.5);
+        let d_origin = topo.calculate_distance(p_origin, p_near);
+        assert!((d_origin - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_lorentzian_spacetime_interval() {
+        let topo = TopologyClass::LorentzianSpacetime;
+        // Spacelike separation: dx = 3, dt = 0 -> ds = +3
+        let p1 = (0.0, 0.0, 0.0, 0.0);
+        let p2 = (3.0, 0.0, 0.0, 0.0);
+        assert_eq!(topo.calculate_spacetime_interval(p1, p2), 3.0);
+
+        // Timelike separation: dx = 0, dt = 4 -> ds = -4
+        let p3 = (0.0, 0.0, 0.0, 4.0);
+        assert_eq!(topo.calculate_spacetime_interval(p1, p3), -4.0);
+
+        // Lightlike: dx = 3, dy = 4 (spatial dist 5), dt = 5 -> ds = 0
+        let p4 = (3.0, 4.0, 0.0, 5.0);
+        assert_eq!(topo.calculate_spacetime_interval(p1, p4), 0.0);
+    }
+
+    #[test]
+    fn test_multiply_connected_portal_wrap() {
+        let topo = TopologyClass::MultiplyConnectedPortal;
+        let p1 = (0.05, 0.1, 0.2);
+        let p2 = (0.95, 0.1, 0.2);
+        let d = topo.calculate_distance(p1, p2);
+        // Wrapped dx across unit boundary = 0.1
+        assert!((d - 0.1).abs() < 1e-5);
     }
 }

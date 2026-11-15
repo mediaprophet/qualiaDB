@@ -1,8 +1,58 @@
 use super::*;
-use crate::bind::dispatch;
+use crate::extension_registry::{is_extension_namespace, route_call};
 use crate::value::EnumValue;
 
+fn resolve_member_namespace_path(callee: &Expr, env: &Env) -> Option<String> {
+    match &callee.kind {
+        ExprKind::Member { recv, name } => match &recv.kind {
+            ExprKind::Ident(ns) => {
+                let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                Some(format!("{resolved_ns}.{name}"))
+            }
+            ExprKind::Member {
+                recv: inner_recv,
+                name: sub_name,
+            } => {
+                if let ExprKind::Ident(ns) = &inner_recv.kind {
+                    if !env.vars.contains_key(ns) {
+                        let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                        return Some(format!("{resolved_ns}.{sub_name}.{name}"));
+                    }
+                }
+                None
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 impl<'a, H: Host> Engine<'a, H> {
+    /// Routes a host or extension call through `extension_registry::route_call`.
+    pub(crate) fn route_host_or_extension(
+        &mut self,
+        path: &str,
+        pos: &[Value],
+        named: &[(String, Value)],
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        let gate = self.sentinel_gate.as_deref_mut();
+        route_call(
+            self.host,
+            &self.extension_registry,
+            &mut self.prepared_cache,
+            &self.call_context,
+            gate,
+            &mut self.last_extension_outcome,
+            &mut self.budget,
+            path,
+            pos,
+            named,
+            span,
+        )
+    }
+
+    /// Evaluates a call with the first arg evaluated.
     pub(crate) fn eval_call_with_first_val(
         &mut self,
         callee: &Expr,
@@ -11,25 +61,22 @@ impl<'a, H: Host> Engine<'a, H> {
         span: Span,
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
-        let path = match &callee.kind {
-            ExprKind::Member { recv, name } => {
-                if let ExprKind::Ident(ns) = &recv.kind {
-                    let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
-                    format!("{resolved_ns}.{name}")
-                } else {
-                    name.clone()
+        let path = if let Some(ns_path) = resolve_member_namespace_path(callee, env) {
+            ns_path
+        } else {
+            match &callee.kind {
+                ExprKind::Member { name, .. } => name.clone(),
+                ExprKind::Ident(n) => n.clone(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E600,
+                        span,
+                        "call target is not a name",
+                    ))
                 }
-            }
-            ExprKind::Ident(n) => n.clone(),
-            _ => {
-                return Err(Diagnostic::new(
-                    DiagCode::E600,
-                    span,
-                    "call target is not a name",
-                ))
             }
         };
         let mut pos = vec![first];
@@ -43,6 +90,7 @@ impl<'a, H: Host> Engine<'a, H> {
         self.dispatch_call_path(&path, pos, named, span, env)
     }
 
+    /// Evaluates a call.
     pub(crate) fn eval_call(
         &mut self,
         callee: &Expr,
@@ -50,23 +98,80 @@ impl<'a, H: Host> Engine<'a, H> {
         span: Span,
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
         if let ExprKind::Member { recv, name } = &callee.kind {
-            if matches!(name.as_str(), "map" | "filter") {
+            let is_ns = match &recv.kind {
+                ExprKind::Ident(ns) => {
+                    env.aliases.contains_key(ns)
+                        || is_extension_namespace(ns)
+                        || crate::eval::VIBE_0_1_NAMESPACES.contains(&ns.as_str())
+                }
+                ExprKind::Member {
+                    recv: inner_recv, ..
+                } => matches!(&inner_recv.kind, ExprKind::Ident(ns) if !env.vars.contains_key(ns)),
+                _ => false,
+            };
+            if !is_ns
+                && matches!(
+                    name.as_str(),
+                    "map"
+                        | "filter"
+                        | "find"
+                        | "any"
+                        | "some"
+                        | "all"
+                        | "every"
+                        | "contains"
+                        | "includes"
+                        | "starts_with"
+                        | "ends_with"
+                        | "replace"
+                        | "trim"
+                        | "join"
+                        | "push"
+                        | "slice"
+                        | "has"
+                        | "keys"
+                )
+            {
                 return self.eval_collection_method(name, recv, args, span, env);
             }
         }
         let path = match &callee.kind {
             ExprKind::Member { recv, name } => {
                 if let ExprKind::Ident(ns) = &recv.kind {
-                    if env.vars.contains_key(ns) && matches!(name.as_str(), "map" | "filter") {
+                    if env.vars.contains_key(ns)
+                        && matches!(
+                            name.as_str(),
+                            "map"
+                                | "filter"
+                                | "find"
+                                | "any"
+                                | "some"
+                                | "all"
+                                | "every"
+                                | "contains"
+                                | "includes"
+                                | "starts_with"
+                                | "ends_with"
+                                | "replace"
+                                | "trim"
+                                | "join"
+                                | "push"
+                                | "slice"
+                                | "has"
+                                | "keys"
+                        )
+                    {
                         return self.eval_collection_method(name, recv, args, span, env);
                     }
                     // Resolve import aliases: `g.query` → `graph.query`
                     let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
                     format!("{resolved_ns}.{name}")
+                } else if let Some(ns_path) = resolve_member_namespace_path(callee, env) {
+                    ns_path
                 } else {
                     name.clone()
                 }
@@ -91,6 +196,7 @@ impl<'a, H: Host> Engine<'a, H> {
         self.dispatch_call_path(&path, pos, named, span, env)
     }
 
+    /// Dispatches a call path.
     pub(crate) fn dispatch_call_path(
         &mut self,
         path: &str,
@@ -99,6 +205,25 @@ impl<'a, H: Host> Engine<'a, H> {
         span: Span,
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
+        if path == "len" {
+            let val = pos.first().unwrap_or(&Value::Null);
+            return Ok(match val {
+                Value::List(xs) => Value::F64(xs.len() as f64),
+                Value::String(s) => Value::F64(s.len() as f64),
+                Value::Record(m) => Value::F64(m.len() as f64),
+                _ => Value::F64(0.0),
+            });
+        }
+        if path == "contains" {
+            let coll = pos.first().unwrap_or(&Value::Null);
+            let target = pos.get(1).unwrap_or(&Value::Null);
+            return Ok(match (coll, target) {
+                (Value::List(xs), item) => Value::Bool(xs.contains(item)),
+                (Value::String(s), Value::String(sub)) => Value::Bool(s.contains(sub)),
+                (Value::Record(m), Value::String(k)) => Value::Bool(m.contains_key(k)),
+                _ => Value::Bool(false),
+            });
+        }
         if path == "Ok" {
             return Ok(Value::Ok(Box::new(
                 pos.into_iter().next().unwrap_or(Value::Null),
@@ -108,6 +233,9 @@ impl<'a, H: Host> Engine<'a, H> {
             return Ok(Value::Err(Box::new(
                 pos.into_iter().next().unwrap_or(Value::Null),
             )));
+        }
+        if path == "Some" {
+            return Ok(pos.into_iter().next().unwrap_or(Value::Null));
         }
         if path == "vec2" || path == "vec3" || path == "vec4" || path == "mat3" || path == "mat4" {
             return Ok(Value::List(pos));
@@ -141,23 +269,40 @@ impl<'a, H: Host> Engine<'a, H> {
             }
         }
         // Try resolving as a user-defined function in the attached program.
-        if let Some(program_ptr) = self.program {
-            let program = unsafe { &*program_ptr };
+        if let Some(program) = self.program.clone() {
             if let Some(Item::Function(f)) = program
                 .items
                 .iter()
                 .find(|i| matches!(i, Item::Function(f) if f.name == path))
             {
-                if let Some(steps) = budget_steps(&f.budget, env, self) {
-                    self.budget.steps_left = self.budget.steps_left.min(steps);
+                if self.evaluating_budget {
+                    return Err(Diagnostic::new(
+                        DiagCode::E400,
+                        span,
+                        "budget expressions must not call user functions",
+                    ));
                 }
-                let mut local = Env::default();
+                // Budget expressions execute before the body and can call
+                // functions too. Account depth before evaluating them and
+                // preserve their diagnostic rather than swallowing it.
+                self.depth += 1;
+                match budget_steps(&f.budget, env, self) {
+                    Ok(Some(steps)) => self.budget.steps_left = self.budget.steps_left.min(steps),
+                    Ok(None) => {}
+                    Err(error) => {
+                        self.depth -= 1;
+                        return Err(error);
+                    }
+                }
+                let mut local = Env::with_task_scope(env.task_scope.clone());
                 local.aliases = env.aliases.clone();
                 local.enums = env.enums.clone();
+                local.fields = env.fields.clone();
+                local.materials = env.materials.clone();
+                local.laws = env.laws.clone();
                 for (p, a) in f.params.iter().zip(pos.into_iter()) {
                     local.vars.insert(p.name.clone(), a);
                 }
-                self.depth += 1;
                 let r = self.finish_block(&f.body, &mut local);
                 self.depth -= 1;
                 return r;
@@ -172,7 +317,11 @@ impl<'a, H: Host> Engine<'a, H> {
             self.depth -= 1;
             return Err(diag);
         }
-        let r = dispatch(self.host, path, &pos, &named, span);
+        let r = match crate::task_scheduler::dispatch_on_engine(self, path, &pos, env, span) {
+            Ok(Some(value)) => Ok(value),
+            Ok(None) => self.route_host_or_extension(path, &pos, &named, span),
+            Err(error) => Err(error),
+        };
         self.depth -= 1;
         r
     }
@@ -186,43 +335,217 @@ impl<'a, H: Host> Engine<'a, H> {
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
         let recv_val = self.eval_expr(recv, env)?;
-        let Value::List(items) = recv_val else {
-            return Err(Diagnostic::new(
+        match recv_val {
+            Value::List(items) => match name {
+                "map" | "filter" | "find" | "any" | "some" | "all" | "every" => {
+                    let lambda = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => {
+                            return Err(Diagnostic::new(
+                                DiagCode::E100,
+                                span,
+                                format!(".{name} requires a lambda argument"),
+                            ));
+                        }
+                    };
+                    let Value::Lambda { params, body } = lambda else {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            span,
+                            format!(".{name} requires a non-capturing lambda"),
+                        ));
+                    };
+                    if name == "find" {
+                        for item in items {
+                            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                            if v.is_truthy() {
+                                return Ok(item);
+                            }
+                        }
+                        return Ok(Value::Null);
+                    }
+                    if name == "any" || name == "some" {
+                        for item in items {
+                            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                            if v.is_truthy() {
+                                return Ok(Value::Bool(true));
+                            }
+                        }
+                        return Ok(Value::Bool(false));
+                    }
+                    if name == "all" || name == "every" {
+                        for item in items {
+                            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                            if !v.is_truthy() {
+                                return Ok(Value::Bool(false));
+                            }
+                        }
+                        return Ok(Value::Bool(true));
+                    }
+                    let mut out = Vec::new();
+                    for item in items {
+                        let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
+                        if name == "filter" {
+                            if v.is_truthy() {
+                                out.push(item);
+                            }
+                        } else {
+                            out.push(v);
+                        }
+                    }
+                    self.budget.charge(24 + out.len() as u64 * 16, span)?;
+                    Ok(Value::List(out))
+                }
+                "contains" | "includes" => {
+                    let target = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => Value::Null,
+                    };
+                    Ok(Value::Bool(items.contains(&target)))
+                }
+                "join" => {
+                    let sep = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(s) => s,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    let joined = items
+                        .iter()
+                        .map(|x| match x {
+                            Value::String(s) => s.clone(),
+                            Value::F64(n) => n.to_string(),
+                            Value::I64(n) => n.to_string(),
+                            Value::Bool(b) => b.to_string(),
+                            _ => format!("{x:?}"),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&sep);
+                    Ok(Value::String(joined))
+                }
+                "push" => {
+                    let val = match args.first() {
+                        Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
+                        _ => Value::Null,
+                    };
+                    let mut copy = items;
+                    copy.push(val);
+                    Ok(Value::List(copy))
+                }
+                "slice" => {
+                    let start = args
+                        .first()
+                        .and_then(|a| match a {
+                            Arg::Pos(e) => self.eval_expr(e, env).ok(),
+                            _ => None,
+                        })
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0)
+                        .max(0) as usize;
+                    let end = args
+                        .get(1)
+                        .and_then(|a| match a {
+                            Arg::Pos(e) => self.eval_expr(e, env).ok(),
+                            _ => None,
+                        })
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n.max(0) as usize)
+                        .unwrap_or(items.len());
+                    let slice = items
+                        .get(start..end.min(items.len()))
+                        .unwrap_or(&[])
+                        .to_vec();
+                    Ok(Value::List(slice))
+                }
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on list"),
+                )),
+            },
+            Value::String(s) => match name {
+                "contains" | "includes" => {
+                    let target = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.contains(&target)))
+                }
+                "starts_with" => {
+                    let prefix = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.starts_with(&prefix)))
+                }
+                "ends_with" => {
+                    let suffix = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(s.ends_with(&suffix)))
+                }
+                "replace" => {
+                    let from = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    let to = match args.get(1) {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(sub) => sub,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::String(s.replace(&from, &to)))
+                }
+                "trim" => Ok(Value::String(s.trim().to_string())),
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on string"),
+                )),
+            },
+            Value::Record(rec) => match name {
+                "contains" | "has" => {
+                    let key = match args.first() {
+                        Some(Arg::Pos(e)) => match self.eval_expr(e, env)? {
+                            Value::String(k) => k,
+                            _ => "".into(),
+                        },
+                        _ => "".into(),
+                    };
+                    Ok(Value::Bool(rec.contains_key(&key)))
+                }
+                "keys" => {
+                    let keys = rec.keys().cloned().map(Value::String).collect();
+                    Ok(Value::List(keys))
+                }
+                _ => Err(Diagnostic::new(
+                    DiagCode::E600,
+                    span,
+                    format!("unknown method `{name}` on record"),
+                )),
+            },
+            other => Err(Diagnostic::new(
                 DiagCode::E600,
                 span,
-                format!(".{name} requires a list receiver"),
-            ));
-        };
-        let lambda = match args.first() {
-            Some(Arg::Pos(e)) => self.eval_expr(e, env)?,
-            _ => {
-                return Err(Diagnostic::new(
-                    DiagCode::E100,
-                    span,
-                    format!(".{name} requires a lambda argument"),
-                ));
-            }
-        };
-        let Value::Lambda { params, body } = lambda else {
-            return Err(Diagnostic::new(
-                DiagCode::E100,
-                span,
-                format!(".{name} requires a non-capturing lambda"),
-            ));
-        };
-        let mut out = Vec::new();
-        for item in items {
-            let v = self.apply_lambda(&params, &body, item.clone(), env, span)?;
-            if name == "filter" {
-                if v.is_truthy() {
-                    out.push(item);
-                }
-            } else {
-                out.push(v);
-            }
+                format!("cannot call method `.{name}` on {other:?}"),
+            )),
         }
-        self.budget.charge(24 + out.len() as u64 * 16, span)?;
-        Ok(Value::List(out))
     }
 
     fn apply_lambda(
@@ -233,7 +556,7 @@ impl<'a, H: Host> Engine<'a, H> {
         env: &Env,
         span: Span,
     ) -> Result<Value, Diagnostic> {
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
         if let Some(p) = params.first() {
@@ -247,7 +570,7 @@ impl<'a, H: Host> Engine<'a, H> {
             ));
         }
         self.depth += 1;
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             self.depth -= 1;
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }

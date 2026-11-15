@@ -68,14 +68,17 @@ pub const DEFEATER_BIT: u64 = 1u64 << 63;
 pub const PATH_MASK: u64 = 0x7FFF_FFFF_FFFF_FF00;
 
 #[inline]
+/// Extracts the u8 opcode from a predicate.
 pub const fn opcode(predicate: u64) -> u8 {
     (predicate & OPCODE_MASK) as u8
 }
 #[inline]
+/// Extracts the property-path bits.
 pub const fn path_bits(predicate: u64) -> u64 {
     predicate & PATH_MASK
 }
 #[inline]
+/// `true` when the defeater bit is set.
 pub const fn is_defeater(predicate: u64) -> bool {
     predicate & DEFEATER_BIT != 0
 }
@@ -119,6 +122,7 @@ pub fn unpack_float_object(object: u64) -> f32 {
 pub const LOW32_MASK: u64 = 0xFFFF_FFFF;
 
 #[inline]
+/// Extracts the expiry epoch.
 pub const fn expiry(metadata: u64) -> u32 {
     (metadata & LOW32_MASK) as u32
 }
@@ -128,11 +132,13 @@ pub fn truth_degree(metadata: u64) -> f32 {
     f32::from_bits((metadata & LOW32_MASK) as u32)
 }
 #[inline]
+/// Packs a truth degree into metadata.
 pub fn with_truth_degree(d: f32) -> u64 {
     let d = if d.is_finite() { d } else { 0.0 };
     d.to_bits() as u64
 }
 #[inline]
+/// Extracts the Lamport timestamp.
 pub const fn timestamp(metadata: u64) -> u64 {
     metadata
 }
@@ -158,10 +164,12 @@ pub const ROUTING_LANE_MASK: u64 = 0b11u64 << ROUTING_LANE_SHIFT;
 pub const BAKE_CLOCK_MASK: u64 = 0x1FFF_FFFFu64 << 32;
 
 #[inline]
+/// Extracts the quin type tag.
 pub const fn quin_type(metadata: u64) -> u8 {
     ((metadata >> QUIN_TYPE_SHIFT) & 0xF) as u8
 }
 #[inline]
+/// Sets the quin type tag.
 pub const fn with_quin_type(metadata: u64, ty: u8) -> u64 {
     (metadata & !QUIN_TYPE_MASK) | (((ty as u64) & 0xF) << QUIN_TYPE_SHIFT)
 }
@@ -183,20 +191,29 @@ pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
 pub const CONSUMED_BIT: u64 = 1u64 << 59;
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  parity (ECC over the four semantic fields)
+//  parity (canonical 5-field XOR over subject ^ predicate ^ object ^ context ^ metadata)
 // ════════════════════════════════════════════════════════════════════════════════
 #[inline]
-pub const fn parity(subject: u64, predicate: u64, object: u64, context: u64) -> u64 {
-    subject ^ predicate ^ object ^ context
+/// Computes the canonical 5-field parity fold (`subject ^ predicate ^ object ^ context ^ metadata`).
+pub const fn parity(
+    subject: u64,
+    predicate: u64,
+    object: u64,
+    context: u64,
+    metadata: u64,
+) -> u64 {
+    subject ^ predicate ^ object ^ context ^ metadata
 }
 #[inline]
+/// Sets the canonical 5-field parity field on `q`.
 pub fn sealed(mut q: NQuin) -> NQuin {
-    q.parity = parity(q.subject, q.predicate, q.object, q.context);
+    q.parity = parity(q.subject, q.predicate, q.object, q.context, q.metadata);
     q
 }
 #[inline]
+/// `true` when the canonical 5-field parity fold is consistent.
 pub fn parity_valid(q: &NQuin) -> bool {
-    q.parity == parity(q.subject, q.predicate, q.object, q.context)
+    q.parity == parity(q.subject, q.predicate, q.object, q.context, q.metadata)
 }
 
 #[cfg(test)]
@@ -322,21 +339,26 @@ mod tests {
     }
 
     #[test]
-    fn parity_ignores_computational_metadata() {
+    fn parity_enforces_canonical_five_field_xor() {
         let q = sealed(NQuin {
             subject: 7,
             predicate: 8,
             object: 9,
             context: 10,
-            metadata: 0,
+            metadata: QUIN_TYPE_MASK | ROUTING_LANE_MASK | 999,
             parity: 0,
         });
         assert!(parity_valid(&q));
+        assert!(q.verify_ecc_parity());
+        assert_eq!(
+            q.parity,
+            parity(q.subject, q.predicate, q.object, q.context, q.metadata)
+        );
         let mut q2 = q;
-        q2.metadata = QUIN_TYPE_MASK | ROUTING_LANE_MASK | 999;
+        q2.metadata ^= 1;
         assert!(
-            parity_valid(&q2),
-            "parity must ignore the computational-support field"
+            !parity_valid(&q2),
+            "canonical 5-field parity must detect unsealed metadata mutations"
         );
     }
 }

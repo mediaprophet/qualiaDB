@@ -1,6 +1,6 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-11-15
 update_scope: Comprehensive
 ---
 
@@ -30,7 +30,7 @@ Comprehensive index of functionality for `docs`. This document serves as the gro
 
 ### Files & Exported Functionality
 - 📄 `FULL_WASM_COMPUTE_PROGRESS.md`
-- 📄 `HANDOVER-0.0.33-release.md`
+- 📄 `HANDOVER-0.0.40-release.md`
 - 📄 `HANDOVER-llm-on-forge.md`
 - 📄 `WGPU_UPSTREAM_TRACKING.md`
 - 📄 `_config.yml`
@@ -88,8 +88,15 @@ Comprehensive index of functionality for `docs`. This document serves as the gro
 - 📄 `phone-console.webmanifest`
 - 📄 `protocol-integration-architecture.md`
 - 📄 `release-targets.md`
+- 📄 `progress-0.0.40.html`
+- 📄 `prompt-precision.html`
+- 📄 `qdnf.html`
+- 📄 `qdnf-status.html`
+- 📄 `qbdl-streaming.html`
+- 📄 `release-matrix.html`
 - 📄 `science-playground.html`
 - 📄 `scientific-computing.html`
+- 📄 `semantic-instruments.html`
 - 📄 `shacl-client-extensions.md`
 - 📄 `shacl-coverage-summary.md`
 - 📄 `solver_library_documentation.md`
@@ -98,12 +105,16 @@ Comprehensive index of functionality for `docs`. This document serves as the gro
 - 📄 `spatial.html`
 - 📄 `specialized-libraries-shacl-extensions.md`
 - 📄 `specialized-library-extensions-status.md`
+- 📄 `universe.html`
 - 📄 `utils.html`
 - 📄 `values-credentials.html`
+- 📄 `wasm-engine.html`
 - 📄 `wasm-llm-test.html`
 - 📄 `wasm_llm_Benchmark.md`
 - 📄 `wordnet.html`
 - 📄 `zero-heap-compliance.html`
 
 ## Changelog
+- **2026-11-15**: Added `qbdl-streaming.html` operator showcase for mixed QBDL-profile HMC streaming over QDNF (many entries per family, Q42 HTTP Range, native/HTTP/WSS). Linked from `menu.json`, `qdnf.html`, `qdnf-status.html`, `index.html`, `data-formats.html`, `progress-0.0.41.html`, `release-showcase-0.0.41.html`, and EMF/QAC pages.
+- **2026-10-19**: Updated documentation index to showcase 0.0.40.16 release milestones: qualia-sim multi-physics simulation, qualia-geospatial GIS streaming, holographic 3D differential video codec, qualia-mcp Model Context Protocol server, and VibeScript value-producing if-else expressions.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

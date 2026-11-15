@@ -1,0 +1,34 @@
+@prefix si: <https://ns.webizen.org/semantic-instrument/> .
+@prefix cml: <https://ns.webcivics.net/cml/> .
+@prefix meal: <https://ns.webizen.org/meal-evidence/> .
+
+# Demonstrator template for practical food and takeaway considerations.
+# A meal link inherits its ingredients' evidence limits and does not become a treatment claim.
+
+meal:consideration-review a si:SemanticInstrument ;
+    si:instrumentId "https://ns.webizen.org/demo/meal-consideration-review" ;
+    si:name "Meal consideration review template (demo)" ;
+    si:requiresQualifiedAuthor "nutrition-or-dietetics-subject-matter-expert" .
+
+meal:consideration-review-1-0-0 a si:InstrumentRelease ;
+    si:instrument meal:consideration-review ;
+    si:releaseId "https://ns.webizen.org/demo/meal-consideration-review/releases/1.0.0" ;
+    si:contentCategory si:Demo ;
+    si:entryPoint meal:review-meal ;
+    si:prohibitedInterpretation "therapeutic-recommendation-or-override-of-allergy-medication-or-clinical-advice" ;
+    si:requiresInput "meal,ingredient-links,evidence-range,menu-or-label-verification,trade-offs" ;
+    si:holdsWhenMissing "ingredient-links-or-current-menu-label-or-safety-check" ;
+    si:resultKind "meal-consideration-claim" ;
+    si:authorshipState "template-awaiting-qualified-author" ;
+    si:reviewState "awaiting-independent-review" .
+
+meal:review-meal a si:EntryPoint ;
+    si:entryPointName "assess" ;
+    si:operationKind "trace-and-flag" ;
+    si:sideEffects "none" ;
+    si:logicApplication meal:consideration-logic .
+
+meal:consideration-logic a cml:LogicApplication ;
+    cml:modality cml:N3Logic ;
+    cml:logicSummary "Traces meal ingredients to evidence records and exposes trade-offs, allergies, medication and condition checks for qualified review." ;
+    cml:curationStatus cml:Proposed .

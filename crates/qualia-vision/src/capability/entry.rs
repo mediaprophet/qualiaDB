@@ -12,6 +12,7 @@ pub struct CapabilityEntry {
 }
 
 impl CapabilityEntry {
+    /// Creates a new instance.
     pub const fn new(
         id: &'static str,
         domain: &'static str,

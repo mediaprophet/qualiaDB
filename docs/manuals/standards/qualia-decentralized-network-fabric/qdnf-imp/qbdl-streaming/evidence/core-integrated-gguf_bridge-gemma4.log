@@ -1,0 +1,65 @@
+
+running 16 tests
+test gguf_bridge::gemma4::metadata_tests::gemma_metadata_preserves_per_layer_kv_and_boolean_sliding_pattern ... ok
+test gguf_bridge::gemma4::metadata_tests::gemma_metadata_rejects_duplicates_bounds_and_incompatible_geometry ... ok
+test gguf_bridge::gemma4::metadata_tests::gemma_metadata_rejects_unknown_scaling_hadamard_and_nonfinite_values ... ok
+test gguf_bridge::gemma4::tests::gemma_bad_shared_geometry_unknown_roles_and_context_budget_refuse ... ok
+test gguf_bridge::gemma4::tests::gemma_admission_rejects_unknown_roles_ple_dialect_and_cached_aliases ... ok
+test gguf_bridge::gemma4::tests::gemma_current_source_and_directory_must_match_retained_session has been running for over 60 seconds
+test gguf_bridge::gemma4::tests::gemma_legacy_hidden_only_and_speculative_paths_cannot_consume_live_state has been running for over 60 seconds
+test gguf_bridge::gemma4::tests::gemma_legacy_hidden_only_and_speculative_paths_cannot_consume_live_state ... ok
+test gguf_bridge::gemma4::tests::gemma_per_layer_kv_and_shared_producers_do_not_guess_by_dimension ... ok
+test gguf_bridge::gemma4::tests::gemma_current_source_and_directory_must_match_retained_session ... ok
+test gguf_bridge::gemma4::tests::gemma_ple_merge_matches_f64_oracle_for_distinct_token_rows ... ok
+test gguf_bridge::gemma4::tests::gemma_shared_cache_requires_current_producer_and_context_never_wraps_global ... ok
+test gguf_bridge::gemma4::tests::gemma_unscaled_attention_matches_independent_softmax_and_sliding_boundary ... ok
+test gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode ... FAILED
+test gguf_bridge::gemma4::tests::gemma_two_sessions_nonzero_tokens_reset_and_failure_are_isolated ... ok
+test gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode ... FAILED
+test gguf_bridge::gemma4_qwen35::tests::real_qwen35_0_8b_gguf_end_to_end_decode ... FAILED
+test gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode ... FAILED
+
+failures:
+
+---- gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode stdout ----
+
+thread 'gemma4-26b-a4b-test' (3808) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:15:29:
+load_gguf_checked(C:\LLM_files\gemma\gemma-4-26B-A4B-it-GGUF\gemma-4-26B-A4B-it-MXFP4_MOE.gguf) failed: unsupported Gemma tensor blk.0.attn_q.weight
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode' (46464) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:203:19:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+
+---- gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode stdout ----
+
+thread 'gemma4-e4b-test' (13364) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:15:29:
+load_gguf_checked(C:\LLM_files\gemma\gemma-4-E4B-it-GGUF\gemma-4-E4B-it-Q4_K_M.gguf) failed: unsupported Gemma tensor blk.0.attn_q.weight
+
+thread 'gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode' (27760) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:186:19:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+
+---- gguf_bridge::gemma4_qwen35::tests::real_qwen35_0_8b_gguf_end_to_end_decode stdout ----
+
+thread 'qwen35-0.8b-test' (23612) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:15:29:
+load_gguf_checked(C:\LLM_files\qwen\Qwen3.5-0.8B-GGUF\Qwen3.5-0.8B-Q4_K_M.gguf) failed: unsupported Qwen tensor blk.3.attn_q.weight
+
+thread 'gguf_bridge::gemma4_qwen35::tests::real_qwen35_0_8b_gguf_end_to_end_decode' (30316) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:152:19:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+
+---- gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode stdout ----
+
+thread 'qwen35-4b-test' (5664) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:15:29:
+load_gguf_checked(C:\LLM_files\qwen\Qwen3.5-4B-GGUF\Qwen3.5-4B-Q4_K_M.gguf) failed: unsupported Qwen tensor blk.3.attn_q.weight
+
+thread 'gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode' (7564) panicked at crates\qualia-core-db\src\gguf_bridge\gemma4_qwen35\tests.rs:169:19:
+called `Result::unwrap()` on an `Err` value: Any { .. }
+
+
+failures:
+    gguf_bridge::gemma4_qwen35::tests::real_gemma4_26b_a4b_gguf_end_to_end_decode
+    gguf_bridge::gemma4_qwen35::tests::real_gemma4_e4b_gguf_end_to_end_decode
+    gguf_bridge::gemma4_qwen35::tests::real_qwen35_0_8b_gguf_end_to_end_decode
+    gguf_bridge::gemma4_qwen35::tests::real_qwen35_4b_gguf_end_to_end_decode
+
+test result: FAILED. 12 passed; 4 failed; 0 ignored; 0 measured; 10423 filtered out; finished in 141.17s
+

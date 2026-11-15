@@ -1,8 +1,8 @@
 # Qualia WASM Portal — Operator & Integrator Manual
 
 **Product name:** Qualia — *Semantic Subjectivity Bifurcation Portal*  
-**Version:** 0.0.38
-**Branch:** `0.0.38`
+**Version:** 0.0.40
+**Branch:** `0.0.40`
 **Artifact:** `docs/pkg/qualia/qualia.js` + `qualia_bg.wasm`  
 **Companion:** [`wasm-viewport-migration-plan.md`](../plans/wasm-viewport-migration-plan.md), [`q42-acoustic-plane-draft.md`](standards/q42-acoustic-plane-draft.md)
 
@@ -75,7 +75,7 @@ Or use `scripts/package-qualia-wasm.ps1` when execution policy allows.
 cargo test -p qualia-core-db phenomenal_contract --lib
 cargo test -p qualia-core-db audio:: --lib
 node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
-node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 25165824 8388608
 ```
 
 ### 3.3 Local preview (COOP/COEP for SharedArrayBuffer)

@@ -52,10 +52,12 @@ pub const QPRIME_PRESET_IDS: &[&str] =
 /// Legacy extras — available but not primary in the picker.
 pub const LEGACY_PRESET_IDS: &[&str] = &["human-warmth", "twilight-blue", "midnight-slate"];
 
+/// `true` when qprime-preset.
 pub fn is_qprime_preset(id: &str) -> bool {
     QPRIME_PRESET_IDS.contains(&id)
 }
 
+/// Theme label.
 pub fn theme_label(id: &str) -> String {
     id.split('-')
         .map(|w| {
@@ -122,6 +124,7 @@ pub fn theme_picker_sections(
     (qprime, other)
 }
 
+/// Built-in theme catalog.
 pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
     vec![
         ThemeDefinition {
@@ -245,6 +248,7 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
     ]
 }
 
+/// Resolves theme.
 pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]) -> ResolvedTheme {
     let Some(binding) = binding else {
         return ResolvedTheme {
@@ -387,6 +391,7 @@ pub fn shoelace_bridge_css(selector: &str, theme: &ResolvedTheme) -> String {
     )
 }
 
+/// Renders scope-tokens.
 pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<String> {
     let mut css = format!("{selector} {{\n");
     for (token, value) in qprime_system_token_pairs() {
@@ -410,6 +415,7 @@ pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<Stri
     Some(css)
 }
 
+/// Collects stylesheets.
 pub fn collect_stylesheets(themes: &[&ResolvedTheme]) -> Vec<String> {
     let mut hrefs = BTreeSet::new();
     for theme in themes {
@@ -422,6 +428,7 @@ pub fn collect_stylesheets(themes: &[&ResolvedTheme]) -> Vec<String> {
     hrefs.into_iter().collect()
 }
 
+/// Joins theme classes.
 pub fn join_theme_classes(base_class: &str, theme: &ResolvedTheme) -> String {
     match theme.class_name.as_deref() {
         Some(class_name) if !class_name.trim().is_empty() => {

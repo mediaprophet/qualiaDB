@@ -35,6 +35,7 @@ pub fn build_anatomy_graph_context_json(
     crate::anatomy_context::build_anatomy_graph_context_json(qapp_name, user_prompt, agent_reply)
 }
 
+/// Builds anatomy-graph-context-json-with-dicom.
 pub fn build_anatomy_graph_context_json_with_dicom(
     qapp_name: String,
     user_prompt: String,
@@ -49,22 +50,27 @@ pub fn build_anatomy_graph_context_json_with_dicom(
     )
 }
 
+/// Parses dicom-metadata-json.
 pub fn parse_dicom_metadata_json(file_path: String) -> Result<String, String> {
     crate::anatomy_context::parse_dicom_metadata_json(file_path)
 }
 
+/// Builds dicom-overlay-spec-json.
 pub fn build_dicom_overlay_spec_json(file_path: String) -> Result<String, String> {
     crate::anatomy_context::build_dicom_overlay_spec_json(file_path)
 }
 
+/// Submits a DICOM ingest.
 pub fn submit_dicom_ingest(file_path: String, patient_did_hash: u64) -> Result<u64, String> {
     crate::qapp_api::submit_dicom_ingest(file_path, patient_did_hash)
 }
 
+/// DICOM ingest status.
 pub fn dicom_ingest_status(job_id: u64) -> u8 {
     crate::qapp_api::dicom_ingest_status(job_id)
 }
 
+/// Executes a DICOM volume query.
 pub fn execute_dicom_volume_query(
     patient_did_hash: u64,
     series_hash: u64,
@@ -72,6 +78,7 @@ pub fn execute_dicom_volume_query(
     crate::qapp_api::execute_dicom_volume_query(patient_did_hash, series_hash)
 }
 
+/// Issues a qapp session token.
 pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();

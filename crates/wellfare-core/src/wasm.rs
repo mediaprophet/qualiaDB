@@ -6,6 +6,7 @@ use crate::parser::{parse_heart_rate_csv, parse_sleep_csv, parse_steps_csv, pars
 use crate::rdf::{heart_rate_to_turtle, sleep_to_turtle, steps_to_turtle, weight_to_turtle};
 
 #[wasm_bindgen]
+/// Parses  CSV as JSON.
 pub fn parse_weight_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_weight_csv(content) {
         Ok(records) => serde_wasm_bindgen::to_value(&records)
@@ -15,6 +16,7 @@ pub fn parse_weight_csv_json(content: &str) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+/// Parses  CSV as JSON.
 pub fn parse_sleep_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_sleep_csv(content) {
         Ok(records) => serde_wasm_bindgen::to_value(&records)
@@ -24,6 +26,7 @@ pub fn parse_sleep_csv_json(content: &str) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+/// Parses  CSV as JSON.
 pub fn parse_heart_rate_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_heart_rate_csv(content) {
         Ok(records) => serde_wasm_bindgen::to_value(&records)
@@ -33,6 +36,7 @@ pub fn parse_heart_rate_csv_json(content: &str) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+/// Parses  CSV as JSON.
 pub fn parse_steps_csv_json(content: &str) -> Result<JsValue, JsValue> {
     match parse_steps_csv(content) {
         Ok(records) => serde_wasm_bindgen::to_value(&records)
@@ -42,6 +46,7 @@ pub fn parse_steps_csv_json(content: &str) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+///  Turtle from CSV.
 pub fn weight_turtle_from_csv(content: &str) -> Result<String, JsValue> {
     match parse_weight_csv(content) {
         Ok(records) => Ok(weight_to_turtle(&records)),
@@ -50,6 +55,7 @@ pub fn weight_turtle_from_csv(content: &str) -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+///  Turtle from CSV.
 pub fn sleep_turtle_from_csv(content: &str) -> Result<String, JsValue> {
     match parse_sleep_csv(content) {
         Ok(records) => Ok(sleep_to_turtle(&records)),
@@ -58,6 +64,7 @@ pub fn sleep_turtle_from_csv(content: &str) -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+///  Turtle from CSV.
 pub fn heart_rate_turtle_from_csv(content: &str) -> Result<String, JsValue> {
     match parse_heart_rate_csv(content) {
         Ok(records) => Ok(heart_rate_to_turtle(&records)),
@@ -66,6 +73,7 @@ pub fn heart_rate_turtle_from_csv(content: &str) -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+///  Turtle from CSV.
 pub fn steps_turtle_from_csv(content: &str) -> Result<String, JsValue> {
     match parse_steps_csv(content) {
         Ok(records) => Ok(steps_to_turtle(&records)),
@@ -92,6 +100,7 @@ pub struct WasmHealthStore {
 #[wasm_bindgen]
 impl WasmHealthStore {
     #[wasm_bindgen(constructor)]
+    /// Creates a new instance.
     pub fn new() -> Result<WasmHealthStore, JsValue> {
         crate::store::HealthStore::new()
             .map(|inner| WasmHealthStore { inner })

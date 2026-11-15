@@ -43,6 +43,7 @@ pub fn cnn_light_super_resolve(
 }
 
 #[cfg(feature = "vision-onnx")]
+/// `?::cnn_light_super_resolve`.
 pub fn cnn_light_super_resolve(
     weight_path: &Path,
     rgb: RgbView<'_>,

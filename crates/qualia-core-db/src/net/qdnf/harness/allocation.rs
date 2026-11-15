@@ -64,6 +64,7 @@ pub struct ReservationTracker {
 }
 
 impl ReservationTracker {
+    /// Creates a default `ReservationTracker`.
     pub const fn new() -> Self {
         Self {
             slots: [PoolSlot::EMPTY; POOL_SLOTS],
@@ -73,18 +74,22 @@ impl ReservationTracker {
         }
     }
 
+    /// `ReservationTracker::live_bytes`.
     pub const fn live_bytes(&self) -> u64 {
         self.live_bytes
     }
 
+    /// `ReservationTracker::peak_bytes`.
     pub const fn peak_bytes(&self) -> u64 {
         self.peak_bytes
     }
 
+    /// `ReservationTracker::live_leases`.
     pub const fn live_leases(&self) -> u8 {
         self.live_leases
     }
 
+    /// Live allocation generation.
     pub fn live_generation(&self, slot: u8) -> Result<Generation, QdnfError> {
         let i = slot as usize;
         if i >= POOL_SLOTS {
@@ -96,6 +101,7 @@ impl ReservationTracker {
         Ok(self.slots[i].generation)
     }
 
+    /// Reserves capacity.
     pub fn reserve(&mut self, owner: u8, bytes: u32) -> Result<HarnessLease, QdnfError> {
         let mut i = 0;
         while i < POOL_SLOTS {
@@ -127,6 +133,7 @@ impl ReservationTracker {
         Err(QdnfError::Capacity)
     }
 
+    /// Releases the resource.
     pub fn release(&mut self, lease: HarnessLease) -> Result<(), QdnfError> {
         let i = lease.slot as usize;
         if i >= POOL_SLOTS {

@@ -8,6 +8,7 @@ use crate::specialized_libs::computational_geometry::{convex_hull_indices_2, Poi
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: convex-hull-2d.
 pub fn wasm_convex_hull_2d(points_flat: &[f64]) -> Result<js_sys::Uint32Array, JsValue> {
     if points_flat.len() % 2 != 0 {
         return Err(JsValue::from_str(
@@ -33,6 +34,7 @@ pub fn wasm_convex_hull_2d(points_flat: &[f64]) -> Result<js_sys::Uint32Array, J
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: delaunay-triangulation-2d.
 pub fn wasm_delaunay_triangulation_2d(points_flat: &[f64]) -> Result<js_sys::Uint32Array, JsValue> {
     if points_flat.len() % 2 != 0 {
         return Err(JsValue::from_str(

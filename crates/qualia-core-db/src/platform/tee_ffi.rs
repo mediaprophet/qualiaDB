@@ -10,6 +10,7 @@ pub mod android_keystore {
     extern "C" {
         // Native C-API hooks into the Android Hardware-Backed Keystore (Titan M / TrustZone)
         // Passes the 48-byte NQuin memory block directly to the secure enclave for signing.
+        /// JNI shim: signs the NQuin in the Android Keystore; symbol supplied by the embedding app (not an NDK builtin).
         pub fn AKeyStore_signData(
             key_alias: *const u8,
             key_alias_len: usize,
@@ -19,6 +20,7 @@ pub mod android_keystore {
             out_signature_len: *mut usize,
         ) -> c_int;
 
+        /// JNI shim: verifies a signature in the Android Keystore; symbol supplied by the embedding app.
         pub fn AKeyStore_verifySignature(
             key_alias: *const u8,
             key_alias_len: usize,
@@ -38,6 +40,7 @@ pub mod apple_secure_enclave {
     extern "C" {
         // CoreFoundation & Security framework native bindings for the Apple Secure Enclave
         // `dataToSign` points to the CFDataRef wrapper of the 48-byte NQuin
+        /// `?::SecKeyCreateSignature`.
         pub fn SecKeyCreateSignature(
             key: *mut c_void,        // SecKeyRef
             algorithm: *mut c_void,  // SecKeyAlgorithm
@@ -45,6 +48,7 @@ pub mod apple_secure_enclave {
             error: *mut *mut c_void, // CFErrorRef
         ) -> *mut c_void; // Returns CFDataRef signature
 
+        /// Apple Security.framework: verifies a signature in the Secure Enclave.
         pub fn SecKeyVerifySignature(
             key: *mut c_void,        // SecKeyRef
             algorithm: *mut c_void,  // SecKeyAlgorithm

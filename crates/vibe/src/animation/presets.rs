@@ -31,6 +31,7 @@ pub enum AnimationFamily {
 }
 
 impl AnimationFamily {
+    /// Constructs from name.
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_ascii_lowercase().replace('_', "-").as_str() {
             "spatial-kinematics" | "kinematics" => Some(Self::SpatialKinematics),
@@ -47,6 +48,7 @@ impl AnimationFamily {
         }
     }
 
+    /// Name.
     pub fn name(&self) -> &'static str {
         match self {
             Self::SpatialKinematics => "spatial_kinematics",

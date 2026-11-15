@@ -4,6 +4,7 @@
 use crate::specialized_libs::computer_vision::cv::buffer::GrayView;
 use crate::specialized_libs::computer_vision::cv::error::CvError;
 
+/// Perspective warp on a u8 image.
 pub fn warp_perspective_u8(
     src: GrayView<'_>,
     h: [f32; 9],

@@ -23,18 +23,7 @@ pub fn ahash_u64(src: GrayView<'_>) -> Result<u64, CvError> {
     }
     let mut samples = [0u8; 64];
     sample_nn(src, AHASH_SIDE, AHASH_SIDE, &mut samples);
-    let mut sum = 0u32;
-    for &p in &samples {
-        sum += p as u32;
-    }
-    let mean = (sum / 64) as u8;
-    let mut hash = 0u64;
-    for (i, &p) in samples.iter().enumerate() {
-        if p >= mean {
-            hash |= 1u64 << i;
-        }
-    }
-    Ok(hash)
+    Ok(etalon_signal::vision::ahash_from_luma_64(&samples))
 }
 
 /// Difference hash: nearest-neighbor sample to 9×8, bit = right ≥ left (row-wise).
@@ -44,20 +33,7 @@ pub fn dhash_u64(src: GrayView<'_>) -> Result<u64, CvError> {
     }
     let mut samples = [0u8; (DHASH_WIDTH * DHASH_HEIGHT) as usize];
     sample_nn(src, DHASH_WIDTH, DHASH_HEIGHT, &mut samples);
-    let mut hash = 0u64;
-    let mut bit = 0u32;
-    for y in 0..DHASH_HEIGHT {
-        let row = (y * DHASH_WIDTH) as usize;
-        for x in 0..(DHASH_WIDTH - 1) {
-            let left = samples[row + x as usize];
-            let right = samples[row + x as usize + 1];
-            if right >= left {
-                hash |= 1u64 << bit;
-            }
-            bit += 1;
-        }
-    }
-    Ok(hash)
+    Ok(etalon_signal::vision::dhash_from_luma_72(&samples))
 }
 
 /// Nearest-neighbour downsample into `out` (must be `w * h` bytes).

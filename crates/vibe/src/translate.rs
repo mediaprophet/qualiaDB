@@ -162,6 +162,7 @@ pub struct Tier2Label {
 }
 
 impl Tier2Label {
+    /// Creates a new `Tier2Label`.
     pub fn new(iri: &str, locale: &str, label: &str) -> Self {
         Self {
             iri: iri.into(),
@@ -171,6 +172,7 @@ impl Tier2Label {
         }
     }
 
+    /// Builder — sets description.
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = Some(desc.into());
         self
@@ -184,6 +186,7 @@ pub struct Tier2Registry {
 }
 
 impl Tier2Registry {
+    /// Creates a new `Tier2Registry`.
     pub fn new() -> Self {
         Self::default()
     }

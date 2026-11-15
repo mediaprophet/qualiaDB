@@ -14,12 +14,19 @@ mod gpu;
 #[cfg(feature = "gpu-runtime")]
 mod gpu_compute;
 mod gpu_state;
+pub mod pipeline_caps;
 mod scene;
 mod scene_graph;
 mod shader_compile;
 pub mod spectral;
 mod svg;
 mod wave20_host;
+
+pub use pipeline_caps::{
+    render_set_environment_probe, render_temporal_set_mode, render_temporal_status,
+    render_texture_transcode_caps, render_vegetation_clear_colliders,
+    render_vegetation_push_collider, render_water_set_parameters,
+};
 
 pub use animation::{
     animation_eval_curve, animation_eval_preset, animation_list_presets, animation_sclerp,

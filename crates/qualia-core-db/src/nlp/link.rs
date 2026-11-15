@@ -3,6 +3,7 @@
 use super::gazetteer::Hit;
 use super::terms::known_iri;
 
+/// Filters hits to known terms.
 pub fn filter_known(hits: Vec<Hit>) -> Vec<Hit> {
     hits.into_iter().filter(|h| known_iri(h.iri)).collect()
 }

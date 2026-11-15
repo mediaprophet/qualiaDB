@@ -29,7 +29,7 @@
 
 **What was built**
 - Poet: manufacture/receipts/validate/version/deps/fixture/capability/manifest panels registered in `mod.rs` and wired into the bay surface.
-- Studio: inspect/run/deps/lifecycle panels + InstrumentFlow Ctrl+Z/Y via `LayoutUndo`; session `data-si-flow-layout` persist (fixed `let mut pos` for Dioxus Signal).
+- Studio: inspect/run/deps/lifecycle panels + InstrumentFlow Ctrl+Z/Y via `LayoutUndo`; session `data-si-flow-layout` persist (fixed `let mut pos` for Aether Signal).
 - Desktop: `si_suspend_demo` / `si_remove_demo` / `si_cancel_run`; suspend blocks run; remove drops collect.
 - Core: `LocalRegistry::uninstall` drops lookup without erasing receipt history; brace regression in registry tests fixed.
 

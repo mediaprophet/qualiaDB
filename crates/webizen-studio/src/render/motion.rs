@@ -77,6 +77,7 @@ pub fn prefers_reduced_motion() -> bool {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback.
 pub fn prefers_reduced_motion() -> bool {
     false
 }

@@ -1,8 +1,9 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `NeuroSymbolicChat` component.
 pub fn NeuroSymbolicChat() -> Element {
     rsx! {
         div { class: "neuro-symbolic-chat-pane flex flex-col h-full",

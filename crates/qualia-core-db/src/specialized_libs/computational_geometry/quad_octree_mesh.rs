@@ -82,6 +82,7 @@ pub enum QuadMeshError {
 }
 
 impl core::fmt::Display for QuadMeshError {
+    /// Formats the quadtree error with its offending parameter value.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::MaxLevelTooLarge { requested, max } => {
@@ -119,6 +120,7 @@ pub enum OctMeshError {
 }
 
 impl core::fmt::Display for OctMeshError {
+    /// Formats the octree error with its offending parameter value.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::MaxLevelTooLarge { requested, max } => {
@@ -171,6 +173,7 @@ pub struct QuadNode {
 }
 
 impl QuadNode {
+    /// Returns `true` when the node has no children (`first_child == NONE`).
     #[inline]
     fn is_leaf(&self) -> bool {
         self.first_child == NONE
@@ -199,6 +202,7 @@ pub struct QuadMeshOptions {
 }
 
 impl Default for QuadMeshOptions {
+    /// Defaults: `max_level = 10`, `max_cells = 100_000`, 2:1 balancing on.
     fn default() -> Self {
         Self {
             max_level: 10,
@@ -651,6 +655,7 @@ pub struct OctNode {
 }
 
 impl OctNode {
+    /// Returns `true` when the node has no children (`first_child == NONE`).
     #[inline]
     fn is_leaf(&self) -> bool {
         self.first_child == NONE
@@ -679,6 +684,7 @@ pub struct OctMeshOptions {
 }
 
 impl Default for OctMeshOptions {
+    /// Defaults: `max_level = 8`, `max_cells = 200_000`, 2:1 balancing on.
     fn default() -> Self {
         Self {
             max_level: 8,
@@ -698,11 +704,13 @@ pub struct OctTree {
 }
 
 impl OctTree {
+    /// Number of nodes in the tree (leaves + internal nodes).
     #[inline]
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
+    /// Collects a snapshot of every leaf cell (centre, half-size, level).
     pub fn leaves(&self) -> Vec<OctLeaf> {
         let mut out = Vec::new();
         for n in &self.nodes {
@@ -719,6 +727,8 @@ impl OctTree {
         out
     }
 
+    /// Splits leaf `idx` into 8 children (index bits: x|y|z), returning the
+    /// index of the first child. Caller must ensure `idx` is a leaf.
     fn subdivide(&mut self, idx: u32) -> Option<u32> {
         let n = self.nodes[idx as usize];
         debug_assert!(n.is_leaf());

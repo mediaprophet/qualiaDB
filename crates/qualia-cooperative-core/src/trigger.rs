@@ -141,16 +141,19 @@ impl TriggerContext {
         }
     }
 
+    /// Builder — sets event.
     pub fn with_event(mut self, event_id: impl Into<String>) -> Self {
         self.occurred_events.push(event_id.into());
         self
     }
 
+    /// Builder — sets attestation.
     pub fn with_attestation(mut self, att: Attestation) -> Self {
         self.attestations.push(att);
         self
     }
 
+    /// Builder — sets liveness.
     pub fn with_liveness(mut self, last_liveness_unix: u32) -> Self {
         self.last_liveness_unix = Some(last_liveness_unix);
         self

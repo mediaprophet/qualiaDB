@@ -139,6 +139,8 @@ pub struct EvidentialPair {
 }
 
 impl EvidentialPair {
+    /// Create a pair with `mu`/`lambda` clamped into `[0, 1]` — inputs
+    /// outside the unit interval saturate rather than error.
     pub fn new(mu: f32, lambda: f32) -> Self {
         Self {
             mu: mu.clamp(0.0, 1.0),
@@ -199,6 +201,8 @@ impl EvidentialPair {
 }
 
 impl Default for EvidentialPair {
+    /// The empty-evidence pair (`μ = 0, λ = 0` — neither supported nor
+    /// refuted).
     fn default() -> Self {
         Self {
             mu: 0.0,

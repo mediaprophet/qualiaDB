@@ -120,6 +120,7 @@ impl Hierarchical {
         out
     }
 
+    /// Merge count.
     pub fn n_merges(&self) -> usize {
         self.merges.len()
     }

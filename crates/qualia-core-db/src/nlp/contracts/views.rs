@@ -32,6 +32,7 @@ impl TokenView {
         norm_index: NORM_INDEX_NONE,
     };
 
+    /// Source text slice for this token span; error when out of range.
     pub fn text(self, source: &str) -> Result<&str, NlpContractError> {
         slice_source(self.span, source)
     }
@@ -51,6 +52,7 @@ impl SentenceView {
         },
     };
 
+    /// Source text slice for this sentence.
     pub fn text(self, source: &str) -> Result<&str, NlpContractError> {
         slice_source(self.span, source)
     }
@@ -74,6 +76,7 @@ impl HitView {
         surface: "",
     };
 
+    /// Source text slice for this hit.
     pub fn text(self, source: &str) -> Result<&str, NlpContractError> {
         slice_source(self.span, source)
     }
@@ -102,12 +105,14 @@ impl NormView {
         yyyy_mm_dd: [0; 10],
     };
 
+    /// Document span of this normalization.
     pub fn span(self) -> DocSpan {
         match self {
             Self::DateIso { span, .. } | Self::Number { span, .. } => span,
         }
     }
 
+    /// Source text slice for this normalization.
     pub fn text(self, source: &str) -> Result<&str, NlpContractError> {
         slice_source(self.span(), source)
     }
@@ -135,6 +140,7 @@ impl PlanView {
         kind: "",
     };
 
+    /// Source text slice for this plan.
     pub fn text(self, source: &str) -> Result<&str, NlpContractError> {
         slice_source(self.span, source)
     }

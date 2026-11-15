@@ -69,6 +69,7 @@ pub struct VectorSectorMap {
 }
 
 impl VectorSectorMap {
+    /// `true` when the key exists.
     pub fn contains(&self, projection: u64) -> bool {
         if !self.active {
             return false;
@@ -77,6 +78,7 @@ impl VectorSectorMap {
     }
 }
 
+/// Returns the quin metadata as its spatial projection.
 pub fn extract_spatial_projection(quin: &NQuin) -> u64 {
     quin.metadata
 }

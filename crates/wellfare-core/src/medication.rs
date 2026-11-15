@@ -75,6 +75,7 @@ fn stable_suffix(parts: &[&str]) -> String {
     hex::encode(&digest[..4])
 }
 
+/// New medication ID.
 pub fn new_medication_id(name: &str, created_unix: u32) -> String {
     format!(
         "urn:wellfair:medication:{}",
@@ -82,6 +83,7 @@ pub fn new_medication_id(name: &str, created_unix: u32) -> String {
     )
 }
 
+/// New administration ID.
 pub fn new_administration_id(med_id: &str, unix: u32) -> String {
     format!(
         "urn:wellfair:med_admin:{}",
@@ -89,6 +91,7 @@ pub fn new_administration_id(med_id: &str, unix: u32) -> String {
     )
 }
 
+/// New diet ID.
 pub fn new_diet_id(description: &str, unix: u32) -> String {
     format!(
         "urn:wellfair:diet:{}",
@@ -128,6 +131,7 @@ pub struct EnvelopeWithSummary {
     pub summary: String,
 }
 
+///  envelope.
 pub fn medication_envelope(
     entry: &MedicationCatalogEntry,
     owner_did: &str,
@@ -154,6 +158,7 @@ pub fn medication_envelope(
     }
 }
 
+///  envelope.
 pub fn administration_envelope(
     admin: &MedicationAdministration,
     owner_did: &str,
@@ -179,6 +184,7 @@ pub fn administration_envelope(
     }
 }
 
+///  envelope.
 pub fn diet_envelope(entry: &DietEntry, owner_did: &str, author_did: &str) -> EnvelopeWithSummary {
     let payload = serde_json::to_string(entry).unwrap_or_default();
     let summary = serde_json::json!({

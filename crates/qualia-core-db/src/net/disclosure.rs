@@ -20,6 +20,7 @@ pub struct NetworkDisclosureRegistry {
 }
 
 impl NetworkDisclosureRegistry {
+    /// Creates `NetworkDisclosureRegistry` with the given state.
     pub fn new() -> Self {
         Self {
             allowed_endpoints: HashMap::new(),

@@ -12,6 +12,7 @@ const ATTR_XOR_RELAYED: u16 = 0x0016;
 const ATTR_LIFETIME: u16 = 0x000D;
 const FAMILY_IPV4: u8 = 0x01;
 
+/// Encodes `allocate_request` into the caller buffer.
 pub fn encode_allocate_request(tid: &[u8; 12], out: &mut [u8]) -> Result<usize, &'static str> {
     if out.len() < 20 {
         return Err("capacity");
@@ -24,6 +25,7 @@ pub fn encode_allocate_request(tid: &[u8; 12], out: &mut [u8]) -> Result<usize, 
     Ok(20)
 }
 
+/// Encodes `allocate_success` into the caller buffer.
 pub fn encode_allocate_success(
     tid: &[u8; 12],
     relayed: SocketAddr,
@@ -57,6 +59,7 @@ pub fn encode_allocate_success(
     Ok(44)
 }
 
+/// Parses `xor-relayed-v4`.
 pub fn parse_xor_relayed_v4(msg: &[u8], tid: &[u8; 12]) -> Result<SocketAddr, &'static str> {
     if msg.len() < 32 {
         return Err("truncated");

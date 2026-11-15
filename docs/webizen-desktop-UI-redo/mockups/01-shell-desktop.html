@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>01 — Shell desktop</title>
+<style>
+  :root { --desk:#1b3a4b; --desk2:#0d2130; --panel:rgba(12,18,24,.72); --text:#f2f6fa; --muted:#b7c4d0; --dock:rgba(8,12,18,.78); --icon:#243040; --accent:#7ec8ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font:14px/1.4 system-ui,sans-serif; color:var(--text);
+    background: radial-gradient(1200px 600px at 20% 10%, #2a6f8f 0%, transparent 55%),
+                linear-gradient(160deg, var(--desk), var(--desk2)); }
+  .banner { position:fixed; top:0; left:0; right:0; z-index:5; padding:.45rem .75rem; background:#111827ee; border-bottom:1px solid #334155; font-size:12px; color:var(--muted); }
+  .banner strong { color:var(--accent); }
+  .menubar { position:fixed; top:2rem; left:0; right:0; height:28px; display:flex; align-items:center; gap:1rem; padding:0 .9rem;
+    background:var(--panel); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,.08); }
+  .menubar .brand { font-weight:600; letter-spacing:.02em; }
+  .menubar .grow { flex:1; }
+  .menubar .status { color:var(--muted); font-size:12px; }
+  .desktop { position:fixed; inset:calc(2rem + 28px) 0 72px 0; padding:1.25rem; }
+  .shortcut { width:88px; text-align:center; color:var(--text); text-shadow:0 1px 2px #0008; }
+  .shortcut .tile { width:52px; height:52px; margin:0 auto .35rem; border-radius:12px; background:var(--icon); border:1px solid #3a4a5c; display:grid; place-items:center; font-size:22px; }
+  .dock { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:10px; padding:10px 14px;
+    background:var(--dock); border:1px solid rgba(255,255,255,.1); border-radius:18px; backdrop-filter:blur(14px); }
+  .dock button { width:48px; height:48px; border:0; border-radius:12px; background:#1e2a38; color:var(--text); cursor:pointer; font-size:11px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+  .dock button:hover { outline:2px solid var(--accent); }
+  .dock button span { font-size:18px; line-height:1; }
+  .caption { font-size:10px; color:var(--muted); }
+</style>
+</head>
+<body>
+  <div class="banner"><strong>Gate 0 mock-up</strong> — OS shell. Apps on the dock are launchable. No life-domain IA. No held/not-yet.</div>
+  <div class="menubar">
+    <div class="brand">Webizen</div>
+    <div>File</div><div>View</div><div>Go</div>
+    <div class="grow"></div>
+    <div class="status">Native · Renderer ready · Live</div>
+  </div>
+  <div class="desktop">
+    <div class="shortcut"><div class="tile">🗂</div>Files</div>
+  </div>
+  <nav class="dock" aria-label="App dock">
+    <button type="button"><span>🪶</span><div class="caption">Poet</div></button>
+    <button type="button"><span>🌐</span><div class="caption">Browser</div></button>
+    <button type="button"><span>💬</span><div class="caption">Talk</div></button>
+    <button type="button"><span>📁</span><div class="caption">Keep</div></button>
+    <button type="button"><span>✨</span><div class="caption">Vibe</div></button>
+    <button type="button"><span>⚙️</span><div class="caption">Settings</div></button>
+  </nav>
+</body>
+</html>

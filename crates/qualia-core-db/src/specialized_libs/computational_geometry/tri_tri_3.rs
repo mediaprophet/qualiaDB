@@ -211,6 +211,8 @@ pub fn tri_tri_intersect_3_with_kernel<K: GeometryKernel>(
 }
 
 #[inline]
+/// `true` when all three `orient_3d` signs are equal and non-zero —
+/// the strict same-side test for coplanar-free triangle separation.
 fn same_nonzero_sign(a: Sign, b: Sign, c: Sign) -> bool {
     a != Sign::Zero && a == b && b == c
 }
@@ -441,6 +443,8 @@ fn seg_seg_cross_2d<K: GeometryKernel>(
 }
 
 #[inline]
+/// Bounding-box test: `p` within the closed segment `a→b`'s extent
+/// (called only after collinearity is established by `orient_2d`).
 fn on_segment_2d(a: (f64, f64), b: (f64, f64), p: (f64, f64)) -> bool {
     p.0 >= a.0.min(b.0) && p.0 <= a.0.max(b.0) && p.1 >= a.1.min(b.1) && p.1 <= a.1.max(b.1)
 }
@@ -730,6 +734,7 @@ fn push_unique_exact(points: &mut Vec<ExactPoint3>, pt: &ExactPoint3) {
 }
 
 #[inline]
+/// Unnormalised triangle normal `(b−a) × (c−a)`.
 fn tri_normal(a: Point3, b: Point3, c: Point3) -> Point3 {
     let (ux, uy, uz) = (b.x - a.x, b.y - a.y, b.z - a.z);
     let (vx, vy, vz) = (c.x - a.x, c.y - a.y, c.z - a.z);
@@ -780,6 +785,7 @@ fn point_in_tri_3d(x: Point3, a: Point3, b: Point3, c: Point3, n: Point3) -> boo
 }
 
 #[inline]
+/// Squared Euclidean distance between two `Point3`s.
 fn dist_sq(a: Point3, b: Point3) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;

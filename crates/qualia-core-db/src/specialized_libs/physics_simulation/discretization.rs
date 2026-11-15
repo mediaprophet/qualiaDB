@@ -177,6 +177,7 @@ pub struct BoundaryStencil {
 }
 
 impl SpatialDiscretizer {
+    /// Creates a discretizer with default grid/mesh/stencil components.
     pub fn new() -> Self {
         Self {
             discretization_method: SpatialDiscretizationMethod::Structured,
@@ -186,6 +187,7 @@ impl SpatialDiscretizer {
         }
     }
 
+    /// Initializes grid and mesh generators; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.grid_generator.initialize()?;
         self.mesh_generator.initialize()?;
@@ -214,6 +216,7 @@ impl SpatialDiscretizer {
 }
 
 impl GridGenerator {
+    /// Creates a grid generator with default parameters/quality metrics.
     pub fn new() -> Self {
         Self {
             grid_type: GridType::Cartesian,
@@ -222,6 +225,7 @@ impl GridGenerator {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -258,6 +262,7 @@ impl GridGenerator {
 }
 
 impl GridParameters {
+    /// Creates default `GridParameters`.
     pub fn new() -> Self {
         Self {
             domain_bounds: vec![(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)],
@@ -269,6 +274,7 @@ impl GridParameters {
 }
 
 impl GridQualityMetrics {
+    /// Creates zeroed `GridQualityMetrics`.
     pub fn new() -> Self {
         Self {
             orthogonality: 1.0,
@@ -281,6 +287,7 @@ impl GridQualityMetrics {
 }
 
 impl MeshGenerator {
+    /// Creates a mesh generator with default parameters/quality metrics.
     pub fn new() -> Self {
         Self {
             mesh_type: MeshType::Hexahedral,
@@ -289,6 +296,7 @@ impl MeshGenerator {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -325,6 +333,7 @@ impl MeshGenerator {
 }
 
 impl MeshParameters {
+    /// Creates default `MeshParameters`.
     pub fn new() -> Self {
         Self {
             element_size: 0.01,
@@ -336,6 +345,7 @@ impl MeshParameters {
 }
 
 impl MeshQualityMetrics {
+    /// Creates zeroed `MeshQualityMetrics`.
     pub fn new() -> Self {
         Self {
             element_quality: 1.0,
@@ -347,6 +357,7 @@ impl MeshQualityMetrics {
 }
 
 impl StencilOperators {
+    /// Creates default finite-difference stencil operators.
     pub fn new() -> Self {
         Self {
             operators: HashMap::new(),

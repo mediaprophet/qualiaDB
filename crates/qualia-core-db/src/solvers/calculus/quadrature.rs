@@ -42,6 +42,7 @@ where
     }
 }
 
+/// Adaptive Simpson quadrature.
 pub fn adaptive_simpson<F>(
     function: F,
     a: f64,
@@ -205,6 +206,7 @@ where
     Ok((kronrod, (kronrod - gauss).abs(), 15))
 }
 
+/// Adaptive Gauss-Kronrod 15 quadrature.
 pub fn adaptive_gauss_kronrod_15<F>(
     function: F,
     a: f64,

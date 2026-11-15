@@ -41,6 +41,7 @@ pub mod geosparql;
 /// and (integrated here) the typed function descriptor registry. See
 /// `docs/plans/immersive-sparql-hypermedia-profile.md`.
 pub mod immersive;
+pub mod kernel_extensions;
 pub mod parsers;
 pub mod quin_sink;
 pub mod rdf_formats;

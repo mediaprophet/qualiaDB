@@ -2,7 +2,7 @@
 
 use super::host_client::{evaluate_comorbidity, ComorbidityReportDto};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn status_label(status: u8) -> &'static str {
     match status {
@@ -14,6 +14,7 @@ fn status_label(status: u8) -> &'static str {
 }
 
 #[component]
+/// Aether `WellfairComorbidityPanel` component.
 pub fn WellfairComorbidityPanel() -> Element {
     let mut organ = use_signal(|| "Whole body".to_string());
     let mut report = use_signal(|| None::<ComorbidityReportDto>);

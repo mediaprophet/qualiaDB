@@ -63,10 +63,12 @@ impl WebizenHostApi {
         super::super::body_constitution::load(&self.storage_root).unwrap_or_default()
     }
 
+    /// `true` when the body constitution is declared.
     pub fn body_constitution_is_declared(&self) -> bool {
         super::super::body_constitution::load(&self.storage_root).is_some()
     }
 
+    /// Sets body-constitution.
     pub fn set_body_constitution(
         &self,
         body: &wellfare_core::anatomy::BodyConstitution,
@@ -74,6 +76,7 @@ impl WebizenHostApi {
         super::super::body_constitution::save(&self.storage_root, body)
     }
 
+    /// Resets the body constitution.
     pub fn reset_body_constitution(&self) -> Result<(), String> {
         super::super::body_constitution::clear(&self.storage_root)
     }

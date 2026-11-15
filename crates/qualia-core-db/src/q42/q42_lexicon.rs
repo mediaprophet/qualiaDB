@@ -40,6 +40,7 @@ pub struct Q42Context {
 }
 
 impl Q42Context {
+    /// Creates the default JSON-LD context vocabulary (rdf/rdfs/owl/xsd/hcai/qualia).
     pub fn new() -> Self {
         let mut vocabulary = HashMap::new();
         vocabulary.insert(
@@ -75,10 +76,67 @@ impl Q42Context {
         }
     }
 
-    pub fn from_volume(_volume: &Q42Volume) -> Result<Self, io::Error> {
-        Ok(Self::new())
+    /// Derives the semantic context from the volume's embedded lexicon and manifest headers.
+    pub fn from_volume(volume: &Q42Volume) -> Result<Self, io::Error> {
+        let mut context = Self::new();
+        let lex_view = volume.lex_view().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid volume lexicon: {:?}", e),
+            )
+        })?;
+
+        // Extract per-volume vocabulary mappings from the embedded lexicon
+        for i in 0..lex_view.entry_count() {
+            let Some(hash) = lex_view.hash_at(i) else {
+                break;
+            };
+            if let Some(text) = lex_view
+                .lookup_webizen_identity(hash).map(str::to_owned)
+                .or_else(|| lex_view.lookup_owned(hash))
+            {
+                if let Some(colon_pos) = text.find(':') {
+                    let prefix = &text[..colon_pos];
+                    let uri = &text[colon_pos + 1..];
+                    if uri.starts_with("http://")
+                        || uri.starts_with("https://")
+                        || uri.starts_with("urn:")
+                    {
+                        context
+                            .vocabulary
+                            .insert(prefix.to_string(), uri.to_string());
+                    }
+                }
+            }
+        }
+
+        // Check for base IRI / context overrides in the volume manifest
+        if let Ok(Some(manifest_bytes)) = volume.volume_manifest_bytes() {
+            if let Ok(manifest_str) = std::str::from_utf8(manifest_bytes) {
+                for line in manifest_str.lines() {
+                    let line = line.trim();
+                    if let Some(base) = line.strip_prefix("@base ") {
+                        context.base_iri = base
+                            .trim_matches(|c| c == '<' || c == '>' || c == '"' || c == ';')
+                            .to_string();
+                    } else if let Some(prefix_decl) = line.strip_prefix("@prefix ") {
+                        let parts: Vec<&str> = prefix_decl.split_whitespace().collect();
+                        if parts.len() >= 2 {
+                            let prefix = parts[0].trim_end_matches(':');
+                            let uri = parts[1].trim_matches(|c| c == '<' || c == '>' || c == ';');
+                            context
+                                .vocabulary
+                                .insert(prefix.to_string(), uri.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(context)
     }
 
+    /// Resolves a vocabulary prefix to its base IRI.
     pub fn resolve_semantic_term(&self, term: &str) -> Option<String> {
         self.vocabulary.get(term).cloned()
     }
@@ -125,10 +183,12 @@ pub struct Q42CborLdParser {
 }
 
 impl Q42CborLdParser {
+    /// Creates a parser over `lexicon`.
     pub fn new(lexicon: Q42Lexicon) -> Self {
         Self { lexicon }
     }
 
+    /// Builds a parser from the volume's `Q42Lexicon`.
     pub fn from_volume(volume: &Q42Volume) -> Result<Self, io::Error> {
         let lexicon = Q42Lexicon::from_volume(volume).map_err(|_| {
             io::Error::new(
@@ -145,6 +205,7 @@ impl Q42CborLdParser {
         &self.lexicon
     }
 
+    /// `Q42CborLdParser::parse`.
     pub fn parse(&self, data: &[u8]) -> Result<SemanticPayload, CborLdError> {
         Ok(SemanticPayload {
             data: data.to_vec(),
@@ -157,6 +218,7 @@ impl Q42CborLdParser {
         })
     }
 
+    /// Decodes a CBOR-LD payload, expanding compact IRIs via the lexicon.
     pub fn parse_semantic_payload(&self, data: &[u8]) -> Result<SemanticPayload, CborLdError> {
         self.parse(data)
     }
@@ -169,7 +231,8 @@ pub struct Q42Lexicon {
     pub terms: HashMap<String, u64>,
     /// Hash to term mapping (reverse lookup)
     pub reverse: HashMap<u64, String>,
-    /// Lexicon version
+    /// Legacy CBOR-LD processing-profile marker. This is not the Q42LEX wire
+    /// version; native v2/v4 bytes are interpreted by Q42LexMmap before adaptation.
     pub version: LexiconVersion,
     /// Context URI
     pub context_uri: String,
@@ -183,6 +246,7 @@ pub enum LexiconVersion {
 }
 
 impl LexiconVersion {
+    /// Lexicon format v2 (page-directory layout).
     pub fn v2() -> Self {
         LexiconVersion::V2
     }
@@ -247,11 +311,11 @@ impl Q42Lexicon {
                 break;
             };
             if let Some(text) = lex_view
-                .lookup_webizen_identity(hash)
-                .or_else(|| lex_view.lookup_hash(hash))
+                .lookup_webizen_identity(hash).map(str::to_owned)
+                .or_else(|| lex_view.lookup_owned(hash))
             {
-                terms.insert(text.to_string(), hash);
-                reverse.insert(hash, text.to_string());
+                terms.insert(text.clone(), hash);
+                reverse.insert(hash, text);
             }
         }
 
@@ -316,3 +380,7 @@ impl Default for Q42Lexicon {
         Self::new()
     }
 }
+
+#[cfg(test)]
+#[path = "q42_lexicon_tests.rs"]
+mod tests;

@@ -101,7 +101,9 @@ impl QiError {
 
 /// In-process document store. Implementations keep a fixed slot cap.
 pub trait QiStore {
+    /// Stores `payload` for `id` at `generation`.
     fn put(&mut self, id: &DidQi, generation: u64, payload: &[u8]) -> Result<(), QiError>;
+    /// Reads `id` into `out`.
     fn get(&self, id: &DidQi, out: &mut [u8]) -> Result<(u64, usize), QiError>;
 }
 

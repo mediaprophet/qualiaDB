@@ -88,16 +88,20 @@ fn content_hash(
 }
 
 impl AccountabilityLedger {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Entries.
     pub fn entries(&self) -> &[LedgerEntry] {
         &self.entries
     }
+    /// Length.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

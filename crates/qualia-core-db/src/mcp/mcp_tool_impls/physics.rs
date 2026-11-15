@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: ODE solve.
 pub fn ode_solve(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::physics_simulation::{
         CommunicationPattern, DomainDecomposition, DomainType, LoadBalancing, NumericalMethod,

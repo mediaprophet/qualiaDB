@@ -1,8 +1,9 @@
 //! QApp catalogue entry for the shared Anatomy comorbidity surface.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `ComorbidityAnalyzer` component.
 pub fn ComorbidityAnalyzer() -> Element {
     rsx! {
         div { style: "padding:1rem;",

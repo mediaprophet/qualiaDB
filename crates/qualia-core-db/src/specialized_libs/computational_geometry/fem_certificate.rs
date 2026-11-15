@@ -58,6 +58,7 @@ impl From<MixedTopologyError> for FemCertificateError {
     }
 }
 
+/// Builds `fem-certificate`.
 pub fn build_fem_certificate(
     vertices: &[Point3],
     cells: &[MixedCell],
@@ -112,6 +113,7 @@ pub fn build_fem_certificate(
     })
 }
 
+/// Encodes `fem_certificate` into the caller buffer.
 pub fn encode_fem_certificate(
     cert: &FemCertificate,
     out: &mut [u8],
@@ -147,6 +149,7 @@ pub fn encode_fem_certificate(
     Ok(FEM_CERT_ENCODED_LEN)
 }
 
+/// Decodes `fem_certificate`; fails closed on malformed input.
 pub fn decode_fem_certificate(data: &[u8]) -> Result<FemCertificate, FemCertificateError> {
     if data.len() < FEM_CERT_ENCODED_LEN {
         return Err(FemCertificateError::PayloadTooShort);

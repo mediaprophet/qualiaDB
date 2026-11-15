@@ -1,5 +1,6 @@
 use qualia_core_db::render::assets::Mesh;
 
+/// Generates a sphere mesh.
 pub fn generate_sphere_mesh(segments: u32, rings: u32) -> Mesh {
     let mut positions = Vec::new();
     let mut triangles = Vec::new();
@@ -39,6 +40,7 @@ pub fn generate_sphere_mesh(segments: u32, rings: u32) -> Mesh {
     }
 }
 
+/// Generates a colored sphere mesh.
 pub fn generate_sphere_mesh_colored(
     segments: u32,
     rings: u32,
@@ -60,6 +62,7 @@ pub fn generate_sphere_mesh_colored(
     (mesh.positions, colors, indices)
 }
 
+/// Generates a starfield mesh.
 pub fn generate_starfield_mesh(positions: &[[f32; 3]], colors: &[[f32; 4]]) -> Mesh {
     let triangles: Vec<[u32; 3]> = (0..positions.len() as u32)
         .step_by(1)
@@ -76,6 +79,7 @@ pub fn generate_starfield_mesh(positions: &[[f32; 3]], colors: &[[f32; 4]]) -> M
     }
 }
 
+/// Generates a terrain mesh.
 pub fn generate_terrain_mesh(heightfield: &[f32], width: u32, height: u32, scale: f32) -> Mesh {
     let mut positions = Vec::with_capacity((width * height) as usize);
     let mut triangles = Vec::new();

@@ -38,7 +38,9 @@ pub fn route_from_shell_target(raw: &str) -> Route {
         | "talk/directory" | "talk/people" | "talk/dir" => Route::TalkDirectoryRoute {},
         "mail" | "email" | "talk/mail" | "talk/email" => Route::TalkMailRoute {},
         "library" | "memory" | "lived-memory" => Route::LibraryRoute {},
-        "settings" | "prefs" | "preferences" => Route::SettingsRoute {},
+        "settings" | "prefs" | "preferences" | "models" | "model" | "settings/models" => {
+            Route::SettingsRoute {}
+        }
         "keep" => Route::KeepRoute {},
         "wellfair" => Route::WellfairRoute {},
         "chora" => Route::ChoraRoute {},
@@ -55,11 +57,6 @@ pub fn route_from_shell_target(raw: &str) -> Route {
         "logs" => Route::LogsRoute {},
         "jobs" => Route::JobsRoute {},
         "gpu-viewport" => Route::GpuViewportRoute {},
-        "poet" | "vibe" => Route::PoetRoute {},
-        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
-        "instruments" | "semantic-instrument" | "semantic-instruments" => {
-            Route::PoetInstrumentRoute {}
-        }
         _ => Route::TalkRoute {},
     }
 }
@@ -93,13 +90,15 @@ mod tests {
             route_from_shell_target("/studio/#/mail"),
             Route::TalkMailRoute {}
         );
-        assert_ne!(route_from_shell_target("mail"), Route::PoetRoute {});
     }
 
     #[test]
     fn settings_is_in_shell_not_home() {
         assert_eq!(route_from_shell_target("settings"), Route::SettingsRoute {});
-        assert_eq!(route_from_shell_target("/settings"), Route::SettingsRoute {});
+        assert_eq!(
+            route_from_shell_target("/settings"),
+            Route::SettingsRoute {}
+        );
         assert_eq!(route_from_shell_target("prefs"), Route::SettingsRoute {});
         assert_ne!(route_from_shell_target("settings"), Route::TalkRoute {});
     }

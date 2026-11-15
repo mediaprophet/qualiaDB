@@ -51,6 +51,7 @@ pub fn nested_claim_fingerprint(ante: u64, pred: u64, cons: u64) -> u64 {
 }
 
 #[inline]
+/// `true` when nested-subject.
 pub fn is_nested_subject(subject: u64) -> bool {
     (subject & NESTED_SUBJECT_MASK) != 0
 }

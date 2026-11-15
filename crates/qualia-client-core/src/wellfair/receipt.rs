@@ -27,6 +27,7 @@ pub struct ReceiptLog {
 }
 
 impl ReceiptLog {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(RECEIPTS_FILE);
         if let Some(parent) = path.parent() {
@@ -38,6 +39,7 @@ impl ReceiptLog {
         Ok(Self { path })
     }
 
+    /// Appends.
     pub fn append(&self, record: &ReceiptRecord) -> std::io::Result<()> {
         let line =
             serde_json::to_string(record).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -47,6 +49,7 @@ impl ReceiptLog {
         Ok(())
     }
 
+    /// Lists recent entries.
     pub fn list_recent(&self, limit: usize) -> std::io::Result<Vec<ReceiptRecord>> {
         let file = fs::File::open(&self.path)?;
         let reader = BufReader::new(file);
@@ -69,6 +72,7 @@ impl ReceiptLog {
     }
 }
 
+/// Receipt from a policy decision.
 pub fn receipt_from_decision(
     qapp_id: &str,
     record_id: &str,

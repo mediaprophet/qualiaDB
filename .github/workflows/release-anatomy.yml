@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.39"
+        description: "Existing release tag to upload assets to, for example v0.0.41"
         required: true
 
 permissions:
@@ -19,6 +19,7 @@ env:
 jobs:
   build-anatomy-packs:
     name: Anatomy .hmc asset packs
+    if: false # Disabled pending Synth remodel
     runs-on: ubuntu-22.04
 
     steps:

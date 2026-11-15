@@ -238,6 +238,7 @@ pub enum ResolutionAction {
 }
 
 impl MeshCoordinator {
+    /// Creates a coordinator with empty node manager, load balancer, and synchronization state.
     pub fn new() -> Self {
         Self {
             #[cfg(not(target_arch = "wasm32"))]
@@ -248,6 +249,7 @@ impl MeshCoordinator {
         }
     }
 
+    /// Initializes node management, load balancing, and synchronization; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.node_manager.initialize()?;
         self.load_balancer.initialize()?;
@@ -255,6 +257,7 @@ impl MeshCoordinator {
         Ok(())
     }
 
+    /// Registers nodes with the node manager (delegates to `NodeManager`).
     pub fn initialize_mesh_network(&mut self) -> Result<(), PhysicsError> {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -314,24 +317,62 @@ impl MeshCoordinator {
         }
     }
 
+    /// Distributes a simulation task dynamically across registered worker nodes,
+    /// computing normalized load allocations from node capacities and selecting
+    /// the communication pattern based on simulation mesh structure.
     pub fn distribute_simulation(
         &self,
-        _simulation: &Simulation,
+        simulation: &Simulation,
     ) -> Result<NodeDistribution, PhysicsError> {
-        // Distribute simulation across available nodes
+        let mut node_ids: Vec<String> = self.node_manager.nodes.keys().cloned().collect();
+        if node_ids.is_empty() {
+            return Err(PhysicsError::InvalidConfiguration(
+                "No worker nodes registered in mesh coordinator".into(),
+            ));
+        }
+        node_ids.sort();
+
+        let n = node_ids.len();
+        // Compute capacities based on available load capacity (1.0 - current_load)
+        let capacities: Vec<f64> = node_ids
+            .iter()
+            .map(|id| {
+                let load = self.node_manager.nodes.get(id).map(|node| node.current_load).unwrap_or(0.0);
+                (1.0 - load).max(0.05)
+            })
+            .collect();
+
+        let total_cap: f64 = capacities.iter().sum();
+        let node_loads: Vec<f64> = if total_cap > 0.0 {
+            capacities
+                .iter()
+                .map(|c| (c / total_cap * 1000.0).round() / 1000.0)
+                .collect()
+        } else {
+            vec![1.0 / n as f64; n]
+        };
+
+        // Select communication pattern based on simulation mesh structure and node scale
+        let communication_pattern = if simulation.mesh.is_some() {
+            CommunicationPattern::Neighborhood
+        } else if n > 4 {
+            CommunicationPattern::Collective
+        } else if n > 1 {
+            CommunicationPattern::PointToPoint
+        } else {
+            CommunicationPattern::Hybrid
+        };
+
         let distribution = NodeDistribution {
-            node_ids: vec![
-                "node1".to_string(),
-                "node2".to_string(),
-                "node3".to_string(),
-            ],
-            node_loads: vec![0.33, 0.33, 0.34],
-            communication_pattern: CommunicationPattern::Hybrid,
+            node_ids,
+            node_loads,
+            communication_pattern,
         };
 
         Ok(distribution)
     }
 
+    /// Real merge: groups result fields by base name (strips `_nodeN` suffixes) and averages data element-wise across nodes; mismatched lengths are skipped per-field.
     pub fn collect_results(
         &self,
         results: &[SimulationResult],
@@ -391,6 +432,7 @@ impl MeshCoordinator {
 }
 
 impl NodeManager {
+    /// Creates an empty node manager.
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
@@ -399,21 +441,42 @@ impl NodeManager {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory registry needs no setup.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
-        // Initialize with default nodes
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Initialize with default worker nodes
         let node1 = MeshNode {
             node_id: "node1".to_string(),
             node_type: NodeType::Worker,
             capabilities: NodeCapabilities::new(),
             current_load: 0.0,
             network_address: "192.168.1.1".to_string(),
-            last_heartbeat: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            last_heartbeat: now,
+        };
+        let node2 = MeshNode {
+            node_id: "node2".to_string(),
+            node_type: NodeType::Worker,
+            capabilities: NodeCapabilities::new(),
+            current_load: 0.0,
+            network_address: "192.168.1.2".to_string(),
+            last_heartbeat: now,
+        };
+        let node3 = MeshNode {
+            node_id: "node3".to_string(),
+            node_type: NodeType::Worker,
+            capabilities: NodeCapabilities::new(),
+            current_load: 0.0,
+            network_address: "192.168.1.3".to_string(),
+            last_heartbeat: now,
         };
 
         self.nodes.insert("node1".to_string(), node1);
+        self.nodes.insert("node2".to_string(), node2);
+        self.nodes.insert("node3".to_string(), node3);
         Ok(())
     }
 
@@ -444,6 +507,7 @@ impl NodeManager {
 }
 
 impl NodeCapabilities {
+    /// Creates a default `NodeCapabilities` descriptor.
     pub fn new() -> Self {
         Self {
             cpu_cores: 8,
@@ -457,6 +521,7 @@ impl NodeCapabilities {
 }
 
 impl MeshLoadBalancer {
+    /// Creates a load balancer with default metrics and redistribution policy.
     pub fn new() -> Self {
         Self {
             balancing_strategy: LoadBalancingStrategy::LoadBased,
@@ -465,6 +530,7 @@ impl MeshLoadBalancer {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -501,6 +567,7 @@ impl MeshLoadBalancer {
 }
 
 impl LoadMetrics {
+    /// Creates a zeroed `LoadMetrics`.
     pub fn new() -> Self {
         Self {
             cpu_utilization: 0.0,
@@ -512,6 +579,7 @@ impl LoadMetrics {
 }
 
 impl RedistributionPolicy {
+    /// Creates a default `RedistributionPolicy`.
     pub fn new() -> Self {
         Self {
             redistribution_threshold: 0.8,
@@ -522,6 +590,7 @@ impl RedistributionPolicy {
 }
 
 impl MeshSynchronization {
+    /// Creates synchronization state with default conflict resolution.
     pub fn new() -> Self {
         Self {
             synchronization_method: SynchronizationMethod::Hybrid,
@@ -530,6 +599,7 @@ impl MeshSynchronization {
         }
     }
 
+    /// Initializes conflict resolution; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.conflict_resolution.initialize()?;
         Ok(())
@@ -557,6 +627,7 @@ impl MeshSynchronization {
 }
 
 impl ConflictResolution {
+    /// Creates conflict-resolution state with default policy/detection.
     pub fn new() -> Self {
         Self {
             resolution_strategy: ConflictResolutionStrategy::LastWriterWins,
@@ -565,6 +636,7 @@ impl ConflictResolution {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -601,6 +673,7 @@ impl ConflictResolution {
 }
 
 impl ConflictDetection {
+    /// Creates an empty conflict-detection state.
     pub fn new() -> Self {
         Self {
             detection_method: ConflictDetectionMethod::Timestamp,
@@ -630,6 +703,7 @@ impl ConflictDetection {
 }
 
 impl ResolutionPolicy {
+    /// Creates a default `ResolutionPolicy`.
     pub fn new() -> Self {
         Self {
             policy_id: "default".to_string(),

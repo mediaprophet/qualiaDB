@@ -99,6 +99,7 @@ pub struct NumericalMethodConfiguration {
 // ── Opcode generation ──────────────────────────────────────────────────────────
 
 impl UnitsConfiguration {
+    /// Emits SLG opcodes configuring units handling.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.dimension_components as f64,
@@ -106,6 +107,7 @@ impl UnitsConfiguration {
     }
 }
 impl NumberTheoryConfiguration {
+    /// Emits SLG opcodes configuring number theory.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_input_bits as f64),
@@ -114,6 +116,7 @@ impl NumberTheoryConfiguration {
     }
 }
 impl SpecialFunctionConfiguration {
+    /// Emits SLG opcodes configuring special functions.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_series_terms as f64),
@@ -122,16 +125,19 @@ impl SpecialFunctionConfiguration {
     }
 }
 impl InterpolationConfiguration {
+    /// Emits SLG opcodes configuring interpolation.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_nodes as f64)]
     }
 }
 impl IntegralTransformConfiguration {
+    /// Emits SLG opcodes configuring integral transforms.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_samples as f64)]
     }
 }
 impl VectorCalculusConfiguration {
+    /// Emits SLG opcodes configuring vector calculus.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.max_spatial_dimension as f64,
@@ -139,16 +145,19 @@ impl VectorCalculusConfiguration {
     }
 }
 impl ExactArithmeticConfiguration {
+    /// Emits SLG opcodes configuring exact arithmetic.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_digits as f64)]
     }
 }
 impl SymbolicCalculusConfiguration {
+    /// Emits SLG opcodes configuring symbolic calculus.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_order as f64)]
     }
 }
 impl AssumptionConfiguration {
+    /// Emits SLG opcodes configuring assumptions.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         // A single representative allowed sign is bound-checked via has-value.
         let first = self.allowed_signs.first().cloned().unwrap_or_default();
@@ -156,6 +165,7 @@ impl AssumptionConfiguration {
     }
 }
 impl NumericalMethodConfiguration {
+    /// Emits SLG opcodes configuring numerical methods.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_state_dimension as f64),

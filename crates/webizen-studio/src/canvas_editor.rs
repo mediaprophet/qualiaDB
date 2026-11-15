@@ -34,6 +34,7 @@ pub struct WorkspaceHistory {
 }
 
 impl WorkspaceHistory {
+    /// Creates a new instance.
     pub fn new(initial: WebizenWorkspace) -> Self {
         Self {
             entries: vec![initial],
@@ -41,18 +42,22 @@ impl WorkspaceHistory {
         }
     }
 
+    /// `true` when able to undo.
     pub fn can_undo(&self) -> bool {
         self.index > 0
     }
 
+    /// `true` when able to redo.
     pub fn can_redo(&self) -> bool {
         self.index + 1 < self.entries.len()
     }
 
+    /// Current.
     pub fn current(&self) -> &WebizenWorkspace {
         &self.entries[self.index]
     }
 
+    /// Pushes an item.
     pub fn push(&mut self, workspace: WebizenWorkspace) {
         if self.entries.get(self.index) == Some(&workspace) {
             return;
@@ -67,6 +72,7 @@ impl WorkspaceHistory {
         self.index = self.entries.len().saturating_sub(1);
     }
 
+    /// Undoes the last edit.
     pub fn undo(&mut self) -> Option<WebizenWorkspace> {
         if !self.can_undo() {
             return None;
@@ -75,6 +81,7 @@ impl WorkspaceHistory {
         Some(self.entries[self.index].clone())
     }
 
+    /// Redoes the last undone edit.
     pub fn redo(&mut self) -> Option<WebizenWorkspace> {
         if !self.can_redo() {
             return None;
@@ -95,11 +102,13 @@ impl WorkspaceHistory {
         Some(history)
     }
 
+    /// Undo-stack index.
     pub fn stack_index(&self) -> u16 {
         self.index.min(u16::MAX as usize) as u16
     }
 }
 
+/// Default fiduciary binding.
 pub fn default_fiduciary_binding() -> ThemeBinding {
     ThemeBinding {
         theme_id: Some("fiduciary-dark".to_string()),
@@ -107,6 +116,7 @@ pub fn default_fiduciary_binding() -> ThemeBinding {
     }
 }
 
+/// New workspace shell.
 pub fn new_workspace_shell(
     name: String,
     panes: Vec<crate::canvas_model::PanePlacement>,
@@ -128,6 +138,7 @@ pub fn new_workspace_shell(
     ws
 }
 
+/// Grid metrics.
 pub fn grid_metrics(page: &Page) -> (u16, u16, u16) {
     match &page.layout_strategy {
         LayoutStrategy::PointGrid {
@@ -140,6 +151,7 @@ pub fn grid_metrics(page: &Page) -> (u16, u16, u16) {
     }
 }
 
+/// Snaps to the u16 grid.
 pub fn snap_u16(value: u16, step: u16) -> u16 {
     let step = step.max(1);
     ((value + step / 2) / step) * step
@@ -161,6 +173,7 @@ pub fn pixel_delta_to_grid(
     (gx, gy)
 }
 
+/// Clamps a pane origin to the canvas.
 pub fn clamp_pane_origin(x: i32, y: i32, w: u16, h: u16, grid_w: u16, grid_h: u16) -> (u16, u16) {
     let max_x = grid_w.saturating_sub(w.max(1));
     let max_y = grid_h.saturating_sub(h.max(1));
@@ -170,6 +183,7 @@ pub fn clamp_pane_origin(x: i32, y: i32, w: u16, h: u16, grid_w: u16, grid_h: u1
     )
 }
 
+/// Clamps a pane size to bounds.
 pub fn clamp_pane_size(w: i32, h: i32, x: u16, y: u16, grid_w: u16, grid_h: u16) -> (u16, u16) {
     let max_w = grid_w.saturating_sub(x).max(4);
     let max_h = grid_h.saturating_sub(y).max(4);

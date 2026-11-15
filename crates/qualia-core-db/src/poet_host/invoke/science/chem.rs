@@ -9,6 +9,7 @@ use crate::domains::chemical::organic_chemistry::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: SMILES parse.
 pub fn smiles(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "smiles"))
@@ -45,6 +46,7 @@ fn parsed_molecule(
     }
 }
 
+/// VibeScript seam: organic-chemistry compute.
 pub fn organic_compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let operation = args::rec_str(args_v, "operation")
         .ok_or_else(|| args::bad(span, "OrganicChemistry.compute needs operation"))?;

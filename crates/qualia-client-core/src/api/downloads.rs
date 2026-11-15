@@ -5,6 +5,7 @@
 use crate::state::*;
 use std::path::PathBuf;
 
+/// Gets active-downloads.
 pub fn get_active_downloads() -> Vec<ProgressPayload> {
     let state = crate::state::APP_STATE.get().unwrap();
     state
@@ -18,6 +19,7 @@ pub fn get_active_downloads() -> Vec<ProgressPayload> {
 
 // ── Remote manifest fetch ─────────────────────────────────────────────────────
 
+/// Fetches remote-manifest.
 pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
     reqwest::get(&url)
         .await
@@ -29,10 +31,12 @@ pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
 
 // ── Imported accounts persistence ────────────────────────────────────────────
 
+/// Imported accounts path.
 pub fn imported_accounts_path() -> PathBuf {
     app_meta_dir().join("imported_accounts.json")
 }
 
+/// Loads imported-accounts.
 pub fn load_imported_accounts() -> Result<serde_json::Value, String> {
     let path = imported_accounts_path();
     if !path.exists() {
@@ -42,6 +46,7 @@ pub fn load_imported_accounts() -> Result<serde_json::Value, String> {
     serde_json::from_str(&s).map_err(|e| e.to_string())
 }
 
+/// Saves imported-accounts.
 pub fn save_imported_accounts(accounts: serde_json::Value) -> Result<(), String> {
     let meta = app_meta_dir();
     std::fs::create_dir_all(&meta).map_err(|e| e.to_string())?;

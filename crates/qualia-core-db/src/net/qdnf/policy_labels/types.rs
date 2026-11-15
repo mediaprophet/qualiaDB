@@ -16,6 +16,7 @@ pub enum Confidentiality {
 
 impl Confidentiality {
     #[inline]
+    /// `true` when confidentiality is unknown.
     pub const fn is_unknown(self) -> bool {
         matches!(self, Self::Unknown)
     }
@@ -33,10 +34,12 @@ impl Confidentiality {
     }
 
     #[inline]
+    /// `true` when an audience is required.
     pub const fn requires_audience(self) -> bool {
         matches!(self, Self::C2Sensitive | Self::C3Compartmented)
     }
 
+    /// Decodes a confidentiality wire byte.
     pub fn from_wire(value: u8) -> Result<Self, QdnfError> {
         match value {
             0 => Ok(Self::C0Public),
@@ -49,6 +52,7 @@ impl Confidentiality {
     }
 
     #[inline]
+    /// Encodes to a wire byte.
     pub const fn to_wire(self) -> u8 {
         self as u8
     }
@@ -96,6 +100,7 @@ impl LabelFields {
         }
     }
 
+    /// Builds a label request.
     pub fn request(confidentiality: Confidentiality, issuer: StrongDigest) -> Self {
         let mut fields = Self::blank();
         fields.confidentiality = confidentiality;
@@ -104,11 +109,13 @@ impl LabelFields {
     }
 
     #[inline]
+    /// Compartment digests.
     pub fn compartments(&self) -> &[StrongDigest] {
         &self.compartments[..self.compartment_count as usize]
     }
 
     #[inline]
+    /// Purpose digests.
     pub fn purposes(&self) -> &[StrongDigest] {
         &self.purposes[..self.purpose_count as usize]
     }
@@ -123,6 +130,7 @@ pub struct VerifiedLabel {
 }
 
 impl VerifiedLabel {
+    /// From verified.
     pub(super) fn from_verified(fields: LabelFields, exact_bytes_digest: StrongDigest) -> Self {
         Self {
             fields,
@@ -131,21 +139,25 @@ impl VerifiedLabel {
     }
 
     #[inline]
+    /// Label fields.
     pub const fn fields(&self) -> &LabelFields {
         &self.fields
     }
 
     #[inline]
+    /// Digest of the exact label bytes.
     pub const fn exact_bytes_digest(&self) -> StrongDigest {
         self.exact_bytes_digest
     }
 
     #[inline]
+    /// Issuer digest.
     pub const fn issuer(&self) -> StrongDigest {
         self.fields.issuer
     }
 
     #[inline]
+    /// Confidentiality level.
     pub const fn confidentiality(&self) -> Confidentiality {
         self.fields.confidentiality
     }

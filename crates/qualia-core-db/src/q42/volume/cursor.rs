@@ -18,6 +18,7 @@ pub struct Q42BlockCursor<'a> {
 }
 
 impl<'a> Q42BlockCursor<'a> {
+    /// Creates with the given state.
     pub(super) fn new(volume: &'a Q42Volume) -> Self {
         Self {
             volume,
@@ -60,6 +61,7 @@ impl<'a> Q42BlockCursor<'a> {
     }
 
     #[inline]
+    /// `Q42BlockCursor::next_index`.
     pub fn next_index(&self) -> usize {
         self.next_index
     }

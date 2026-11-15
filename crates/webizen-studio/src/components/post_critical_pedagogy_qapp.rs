@@ -1,7 +1,8 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
+/// Aether `PostCriticalPedagogyQapp` component.
 pub fn PostCriticalPedagogyQapp() -> Element {
     rsx! {
         QAppEngine {

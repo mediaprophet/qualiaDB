@@ -31,6 +31,7 @@ pub struct SealedFrame {
 }
 
 impl SealedFrame {
+    /// Raw sealed-frame bytes.
     pub fn as_slice(&self) -> &[u8] {
         &self.bytes[..self.len as usize]
     }
@@ -48,6 +49,7 @@ impl SealedFrame {
 }
 
 impl NativePeer {
+    /// `Ok(())` when not cancelled.
     pub(super) fn require_not_cancelled(&self) -> Result<(), QdnfError> {
         if self.cancelled {
             Err(QdnfError::Cancelled)
@@ -56,6 +58,7 @@ impl NativePeer {
         }
     }
 
+    /// `Ok(())` when primary.
     pub(super) fn require_primary(&self) -> Result<SessionHandle, QdnfError> {
         self.primary.ok_or(QdnfError::Unauthorized)
     }
@@ -76,6 +79,7 @@ impl NativePeer {
         Ok(remote)
     }
 
+    /// Activates a protected session (handshake + capability negotiation); returns the session handle.
     pub fn activate_protected(
         &mut self,
         permit: ExecutionPermit,
@@ -96,6 +100,7 @@ impl NativePeer {
         Ok(handle)
     }
 
+    /// Closes session `h`; `QdnfError` on unknown/invalid handle.
     pub fn close_session(&mut self, h: SessionHandle) -> Result<(), QdnfError> {
         self.sessions.close(h, &mut self.ledger)?;
         if self.primary == Some(h) {
@@ -105,16 +110,19 @@ impl NativePeer {
     }
 
     #[inline]
+    /// Number of live sessions.
     pub fn live_session_count(&self) -> usize {
         self.sessions.live_count()
     }
 
     #[inline]
+    /// Remaining host byte budget.
     pub fn remaining_host_bytes(&self) -> u64 {
         self.ledger.host_remaining_bytes()
     }
 
     #[inline]
+    /// The primary session handle, if any.
     pub fn primary_session(&self) -> Option<SessionHandle> {
         self.primary
     }
@@ -150,6 +158,7 @@ impl NativePeer {
         Ok(n)
     }
 
+    /// Sends stream bytes on the primary session.
     pub fn send_stream(
         &mut self,
         dest: &ObservedLocator,
@@ -159,10 +168,12 @@ impl NativePeer {
         Ok(payload.len())
     }
 
+    /// Receives stream bytes into `out`; returns bytes read.
     pub fn recv_stream(&mut self, out: &mut [u8]) -> Result<usize, QdnfError> {
         self.recv_protected(out)
     }
 
+    /// Sends a protected frame on the primary session.
     pub fn send_protected(
         &mut self,
         dest: &ObservedLocator,
@@ -172,6 +183,7 @@ impl NativePeer {
         self.send_protected_on(h, dest, payload)
     }
 
+    /// Sends a protected frame on session `h`.
     pub fn send_protected_on(
         &mut self,
         h: SessionHandle,
@@ -182,6 +194,7 @@ impl NativePeer {
         self.send_protected_with_path(h, path, dest, payload)
     }
 
+    /// Sends protected with path.
     pub(super) fn send_protected_with_path(
         &mut self,
         h: SessionHandle,
@@ -240,11 +253,13 @@ impl NativePeer {
         }
     }
 
+    /// Receives a protected frame into `out` on the primary session.
     pub fn recv_protected(&mut self, out: &mut [u8]) -> Result<usize, QdnfError> {
         let h = self.require_primary()?;
         self.recv_protected_on(h, out)
     }
 
+    /// Receives a protected frame on session `h`.
     pub fn recv_protected_on(
         &mut self,
         h: SessionHandle,

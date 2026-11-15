@@ -160,6 +160,7 @@ pub struct AnalysisResults {
 // Supporting structs
 
 impl EngineeringModel {
+    /// Creates an empty engineering model.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -174,6 +175,7 @@ impl EngineeringModel {
 }
 
 impl Geometry {
+    /// Creates empty model geometry.
     pub fn new() -> Self {
         Self {
             geometry_type: GeometryType::Beam,
@@ -184,6 +186,7 @@ impl Geometry {
 }
 
 impl GeometricFeature {
+    /// Creates a default geometric feature.
     pub fn new() -> Self {
         Self {
             feature_id: "feature_1".to_string(),
@@ -194,6 +197,7 @@ impl GeometricFeature {
 }
 
 impl Material {
+    /// Creates a default material record.
     pub fn new() -> Self {
         Self {
             material_id: "steel_1".to_string(),
@@ -204,6 +208,7 @@ impl Material {
 }
 
 impl MaterialProperties {
+    /// Creates default material properties.
     pub fn new() -> Self {
         Self {
             youngs_modulus: 200000.0,
@@ -219,6 +224,7 @@ impl MaterialProperties {
 }
 
 impl BoundaryCondition {
+    /// Creates a default boundary condition.
     pub fn new() -> Self {
         Self {
             condition_id: "bc_1".to_string(),
@@ -229,6 +235,7 @@ impl BoundaryCondition {
 }
 
 impl Load {
+    /// Creates a default load record.
     pub fn new() -> Self {
         Self {
             load_id: "load_1".to_string(),
@@ -241,6 +248,7 @@ impl Load {
 }
 
 impl AnalysisResults {
+    /// Creates empty analysis results.
     pub fn new() -> Self {
         Self {
             results_id: "results_1".to_string(),
@@ -258,6 +266,7 @@ impl AnalysisResults {
 }
 
 impl ReliabilityResults {
+    /// Creates empty reliability results.
     pub fn new() -> Self {
         Self {
             results_id: "reliability_1".to_string(),
@@ -270,6 +279,7 @@ impl ReliabilityResults {
 }
 
 impl EngineeringPerformanceMetrics {
+    /// Creates zeroed performance metrics.
     pub fn new() -> Self {
         Self {
             total_analyses: 0,

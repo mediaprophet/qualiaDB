@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -10,6 +10,7 @@ struct DeployRecord {
 }
 
 #[component]
+/// Aether `WalInspector` component.
 pub fn WalInspector() -> Element {
     let mut records = use_signal(Vec::<DeployRecord>::new);
     let mut status = use_signal(|| "Loading deploy history…".to_string());

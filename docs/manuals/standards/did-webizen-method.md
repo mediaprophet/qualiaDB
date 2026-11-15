@@ -117,7 +117,7 @@ Identifies a ratified bilateral or multi-party micro-commons contract graph (gov
 
 ### 4.4 Agent Realm (`did:webizen:agent:`)
 Identifies a human participant, autonomous persona, or collective custodian within the Web of Data social layer.
-* **Separation from `did:qi`:** While `did:qi` represents the physical/network host or node, `did:webizen:agent` represents the user's sovereign profile, knowledge graph root, and WebID.
+* **Separation from `did:qi`:** While `did:qi` represents the physical/network host or node, `did:webizen:agent` represents the user's human-centric profile, knowledge graph root, and WebID.
 
 ---
 

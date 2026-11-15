@@ -31,6 +31,7 @@ pub struct QpuDispatchResult {
 
 // ── Main dispatch entry-points ─────────────────────────────────────────────────
 
+/// QUBO dispatch — feature-gated, real provider submission (D-Wave first).
 pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResult, String> {
     let state = qpu_oracle::cached_state_internal();
     if !state.feature_unlocked {
@@ -174,6 +175,7 @@ pub fn dispatch_qubo(matrix: &QuboMatrix, shots: u32) -> Result<QpuDispatchResul
     })
 }
 
+/// VQE dispatch — feature-gated, real provider submission (Quantinuum preferred).
 pub fn dispatch_vqe(parameter_vector: &[f64], shots: u32) -> Result<QpuDispatchResult, String> {
     let state = qpu_oracle::cached_state_internal();
     if !state.feature_unlocked {

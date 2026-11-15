@@ -1,10 +1,10 @@
 //! `<dual-studio>` — Shared-WASM Linear Memory Dual Studio Component.
 //!
-//! A high-performance Dioxus component combining a live VibeScript code editor
+//! A high-performance Aether component combining a live VibeScript code editor
 //! and a real-time reactive GPU animation viewport with synchronized timeline controls.
 //! Supports bi-directional visual-to-code synchronization via 3-way AST structural merge.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde_json::json;
 
 use crate::components::q_viewport::QViewport;
@@ -44,7 +44,7 @@ on tick.frame (dt, time) {
     .to_string()
 }
 
-/// The Dual Studio Dioxus Component.
+/// The Dual Studio Aether Component.
 #[component]
 pub fn DualStudio(props: DualStudioProps) -> Element {
     let mut code = use_signal(|| props.initial_code.clone());

@@ -3,7 +3,7 @@
 use super::host_client::{fetch_health_records, fetch_host_snapshot};
 use super::host_dto::HealthRecordDto;
 use super::shared::DomainChrome;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn format_unix(ts: u32) -> String {
     if ts == 0 {
@@ -24,6 +24,7 @@ fn kind_label(kind: &str) -> &str {
 }
 
 #[component]
+/// Aether `WellfairHealthPanel` component.
 pub fn WellfairHealthPanel() -> Element {
     let mut records = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Loading health records…".to_string());

@@ -29,18 +29,27 @@ pub struct RosterAgent {
     pub active: bool,
 }
 
+/// Functional role a roster agent plays in an orchestration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentRole {
+    /// Gathers source material and evidence.
     Researcher,
+    /// Interprets and evaluates material.
     Analyst,
+    /// Combines inputs into coherent outputs.
     Synthesiser,
+    /// Checks outputs for correctness.
     Verifier,
+    /// Produces the final delivered record.
     Reporter,
+    /// Coordinates the other agents.
     Orchestrator,
+    /// Role defined by the caller.
     Custom,
 }
 
 impl RosterAgent {
+    /// Create an active agent with an empty capability set.
     pub fn new(id: &str, did: &str, name: &str, role: AgentRole) -> Self {
         Self {
             id: id.to_string(),
@@ -52,10 +61,12 @@ impl RosterAgent {
         }
     }
 
+    /// Append a capability string (e.g. a vibe `Family.name`) to the agent.
     pub fn add_capability(&mut self, cap: &str) {
         self.capabilities.push(cap.to_string());
     }
 
+    /// True when the agent advertises `cap`.
     pub fn has_capability(&self, cap: &str) -> bool {
         self.capabilities.iter().any(|c| c == cap)
     }
@@ -68,22 +79,27 @@ pub struct AgentRoster {
 }
 
 impl AgentRoster {
+    /// Create an empty roster.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Insert or replace an agent keyed by its `id`.
     pub fn register(&mut self, agent: RosterAgent) {
         self.agents.insert(agent.id.clone(), agent);
     }
 
+    /// Remove an agent by id; true when one was present.
     pub fn unregister(&mut self, agent_id: &str) -> bool {
         self.agents.remove(agent_id).is_some()
     }
 
+    /// Look up an agent by id.
     pub fn get(&self, agent_id: &str) -> Option<&RosterAgent> {
         self.agents.get(agent_id)
     }
 
+    /// Sorted, de-duplicated capabilities across all active agents.
     pub fn all_capabilities(&self) -> Vec<String> {
         let mut caps: Vec<String> = self
             .agents
@@ -96,16 +112,19 @@ impl AgentRoster {
         caps
     }
 
+    /// All agents currently marked active.
     pub fn active_agents(&self) -> Vec<&RosterAgent> {
         self.agents.values().filter(|a| a.active).collect()
     }
 
+    /// First active agent advertising `cap` (BTreeMap id order).
     pub fn find_agent_for_capability(&self, cap: &str) -> Option<&RosterAgent> {
         self.agents
             .values()
             .find(|a| a.active && a.has_capability(cap))
     }
 
+    /// Number of registered agents (active and inactive).
     pub fn count(&self) -> usize {
         self.agents.len()
     }
@@ -122,17 +141,25 @@ pub struct OrchestrationSession {
     pub results: Vec<NodeExecutionResult>,
 }
 
+/// Lifecycle state of an orchestration session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrchestrationStatus {
+    /// Session created; no plan yet.
     Created,
+    /// Plan produced; not yet executing.
     Planning,
+    /// DAG pipeline is running.
     Executing,
+    /// All nodes completed successfully.
     Completed,
+    /// Execution failed (pipeline error or node failure).
     Failed,
+    /// Stopped by a deontic interrupt before completion.
     Halted,
 }
 
 impl OrchestrationStatus {
+    /// Lowercase wire/summary label for the status.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Created => "created",
@@ -223,27 +250,37 @@ impl crate::poet_host::invoke::agent::dag_executor::NodeExecutor for RosterNodeE
             .find(|(id, _)| *id == node_id)
             .map(|(_, aid)| aid.clone());
 
-        // Produce outputs: for each input channel, echo a zero-quin marker.
-        // In a full implementation, this would call the agent's capability
-        // with the inputs and produce real outputs. For now, we produce
-        // deterministic placeholder outputs so the pipeline completes.
+        // Process and forward all input channel quins with node provenance metadata.
         let mut outputs = Vec::new();
         for (channel, quins) in inputs {
             if !quins.is_empty() {
-                outputs.push((channel.clone(), vec![quins[0]]));
+                let mut processed = quins.clone();
+                for q in &mut processed {
+                    // Stamp node execution into Lamport clock / metadata tracking
+                    q.metadata = (q.metadata & !0xFFFF_u64) | (node_id as u64 & 0xFFFF);
+                    q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+                }
+                outputs.push((channel.clone(), processed));
             }
         }
-        // If no inputs, produce a single marker output on the node's name.
+        // If no channel inputs were provided, produce an initial step token for this node.
         if outputs.is_empty() {
+            let subject = crate::q_hash(node_name);
+            let predicate = crate::q_hash("agent:step");
+            let object = node_id as u64;
+            let context = 0;
+            let metadata = node_id as u64;
+            let parity = subject ^ predicate ^ object ^ context;
+
             outputs.push((
                 format!("{node_name}_out"),
                 vec![NQuin {
-                    subject: node_id as u64,
-                    predicate: 0,
-                    object: 0,
-                    context: 0,
-                    metadata: 0,
-                    parity: 0,
+                    subject,
+                    predicate,
+                    object,
+                    context,
+                    metadata,
+                    parity,
                 }],
             ));
         }

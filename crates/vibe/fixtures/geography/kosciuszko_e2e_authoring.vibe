@@ -1,0 +1,477 @@
+// Mount Kosciuszko Snowy Mountains End-to-End Authoring, Simulation,
+// Geoprocessing, GPU Compute, Cartography & Planetary Viewport Pipeline (GEO-S10 / R10-V).
+// Declares PlanetaryViewportComplex governing end-to-end authoring and visualization
+// across all 10 rounds: Geodesy.*, Terrain.*, GisIo.*, GeoSparql.*, GisGp.*,
+// WgslForge.geo_*, PoetGeo.*, Cartography.*, and WebizenGeo.*.
+module <https://qualiadb.org/modules/geography/kosciuszko_e2e_authoring>;
+using Geodesy;
+using Terrain;
+using GisIo;
+using GeoSparql;
+using GisGp;
+using WgslForge;
+using PoetGeo;
+using Cartography;
+using WebizenGeo;
+using Topology;
+using Poet;
+
+// Declarative PlanetaryViewportComplex governing multi-scale terrain rendering,
+// vector tile symbology, label placement, atmospheric scattering, and interactive picking
+topology snowy_planetary_viewport_pipeline : PlanetaryViewportComplex {
+    role: "PlanetaryViewportComplex";
+    complex_id: "urn:qualia:topology:planetary-viewport";
+    anchors: ["MountKosciuszkoSummit", "CharlottePassLookout", "SpencersCreekBasin", "PerisherValleyMedical"];
+    crs_epsg: 7855;
+    states: [
+        "GeodesyAndTerrainReady",
+        "CdlodMeshAndSkirtsBuilt",
+        "VectorTilesAndLabelsPlaced",
+        "AtmosphereAndWaterShaded",
+        "InteractiveFramePresented"
+    ];
+    transitions: [
+        "subdivide_cdlod_and_skirts",
+        "place_mvt_curved_labels",
+        "shade_atmosphere_water_contours",
+        "present_and_pick_feature"
+    ];
+    invariants: [
+        "SeamlessCdlodSkirts",
+        "ZeroLabelCollisions",
+        "AtmosphereLimbConservation",
+        "DeterministicPickParity"
+    ];
+    boundary {
+        min_easting: 609000.0;
+        min_northing: 5959000.0;
+        max_easting: 619000.0;
+        max_northing: 5969000.0;
+    }
+}
+
+// Pure domain geographic and cadastral bounding box for Kosciuszko Main Range (EPSG:7855 / MGA Zone 55)
+pure fn kosciuszko_study_bbox() -> Record {
+    return {
+        name: "Mount Kosciuszko Main Range Study Area",
+        crs: "EPSG:7855",
+        min_x: 609000.0,
+        min_y: 5959000.0,
+        max_x: 619000.0,
+        max_y: 5969000.0,
+        width_m: 10000.0,
+        height_m: 10000.0,
+        min_elevation_m: 1600.0,
+        summit_elevation_m: 2228.0
+    };
+}
+
+// Pure summit walking trail polyline vertices (MGA94 Zone 55 Easting, Northing, Height)
+pure fn summit_trail_waypoints() -> Record {
+    return {
+        name: "Mount Kosciuszko Summit Walk",
+        trail_id: "trail://nsw:kosciuszko-summit-walk",
+        vertices: [
+            [611200.0, 5961400.0, 1850.0],
+            [611450.0, 5961620.0, 1895.0],
+            [611780.0, 5961890.0, 1940.0],
+            [612100.0, 5962150.0, 2010.0],
+            [612450.0, 5962450.0, 2080.0],
+            [612800.0, 5962800.0, 2150.0],
+            [613100.0, 5963100.0, 2228.0]
+        ],
+        stroke_width_m: 3.5,
+        target_zoom: 14.5
+    };
+}
+
+// Pure alpine lake boundary polygon: Lake Cootapatamba (Australia's highest glacial tarn, 2,048m)
+pure fn alpine_lake_polygon() -> Record {
+    return {
+        name: "Lake Cootapatamba Glacial Tarn",
+        feature_id: "water://qualia:lake-cootapatamba",
+        elevation_m: 2048.0,
+        exterior: [
+            [611800.0, 5960800.0],
+            [612050.0, 5960950.0],
+            [612200.0, 5961200.0],
+            [612100.0, 5961400.0],
+            [611900.0, 5961350.0],
+            [611750.0, 5961050.0],
+            [611800.0, 5960800.0]
+        ],
+        interiors: []
+    };
+}
+
+// Pure camera setup and view frustum planes for 3D planetary viewport presentation
+pure fn camera_view_setup() -> Record {
+    return {
+        position: [608500.0, 5958000.0, 3100.0],
+        target: [613100.0, 5963100.0, 2228.0],
+        altitude_m: 3100.0,
+        view_dir: [0.65, 0.72, -0.24],
+        fov_deg: 60.0,
+        frustum_planes: [
+            [0.707, 0.0, -0.707, 50.0],
+            [-0.707, 0.0, -0.707, 50.0],
+            [0.0, 0.707, -0.707, 40.0],
+            [0.0, -0.707, -0.707, 40.0],
+            [0.0, 0.0, 1.0, -10.0],
+            [0.0, 0.0, -1.0, 25000.0]
+        ],
+        viewport_px: {
+            width_px: 1920.0,
+            height_px: 1080.0
+        }
+    };
+}
+
+// Pure planetary atmospheric scattering and solar ephemeris parameters
+pure fn atmosphere_sun_spec() -> Record {
+    return {
+        sun_direction: [0.35, 0.61, 0.71],
+        atmosphere_params: {
+            rayleigh_density_scale_m: 8000.0,
+            mie_density_scale_m: 1200.0,
+            rayleigh_scattering: [0.0000058, 0.0000135, 0.0000331],
+            mie_scattering: [0.0000040, 0.0000040, 0.0000040],
+            ozone_absorption: [0.00000065, 0.00000188, 0.000000085],
+            planetary_radius_m: 6378137.0
+        }
+    };
+}
+
+// Pure hypsometric elevation tinting ramp and contour specifications
+pure fn hypsometric_elevation_ramp() -> List {
+    return [
+        { elevation_m: 1600.0, color_rgba: [0.18, 0.45, 0.22, 1.0] },
+        { elevation_m: 1750.0, color_rgba: [0.38, 0.62, 0.32, 1.0] },
+        { elevation_m: 1900.0, color_rgba: [0.72, 0.75, 0.48, 1.0] },
+        { elevation_m: 2050.0, color_rgba: [0.78, 0.68, 0.52, 1.0] },
+        { elevation_m: 2150.0, color_rgba: [0.85, 0.82, 0.80, 1.0] },
+        { elevation_m: 2228.0, color_rgba: [0.98, 0.98, 1.00, 1.0] }
+    ];
+}
+
+// Executes the complete 10-round Mount Kosciuszko authoring, geoprocessing, and viewport pipeline
+fn execute_kosciuszko_e2e_pipeline() -> Record {
+    let bbox = kosciuszko_study_bbox();
+    let trail = summit_trail_waypoints();
+    let lake = alpine_lake_polygon();
+    let camera = camera_view_setup();
+    let atmosphere = atmosphere_sun_spec();
+    let hypsometric_ramp = hypsometric_elevation_ramp();
+
+    // ------------------------------------------------------------------------
+    // ROUND 1: Geodesy & Ephemeris (Geodesy.*)
+    // ------------------------------------------------------------------------
+    let geodetic_coords = Geodesy.crs_transform(
+        bbox.crs,
+        "EPSG:4326",
+        [bbox.min_x, bbox.min_y, 0.0]
+    );
+
+    let summit_geodesic = Geodesy.wgs84_inverse(
+        -36.4312, 148.3315,
+        -36.4559, 148.2636
+    );
+
+    let solar_insolation = Geodesy.topographic_insolation(
+        bbox.crs,
+        bbox.summit_elevation_m,
+        0.18,
+        0.05,
+        12.5
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 2 & 3: Procedural Terrain DAG & 6-Layer Strata Erosion (Terrain.*)
+    // ------------------------------------------------------------------------
+    let base_noise = Terrain.ridge_noise_2d(
+        0.00045,
+        6,
+        2.08,
+        0.52,
+        42
+    );
+
+    let kosciuszko_summit_peak = Terrain.alpine_peak(
+        "peak://qualia:mount-kosciuszko-summit",
+        2228.0,
+        1820.0,
+        0.38
+    );
+
+    let hydraulic_erosion = Terrain.erosion_hydraulic(
+        "field://qualia:kosciuszko-elev-unweathered",
+        40,
+        0.025,
+        0.12,
+        0.04
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 4: LiDAR Ingest, CSF Ground Classification & Vector I/O (GisIo.*)
+    // ------------------------------------------------------------------------
+    let lidar_ingest = GisIo.ingest_lidar_copc(
+        "copc://nsw:snowy-mountains-2026.copc.laz",
+        bbox.min_x,
+        bbox.min_y,
+        bbox.max_x,
+        bbox.max_y,
+        1048576
+    );
+
+    let ground_points = GisIo.classify_csf_ground(
+        "cloud://qualia:snowy-lidar-ingested",
+        0.45,
+        0.12,
+        3.0
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 5: GeoSPARQL Spatial Covenants & Topological Predicates (GeoSparql.*)
+    // ------------------------------------------------------------------------
+    let peatland_covenant = GeoSparql.eval_odrl_spatial_covenant(
+        "urn:qualia:zone:kosciuszko-sphagnum-covenant",
+        "LINESTRING(611200 5961400, 613100 5963100)",
+        0.0
+    );
+
+    let lake_intersects_alpine = GeoSparql.sf_intersects(
+        "geom://qualia:lake-cootapatamba",
+        "geom://qualia:kosciuszko-alpine-zone"
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 6 & 7: Vector Geoprocessing, Kriging & Marching Squares (GisGp.*)
+    // ------------------------------------------------------------------------
+    let trail_buffer = GisGp.buffer_polygon(
+        "geom://qualia:kosciuszko-summit-walk",
+        15.0,
+        8,
+        "round"
+    );
+
+    let least_cost_evac = GisGp.least_cost_path_astar(
+        "cost://qualia:snowy-slope-friction",
+        [613100.0, 5963100.0],
+        [611200.0, 5961400.0],
+        1.15
+    );
+
+    let contour_mesh = GisGp.marching_squares_contours(
+        "field://qualia:snowy-dem-25m",
+        50.0,
+        1600.0,
+        2250.0
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 8: WGSL Forge Terrain GPU Compute Kernel Compilation (WgslForge.geo_*)
+    // ------------------------------------------------------------------------
+    let gpu_noise_kernel = WgslForge.geo_emit_multifractal_noise(
+        bbox.width_m,
+        bbox.height_m,
+        25.0,
+        "RidgedMulti",
+        6,
+        2.15,
+        0.55
+    );
+
+    let gpu_dispatch = WgslForge.geo_certify_and_dispatch(
+        "kernel://qualia:wgsl-terrain-erosion-824",
+        "field://qualia:snowy-dem-25m",
+        [16, 16, 1]
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 9: Poet Interactive CoW Sculpting & Cartography SVG (PoetGeo.*, Cartography.*)
+    // ------------------------------------------------------------------------
+    let brush_stroke = PoetGeo.cow_stroke_apply(
+        "stroke_trail_grooming_001",
+        "smooth",
+        [
+            [611450.0, 5961620.0, 1895.0],
+            [611780.0, 5961890.0, 1940.0],
+            [612100.0, 5962150.0, 2010.0]
+        ],
+        30.0,
+        0.55
+    );
+
+    let camera_flight = PoetGeo.orbital_camera_flythrough(
+        [
+            { pos: [608500.0, 5958000.0, 3100.0], target: [613100.0, 5963100.0, 2228.0], fov: 60.0, roll: 0.0, duration_s: 6.0 },
+            { pos: [611000.0, 5960000.0, 2750.0], target: [613100.0, 5963100.0, 2228.0], fov: 55.0, roll: 1.5, duration_s: 8.0 }
+        ],
+        "catmull_rom",
+        90.0
+    );
+
+    let jenks_thematic = Cartography.classify_jenks_thematic(
+        [1650.0, 1720.0, 1840.0, 1960.0, 2080.0, 2190.0, 2228.0],
+        5,
+        "jenks_natural_breaks"
+    );
+
+    let publication_svg = Cartography.compose_publication_svg(
+        [
+            { layer_id: "dem_hypsometric_contours", opacity: 0.85, blend: "multiply" },
+            { layer_id: "kosciuszko_summit_trail", stroke_width_mm: 0.9, color: "#d95f02" },
+            { layer_id: "lake_cootapatamba_water", fill: "#2b83ba", opacity: 0.9 }
+        ],
+        { width_mm: 297.0, height_mm: 210.0, dpi: 300.0, margin_mm: 12.0 },
+        { units: "km", max_width_mm: 50.0, divisions: 5 },
+        { style: "compass_rose_clean", anchor: "top_right", size_mm: 22.0 },
+        { title: "Mount Kosciuszko Planetary Viewport Master Map", orientation: "vertical" }
+    );
+
+    // ------------------------------------------------------------------------
+    // ROUND 10: Webizen Planetary Viewport & GPU Rendering (WebizenGeo.*)
+    // ------------------------------------------------------------------------
+
+    // 1. Capped 2D/3D polyline tessellation for alpine trails
+    let trail_tessellation = WebizenGeo.tessellate_polyline_capped(
+        trail.vertices,
+        trail.stroke_width_m,
+        "round",
+        "round",
+        2.0
+    );
+
+    // 2. Robust earcut polygon triangulation for Lake Cootapatamba
+    let lake_tessellation = WebizenGeo.tessellate_polygon_earcut(
+        lake.exterior,
+        lake.interiors,
+        "counter_clockwise"
+    );
+
+    // 3. Continuous distance-dependent LOD (CDLOD) quadtree selection
+    let cdlod_nodes = WebizenGeo.select_cdlod_quadtree(
+        camera.position,
+        camera.frustum_planes,
+        bbox,
+        6,
+        0.28
+    );
+
+    // 4. Perimeter crack-sealing vertical terrain skirts
+    let terrain_skirts = WebizenGeo.build_terrain_skirts(
+        trail.vertices,
+        50.0,
+        { north: true, south: true, east: true, west: true }
+    );
+
+    // 5. Mapbox vector tile (MVT) styling evaluation at continuous zoom
+    let mvt_style_eval = WebizenGeo.eval_mvt_style_zoom(
+        { feature_class: "alpine_track", grade: "grade_4_rough" },
+        trail.target_zoom,
+        {
+            min_zoom: 10.0,
+            max_zoom: 18.0,
+            line_color: "#d95f02",
+            line_width_stops: [[10.0, 1.5], [14.0, 3.0], [18.0, 6.0]]
+        }
+    );
+
+    // 6. Smooth curved centerline label placement along summit trail
+    let curved_label = WebizenGeo.layout_curved_centerline_labels(
+        trail.vertices,
+        "Mount Kosciuszko Summit Trail (Elev. 2,228m)",
+        { font_family: "Inter", font_size_pt: 12.0, ascender_px: 9.5, advance_px: 7.8 },
+        0.32
+    );
+
+    // 7. Screen-space 2D label and icon collision resolution via R-tree
+    let label_collisions = WebizenGeo.solve_label_collisions(
+        [
+            { id: "lbl_kosciuszko_summit", bbox: [920.0, 510.0, 1140.0, 535.0], priority: 1, anchor: "top_center" },
+            { id: "lbl_lake_cootapatamba", bbox: [840.0, 620.0, 1020.0, 642.0], priority: 2, anchor: "center" },
+            { id: "lbl_charlotte_pass", bbox: [620.0, 780.0, 780.0, 802.0], priority: 3, anchor: "bottom_left" }
+        ],
+        camera.viewport_px,
+        0.20
+    );
+
+    // 8. Planetary atmospheric limb radiance and Rayleigh/Mie scattering
+    let atmosphere_limb = WebizenGeo.eval_sky_atmosphere_limb(
+        camera.altitude_m,
+        atmosphere.sun_direction,
+        camera.view_dir,
+        atmosphere.atmosphere_params
+    );
+
+    // 9. Multi-octave Gerstner water wave displacement and shoreline foam
+    let lake_waves = WebizenGeo.eval_water_wave_foam(
+        lake.exterior,
+        18.5,
+        [4.8, 1.8],
+        [
+            { amplitude: 0.08, wavelength: 3.5, speed: 1.2, steepness: 0.35 },
+            { amplitude: 0.04, wavelength: 1.8, speed: 2.1, steepness: 0.25 }
+        ]
+    );
+
+    // 10. Hypsometric elevation contour shading and screen cursor feature pick
+    let hypsometric_pick = WebizenGeo.shade_hypsometric_and_pick(
+        "field://qualia:snowy-dem-25m",
+        hypsometric_ramp,
+        25.0,
+        { x: 960.0, y: 540.0 }
+    );
+
+    return {
+        status: "complete",
+        pipeline: "GEO-S10 Mount Kosciuszko End-to-End Authoring, Simulation, Geoprocessing, GPU Compute, Cartography & Planetary Viewport Pipeline",
+        complex_state: "InteractiveFramePresented",
+        crs: bbox.crs,
+        geodesy: {
+            geodetic_origin: geodetic_coords,
+            summit_geodesic: summit_geodesic,
+            solar_insolation: solar_insolation
+        },
+        terrain: {
+            base_noise: base_noise,
+            kosciuszko_summit: kosciuszko_summit_peak,
+            hydraulic_erosion: hydraulic_erosion
+        },
+        gis_io: {
+            lidar_ingest: lidar_ingest,
+            ground_points: ground_points
+        },
+        geosparql: {
+            peatland_covenant: peatland_covenant,
+            lake_intersects_alpine: lake_intersects_alpine
+        },
+        gis_gp: {
+            trail_buffer: trail_buffer,
+            least_cost_evac: least_cost_evac,
+            contour_mesh: contour_mesh
+        },
+        wgsl_forge: {
+            gpu_noise_kernel: gpu_noise_kernel,
+            gpu_dispatch: gpu_dispatch
+        },
+        poet_carto: {
+            brush_stroke: brush_stroke,
+            camera_flight: camera_flight,
+            jenks_thematic: jenks_thematic,
+            publication_svg: publication_svg
+        },
+        webizen_viewport: {
+            trail_tessellation: trail_tessellation,
+            lake_tessellation: lake_tessellation,
+            cdlod_nodes: cdlod_nodes,
+            terrain_skirts: terrain_skirts,
+            mvt_style_eval: mvt_style_eval,
+            curved_label: curved_label,
+            label_collisions: label_collisions,
+            atmosphere_limb: atmosphere_limb,
+            lake_waves: lake_waves,
+            hypsometric_pick: hypsometric_pick
+        }
+    };
+}

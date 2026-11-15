@@ -37,6 +37,7 @@ pub enum InviteError {
 }
 
 impl Invitation {
+    /// Encodes the invitation into `out`.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, InviteError> {
         let need = 5
             + 1
@@ -66,6 +67,7 @@ impl Invitation {
         Ok(n)
     }
 
+    /// Decodes+validates an invitation at `now_unix`.
     pub fn decode(bytes: &[u8], now_unix: u32) -> Result<Self, InviteError> {
         if bytes.len() < 7 {
             return Err(InviteError::Truncated);
@@ -179,6 +181,7 @@ pub fn sign_invitation(
     Ok(body.len() + 64)
 }
 
+/// Verifies invitation integrity/expiry.
 pub fn verify_invitation(
     signed: &[u8],
     vk: &VerifyingKey,
