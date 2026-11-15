@@ -83,6 +83,9 @@ impl<'a> LsBitReader<'a> {
             let rem = self.read_bits(k)?;
             Ok(((q << k) | rem) as i32)
         } else {
+            if self.read_bit()? != 1 {
+                return Err(JpegLsError::CorruptStream("missing Golomb escape 1-bit"));
+            }
             let val = self.read_bits(qbpp)?;
             Ok(val as i32 + 1)
         }

@@ -76,7 +76,7 @@ fn cryptographic_material_binding_epoch_frame_and_rational_clock_verification() 
             .unwrap(),
         (0, 1)
     );
-    // 48000000/1001 Hz rate: sample 1001 starting at 1/48000000 s (1 tick at 48 MHz) = 1002001/48000000 s
+    // 48000000/1001 Hz rate: sample 1001 starting at 1/48000000 s (1 tick at 48 MHz) = 1002002/48000000 = 501001/24000000 s
     let clk_48m = RationalClock {
         clock_id: 11,
         scale: 0,
@@ -90,7 +90,7 @@ fn cryptographic_material_binding_epoch_frame_and_rational_clock_verification() 
         start_1tick
             .sample_offset_from_clock_epoch_seconds(&clk_48m, 1001, 48_000_000, 1001)
             .unwrap(),
-        (1_002_001, 48_000_000)
+        (501_001, 24_000_000)
     );
 
     // 2. Build valid .m64 container and BankedConstituentLut at epoch 7

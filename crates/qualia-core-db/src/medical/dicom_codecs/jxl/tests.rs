@@ -209,7 +209,6 @@ fn build_jxl_gray_modular_codestream(w: u16, h: u16, bps: u8, pixels: &[i64], wi
     body.align_byte();
 
     // TOC (1 entry)
-    bw.align_byte();
     bw.write_bool(false); // permuted = false
     bw.align_byte();
     assert!(body.buf.len() < 1024);
@@ -371,7 +370,7 @@ fn jxl_truncation_and_dimension_mismatch_preserve_sentinel() {
     let mut cs = build_jxl_gray_modular_codestream(4, 4, 8, &px, false);
     cs.truncate(cs.len() - 3);
     let dcm_trunc = make_part10_jxl_fixture(TS_JXL_LOSSLESS, 4, 4, 8, 8, &[&cs]);
-    let mut out = vec![0x5Au8; 16];
+    let mut out = vec![0x5Au8; 32];
     assert!(decode_jxl_part10_into(&dcm_trunc, &mut out, JxlLimits::default()).is_err());
     assert!(out.iter().all(|&b| b == 0x5A));
 
@@ -440,7 +439,6 @@ fn jxl_truncation_and_dimension_mismatch_preserve_sentinel() {
         }
     }
     vbody.align_byte();
-    vbw.align_byte();
     vbw.write_bool(false); // permuted = false
     vbw.align_byte();
     vbw.write_u32_sel(0, vbody.buf.len() as u64, 10);

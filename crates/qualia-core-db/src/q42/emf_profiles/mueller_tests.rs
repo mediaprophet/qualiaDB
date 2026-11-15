@@ -162,7 +162,7 @@ fn spectrum_24_and_28_band_envelopes_with_response_calibration_and_integration()
     let payload28 = make_spectrum_payload(10, &bins28, stride28);
     let spec28 = ExtendedModeSpec::Spectrum {
         axis: SpectralAxisSpec {
-            axis: "wavelength_m",
+            axis: "vacuum_wavelength_m",
             sample_semantics: "bin_average",
             physical_quantity: "spectral_radiance",
             unit: "W sr^-1 m^-2 m^-1",

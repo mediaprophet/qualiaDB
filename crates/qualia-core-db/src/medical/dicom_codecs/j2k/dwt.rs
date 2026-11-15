@@ -55,26 +55,25 @@ pub fn idwt_1d_53(low: &[i32], high: &[i32], out: &mut [i32], cas: usize) {
         return;
     }
     for i in 0..n {
+        let k = i / 2;
         if (i + cas).is_multiple_of(2) {
-            let k = i / 2;
-            let h_idx = |pos: isize| -> i32 {
-                let len = high.len();
-                if len == 0 { return 0; }
-                high[sym_ext(pos, len)]
-            };
-            let (hl, hr) = if cas == 0 {
-                (h_idx(k as isize - 1), h_idx(k as isize))
-            } else {
-                (h_idx(k as isize), h_idx(k as isize + 1))
-            };
-            out[i] = low[k] - ((hl + hr + 2) >> 2);
+            out[i] = low[k];
+        } else {
+            out[i] = high[k];
+        }
+    }
+    for i in 0..n {
+        if (i + cas).is_multiple_of(2) {
+            let hl = out[sym_ext(i as isize - 1, n)];
+            let hr = out[sym_ext(i as isize + 1, n)];
+            out[i] -= (hl + hr + 2) >> 2;
         }
     }
     for i in 0..n {
         if !(i + cas).is_multiple_of(2) {
-            let k = i / 2;
-            let x_idx = |pos: isize| -> i32 { out[sym_ext(pos, n)] };
-            out[i] = high[k] + ((x_idx(i as isize - 1) + x_idx(i as isize + 1)) >> 1);
+            let xl = out[sym_ext(i as isize - 1, n)];
+            let xr = out[sym_ext(i as isize + 1, n)];
+            out[i] += (xl + xr) >> 1;
         }
     }
 }

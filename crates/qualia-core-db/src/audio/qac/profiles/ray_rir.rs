@@ -354,7 +354,7 @@ pub fn write_ray_contributions_qac(
     meta.push_frame(2, frame)?;
     meta.push_provenance(3, provenance)?;
     let launch_id = if let Some(lt) = launch_time {
-        Some(meta.push_instant(8, lt)?)
+        Some(meta.push_instant(10, lt)?)
     } else {
         None
     };

@@ -231,7 +231,7 @@ fn rejects_invalid_shape_scalar_unit_clock_reference_and_critical_field() {
         }),
         Box::new(|bs| field(bs, 6, 11).tag = 11),
         Box::new(|bs| field(bs, 6, 9).critical = 0),
-        Box::new(|bs| field(bs, 4, 4).bytes = b"authority\ncommand".to_vec()),
+        Box::new(|bs| field(bs, 4, 4).bytes = "authority\u{0085}command".as_bytes().to_vec()),
     ];
     for change in bad {
         let bytes = build(PCM, Config::default(), |bs| {

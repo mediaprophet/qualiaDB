@@ -39,7 +39,7 @@ impl LsbBitWriter {
             if v == 1 {
                 self.write_bits(0, 3);
             } else {
-                let n = (usize::BITS - (v as u32).leading_zeros() - 1) as usize;
+                let n = (u32::BITS - (v as u32).leading_zeros() - 1) as usize;
                 self.write_bits(n as u64, 3);
                 self.write_bits((v - (1usize << n)) as u64, n);
             }

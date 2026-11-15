@@ -15,7 +15,7 @@ fn golden_all_emf_v4_modes_0100_to_0107_round_trip() {
             mode,
             revision: 1,
             flags: 3,
-            stream_id: 0,
+            stream_id: 1,
             frame_id: 0,
             start_tick: -100,
             time_count: 1,
@@ -46,7 +46,7 @@ fn golden_all_qac_v1_modes_0100_to_0107_continuum_and_aux() {
             mode,
             revision: 1,
             flags: 3,
-            stream_id: 0,
+            stream_id: 1,
             frame_id: 0,
             start_tick: 0,
             time_count: 1,
@@ -69,7 +69,7 @@ fn golden_all_qac_v1_modes_0100_to_0107_continuum_and_aux() {
 fn golden_4096_alignment_and_metadata_only_and_entry_index_bounds() {
     assert_both_families(|family| {
         let meta = sample_metadata(None, None);
-        let entry = [entry_timed(0, -1, 0x0104, 4, b"ALIGNED")];
+        let entry = [entry_timed(1, -1, 0x0104, 4, b"ALIGNED")];
         let bytes = encode_envelope(family, 1, &meta, &entry);
         assert_eq!(bytes.len() % 4096, 0);
         let view = StructuralView::open(&bytes, family, Limits::default()).unwrap();
@@ -95,7 +95,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0104,
                 revision: 1,
                 flags: 3,
-                stream_id: 0,
+                stream_id: 1,
                 frame_id: 0,
                 start_tick: -10,
                 time_count: 1,
@@ -110,7 +110,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0104,
                 revision: 1,
                 flags: 3,
-                stream_id: 0,
+                stream_id: 1,
                 frame_id: 0,
                 start_tick: -1,
                 time_count: 1,
@@ -125,7 +125,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0104,
                 revision: 1,
                 flags: 7,
-                stream_id: 0,
+                stream_id: 1,
                 frame_id: 2,
                 start_tick: -1,
                 time_count: 1,
@@ -140,7 +140,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0105,
                 revision: 1,
                 flags: 7,
-                stream_id: 0,
+                stream_id: 1,
                 frame_id: 2,
                 start_tick: -1,
                 time_count: 1,
@@ -155,7 +155,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0105,
                 revision: 1,
                 flags: 7,
-                stream_id: 0,
+                stream_id: 1,
                 frame_id: 2,
                 start_tick: -1,
                 time_count: 1,
@@ -170,7 +170,7 @@ fn golden_five_tuple_sort_tie_breakers_and_negative_ticks() {
                 mode: 0x0104,
                 revision: 1,
                 flags: 3,
-                stream_id: 1,
+                stream_id: 2,
                 frame_id: 0,
                 start_tick: i64::MIN,
                 time_count: 1,

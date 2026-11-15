@@ -185,25 +185,25 @@ fn rejects_directory_extents_codec_and_ordering() {
         expect_open_err(&uns_stream, family, Error::Order);
 
         let mut neg_trap = two.clone();
-        put_u32(&mut neg_trap, HEADER_BYTES + DIRECTORY_BYTES + 8, 0);
+        put_u32(&mut neg_trap, HEADER_BYTES + DIRECTORY_BYTES + 8, 1);
         put_i64(&mut neg_trap, HEADER_BYTES + 16, 1);
         put_i64(&mut neg_trap, HEADER_BYTES + DIRECTORY_BYTES + 16, -2);
         reseal(&mut neg_trap, true, true);
         expect_open_err(&neg_trap, family, Error::Order);
 
         let mut dup_key = two.clone();
-        put_u32(&mut dup_key, HEADER_BYTES + DIRECTORY_BYTES + 8, 0);
+        put_u32(&mut dup_key, HEADER_BYTES + DIRECTORY_BYTES + 8, 1);
         reseal(&mut dup_key, true, true);
         expect_open_err(&dup_key, family, Error::Order);
 
         let mut uns_mode = two.clone();
-        put_u32(&mut uns_mode, HEADER_BYTES + DIRECTORY_BYTES + 8, 0);
+        put_u32(&mut uns_mode, HEADER_BYTES + DIRECTORY_BYTES + 8, 1);
         put_u16(&mut uns_mode, HEADER_BYTES, 0x0105);
         reseal(&mut uns_mode, true, true);
         expect_open_err(&uns_mode, family, Error::Order);
 
         let mut uns_desc = two.clone();
-        put_u32(&mut uns_desc, HEADER_BYTES + DIRECTORY_BYTES + 8, 0);
+        put_u32(&mut uns_desc, HEADER_BYTES + DIRECTORY_BYTES + 8, 1);
         put_u32(&mut uns_desc, HEADER_BYTES + 112, 9);
         reseal(&mut uns_desc, true, true);
         expect_open_err(&uns_desc, family, Error::Order);
@@ -226,7 +226,7 @@ fn rejects_nonzero_padding_across_all_envelope_zones() {
         }
 
         let meta = sample_metadata(None, None);
-        let aligned4096 = encode_envelope(family, 1, &meta, &[super::helpers::entry_timed(0, 0, 0x0104, 4, b"P4K")]);
+        let aligned4096 = encode_envelope(family, 1, &meta, &[super::helpers::entry_timed(1, 0, 0x0104, 4, b"P4K")]);
         let mut p4k = aligned4096.clone();
         let po4 = get_u64(&p4k, HEADER_BYTES + 40) as usize;
         p4k[po4 + 3] = 0x11;

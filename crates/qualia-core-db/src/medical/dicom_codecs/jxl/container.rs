@@ -188,6 +188,9 @@ pub fn unwrap_jxl_container<'a>(bytes: &'a [u8], max_compressed_bytes: usize) ->
     let mut saw_last_jxlp = false;
 
     while pos < bytes.len() {
+        if pos + 1 == bytes.len() && bytes[pos] == 0 && (jxlc.is_some() || saw_last_jxlp) {
+            break;
+        }
         if pos + 8 > bytes.len() {
             return Err(JxlError::CorruptStream("truncated ISOBMFF box header"));
         }

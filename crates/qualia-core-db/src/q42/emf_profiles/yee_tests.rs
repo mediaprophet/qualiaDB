@@ -229,7 +229,7 @@ fn yee_cfl_dispersion_and_periodic_leapfrog_energy_and_loss() {
         c.conductivity_s_per_m = 0.5;
     }
     let e_loss_start = yee_total_energy_j(&cells, spacing).unwrap();
-    for _ in 0..10 {
+    for _ in 0..25 {
         yee_step_periodic(&mut cells, dims, spacing, dt).unwrap();
     }
     let e_loss_end = yee_total_energy_j(&cells, spacing).unwrap();
@@ -344,6 +344,7 @@ fn yee_rejects_dispersive_restart_without_aux_and_bad_stagger_or_constitutive_mi
         fi(4, true, V::F64(&[0.0, 0.0, 0.0, 1.0])),
         fi(5, true, V::F64(&[0.01, 0.01, 0.01])),
         fi(6, true, V::U32(&[1, 1, 1])),
+        fi(7, true, V::U32(&[0])),
         fi(8, true, V::Utf8("right-handed-X-forward-Y-left-Z-up")),
     ];
     let f_prv = [fi(1, true, V::U32(&[0]))];
@@ -362,7 +363,7 @@ fn yee_rejects_dispersive_restart_without_aux_and_bad_stagger_or_constitutive_mi
         fi(14, true, V::MetadataRefs(&[6])),
     ];
     let f_dsc = [
-        fi(2, false, V::MetadataRefs(&[2])),
+        fi(2, true, V::MetadataRefs(&[2])),
         fi(3, true, V::MetadataRefs(&[3])),
         fi(7, true, V::Utf8("yee_cartesian_cell")),
         fi(8, true, V::Utf8("mixed:mode-registry")),
@@ -388,7 +389,7 @@ fn yee_rejects_dispersive_restart_without_aux_and_bad_stagger_or_constitutive_mi
     let entry = [EntryInput {
         mode: 0x0102,
         revision: 1,
-        flags: 0,
+        flags: 4,
         stream_id: 0,
         frame_id: 2,
         start_tick: 0,
