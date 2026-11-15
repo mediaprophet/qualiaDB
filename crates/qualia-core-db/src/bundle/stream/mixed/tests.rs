@@ -321,10 +321,10 @@ fn each_family_admits_through_format_view() {
                     }
                 }
                 EntryFamily::Q42 => {
-                    let range = complete(selected, span, payload);
+                    let ranges = [complete(selected, span, payload)];
                     let source = match Q42AuthenticatedRangeSource::new(
                         selected,
-                        &[range],
+                        &ranges,
                         payload.len() as u64,
                         1,
                     ) {

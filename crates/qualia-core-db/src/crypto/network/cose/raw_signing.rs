@@ -1,6 +1,5 @@
 //! Internal raw profile operations over exact COSE bytes, without key custody.
 //! Public production signing remains in the managed_signing adapter.
-#[cfg(any(test, not(target_arch = "wasm32")))]
 use super::encode_pair;
 use super::{
     encode_binding, sig_structure_into, Binding, KeyIds, PairedPublicKeys, Workspace, ED25519,
@@ -10,7 +9,6 @@ use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::signing_profile::{self, RawSigningKeys};
 use fips204::traits::{SerDes, Signer};
 
-#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) type SigningKeys<'a> = RawSigningKeys<'a>;
 impl RawSigningKeys<'_> {
     pub(crate) fn key_ids(&self) -> KeyIds {
@@ -25,7 +23,6 @@ impl RawSigningKeys<'_> {
 }
 
 /// Internal fixtures/adapters only. No public arbitrary-key signing escape hatch.
-#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn sign_pair_raw(
     binding: &Binding<'_>,
     keys: &SigningKeys<'_>,

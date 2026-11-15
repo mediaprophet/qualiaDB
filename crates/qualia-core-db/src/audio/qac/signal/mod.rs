@@ -6,6 +6,8 @@ pub use encode::encode;
 pub use model::*;
 pub use view::{admit, SignalView};
 #[cfg(test)]
+pub(super) mod test_support;
+#[cfg(test)]
 mod tests;
 
 #[cfg(test)]

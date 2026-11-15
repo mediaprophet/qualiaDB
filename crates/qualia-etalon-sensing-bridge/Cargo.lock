@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "etalon-inference"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 dependencies = [
  "bytemuck",
  "etalon-inference-kernel",
@@ -1302,17 +1302,17 @@ dependencies = [
 [[package]]
 name = "etalon-inference-contract"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 
 [[package]]
 name = "etalon-inference-kernel"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 
 [[package]]
 name = "etalon-inference-lab"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 dependencies = [
  "ciborium",
  "etalon-diagnostics",
@@ -1384,12 +1384,12 @@ version = "0.0.2"
 [[package]]
 name = "etalon-sense-core"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 
 [[package]]
 name = "etalon-sense-nfc"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 dependencies = [
  "etalon-sense-core",
 ]
@@ -1397,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "etalon-sense-sdr"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 dependencies = [
  "etalon-sense-core",
  "etalon-signal",
@@ -1461,7 +1461,7 @@ dependencies = [
 [[package]]
 name = "etalon-vibe"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=057545fc14bc1202a167b9a76a8f82e246c1738f#057545fc14bc1202a167b9a76a8f82e246c1738f"
 dependencies = [
  "etalon-model",
  "etalon-nquin",

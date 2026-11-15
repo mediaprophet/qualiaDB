@@ -7,7 +7,10 @@
 //! assertions, explicit scientific-to-display `f64 -> f32` projection with declared lossy fields,
 //! and C02-C09 CPU `f64` vs GPU `f32` reference kernel parity budgets.
 
-use super::poynting_energy::{c02_preview_f32_budget, instantaneous_poynting_and_energy};
+pub use super::poynting_energy::{
+    c02_preview_f32_budget, c02_reduction_f64_budget, c02_small_op_f64_budget,
+    instantaneous_poynting_and_energy,
+};
 use super::yee_fdtd::{yee_step_leapfrog_in_place, YeeMaterialParams, YeeSolverProfile};
 use super::{
     BoundaryCondition, EmfOperatorError, Grid3dSpec, C0_M_PER_S, MU0_REF_H_PER_M,

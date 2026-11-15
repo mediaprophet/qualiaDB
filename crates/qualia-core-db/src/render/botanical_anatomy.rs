@@ -72,8 +72,11 @@ use etalon_sim::metamer_fspm::{Metamer, MetamerOrgan, MetamerPlantGraph, Thermal
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::f32::consts::PI;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 // Coverage splitting is kept separate from the multi-scale geometry builders.

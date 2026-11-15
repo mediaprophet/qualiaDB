@@ -5,7 +5,7 @@ use super::PortalGpu;
 impl PortalGpu {
     /// Submit the current field slice to the browser surface. This is a draw,
     /// not a pixel-readback receipt; the host must observe the resulting canvas.
-    pub(crate) fn emf_present_slice(
+    pub fn emf_present_slice(
         &mut self,
         bounds: [f32; 6],
         amplitude_gain: f32,

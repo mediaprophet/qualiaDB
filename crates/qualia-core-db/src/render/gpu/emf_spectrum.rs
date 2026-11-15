@@ -385,7 +385,7 @@ mod tests {
         if crate::gpu_context::try_shared_gpu().is_none() {
             return;
         }
-        let mut portal = super::super::PortalGpu::new_offscreen(32, 32, 256).expect("offscreen");
+        let mut portal = crate::render::gpu::PortalGpu::new_offscreen(32, 32, 256).expect("offscreen");
         portal.emf_upload_emf64(&bytes).expect("emf64 upload");
         assert!(portal.emf_has_field());
         assert_eq!(portal.emf_grid_dims(), (8, 8, 8, 1));

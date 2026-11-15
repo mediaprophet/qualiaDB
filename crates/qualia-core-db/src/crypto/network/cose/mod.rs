@@ -10,8 +10,7 @@ mod cbor;
 mod envelope;
 #[cfg(not(target_arch = "wasm32"))]
 mod managed_signing;
-// Portable authority fixtures need raw signing; production custody stays native.
-#[cfg(any(test, not(target_arch = "wasm32")))]
+// Portable authority fixtures and mixed-HMC stream bundles use raw signing; production custody stays native.
 mod raw_signing;
 mod types;
 mod verify;
@@ -20,7 +19,6 @@ pub use binding::{decode_binding, encode_binding, PairedPublicKeys};
 pub use envelope::{decode_pair, encode_pair, sig_structure_into, ParsedPair};
 #[cfg(not(target_arch = "wasm32"))]
 pub use managed_signing::sign_pair;
-#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) use raw_signing::{sign_pair_raw, SigningKeys};
 pub use types::*;
 pub use verify::{verify_pair, VerifiedPair};

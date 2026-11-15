@@ -4,7 +4,7 @@
 **Owner:** Timothy (licensor / issuer) · **This doc:** implementation planning only — used to decide what to build
 **Cite:** `webizen-lite-wasm` (`wasm-ontology` capability profile) · `asset_envelope/licence.rs` · `client-core/domains.rs` · `node_identity.rs` · `wallet/` (XEC) · `net/qdnf/authority/permit.rs` · `semantic_instruments/` · Permissive Commons spec §4 (`docs/manuals/webizen_permissive_commons.md`)
 
-**Purpose:** Establish a licensing methodology that issues **signed licence instruments bound to particular domain names**, governing use of the WebCivics WASM export (`webizen-lite-wasm`, the `wasm-ontology` capability profile). The instrument must support multiple licence classes — commercial organisations (development/client work), non-profits and community bodies (e.g. `.org` domains), evaluation/preview, and personal/sovereign use — with eCash as the initial payment/activation rail.
+**Purpose:** Establish a licensing methodology that issues **signed licence instruments bound to particular domain names**, governing use of the WebCivics WASM export (`webizen-lite-wasm`, the `wasm-ontology` capability profile). The instrument must support multiple licence classes — commercial organisations (development/client work), non-profits and community bodies (e.g. `.org` domains), evaluation/preview, and personal/self-determined use — with eCash as the initial payment/activation rail.
 
 Two discovery/attestation mechanisms are required by the author:
 
@@ -37,7 +37,7 @@ Aligned with `domains.rs::AgentType` and the Permissive Commons entity-pricing m
 |---|---|---|---|
 | `community` | Non-profit / community / humanitarian (`.org`, `HumanitarianService`, `Group` cooperatives) | Run + serve the WASM export; no commercial rights | Gratis grant (signed, zero-cost) |
 | `community-steward` | A local custodian (the "inn" — pub, library, co-op) administering services for member stores in a small community (§2-A) | Run + serve **and administer delegated subdomains/mailboxes for named members**; no commercial resale of the licence itself | Gratis or nominal token — the town is the beneficiary, not the customer |
-| `personal` | Natural persons, sovereign self-hosting | Run for personal use | Gratis |
+| `personal` | Natural persons, self-determined hosting | Run for personal use | Gratis |
 | `evaluation` | Any org, time-boxed | Run, capped window (e.g. 90 days), no redistribution | Gratis or token |
 | `commercial` | Commercial organisations Tim does dev work for | Run + serve + client-scoped derivative builds per terms | eCash payment evidence required |
 | `internal` | Issuer's own deployments / dev | Unrestricted scope | None |

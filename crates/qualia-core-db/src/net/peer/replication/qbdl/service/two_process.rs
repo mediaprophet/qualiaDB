@@ -1052,7 +1052,7 @@ mod protected_handshake {
         Ok(served)
     }
 
-    pub(super) fn run_protected_client<B: Bearer>(mut framed: B) {
+    pub(super) fn run_protected_client<B: Bearer>(mut framed: B, peer_loc: ObservedLocator) {
         assert_eq!(framed.profile(), BearerProfile::LocalIpcV1);
         assert!(framed.profile().native_independent());
         let mut keys = match read_keys_from_env() {
@@ -1088,7 +1088,7 @@ mod protected_handshake {
             ENDPOINT_RESERVATION_BYTES,
         )
         .unwrap();
-        let route = Route::observed(&framed, framed.peer()).unwrap();
+        let route = Route::observed(&framed, peer_loc).unwrap();
         let mut workspace = Box::write(
             Box::<EndpointWorkspace>::new_uninit(),
             EndpointWorkspace::new(),
@@ -1112,7 +1112,6 @@ mod protected_handshake {
         poll_step(deadline, false, || initiator.send_step(&mut framed, &pins, &now)).unwrap();
         let installed = initiator.install(&pins, &now).unwrap();
         drop(initiator);
-        drop(workspace);
         drop(signer);
         let mut channel = into_channel(installed, framed, &owner, &pins).unwrap();
         let mut lanes = SessionOwner::new();
@@ -1134,6 +1133,7 @@ mod protected_handshake {
 
     pub(super) fn run_protected_provider<B: Bearer>(
         mut framed: B,
+        peer_loc: ObservedLocator,
         keys: &mut SharedKeys,
     ) -> Result<ServedLeaf, Error> {
         assert_eq!(framed.profile(), BearerProfile::LocalIpcV1);
@@ -1165,7 +1165,7 @@ mod protected_handshake {
             ENDPOINT_RESERVATION_BYTES,
         )
         .map_err(super::super::from_qdnf)?;
-        let route = Route::observed(&framed, framed.peer()).map_err(super::super::from_qdnf)?;
+        let route = Route::observed(&framed, peer_loc).map_err(super::super::from_qdnf)?;
         let mut workspace = Box::write(
             Box::<EndpointWorkspace>::new_uninit(),
             EndpointWorkspace::new(),
@@ -1202,7 +1202,6 @@ mod protected_handshake {
             .install(&pins, &now)
             .map_err(super::super::from_qdnf)?;
         drop(responder);
-        drop(workspace);
         drop(signer);
         let mut channel = into_channel(installed, framed, &owner, &pins).map_err(super::super::from_qdnf)?;
         let mut lanes = SessionOwner::new();
@@ -1262,7 +1261,8 @@ fn two_os_process_protected_session_transfers_useful_leaf() {
     assert!(!physical_two_host_qualified());
     if is_child() {
         let framed = win::child_connect_framed().unwrap();
-        protected_handshake::run_protected_client(framed);
+        let peer = framed.peer();
+        protected_handshake::run_protected_client(framed, peer);
         return;
     }
     let (mut keys, path, _guard) = protected_handshake::generate_and_write_package().unwrap();
@@ -1271,7 +1271,8 @@ fn two_os_process_protected_session_transfers_useful_leaf() {
         Ok(v) => v,
         Err(e) => panic!("named-pipe bind/accept failed (no ipc_pair/TCP fallback): {e:?}"),
     };
-    let served = match protected_handshake::run_protected_provider(framed, &mut keys) {
+    let peer = framed.peer();
+    let served = match protected_handshake::run_protected_provider(framed, peer, &mut keys) {
         Ok(s) => s,
         Err(e) => {
             kill_wait(&mut child);
@@ -1288,7 +1289,8 @@ fn two_os_process_protected_session_transfers_useful_leaf() {
     assert!(!physical_two_host_qualified());
     if is_child() {
         let framed = uds::child_connect_framed().unwrap();
-        protected_handshake::run_protected_client(framed);
+        let peer = framed.peer();
+        protected_handshake::run_protected_client(framed, peer);
         return;
     }
     let (mut keys, path, _guard) = protected_handshake::generate_and_write_package().unwrap();
@@ -1297,7 +1299,8 @@ fn two_os_process_protected_session_transfers_useful_leaf() {
         Ok(v) => v,
         Err(e) => panic!("unix-domain bind/accept failed (no ipc_pair/TCP fallback): {e:?}"),
     };
-    let served = match protected_handshake::run_protected_provider(framed, &mut keys) {
+    let peer = framed.peer();
+    let served = match protected_handshake::run_protected_provider(framed, peer, &mut keys) {
         Ok(s) => s,
         Err(e) => {
             kill_wait(&mut child);

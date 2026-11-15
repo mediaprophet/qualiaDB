@@ -17,6 +17,4 @@ pub use super::dicom_part10::{
 };
 
 #[cfg(test)]
-pub(crate) use super::dicom_part10::test_fixtures;
-#[cfg(test)]
 pub use super::dicom_part10::test_fixture_split_bytes;

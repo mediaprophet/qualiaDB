@@ -435,7 +435,7 @@ fn status_206_content_range_exact() {
     let got = get_range(&mut stream, &req, &mut out).unwrap();
     assert_eq!(got, Fetched::Partial { length: take as usize });
     assert_eq!(&out[..take as usize], &native[..take as usize]);
-    let text = String::from_utf8_lossy(&captured.lock().unwrap());
+    let text = String::from_utf8_lossy(&captured.lock().unwrap()).into_owned();
     assert!(text.contains("Range: bytes=0-"));
     assert!(text.contains("Accept-Encoding: identity"));
     assert!(text.contains("If-Range: "));
@@ -537,7 +537,7 @@ fn changed_validator_or_etag_refuses() {
         Err(ClientError::Status(StatusError::ChangedValidator))
     );
     assert_eq!(out, [0x5A; 4]);
-    let text = String::from_utf8_lossy(&captured.lock().unwrap());
+    let text = String::from_utf8_lossy(&captured.lock().unwrap()).into_owned();
     assert!(text.contains("If-Range: "));
     th.join().unwrap();
 
@@ -654,7 +654,7 @@ fn redirect_does_not_bypass_authority() {
         Err(ClientError::Lig(QdnfError::Denied))
     );
     assert_eq!(out, [0x5A; 4]);
-    let text = String::from_utf8_lossy(&captured.lock().unwrap());
+    let text = String::from_utf8_lossy(&captured.lock().unwrap()).into_owned();
     assert!(!text.contains("Authorization:"));
     th.join().unwrap();
 

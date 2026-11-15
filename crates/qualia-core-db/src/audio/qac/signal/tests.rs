@@ -3,9 +3,7 @@ use crate::q42::{
     field_envelope::{self as env, EntryInput, EnvelopeInput, Family, StructuralView},
     field_semantics as sem,
 };
-#[path = "test_support.rs"]
-mod support;
-use support::*;
+use super::test_support::*;
 const PCM: &[u8] = include_bytes!("fixtures/pcm-f32-special.le");
 const COMPLEX: &[u8] = include_bytes!("fixtures/stft-n4-complex.le");
 fn read<'a>(bytes: &'a [u8], selected: u32) -> Result<SignalView<'a>, Error> {

@@ -120,7 +120,7 @@ function checkNoSovereignInHtml(dir) {
       assert.doesNotMatch(
         html,
         /\bsovereign(?:ty)?\b/i,
-        `${rel} must use human-rights instrument terminology (human dignity, agency, self-determination, human-centric) instead of 'sovereign' (ADR 0011 / rights_ontology.ttl)`,
+        `${rel} must use human-rights instrument terminology (human dignity, agency, self-determination, access to justice, and evidentiary requirements supporting justice) instead of 'sovereign' (ADR 0011 / rights_ontology.ttl)`,
       );
     }
   }

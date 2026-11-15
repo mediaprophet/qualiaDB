@@ -232,7 +232,7 @@ fn with_env(work: impl FnOnce(&mut Env<'_, '_>)) {
     let request = fixture.request();
     let audience = request.principal.0;
     let pin = install_recipient_pin(&mut pins, &admin, &issuer, &audience);
-    let mut probe = adopt_local_whole_source(&mut owner, &pins, &bound, fixture.request()).unwrap();
+    let probe = adopt_local_whole_source(&mut owner, &pins, &bound, fixture.request()).unwrap();
     let mut recipient = KeyManager::new();
     recipient.initialize().unwrap();
     let (ml, ml_public) = recipient

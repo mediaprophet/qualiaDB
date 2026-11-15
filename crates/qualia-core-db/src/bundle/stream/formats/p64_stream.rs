@@ -4,7 +4,7 @@
 use super::{AuthenticatedRange, FormatError};
 use crate::p64_weight::{has_p64_magic, IntegrityMode, P64TensorIndex};
 /// Version/profile capability. Complete-entry is the transfer unit.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum P64Profile {
     CompleteEntry,
 }
@@ -14,7 +14,7 @@ pub struct P64StreamView<'a> {
     index: P64TensorIndex,
     profile: P64Profile,
 }
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum P64AdmitError {
     Format(FormatError),
     Family,

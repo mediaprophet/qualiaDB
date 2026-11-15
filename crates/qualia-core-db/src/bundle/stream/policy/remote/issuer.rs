@@ -1,19 +1,30 @@
 //! Controller-side issuance of RecipientRecord A and a separately versioned ticket.
 //! Signing uses the existing CryptographicLibrary; PinAuthority stays the key owner.
 use super::{
-    check_recipient_against_independent, encode_decision_ticket_into, ControllerRecognition,
-    DecisionTicketFields, DisclosureAction, IndependentAdmission, PolicyError as E,
-    RecognitionAdmin, RecognitionHandle, RecognizedController, DECISION_TICKET_BYTES,
-    DISCLOSURE_DECISION_PURPOSE, MAX_DECISION_LEASE_SECS, RECIPIENT_BYTES, RECIPIENT_PURPOSE,
+    ControllerRecognition, DisclosureAction, IndependentAdmission, PolicyError as E,
+    RecognizedController,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use super::{
+    check_recipient_against_independent, encode_decision_ticket_into, DecisionTicketFields,
+    RecognitionAdmin, RecognitionHandle, DECISION_TICKET_BYTES, DISCLOSURE_DECISION_PURPOSE,
+    MAX_DECISION_LEASE_SECS, RECIPIENT_BYTES, RECIPIENT_PURPOSE,
+};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::crypto::network::authority::{AuthoritySource, PinAuthority, PinHandle};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::crypto::network::cose::{self, Binding, KeyIds};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::crypto::network::digest::sha384;
 use crate::crypto::network::entropy::fill_os;
 use crate::crypto::network::errors::CryptoError;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::crypto::network::key_provider::ProviderGrant;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::crypto::network::object_stream::{encode_recipient, RecipientFields, RecipientRecord};
-use crate::net::qdnf::types::{OperationId, StrongDigest};
+use crate::net::qdnf::types::OperationId;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::net::qdnf::types::StrongDigest;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::specialized_libs::cryptographic_library::{
     CryptographicLibrary, PairedSigningRequest, SigningAccess, SigningControl,

@@ -163,7 +163,7 @@ fn m64_and_e64_full_digest_chunks_are_borrowed_and_zero_heap() {
         let bytes = m64_bytes(false, magic, true);
         with_qbdl_span!(&bytes, |selected, span| {
             let h = range(selected, &span, 0, 64);
-            let d = range(selected, &span, 64, 64);
+            let d = range(selected, &span, directory_offset(false) as u64, 64);
             let p = range(selected, &span, 128, 128);
             let mut scratch = [PayloadInterval::default(); 4];
             let guard = AllocGuard::begin("m64-e64-selective-full-digest", true);
@@ -248,8 +248,8 @@ fn m64_lrm3_is_an_authenticated_required_metadata_range() {
     with_qbdl_span!(&bytes, |selected, span| {
         let h = range(selected, &span, 0, 64);
         let metric = range(selected, &span, 64, 128);
-        let d = range(selected, &span, 192, 64);
-        let p = range(selected, &span, 256, 128);
+        let d = range(selected, &span, directory_offset(true) as u64, 64);
+        let p = range(selected, &span, payload_offset(true) as u64, 128);
         let view = M64DirectoryView::admit(
             h,
             d,

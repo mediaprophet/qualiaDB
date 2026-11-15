@@ -628,9 +628,6 @@ fn foreign_source_pin_is_unauthorized_and_erases() {
         .issue(&w.owner, transcript, OperationId([9; 16]))
         .unwrap();
     let issued = issue_for(&mut w, fields, facts, challenge, transcript);
-    let mut cose_ws = cose::Workspace::new();
-    let grant =
-        install_remote_disclosure(install_req(&w, &issued, facts), &mut slot, &mut cose_ws).unwrap();
     let issuer = Issuer::new();
     let foreign_pin = w
         .verifier_pins
@@ -652,6 +649,9 @@ fn foreign_source_pin_is_unauthorized_and_erases() {
             NOW,
         )
         .unwrap();
+    let mut cose_ws = cose::Workspace::new();
+    let grant =
+        install_remote_disclosure(install_req(&w, &issued, facts), &mut slot, &mut cose_ws).unwrap();
     let mut foreign = facts;
     foreign.source = digest(99);
     let fields = recipient_fields(foreign, context.id(), &ml, &dh);

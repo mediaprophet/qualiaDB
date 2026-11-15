@@ -4,6 +4,7 @@ mod client;
 mod describe;
 mod provider;
 mod session;
+#[cfg(not(target_arch = "wasm32"))]
 mod protected;
 mod mux;
 
@@ -14,6 +15,7 @@ pub use describe::{
 pub use provider::{refuse_non_plain, OpenedTransfer, PlainProvider, ServedLeaf};
 pub use session::{ServiceIo, Session, SessionOwner, ROLE_CLIENT, ROLE_PROVIDER};
 pub use mux::{transfer_scheduled, BoundEntry, MuxReport, MuxTransfer};
+#[cfg(not(target_arch = "wasm32"))]
 pub use protected::ProtectedSession;
 pub use session::encode_open_body;
 

@@ -13,12 +13,14 @@
 //! - Streaming `.q42` semantic graph encoding (`emit_anatomical_ontology_nquins_to_writer`).
 
 use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io;
 
 use serde::{Deserialize, Serialize};
 
 use crate::q_hash;
 use crate::NQuin;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::QUINS_PER_BLOCK;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -779,14 +781,9 @@ pub fn build_anatomical_ontology_lexicon() -> HashMap<u64, String> {
     lex
 }
 
-/// Encodes all canonical anatomical callout pins and their biological ontology bindings into
-/// a streaming Q42 volume writer, ensuring all Quin blocks are globally object-sorted.
-///
-/// Returns the total number of semantic Quins written into the Q42 volume.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn emit_anatomical_ontology_nquins_to_writer(
-    writer: &mut StreamingQ42VolumeWriter,
-) -> io::Result<usize> {
+/// Builds the globally object-sorted 48-byte `NQuin` list for all canonical anatomical callout pins
+/// and their biological ontology bindings (`PO:`, `UBERON:`, `GO:`, `APC:`).
+pub fn build_anatomical_ontology_nquins() -> Vec<NQuin> {
     let p_type = q_hash("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
     let o_pin_type = q_hash("urn:qualia:bio:AnatomicalCalloutPin");
     let p_scale = q_hash("urn:qualia:bio:hasScale");
@@ -885,7 +882,18 @@ pub fn emit_anatomical_ontology_nquins_to_writer(
 
     // Sort strictly by object ascending to satisfy Q42 BIDX SuperBlock invariant
     quins.sort_by_key(|q| q.object);
+    quins
+}
 
+/// Encodes all canonical anatomical callout pins and their biological ontology bindings into
+/// a streaming Q42 volume writer, ensuring all Quin blocks are globally object-sorted.
+///
+/// Returns the total number of semantic Quins written into the Q42 volume.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn emit_anatomical_ontology_nquins_to_writer(
+    writer: &mut StreamingQ42VolumeWriter,
+) -> io::Result<usize> {
+    let quins = build_anatomical_ontology_nquins();
     let total_quins = quins.len();
     let mut seq_id = 0u64;
 

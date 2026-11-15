@@ -2,21 +2,11 @@
 
 use std::f64::consts::{FRAC_1_SQRT_2, PI};
 
-use crate::q42::m64_matter::{
-    BankedConstituentLut, M64ChunkDirectoryEntry, M64Header, M64PayloadInterval, M64ReadLimits,
-    M64StrataColumnRecord, M64_MAGIC, M64_MODE_STRATA,
-};
-
 use super::acoustic_coupling::{
     evaluate_fluid_solid_oblique_partition, evaluate_planar_interface_scattering,
     resolve_emf_material_entry, resolve_qac_material_ref, AcousticCouplingError, CauchyStress6,
     ContinuumMedium, EmfMaterialZeroPolicy, OrthotropicElasticMedium, PowerLawAcousticAttenuation,
     ResolvedEmfMaterial, TensorStrain6,
-};
-use super::binding::{
-    compute_blake3_256, reject_spatial_key_only_join, CoordinateTransform4x4,
-    CoordinateTransformKind, HalfOpenValidityInterval, MaterialBinding, MaterialBindingError,
-    MaterialEntryIdentity, RationalClock, RationalInstant,
 };
 use super::constitutive::{
     ActiveHamiltonRotation, AnisotropicConstitutiveTensor3x3, Complex64, ConstitutiveError,

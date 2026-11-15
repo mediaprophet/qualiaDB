@@ -31,6 +31,9 @@ impl SparsePageWorkspace {
     pub const fn charged_bytes() -> usize {
         core::mem::size_of::<Self>()
     }
+    pub const fn store_incarnation(&self) -> Generation {
+        self.store_incarnation
+    }
     pub(in super::super) fn with_candidate_page<T>(
         &mut self,
         effect: impl for<'a> FnOnce(&mut CandidateBitmapPage<'a>) -> T,
@@ -64,6 +67,7 @@ impl SparseWorkspaceSlot {
     }
 }
 
+#[cfg(any(test, not(target_arch = "wasm32")))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct SparseWorkspaceKey {
     owner: usize,
@@ -71,6 +75,7 @@ pub(crate) struct SparseWorkspaceKey {
     generation: Generation,
     store_incarnation: Generation,
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 impl SparsePageWorkspace {
     pub(crate) fn binding_key(&self) -> SparseWorkspaceKey {
         SparseWorkspaceKey {
@@ -103,11 +108,13 @@ impl SparsePageWorkspace {
         }
     }
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 #[must_use = "dropping an uncommitted attempt invalidates the page"]
 pub(crate) struct WorkspacePageAttempt<'a> {
     workspace: &'a mut SparsePageWorkspace,
     committed: bool,
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 impl WorkspacePageAttempt<'_> {
     pub(crate) fn workspace(&mut self) -> &mut SparsePageWorkspace {
         self.workspace
@@ -116,6 +123,7 @@ impl WorkspacePageAttempt<'_> {
         self.committed = true;
     }
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 impl Drop for WorkspacePageAttempt<'_> {
     fn drop(&mut self) {
         if !self.committed {

@@ -59,6 +59,7 @@ fn measured(id: &str, root: &str, property: &str, min: f64, max: f64) -> Evidenc
             },
             source_record_id: None,
             media_region: None,
+            ..Default::default()
         },
     }
 }

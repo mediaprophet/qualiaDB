@@ -3,8 +3,10 @@ use super::codec::{Reader, Writer};
 use super::{
     Error, MAX_METADATA, RecipientKeyIds, RecipientRecord, WRAP_BYTES, WRAP_CONTEXT_BYTES,
 };
+#[cfg(any(test, not(target_arch = "wasm32")))]
 use crate::crypto::network::{aead, digest::sha384, kdf::hkdf_sha384};
 use crate::net::qdnf::types::StrongDigest;
+#[cfg(any(test, not(target_arch = "wasm32")))]
 use zeroize::{Zeroize, Zeroizing};
 #[derive(Clone, Copy)]
 pub struct Wrap<'a> {
@@ -127,6 +129,7 @@ pub fn encode_wrap(
     w.put(tag)?;
     w.finish()
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 fn key(kem: &[u8; 32], dh: &[u8; 32], aad: &[u8], out: &mut [u8; 32]) -> Result<(), Error> {
     super::types::nonzero(dh)?;
     let mut ikm = Zeroizing::new([0; 64]);
@@ -139,6 +142,7 @@ fn key(kem: &[u8; 32], dh: &[u8; 32], aad: &[u8], out: &mut [u8; 32]) -> Result<
         out,
     )
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn seal_master_raw(
     c: WrapContext<'_>,
     kem: &[u8; 32],
@@ -159,6 +163,7 @@ pub(crate) fn seal_master_raw(
     aead::encrypt_in_place(&kek, &[0; 12], &aad, &mut encrypted[..], &mut tag)?;
     encode_wrap(c, &encrypted, &tag, out)
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn open_master_raw(
     c: WrapContext<'_>,
     wrap: Wrap<'_>,

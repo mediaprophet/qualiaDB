@@ -31,6 +31,4 @@ pub use types::{
 };
 
 #[cfg(test)]
-pub(crate) use tests::test_fixtures;
-#[cfg(test)]
 pub use tests::test_fixture_split_bytes;

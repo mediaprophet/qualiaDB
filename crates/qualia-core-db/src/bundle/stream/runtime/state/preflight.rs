@@ -85,7 +85,10 @@ impl RuntimeData {
                 accounted = accounted.checked_add(bytes).ok_or(E::Range)?;
             }
         }
+        #[cfg(not(target_arch = "wasm32"))]
         let mut sources = 0usize;
+        #[cfg(target_arch = "wasm32")]
+        let sources = 0usize;
         #[cfg(not(target_arch = "wasm32"))]
         for slot in &self.recovery_sources {
             if let Some(h) = &slot.charge {

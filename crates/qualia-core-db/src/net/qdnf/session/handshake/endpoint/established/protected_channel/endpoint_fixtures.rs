@@ -92,9 +92,7 @@ impl Bearer for Tap {
 pub(super) struct Pair<'a> {
     pub f: &'a Fixture,
     pub ai: &'a EndpointAuthority<'a>,
-    pub ar: &'a EndpointAuthority<'a>,
     pub oi: &'a Mutex<AuthorityOwner>,
-    pub or: &'a Mutex<AuthorityOwner>,
     pub li: &'a Mutex<ReservationLedger>,
     pub lr: &'a Mutex<ReservationLedger>,
     pub i: ProtectedChannel<'a, Tap>,
@@ -208,9 +206,7 @@ pub(super) fn with_pair<R>(run: impl for<'a> FnOnce(Pair<'a>) -> R) -> R {
     run(Pair {
         f: &f,
         ai: &ai,
-        ar: &ar,
         oi: &oi,
-        or: &or,
         li: &li,
         lr: &lr,
         i: ci,
