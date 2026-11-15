@@ -16,10 +16,10 @@ pub use pages::{GeometryPage, GeometryRow, RootPage, RootRow, encode_geometry, e
 pub use recipient::{RecipientFields, RecipientRecord, encode_recipient, recipient_key_ids};
 pub use segment::{ObjectScope, encode_leaf_aad, encode_segment_info, leaf_nonce};
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) use segment::{open_leaf_raw, seal_leaf_raw};
+pub use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
 pub use types::*;
 pub use wrap::{Wrap, WrapContext, encode_wrap};
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) use wrap::{open_master_raw, seal_master_raw};
+pub use wrap::{open_master_raw, seal_master_raw};
 #[cfg(test)]
 mod tests;

@@ -5,10 +5,10 @@ mod receive;
 mod send;
 use super::wire::Error;
 use crate::net::qdnf::types::StrongDigest;
-pub(crate) use receive::{Assembly, Progress};
-pub(crate) use send::MessageSequence;
+pub use receive::{Assembly, Progress};
+pub use send::MessageSequence;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum CarrierError {
+pub enum CarrierError {
     Wire(Error),
     Closed,
     Association,

@@ -27,7 +27,7 @@ impl<'a> PageRefsView<'a> {
         }
         Err(E::Page)
     }
-    pub(crate) fn matches(self, refs: &[PageRef]) -> Result<(), E> {
+    pub fn matches(self, refs: &[PageRef]) -> Result<(), E> {
         if refs.len() != self.count {
             return Err(E::Coverage);
         }

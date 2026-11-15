@@ -143,7 +143,7 @@ fn key(kem: &[u8; 32], dh: &[u8; 32], aad: &[u8], out: &mut [u8; 32]) -> Result<
     )
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) fn seal_master_raw(
+pub fn seal_master_raw(
     c: WrapContext<'_>,
     kem: &[u8; 32],
     dh: &[u8; 32],
@@ -164,7 +164,7 @@ pub(crate) fn seal_master_raw(
     encode_wrap(c, &encrypted, &tag, out)
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) fn open_master_raw(
+pub fn open_master_raw(
     c: WrapContext<'_>,
     wrap: Wrap<'_>,
     kem: &[u8; 32],

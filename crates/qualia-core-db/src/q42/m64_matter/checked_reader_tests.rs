@@ -207,12 +207,12 @@ fn strata_terrain_still_uses_record_crc() {
 
 #[test]
 fn rejects_unknown_record_mode() {
-    let buffer = one_record_container(M64_MAGIC, 0x05, &[0u8; 64]);
+    let buffer = one_record_container(M64_MAGIC, 0x06, &[0u8; 64]);
     assert_eq!(
         parse_one(&buffer).err(),
         Some(M64ReadError::UnsupportedMode {
             chunk: 0,
-            mode: 0x05
+            mode: 0x06
         })
     );
 }

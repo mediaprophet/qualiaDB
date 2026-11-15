@@ -76,7 +76,7 @@ pub struct ReservationHandle {
 
 /// Copyable owner reference used by bounded tables. Not a public budget token.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct ChargeRef {
+pub struct ChargeRef {
     pub slot: u8,
     pub generation: Generation,
 }
@@ -96,7 +96,7 @@ impl ReservationHandle {
     }
 
     /// `ReservationHandle::as_ref`.
-    pub(crate) fn as_ref(&self) -> ChargeRef {
+    pub fn as_ref(&self) -> ChargeRef {
         ChargeRef {
             slot: self.slot,
             generation: self.generation,

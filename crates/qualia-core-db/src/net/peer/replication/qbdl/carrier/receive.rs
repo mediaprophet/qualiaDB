@@ -13,14 +13,14 @@ struct Active {
     header: Header,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Progress {
+pub enum Progress {
     Partial,
     Complete,
 }
 /// One data lane plus one separately supplied control lane. Never allocates.
 /// Failed callbacks, framing errors and unwind erase both lanes and poison this
 /// owner. Reconnect constructs a new owner under a fresh actual session.
-pub(crate) struct Assembly<'a> {
+pub struct Assembly<'a> {
     transcript: StrongDigest,
     data: &'a mut [u8],
     control: &'a mut [u8],
@@ -29,7 +29,7 @@ pub(crate) struct Assembly<'a> {
     closed: bool,
 }
 impl<'a> Assembly<'a> {
-    pub(crate) fn new(
+    pub fn new(
         transcript_id: StrongDigest,
         data: &'a mut [u8],
         control: &'a mut [u8],
@@ -49,7 +49,7 @@ impl<'a> Assembly<'a> {
             closed: false,
         })
     }
-    pub(crate) fn abort(&mut self) {
+    pub fn abort(&mut self) {
         self.data.zeroize();
         self.control.zeroize();
         self.active = None;
@@ -60,7 +60,7 @@ impl<'a> Assembly<'a> {
     /// accepting a syntactic Header alone never establishes those facts.
     /// consume runs on a complete validated message only, while its borrowed
     /// bytes remain private. No message slice escapes this callback.
-    pub(crate) fn accept<T>(
+    pub fn accept<T>(
         &mut self,
         record: ServiceRecordHeader,
         bytes: &[u8],
@@ -72,7 +72,7 @@ impl<'a> Assembly<'a> {
     /// Arm OUTSIDE the actual channel/application authority scope so an outer
     /// final expiry/revocation check also erases assembly. The inner consumer
     /// may stage private state only; this guard cannot undo external effects.
-    pub(crate) fn with_attempt<T, X>(
+    pub fn with_attempt<T, X>(
         &mut self,
         effect: impl FnOnce(&mut Self) -> Result<T, X>,
     ) -> Result<T, X> {

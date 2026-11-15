@@ -3,8 +3,10 @@
 pub mod qdnf_errors;
 #[path = "../../../crates/qualia-core-db/src/net/qdnf/types.rs"]
 pub mod qdnf_types;
+#[path = "../../../crates/qualia-core-db/src/net/qdnf/authority/mod.rs"]
+pub mod qdnf_authority;
 pub mod errors { pub use crate::qdnf_errors::*; pub use crate::qdnf_errors::QdnfError as CryptoError; }
-pub mod net { pub mod qdnf { pub use crate::qdnf_types as types; pub use crate::qdnf_errors as errors; pub mod crypto { pub use crate::session_schedule as schedule; pub use crate::session_finished as finished; } } pub mod peer { pub use crate::parent_runtime as runtime; } }
+pub mod net { pub mod qdnf { pub use crate::qdnf_authority as authority; pub use crate::qdnf_types as types; pub use crate::qdnf_errors as errors; pub mod crypto { pub use crate::session_schedule as schedule; pub use crate::session_finished as finished; } } pub mod peer { pub use crate::parent_runtime as runtime; } }
 #[path = "../../../crates/qualia-core-db/src/bundle/stream/proof/mod.rs"]
 pub mod proof;
 #[cfg(test)]
@@ -53,6 +55,7 @@ pub mod crypto { pub mod network {
     pub use crate::crypto_ed25519 as ed25519;
     pub use crate::crypto_dual_sign as dual_sign;
     pub use crate::crypto_cose as cose;
+    pub use crate::library_signing_profile as signing_profile;
 } }
 
 #[cfg(test)]

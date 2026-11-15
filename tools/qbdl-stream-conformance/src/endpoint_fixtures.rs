@@ -29,9 +29,6 @@ fn corpus() -> Value {
 fn arr32(bytes: &[u8]) -> [u8; 32] {
     bytes.try_into().unwrap()
 }
-fn arr48(bytes: &[u8]) -> [u8; 48] {
-    bytes.try_into().unwrap()
-}
 
 #[derive(Clone)]
 struct Inputs {

@@ -115,7 +115,7 @@ pub fn leaf_nonce(s: ObjectScope, index: u64) -> Result<[u8; 12], Error> {
     Ok(out)
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) fn derive_segment(
+pub fn derive_segment(
     master: &[u8; 32],
     s: ObjectScope,
     segment: u32,
@@ -127,7 +127,7 @@ pub(crate) fn derive_segment(
     hkdf_sha384(Some(&s.context.0), master, &info, out)
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) fn seal_leaf_raw(
+pub fn seal_leaf_raw(
     master: &[u8; 32],
     s: ObjectScope,
     index: u64,
@@ -149,7 +149,7 @@ pub(crate) fn seal_leaf_raw(
     result
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
-pub(crate) fn open_leaf_raw(
+pub fn open_leaf_raw(
     master: &[u8; 32],
     s: ObjectScope,
     index: u64,

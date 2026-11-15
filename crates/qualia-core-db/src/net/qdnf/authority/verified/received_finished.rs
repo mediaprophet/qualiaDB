@@ -1,7 +1,7 @@
 //! Endpoint-only installation checks a received peer Finished, never a trust bool.
 use super::*;
 impl InstalledSessionKeys {
-    pub(crate) fn from_received_finished(
+    pub fn from_received_finished(
         generation: Generation,
         send: &[u8; 32],
         recv: &[u8; 32],

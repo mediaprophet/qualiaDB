@@ -69,7 +69,7 @@ impl SparseWorkspaceSlot {
 
 #[cfg(any(test, not(target_arch = "wasm32")))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct SparseWorkspaceKey {
+pub struct SparseWorkspaceKey {
     owner: usize,
     slot: u8,
     generation: Generation,
@@ -77,7 +77,7 @@ pub(crate) struct SparseWorkspaceKey {
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
 impl SparsePageWorkspace {
-    pub(crate) fn binding_key(&self) -> SparseWorkspaceKey {
+    pub fn binding_key(&self) -> SparseWorkspaceKey {
         SparseWorkspaceKey {
             owner: self.owner,
             slot: self.slot,
@@ -87,13 +87,13 @@ impl SparsePageWorkspace {
     }
     /// A new facade cannot inherit marks from another backend/store incarnation.
     /// This only removes marks and cannot manufacture a verified leaf.
-    pub(crate) fn reset_for_store(&mut self) -> Result<SparseWorkspaceKey, QdnfError> {
+    pub fn reset_for_store(&mut self) -> Result<SparseWorkspaceKey, QdnfError> {
         let next = self.store_incarnation.next()?;
         self.page.invalidate();
         self.store_incarnation = next;
         Ok(self.binding_key())
     }
-    pub(crate) fn check_binding_key(&self, key: SparseWorkspaceKey) -> Result<(), QdnfError> {
+    pub fn check_binding_key(&self, key: SparseWorkspaceKey) -> Result<(), QdnfError> {
         if self.binding_key() != key {
             return Err(QdnfError::StaleGeneration);
         }
@@ -101,7 +101,7 @@ impl SparsePageWorkspace {
     }
     /// Arm before possible effects; commit only after the outer policy wrapper
     /// AND final runtime check succeed. Failure/unwind mechanically clears marks.
-    pub(crate) fn begin_attempt(&mut self) -> WorkspacePageAttempt<'_> {
+    pub fn begin_attempt(&mut self) -> WorkspacePageAttempt<'_> {
         WorkspacePageAttempt {
             workspace: self,
             committed: false,
@@ -110,16 +110,16 @@ impl SparsePageWorkspace {
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
 #[must_use = "dropping an uncommitted attempt invalidates the page"]
-pub(crate) struct WorkspacePageAttempt<'a> {
+pub struct WorkspacePageAttempt<'a> {
     workspace: &'a mut SparsePageWorkspace,
     committed: bool,
 }
 #[cfg(any(test, not(target_arch = "wasm32")))]
 impl WorkspacePageAttempt<'_> {
-    pub(crate) fn workspace(&mut self) -> &mut SparsePageWorkspace {
+    pub fn workspace(&mut self) -> &mut SparsePageWorkspace {
         self.workspace
     }
-    pub(crate) fn commit(mut self) {
+    pub fn commit(mut self) {
         self.committed = true;
     }
 }

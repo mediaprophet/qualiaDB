@@ -2,7 +2,7 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 #[path = "schedule/endpoint.rs"]
-pub(crate) mod endpoint;
+pub mod endpoint;
 
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::kdf::hkdf_sha384;
