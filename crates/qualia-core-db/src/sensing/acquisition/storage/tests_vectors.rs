@@ -18,12 +18,8 @@ const UNKNOWN_OPTIONAL_QAC: &[u8] = include_bytes!("fixtures/unknown-optional.qa
 const BAD_REF_QAC: &[u8] = include_bytes!("fixtures/bad-ref.qac");
 const BAD_HASH_QAC: &[u8] = include_bytes!("fixtures/bad-hash.qac");
 const OVERFLOW_STRIDE_QAC: &[u8] = include_bytes!("fixtures/overflow-stride.qac");
-const AUX_EMF: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/emf-aux-0x0104-0x0106-0x0107.emf"
-);
-const AUX_QAC: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/qac-aux-0x0104-0x0106-0x0107.qac"
-);
+const AUX_EMF: &[u8] = include_bytes!("fixtures/emf-aux-0x0104-0x0106-0x0107.emf");
+const AUX_QAC: &[u8] = include_bytes!("fixtures/qac-aux-0x0104-0x0106-0x0107.qac");
 
 fn sha256_hex(input: &[u8]) -> String {
     const K: [u32; 64] = [
