@@ -10,4 +10,4 @@ pub(super) use codec::{parse_extension, prepare_extension, validate_field_direct
 mod tests;
 
 mod range;
-pub(crate) use range::{parse_extension_tail, validate_directory_bytes};
+pub use range::{parse_extension_tail, validate_directory_bytes};

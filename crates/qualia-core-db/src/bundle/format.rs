@@ -59,14 +59,14 @@ pub const BUNDLE_PAGE_ALIGN_4096: usize = 4096;
 pub const BUNDLE_FLAG_PAGE_ALIGN_4096: u16 = 0x0001;
 
 // --- header field byte offsets ---
-pub(crate) const OFF_MAGIC: usize = 0;
-pub(crate) const OFF_VERSION: usize = 4;
-pub(crate) const OFF_FLAGS: usize = 6;
-pub(crate) const OFF_ENTRY_COUNT: usize = 8;
-pub(crate) const OFF_INDEX_OFFSET: usize = 12;
-pub(crate) const OFF_INDEX_LENGTH: usize = 20;
-pub(crate) const OFF_TOTAL_LENGTH: usize = 28;
-pub(crate) const OFF_CRC32C: usize = 36;
+pub const OFF_MAGIC: usize = 0;
+pub const OFF_VERSION: usize = 4;
+pub const OFF_FLAGS: usize = 6;
+pub const OFF_ENTRY_COUNT: usize = 8;
+pub const OFF_INDEX_OFFSET: usize = 12;
+pub const OFF_INDEX_LENGTH: usize = 20;
+pub const OFF_TOTAL_LENGTH: usize = 28;
+pub const OFF_CRC32C: usize = 36;
 // [40 .. 64) reserved, must be zero.
 
 /// Length of a SHA-256 digest in bytes.
@@ -99,7 +99,7 @@ pub struct BundleEntry {
 
 /// Round `n` up to the next multiple of `align` (a power of two).
 #[inline]
-pub(crate) fn align_up(n: usize, align: usize) -> usize {
+pub fn align_up(n: usize, align: usize) -> usize {
     debug_assert!(align.is_power_of_two());
     (n + align - 1) & !(align - 1)
 }

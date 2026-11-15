@@ -19,7 +19,7 @@ impl<'a> CurrentAuthorityGuard<'a> {
         })?;
         Ok(Self { owner, guard })
     }
-    pub(crate) fn check_affinity(&self, owner: &Mutex<AuthorityOwner>) -> Result<(), E> {
+    pub fn check_affinity(&self, owner: &Mutex<AuthorityOwner>) -> Result<(), E> {
         if !core::ptr::eq(self.owner, owner) {
             return Err(E::Unauthorized);
         }
@@ -28,7 +28,7 @@ impl<'a> CurrentAuthorityGuard<'a> {
         }
         Ok(())
     }
-    pub(crate) fn check_handle(
+    pub fn check_handle(
         &self,
         owner: &Mutex<AuthorityOwner>,
         handle: MutationHandle,
@@ -41,7 +41,7 @@ impl<'a> CurrentAuthorityGuard<'a> {
             .issue_permit(handle, binding, now, ceiling)
             .map(|_| ())
     }
-    pub(crate) fn revoke_handle(
+    pub fn revoke_handle(
         &mut self,
         owner: &Mutex<AuthorityOwner>,
         handle: MutationHandle,

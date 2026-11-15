@@ -10,7 +10,7 @@ use super::{
 use crate::q42::m64_matter::{M64ChunkDirectoryEntry, M64Header, M64StrataColumnRecord};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum SampleError {
+pub enum SampleError {
     Geometry,
     Padding,
     RecordCrc,
@@ -19,7 +19,7 @@ pub(crate) enum SampleError {
 
 /// Validate the complete georaster header/directory closure without reading any records.
 /// Callers must authenticate the exact whole directory before passing it here.
-pub(crate) fn validate_header_directory(
+pub fn validate_header_directory(
     logical_length: u64,
     header: &M64Header,
     meta: &M64GeoRasterMetadata,
@@ -51,7 +51,7 @@ pub(crate) fn validate_header_directory(
 }
 
 /// Canonical row-major map from an in-bounds raster coordinate to (chunk, record).
-pub(crate) fn sample_location(
+pub fn sample_location(
     shape: &M64GeoRasterShape,
     x: usize,
     y: usize,
@@ -75,7 +75,7 @@ pub(crate) fn sample_location(
 
 /// Validate exactly one 64-byte georaster record. Padding is a coordinate
 /// question handled by `sample_location`; this checks CRC and non-raster bytes.
-pub(crate) fn validate_sample_record(
+pub fn validate_sample_record(
     meta: &M64GeoRasterMetadata,
     chunk_index: usize,
     raw: &[u8],

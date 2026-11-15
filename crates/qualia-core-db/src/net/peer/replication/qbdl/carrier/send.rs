@@ -3,25 +3,25 @@ use super::{transcript, CarrierError as E};
 use crate::net::qdnf::types::StrongDigest;
 /// Per-direction checked message IDs. Construct once from an established
 /// session, never per transfer. PendingMessage retains the exact original bytes.
-pub(crate) struct MessageSequence {
+pub struct MessageSequence {
     transcript: StrongDigest,
     next: u128,
 }
-pub(crate) struct PendingMessage<'a> {
+pub struct PendingMessage<'a> {
     transcript: StrongDigest,
     id: u128,
     bytes: &'a [u8],
     offset: usize,
 }
 impl MessageSequence {
-    pub(crate) fn new(value: StrongDigest) -> Result<Self, E> {
+    pub fn new(value: StrongDigest) -> Result<Self, E> {
         transcript(value)?;
         Ok(Self {
             transcript: value,
             next: 1,
         })
     }
-    pub(crate) fn begin<'a>(&mut self, bytes: &'a [u8]) -> Result<PendingMessage<'a>, E> {
+    pub fn begin<'a>(&mut self, bytes: &'a [u8]) -> Result<PendingMessage<'a>, E> {
         Message::parse(bytes)?;
         let next = self.next.checked_add(1).ok_or(E::Order)?;
         let id = self.next;
@@ -35,7 +35,7 @@ impl MessageSequence {
     }
 }
 impl PendingMessage<'_> {
-    pub(crate) fn current(&self) -> Option<(ServiceRecordHeader, &[u8])> {
+    pub fn current(&self) -> Option<(ServiceRecordHeader, &[u8])> {
         if self.offset == self.bytes.len() {
             return None;
         }
@@ -54,7 +54,7 @@ impl PendingMessage<'_> {
     }
     /// Only after the common channel has drained the EXACT sealed frame.
     /// WouldBlock leaves this cursor untouched; do not reseal or advance it.
-    pub(crate) fn drained(&mut self) -> Result<(), E> {
+    pub fn drained(&mut self) -> Result<(), E> {
         if self.offset == self.bytes.len() {
             return Err(E::Closed);
         }

@@ -15,8 +15,7 @@ pub use types::*;
 pub use binding::{decode_binding,encode_binding,PairedPublicKeys};
 pub use envelope::{decode_pair,encode_pair,sig_structure_into,ParsedPair};
 pub use verify::{verify_pair,VerifiedPair};
-#[cfg(test)]
-pub(crate) use raw_signing::{sign_pair_raw,SigningKeys};
+pub use raw_signing::{sign_pair_raw,SigningKeys};
 #[cfg(test)]
 #[path = "../../../../crates/qualia-core-db/src/crypto/network/cose/tests.rs"]
 mod tests;

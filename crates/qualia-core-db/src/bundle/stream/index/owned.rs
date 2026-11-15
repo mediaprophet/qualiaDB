@@ -52,7 +52,7 @@ pub fn materialize_entries(
     Ok(out)
 }
 
-pub(crate) fn decode_owned_index(
+pub fn decode_owned_index(
     h: &CheckedHeader,
     bytes: &[u8],
     l: IndexReadLimits,

@@ -8,13 +8,13 @@ use fips204::{
 };
 
 /// Borrowed provider keys, confined to internal adapters and fixtures.
-pub(crate) struct RawSigningKeys<'a> {
+pub struct RawSigningKeys<'a> {
     pub ml_dsa_65: &'a ml_dsa_65::PrivateKey,
     pub ed25519: &'a SigningKey,
 }
 
 /// FIPS-204 ordinary ML-DSA-65, raw message and empty primitive context.
-pub(crate) fn sign_mldsa65_empty_context_into(
+pub fn sign_mldsa65_empty_context_into(
     key: &ml_dsa_65::PrivateKey,
     message: &[u8],
     out: &mut [u8; ML_DSA_65_SIG_LEN],
@@ -38,7 +38,7 @@ pub fn verify_mldsa65_empty_context(
     }
 }
 
-pub(crate) fn sign_ed25519_raw_into(
+pub fn sign_ed25519_raw_into(
     key: &SigningKey,
     message: &[u8],
     out: &mut [u8; ED25519_SIG_LEN],

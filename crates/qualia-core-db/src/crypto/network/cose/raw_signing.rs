@@ -9,9 +9,9 @@ use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::signing_profile::{self, RawSigningKeys};
 use fips204::traits::{SerDes, Signer};
 
-pub(crate) type SigningKeys<'a> = RawSigningKeys<'a>;
+pub type SigningKeys<'a> = RawSigningKeys<'a>;
 impl RawSigningKeys<'_> {
-    pub(crate) fn key_ids(&self) -> KeyIds {
+    pub fn key_ids(&self) -> KeyIds {
         let ml = self.ml_dsa_65.get_public_key().into_bytes();
         let ed = self.ed25519.verifying_key().to_bytes();
         PairedPublicKeys {
@@ -23,7 +23,7 @@ impl RawSigningKeys<'_> {
 }
 
 /// Internal fixtures/adapters only. No public arbitrary-key signing escape hatch.
-pub(crate) fn sign_pair_raw(
+pub fn sign_pair_raw(
     binding: &Binding<'_>,
     keys: &SigningKeys<'_>,
     workspace: &mut Workspace,
@@ -33,7 +33,7 @@ pub(crate) fn sign_pair_raw(
     encode_pair(&workspace.binding[..n], &workspace.signatures, out)
 }
 
-pub(super) fn sign_payload(
+pub fn sign_payload(
     binding: &Binding<'_>,
     keys: &RawSigningKeys<'_>,
     workspace: &mut Workspace,

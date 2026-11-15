@@ -9,7 +9,7 @@ use super::model::*;
 use crate::container_10d::crc32c::crc32c;
 use crate::q42::chunk_integrity::{verify_blake3_trailer, BLAKE3_TRAILER_BYTES};
 use std::collections::BTreeSet;
-pub(crate) fn parse_extension_tail(
+pub fn parse_extension_tail(
     bytes: &[u8],
     field_end: usize,
     total: usize,
@@ -144,7 +144,7 @@ pub(crate) fn parse_extension_tail(
 }
 
 /// v3 canonical field layout and explicit Hilbert/time interpretation.
-pub(crate) fn validate_directory_bytes(
+pub fn validate_directory_bytes(
     header: &super::super::header::EmfContainerHeader,
     bytes: &[u8],
     extension: &EmfExtensionView<'_>,

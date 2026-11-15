@@ -23,7 +23,7 @@ pub struct VerifiedCredential {
 
 impl VerifiedCredential {
     /// Creates a default `VerifiedCredential`.
-    pub(crate) fn new(
+    pub fn new(
         principal: StrongDigest,
         issuer: StrongDigest,
         instrument: StrongDigest,
@@ -79,7 +79,7 @@ pub struct AuthorisedContact {
 
 impl AuthorisedContact {
     /// Creates a default `AuthorisedContact`.
-    pub(crate) fn new(
+    pub fn new(
         local: StrongDigest,
         remote: StrongDigest,
         state: ContactState,
@@ -144,7 +144,7 @@ pub struct InstalledSessionKeys {
 
 impl InstalledSessionKeys {
     /// Creates a default `InstalledSessionKeys`.
-    pub(crate) fn new(
+    pub fn new(
         generation: Generation,
         send: [u8; AEAD_KEY_LEN],
         recv: [u8; AEAD_KEY_LEN],

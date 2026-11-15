@@ -53,9 +53,9 @@ impl Default for PairSignatures {
 
 /// Public-message scratch. Provider-internal resources are separately qualified.
 pub struct Workspace {
-    pub(crate) binding: [u8; MAX_BINDING_BYTES],
-    pub(crate) sig_structure: [u8; MAX_SIG_STRUCTURE_BYTES],
-    pub(crate) signatures: PairSignatures,
+    pub binding: [u8; MAX_BINDING_BYTES],
+    pub sig_structure: [u8; MAX_SIG_STRUCTURE_BYTES],
+    pub signatures: PairSignatures,
 }
 
 impl Workspace {
