@@ -1,5 +1,6 @@
 //! Transcript-bound handshake key schedule (E02.1).
 
+#[cfg(not(target_arch = "wasm32"))]
 #[path = "schedule/endpoint.rs"]
 pub(crate) mod endpoint;
 

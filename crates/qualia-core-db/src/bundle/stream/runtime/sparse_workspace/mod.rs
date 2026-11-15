@@ -10,4 +10,5 @@ pub use types::{SparsePageWorkspace, WorkspaceReleaseError, MAX_SPARSE_WORKSPACE
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};

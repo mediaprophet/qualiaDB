@@ -3,9 +3,7 @@ use crate::q42::{
     field_envelope::{self as env, Family, StructuralView},
     field_semantics as sem,
 };
-#[path = "test_support.rs"]
-mod support;
-use support::*;
+use super::test_support::*;
 const PCM: &[u8] = include_bytes!("fixtures/pcm-f32-special.le");
 fn admit_limit<'a>(
     view: &StructuralView<'a>,

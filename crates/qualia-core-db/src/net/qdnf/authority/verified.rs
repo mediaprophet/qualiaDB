@@ -2,6 +2,7 @@
 //!
 //! Constructors are crate-private. External crates cannot mint Active/Allow.
 
+#[cfg(not(target_arch = "wasm32"))]
 mod received_finished;
 
 use crate::crypto::network::types::AEAD_KEY_LEN;

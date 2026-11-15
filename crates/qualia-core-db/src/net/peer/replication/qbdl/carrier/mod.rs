@@ -7,8 +7,6 @@ use super::wire::Error;
 use crate::net::qdnf::types::StrongDigest;
 pub(crate) use receive::{Assembly, Progress};
 pub(crate) use send::MessageSequence;
-#[cfg(test)]
-pub(crate) use send::PendingMessage;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum CarrierError {
     Wire(Error),

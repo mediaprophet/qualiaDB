@@ -5,7 +5,7 @@ use crate::medical::dicom_codecs::jxl::color::{linear_to_transfer, xyb_to_linear
 use crate::medical::dicom_codecs::jxl::container::default_opsin_inverse_matrix;
 use crate::medical::dicom_codecs::jxl::modular::{apply_inverse_rct, smooth_tendency};
 use crate::medical::dicom_codecs::jxl::modular_transforms::ModularChannel;
-use crate::medical::dicom_codecs::jxl::vardct::{apply_inverse_block_transform, fdct_1d_into, idct_1d_into, VarDctTransform};
+use crate::medical::dicom_codecs::jxl::vardct::{apply_inverse_block_transform, fdct_1d_into, VarDctTransform};
 
 struct BitWriter {
     buf: Vec<u8>,

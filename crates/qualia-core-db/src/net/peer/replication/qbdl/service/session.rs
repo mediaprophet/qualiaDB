@@ -95,11 +95,7 @@ impl<'a, B: Bearer> Session<'a, B> {
         if role == 0 {
             return Err(Error::Malformed);
         }
-        let SessionOwner {
-            data,
-            control,
-            record,
-        } = owner;
+        let (data, control, record) = owner.lanes();
         Ok(Self {
             endpoint,
             peer,

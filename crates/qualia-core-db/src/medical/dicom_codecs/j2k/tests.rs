@@ -143,7 +143,7 @@ fn j2k_dwt_53_and_97_1d_and_2d_exact_inversion() {
     let sig: Vec<i32> = vec![12, -45, 77, 1024, -512, 33, 9];
     let n = sig.len();
     // Forward 5/3 with cas=0:
-    let mut x = sig.clone();
+    let x = sig.clone();
     let mut high = vec![0i32; n / 2];
     let mut low = vec![0i32; n.div_ceil(2)];
     for k in 0..high.len() {

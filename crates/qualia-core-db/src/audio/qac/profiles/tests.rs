@@ -1,5 +1,5 @@
-//! Unit and physics tests for Q05 profiles (HOA, HRIR, Ray RIR).
-//! Included into `tests_q03_q05.rs` to satisfy the <= 500 lines per file requirement.
+// Unit and physics tests for Q05 profiles (HOA, HRIR, Ray RIR).
+// Included into `tests_q03_q05.rs` to satisfy the <= 500 lines per file requirement.
 
 #[test]
 fn test_q05_hoa_cardinal_normalization_fuma_rotation_and_domain_guard() {

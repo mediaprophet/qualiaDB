@@ -145,7 +145,7 @@ fn invalid_indices_capacity_and_excess_depth_refuse() {
     ));
     assert_eq!(ranges, before, "capacity refusal is transactional");
     assert!(matches!(
-        sibling_ranges((1u64 << 33), 0, &mut ranges),
+        sibling_ranges(1u64 << 33, 0, &mut ranges),
         Err(ProofError::Limit)
     ));
     let max_leaves = crate::bundle::stream::proof::MAX_LOGICAL_BYTES / LEAF_BYTES;

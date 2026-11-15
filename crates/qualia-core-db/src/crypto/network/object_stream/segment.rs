@@ -4,8 +4,10 @@ use super::{
     Error, LEAF_AAD_BYTES, LEAF_BYTES, MAX_METADATA, MAX_OBJECT_BYTES, MAX_SEGMENTS,
     SEGMENT_INFO_BYTES, SEGMENT_LEAVES,
 };
+#[cfg(any(test, not(target_arch = "wasm32")))]
 use crate::crypto::network::{aead, kdf::hkdf_sha384};
 use crate::net::qdnf::types::StrongDigest;
+#[cfg(any(test, not(target_arch = "wasm32")))]
 use zeroize::{Zeroize, Zeroizing};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ObjectScope {
@@ -112,6 +114,7 @@ pub fn leaf_nonce(s: ObjectScope, index: u64) -> Result<[u8; 12], Error> {
     out[4..].copy_from_slice(&index.to_be_bytes());
     Ok(out)
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn derive_segment(
     master: &[u8; 32],
     s: ObjectScope,
@@ -123,6 +126,7 @@ pub(crate) fn derive_segment(
     encode_segment_info(s, segment, &mut info)?;
     hkdf_sha384(Some(&s.context.0), master, &info, out)
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn seal_leaf_raw(
     master: &[u8; 32],
     s: ObjectScope,
@@ -144,6 +148,7 @@ pub(crate) fn seal_leaf_raw(
     }
     result
 }
+#[cfg(any(test, not(target_arch = "wasm32")))]
 pub(crate) fn open_leaf_raw(
     master: &[u8; 32],
     s: ObjectScope,

@@ -473,7 +473,8 @@ fn mutate_dependency_identity_refuses() {
         Obligation::Mandatory,
         7,
     );
-    let inv = Inventory::compile(a, &[local, calib], &[]).unwrap();
+    let local_calib = [local, calib];
+    let inv = Inventory::compile(a, &local_calib, &[]).unwrap();
     assert_eq!(
         evaluate(&inv, EMF, Some(EntryFamily::TenD), &[EMF, CALIB]),
         Readiness::Refused
@@ -538,7 +539,8 @@ fn emf_qac_equal_timestamps_without_shared_timebase_are_not_one_clock() {
         None,
     );
     assert_eq!(emf.interval(), qac.interval());
-    let inv = Inventory::compile(candidate, &[emf, qac], &[]).unwrap();
+    let emf_qac = [emf, qac];
+    let inv = Inventory::compile(candidate, &emf_qac, &[]).unwrap();
     assert!(!inv.share_clock(EMF, QAC));
     assert_eq!(
         DependencyEdge::bind(&emf, &qac, Obligation::Optional, DependencyReason::Clock),
@@ -547,18 +549,15 @@ fn emf_qac_equal_timestamps_without_shared_timebase_are_not_one_clock() {
     let tb = TimebaseId::declared(StrongDigest([3; 48])).unwrap();
     let emf_c = with_interval(spec_of(&emf), ticks, Some(tb));
     let qac_c = with_interval(spec_of(&qac), ticks, Some(tb));
-    let shared = Inventory::compile(
-        candidate,
-        &[emf_c, qac_c],
-        &[DependencyEdge::bind(
-            &emf_c,
-            &qac_c,
-            Obligation::Optional,
-            DependencyReason::Clock,
-        )
-        .unwrap()],
+    let shared_entries = [emf_c, qac_c];
+    let shared_edges = [DependencyEdge::bind(
+        &emf_c,
+        &qac_c,
+        Obligation::Optional,
+        DependencyReason::Clock,
     )
-    .unwrap();
+    .unwrap()];
+    let shared = Inventory::compile(candidate, &shared_entries, &shared_edges).unwrap();
     assert!(shared.share_clock(EMF, QAC));
 }
 #[test]

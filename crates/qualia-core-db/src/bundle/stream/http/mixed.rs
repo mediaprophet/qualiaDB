@@ -1348,7 +1348,7 @@ mod mixed_http_tests {
             }
         );
         assert_eq!(&client_out[..native.len()], native.as_slice());
-        let text = String::from_utf8_lossy(&captured.lock().unwrap());
+        let text = String::from_utf8_lossy(&captured.lock().unwrap()).into_owned();
         assert!(text.contains("Accept-Encoding: identity"));
         assert!(text.contains("Range: bytes="));
         assert!(text.contains("If-Range: "));
@@ -1967,7 +1967,7 @@ mod mixed_http_tests {
             }
         );
         assert_eq!(&client_out[..take], native_window.as_slice());
-        let text = String::from_utf8_lossy(&captured.lock().unwrap());
+        let text = String::from_utf8_lossy(&captured.lock().unwrap()).into_owned();
         assert!(text.contains("Accept-Encoding: identity"));
         assert!(text.contains("Range: bytes="));
         assert!(!text.contains("Authorization:"));

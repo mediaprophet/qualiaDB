@@ -326,13 +326,9 @@ pub fn admit_qac_signal_with_acquisition_source<'a>(
 }
 
 #[cfg(test)]
-#[path = "test_support.rs"]
-mod support;
-
-#[cfg(test)]
 mod tests {
     use super::*;
-    use support::*;
+    use super::super::test_support::*;
     use crate::q42::field_envelope::{EntryInput, EnvelopeInput};
 
     const RAW_BYTES: &[u8] = b"RAW_ACQ_SENSOR_STREAM_01";

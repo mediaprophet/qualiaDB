@@ -196,8 +196,8 @@ mod tests {
         KinematicSolverRegime, Skl2JointDescriptorV2, SwingTwistConeLimits, SKL2_NONE_INDEX,
         SKL2_VERSION_1, SKL2_VERSION_2,
     };
+    use crate::render::assets::Mesh;
     use crate::render::compile_10d::{compile_mesh_to_10d_with_nodes, decode_10d_mesh};
-    use crate::specialized_libs::computational_geometry::types::Mesh;
 
     fn sample_mesh_container() -> Vec<u8> {
         let mesh = Mesh {

@@ -1,4 +1,4 @@
-use super::{geometry::*, ids::*, metadata::*, publisher::*, *};
+use super::{ids::*, metadata::*, publisher::*, *};
 use crate::bundle::stream::{index::EntryScratch, proof::*};
 use crate::bundle::{BundleReadLimits, BundleWriter};
 use crate::crypto::network::{

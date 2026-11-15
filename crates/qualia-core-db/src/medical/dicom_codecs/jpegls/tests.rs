@@ -1,5 +1,4 @@
 use super::*;
-use crate::medical::dicom_codecs::encapsulated::EncapLimits;
 
 struct T87BitWriter {
     out: Vec<u8>,

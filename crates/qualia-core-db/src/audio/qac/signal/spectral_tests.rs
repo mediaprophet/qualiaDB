@@ -3,9 +3,7 @@ use crate::q42::{
     field_envelope::{self as env, Family, StructuralView},
     field_semantics as sem,
 };
-#[path = "test_support.rs"]
-mod support;
-use support::*;
+use super::test_support::*;
 #[test]
 fn imaginary_phase_bin_order_and_negative_nyquist_are_explicit() {
     let original = include_bytes!("fixtures/stft-n4-imaginary.le");

@@ -12,7 +12,9 @@ use std::collections::{BTreeMap, HashMap};
 
 use serde_json::{Map, Number, Value};
 
-use super::model::{CorpusConflict, SpeciesCorpus, SPECIES_CORPUS_CONTEXT};
+#[cfg(not(target_arch = "wasm32"))]
+use super::model::CorpusConflict;
+use super::model::{SpeciesCorpus, SPECIES_CORPUS_CONTEXT};
 
 /// A corpus written both as a native `.q42` volume and as its CBOR-LD projection.
 #[cfg(not(target_arch = "wasm32"))]
@@ -201,6 +203,15 @@ impl SpeciesCorpus {
         Ok((g.lex, g.quins))
     }
 
+    /// Reconstructs and validates a [`SpeciesCorpus`] from an in-memory Q42 lexicon map and NQuin slice.
+    pub fn from_q42_graph(lex: &HashMap<u64, String>, quins: &[NQuin]) -> Result<Self, String> {
+        decode_graph(quins, |h| {
+            lex.get(&h)
+                .cloned()
+                .ok_or_else(|| format!("species corpus has unresolved lexicon hash {h:#018x}"))
+        })
+    }
+
     /// Encodes the corpus as a unified `.q42` volume.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn to_q42_bytes(&self) -> Result<Vec<u8>, String> {
@@ -282,11 +293,17 @@ impl SpeciesCorpus {
         self.validate()?;
         let mut out = vec![0xd9, 0xd9, 0xf7];
         ciborium::into_writer(self, &mut out).map_err(|e| format!("cbor encode: {e}"))?;
+        if out.len() > MAX_CORPUS_Q42_BYTES {
+            return Err(format!("species corpus exceeds {MAX_CORPUS_Q42_BYTES} bytes"));
+        }
         Ok(out)
     }
 
     /// Decodes and validates the CBOR-LD interchange projection.
     pub fn from_cbor_ld(bytes: &[u8]) -> Result<Self, String> {
+        if bytes.len() > MAX_CORPUS_Q42_BYTES {
+            return Err(format!("species corpus exceeds {MAX_CORPUS_Q42_BYTES} bytes"));
+        }
         let body = bytes.strip_prefix(&[0xd9, 0xd9, 0xf7]).unwrap_or(bytes);
         let corpus: Self = ciborium::from_reader(body).map_err(|e| format!("cbor decode: {e}"))?;
         corpus.validate()?;

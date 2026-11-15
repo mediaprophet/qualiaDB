@@ -44,7 +44,7 @@ fn crash_writer_child() {
         [2; 32],
         0,
         |mut store, workspace, rt, pins, bound, f, payload, _, _, _| {
-            let mut op = ticket(rt, payload.len(), 1);
+            let op = ticket(rt, payload.len(), 1);
             let mut scratch = vec![0; READ_SCRATCH_BYTES];
             let mut nodes = [StrongDigest::ZERO; 32];
             let mut owner = AuthorityOwner::new();

@@ -1,5 +1,6 @@
 //! Share-exchange: initiator ML-KEM public + X25519, responder ciphertext + X25519.
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) mod leased;
 
 use crate::crypto::network::errors::CryptoError;

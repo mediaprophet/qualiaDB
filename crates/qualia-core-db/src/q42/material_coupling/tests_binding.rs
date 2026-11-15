@@ -10,7 +10,6 @@ use super::binding::{
     CoordinateTransformKind, HalfOpenValidityInterval, MaterialBinding, MaterialBindingError,
     MaterialEntryIdentity, RationalClock, RationalInstant,
 };
-use super::transduction::IqCarrierConvention;
 
 fn build_valid_m64_strata_container() -> Vec<u8> {
     let mut rec = M64StrataColumnRecord::default();

@@ -313,8 +313,7 @@ pub struct RetainedEmf {
 }
 
 impl RetainedEmf {
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) fn bounds(&self) -> Option<[f32; 6]> {
+    pub fn bounds(&self) -> Option<[f32; 6]> {
         self.field.as_ref().map(|f| f.bounds)
     }
     pub fn status(&self) -> EmfDisplayStatus {
