@@ -46,8 +46,14 @@ impl QualiaPortal {
         Reflect::set(
             &result,
             &"conversion".into(),
-            &"legacy-phase-sigma-diagnostic".into(),
+            &"electric-magnitude-grayscale-diagnostic".into(),
         )?;
+        Reflect::set(
+            &result,
+            &"display_formula".into(),
+            &"clamp(gain * (1-exp(-|E|/(1 V/m))), 0, 1); validity alpha unchanged".into(),
+        )?;
+        Reflect::set(&result, &"source_values_changed".into(), &JsValue::FALSE)?;
         Reflect::set(
             &result,
             &"amplitude_gain".into(),

@@ -133,6 +133,7 @@ impl PortalGpu {
         self.pick_readback.invalidate(true);
         self.pick_semantic_result = None;
         self.source_motion.retire();
+        self.refresh_instance_group_bounds();
         true
     }
 }

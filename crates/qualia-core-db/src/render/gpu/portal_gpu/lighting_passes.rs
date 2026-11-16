@@ -88,11 +88,15 @@ impl PortalGpu {
                     &mesh.material_gpu.material_bind_groups[draw.material_index],
                     &[draw.material_offset],
                 );
-                pass.draw_indexed(
-                    draw.first_index..draw.first_index + draw.index_count,
-                    0,
-                    0..self.mesh_instances.count(),
-                );
+                for (indices, instances) in super::super::instance_groups::draw_ranges(
+                    &self.mesh_instance_groups,
+                    draw.first_index,
+                    draw.index_count,
+                    self.mesh_instances.count(),
+                    false,
+                ) {
+                    pass.draw_indexed(indices, 0, instances);
+                }
             }
         });
         self.shadow_map_dirty = false;
@@ -176,6 +180,7 @@ impl PortalGpu {
                     &self.mesh_model_bind,
                     self.visible_mesh_instances.bind_group(),
                     self.visible_mesh_instances.count(),
+                    &self.mesh_instance_groups,
                 );
             }
         }

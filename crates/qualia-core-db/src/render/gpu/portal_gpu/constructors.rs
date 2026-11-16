@@ -150,7 +150,7 @@ impl PortalGpu {
         let (device, queue) =
             pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
                 label: Some("Webizen GPU Surface"),
-                required_features: etalon::Features::empty(),
+                required_features: adapter.features() & etalon::Features::TIMESTAMP_QUERY,
                 required_limits: etalon::Limits::downlevel_defaults(),
                 memory_hints: etalon::MemoryHints::default(),
                 ..Default::default()
@@ -272,7 +272,7 @@ impl PortalGpu {
         let (device, queue) = adapter
             .request_device(&etalon::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
-                required_features: etalon::Features::empty(),
+                required_features: adapter.features() & etalon::Features::TIMESTAMP_QUERY,
                 // Request exactly the adapter's advertised limits. `Limits::default()`
                 // under wgpu 30 asks for desktop-tier limits that a browser WebGPU
                 // adapter does not grant, so `request_device` would fail device
@@ -335,6 +335,7 @@ impl PortalGpu {
         )
         .await?;
         portal_gpu.device_lost = device_lost;
+        portal_gpu.pass_timings.set_adapter_info(adapter.get_info());
         Ok(portal_gpu)
     }
 }

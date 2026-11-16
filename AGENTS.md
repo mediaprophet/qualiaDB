@@ -1597,3 +1597,10 @@ scoped-scan and Vibe-budget unit tests, the corrected host test, and actual nati
 fixture execution remain pending. The full core suite was not run in this session.
 See ../Aether/notes/implementation/resume-host.md for exact evidence and boundaries.
 HANDOVER.md remains absent; no unrelated canonical work was reverted or edited.
+
+
+### 2026-11-16 — Native website scene runtime and pinned render fixes
+
+Native scene loading now retains per-prototype instance groups, with bounded visibility work and matching forward, ambient-occlusion, shadow and picking submissions. Material pipelines select the original or absent-map sampling variant from the actual material flags and shading model. Optional GPU timestamps and cold workload receipts report actual adapter/pass information without treating CPU submission time as GPU time. Terrain tile selection and triangle winding were corrected.
+
+The workspace, accelerator harness and sensing bridge now pin pushed Etalon revision `a326f829731b116aab634904c6850571b4cdf965`. Native Synth/server and the final website WASM build passed against that source. Focused actual-source instancing, zero-allocation, material-routing and shader pixel checks passed. Full QualiaDB library-suite qualification and final website browser qualification remain open; these build and focused-check results are not a claim of a full-suite pass. Website host Vibe program retention is maintained in the consuming website, using the existing checked-program API.

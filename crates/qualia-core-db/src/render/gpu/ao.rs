@@ -65,6 +65,7 @@ impl AoTargets {
         model_bind: &etalon::BindGroup,
         instance_bind: &etalon::BindGroup,
         instance_count: u32,
+        instance_groups: &[super::instance_groups::MeshInstanceGroup],
     ) {
         self.0.record(encoder, |prepass| {
             prepass.set_bind_group(0, camera_bind, &[]);
@@ -84,11 +85,15 @@ impl AoTargets {
                     &mesh.material_gpu.material_bind_groups[draw.material_index],
                     &[draw.material_offset],
                 );
-                prepass.draw_indexed(
-                    draw.first_index..draw.first_index + draw.index_count,
-                    0,
-                    0..instance_count,
-                );
+                for (indices, instances) in super::instance_groups::draw_ranges(
+                    instance_groups,
+                    draw.first_index,
+                    draw.index_count,
+                    instance_count,
+                    true,
+                ) {
+                    prepass.draw_indexed(indices, 0, instances);
+                }
             }
         });
     }

@@ -19,6 +19,10 @@ impl PortalGpu {
         if self.last_visibility_key == Some(key) {
             return;
         }
+        if !self.mesh_instance_groups.is_empty() {
+            self.update_group_visibility(model_from_mesh, view_projection);
+            return;
+        }
 
         let source_count = self.mesh_instance_source.len();
         let selection = match self.mesh_base_aabb {

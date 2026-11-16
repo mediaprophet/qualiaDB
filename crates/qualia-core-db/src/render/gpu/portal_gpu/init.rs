@@ -582,42 +582,46 @@ impl PortalGpu {
                 shader_location: 4,
             }],
         };
-        let mesh_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
-            label: Some("portal-mesh-pipeline"),
-            layout: Some(&mesh_pipeline_layout),
-            vertex: etalon::VertexState {
-                module: &mesh_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[
-                    Some(mesh_vertex_layout.clone()),
-                    Some(mesh_color_layout.clone()),
-                    Some(mesh_normal_layout.clone()),
-                    Some(mesh_tangent_layout.clone()),
-                    Some(mesh_uv_layout.clone()),
-                ],
+        let mesh_pipeline = super::super::material_pipelines::MaterialPipelines::new(
+            &device,
+            &etalon::RenderPipelineDescriptor {
+                label: Some("portal-mesh-pipeline"),
+                layout: Some(&mesh_pipeline_layout),
+                vertex: etalon::VertexState {
+                    module: &mesh_shader,
+                    entry_point: Some("vertex_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[
+                        Some(mesh_vertex_layout.clone()),
+                        Some(mesh_color_layout.clone()),
+                        Some(mesh_normal_layout.clone()),
+                        Some(mesh_tangent_layout.clone()),
+                        Some(mesh_uv_layout.clone()),
+                    ],
+                },
+                fragment: Some(etalon::FragmentState {
+                    module: &mesh_shader,
+                    entry_point: Some("fragment_main"),
+                    compilation_options: Default::default(),
+                    targets: &[Some(color_target_state(format))],
+                }),
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
+                    cull_mode: None,
+                    ..Default::default()
+                },
+                depth_stencil: Some(depth_state.clone()),
+                multisample: etalon::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
             },
-            fragment: Some(etalon::FragmentState {
-                module: &mesh_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(color_target_state(format))],
-            }),
-            primitive: etalon::PrimitiveState {
-                topology: etalon::PrimitiveTopology::TriangleList,
-                cull_mode: None,
-                ..Default::default()
-            },
-            depth_stencil: Some(depth_state.clone()),
-            multisample: etalon::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        );
         let mut transparent_depth_state = depth_state.clone();
         transparent_depth_state.depth_write_enabled = Some(false);
         transparent_depth_state.depth_compare = Some(etalon::CompareFunction::LessEqual);
-        let mesh_pipeline_blend =
-            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
+        let mesh_pipeline_blend = super::super::material_pipelines::MaterialPipelines::new(
+            &device,
+            &etalon::RenderPipelineDescriptor {
                 label: Some("portal-mesh-transparent-pipeline"),
                 layout: Some(&mesh_pipeline_layout),
                 vertex: etalon::VertexState {
@@ -647,7 +651,8 @@ impl PortalGpu {
                 multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
-            });
+            },
+        );
 
         let picking_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-picking-pipeline"),
@@ -780,68 +785,74 @@ impl PortalGpu {
                 multiview_mask: None,
                 cache: None,
             });
-            let mesh_hdr = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
-                label: Some("portal-mesh-hdr"),
-                layout: Some(&mesh_pipeline_layout),
-                vertex: etalon::VertexState {
-                    module: &mesh_shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[
-                        Some(mesh_vertex_layout.clone()),
-                        Some(mesh_color_layout.clone()),
-                        Some(mesh_normal_layout.clone()),
-                        Some(mesh_tangent_layout.clone()),
-                        Some(mesh_uv_layout.clone()),
-                    ],
+            let mesh_hdr = super::super::material_pipelines::MaterialPipelines::new(
+                &device,
+                &etalon::RenderPipelineDescriptor {
+                    label: Some("portal-mesh-hdr"),
+                    layout: Some(&mesh_pipeline_layout),
+                    vertex: etalon::VertexState {
+                        module: &mesh_shader,
+                        entry_point: Some("vertex_main"),
+                        compilation_options: Default::default(),
+                        buffers: &[
+                            Some(mesh_vertex_layout.clone()),
+                            Some(mesh_color_layout.clone()),
+                            Some(mesh_normal_layout.clone()),
+                            Some(mesh_tangent_layout.clone()),
+                            Some(mesh_uv_layout.clone()),
+                        ],
+                    },
+                    fragment: Some(etalon::FragmentState {
+                        module: &mesh_shader,
+                        entry_point: Some("fragment_main"),
+                        compilation_options: Default::default(),
+                        targets: &[Some(color_target_state(HDR_FORMAT))],
+                    }),
+                    primitive: etalon::PrimitiveState {
+                        topology: etalon::PrimitiveTopology::TriangleList,
+                        cull_mode: None,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(depth_state.clone()),
+                    multisample: etalon::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
                 },
-                fragment: Some(etalon::FragmentState {
-                    module: &mesh_shader,
-                    entry_point: Some("fragment_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(color_target_state(HDR_FORMAT))],
-                }),
-                primitive: etalon::PrimitiveState {
-                    topology: etalon::PrimitiveTopology::TriangleList,
-                    cull_mode: None,
-                    ..Default::default()
+            );
+            let mesh_hdr_blend = super::super::material_pipelines::MaterialPipelines::new(
+                &device,
+                &etalon::RenderPipelineDescriptor {
+                    label: Some("portal-mesh-hdr-transparent"),
+                    layout: Some(&mesh_pipeline_layout),
+                    vertex: etalon::VertexState {
+                        module: &mesh_shader,
+                        entry_point: Some("vertex_main"),
+                        compilation_options: Default::default(),
+                        buffers: &[
+                            Some(mesh_vertex_layout.clone()),
+                            Some(mesh_color_layout.clone()),
+                            Some(mesh_normal_layout.clone()),
+                            Some(mesh_tangent_layout.clone()),
+                            Some(mesh_uv_layout.clone()),
+                        ],
+                    },
+                    fragment: Some(etalon::FragmentState {
+                        module: &mesh_shader,
+                        entry_point: Some("fragment_main"),
+                        compilation_options: Default::default(),
+                        targets: &[Some(color_target_state(HDR_FORMAT))],
+                    }),
+                    primitive: etalon::PrimitiveState {
+                        topology: etalon::PrimitiveTopology::TriangleList,
+                        cull_mode: None,
+                        ..Default::default()
+                    },
+                    depth_stencil: Some(transparent_depth_state.clone()),
+                    multisample: etalon::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
                 },
-                depth_stencil: Some(depth_state.clone()),
-                multisample: etalon::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-            let mesh_hdr_blend = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
-                label: Some("portal-mesh-hdr-transparent"),
-                layout: Some(&mesh_pipeline_layout),
-                vertex: etalon::VertexState {
-                    module: &mesh_shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: Default::default(),
-                    buffers: &[
-                        Some(mesh_vertex_layout.clone()),
-                        Some(mesh_color_layout.clone()),
-                        Some(mesh_normal_layout.clone()),
-                        Some(mesh_tangent_layout.clone()),
-                        Some(mesh_uv_layout.clone()),
-                    ],
-                },
-                fragment: Some(etalon::FragmentState {
-                    module: &mesh_shader,
-                    entry_point: Some("fragment_main"),
-                    compilation_options: Default::default(),
-                    targets: &[Some(color_target_state(HDR_FORMAT))],
-                }),
-                primitive: etalon::PrimitiveState {
-                    topology: etalon::PrimitiveTopology::TriangleList,
-                    cull_mode: None,
-                    ..Default::default()
-                },
-                depth_stencil: Some(transparent_depth_state.clone()),
-                multisample: etalon::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
+            );
             let bloom = if bloom_wanted {
                 create_bloom_chain(
                     &device,
@@ -908,7 +919,9 @@ impl PortalGpu {
         let visible_instance_scratch =
             vec![identity_instance; crate::render::instance_culling::MAX_GPU_MESH_INSTANCES];
 
+        let pass_timings = gpu_timing::PassTimings::new(&device, &queue);
         Ok(Self {
+            pass_timings,
             device,
             queue,
             device_lost: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -966,6 +979,9 @@ impl PortalGpu {
             mesh_instances,
             visible_mesh_instances,
             mesh_instance_source,
+            mesh_instance_groups: Vec::with_capacity(
+                super::super::instance_groups::MAX_INSTANCE_GROUPS,
+            ),
             visible_instance_indices,
             visible_instance_scratch,
             last_visibility_key: None,

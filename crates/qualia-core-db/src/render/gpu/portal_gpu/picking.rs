@@ -94,11 +94,15 @@ impl PortalGpu {
                             &mesh.material_gpu.material_bind_groups[draw.material_index],
                             &[draw.material_offset],
                         );
-                        pass.draw_indexed(
-                            draw.first_index..draw.first_index + draw.index_count,
-                            0,
-                            0..mesh_count,
-                        );
+                        for (indices, instances) in super::super::instance_groups::draw_ranges(
+                            &self.mesh_instance_groups,
+                            draw.first_index,
+                            draw.index_count,
+                            mesh_count,
+                            true,
+                        ) {
+                            pass.draw_indexed(indices, 0, instances);
+                        }
                     }
                 }
             },

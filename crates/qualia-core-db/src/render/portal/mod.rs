@@ -31,16 +31,19 @@ use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, Operational
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
 mod camera_lens;
-mod emf_preview;
 #[path = "../portal_emf_metadata.rs"]
 mod emf_metadata;
+mod emf_preview;
+mod gpu_timing;
+mod instance_groups;
 #[path = "../portal_qac_js.rs"]
 mod qac_js;
-use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
+mod scene_loader;
 use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
 };
+use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
 use crate::render::spectral::sigma_to_display_rgb;
 use crate::render::standpoint::{resolve_standpoint_hash, spectator_default};
 use crate::render::telemetry::{
@@ -1384,19 +1387,35 @@ impl QualiaPortal {
             return Err(JsValue::from_str("qac browser source exceeds 128 MiB"));
         }
         let mut owned = Vec::new();
-        owned.try_reserve_exact(bytes.len()).map_err(|_|JsValue::from_str("qac source allocation refused"))?;
+        owned
+            .try_reserve_exact(bytes.len())
+            .map_err(|_| JsValue::from_str("qac source allocation refused"))?;
         owned.extend_from_slice(bytes);
-        let qac = crate::render::portal_qac::RetainedQac::open(owned.into_boxed_slice(), selected_entry, limits)
-            .map_err(|e|JsValue::from_str(&format!("qac admission: {e:?}")))?;
+        let qac = crate::render::portal_qac::RetainedQac::open(
+            owned.into_boxed_slice(),
+            selected_entry,
+            limits,
+        )
+        .map_err(|e| JsValue::from_str(&format!("qac admission: {e:?}")))?;
         let result = qac_js::metadata(&qac)?;
         self.last_qac = Some(qac);
         Ok(result.into())
     }
 
     /// Exact little-endian bytes plus layout; decimal index avoids JS Number rounding.
-    pub fn qac_window(&self, start_record_decimal: &str, records: u32, channel: u32) -> Result<JsValue, JsValue> {
-        let start = start_record_decimal.parse::<u64>().map_err(|_|JsValue::from_str("invalid qac record index"))?;
-        let qac = self.last_qac.as_ref().ok_or_else(||JsValue::from_str("no admitted qac source"))?;
+    pub fn qac_window(
+        &self,
+        start_record_decimal: &str,
+        records: u32,
+        channel: u32,
+    ) -> Result<JsValue, JsValue> {
+        let start = start_record_decimal
+            .parse::<u64>()
+            .map_err(|_| JsValue::from_str("invalid qac record index"))?;
+        let qac = self
+            .last_qac
+            .as_ref()
+            .ok_or_else(|| JsValue::from_str("no admitted qac source"))?;
         Ok(qac_js::window(qac, start, records, channel)?.into())
     }
 
@@ -1404,7 +1423,9 @@ impl QualiaPortal {
         Ok(qac_js::inspect_container(bytes)?.into())
     }
 
-    pub fn clear_qac(&mut self) { self.last_qac = None; }
+    pub fn clear_qac(&mut self) {
+        self.last_qac = None;
+    }
 
     /// Load a current typed field, retaining original bytes independently of display.
     /// Rendering is a declared electric-field-magnitude derivative in local grid coordinates.
@@ -1413,35 +1434,70 @@ impl QualiaPortal {
     }
 
     /// Select a field explicitly when a recording contains several grids or streams.
-    pub fn load_emf_selected(&mut self, bytes: &[u8], descriptor_id: u32,
-        frame_id: u32, clock_id: u32, stream_id: u32) -> Result<JsValue, JsValue> {
-        self.load_emf_selection_impl(bytes, Some(crate::render::portal_emf_state::DisplaySelection {
-            descriptor_id, frame_id, clock_id, stream_id,
-        }))
+    pub fn load_emf_selected(
+        &mut self,
+        bytes: &[u8],
+        descriptor_id: u32,
+        frame_id: u32,
+        clock_id: u32,
+        stream_id: u32,
+    ) -> Result<JsValue, JsValue> {
+        self.load_emf_selection_impl(
+            bytes,
+            Some(crate::render::portal_emf_state::DisplaySelection {
+                descriptor_id,
+                frame_id,
+                clock_id,
+                stream_id,
+            }),
+        )
     }
 
-    fn load_emf_selection_impl(&mut self, bytes: &[u8],
-        selection: Option<crate::render::portal_emf_state::DisplaySelection>) -> Result<JsValue, JsValue> {
-        let loaded = crate::render::portal_load_emf::decode_emf_with_selection(bytes, selection,
-            crate::render::portal_load_emf::PortalEmfLimits::default())
-            .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    fn load_emf_selection_impl(
+        &mut self,
+        bytes: &[u8],
+        selection: Option<crate::render::portal_emf_state::DisplaySelection>,
+    ) -> Result<JsValue, JsValue> {
+        let loaded = crate::render::portal_load_emf::decode_emf_with_selection(
+            bytes,
+            selection,
+            crate::render::portal_load_emf::PortalEmfLimits::default(),
+        )
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
         // Prepare all metadata before changing either accepted data or residency.
         let result = emf_metadata::inspect(bytes)?;
         let selection = loaded.selection();
-        for (name, id) in [("descriptor_id", selection.descriptor_id), ("frame_id", selection.frame_id),
-            ("clock_id", selection.clock_id), ("stream_id", selection.stream_id)] {
+        for (name, id) in [
+            ("descriptor_id", selection.descriptor_id),
+            ("frame_id", selection.frame_id),
+            ("clock_id", selection.clock_id),
+            ("stream_id", selection.stream_id),
+        ] {
             Reflect::set(&result, &name.into(), &(id as f64).into())?;
         }
         let ticks = js_sys::Array::new();
-        for tick in loaded.time_ticks() { ticks.push(&tick.to_string().into()); }
+        for tick in loaded.time_ticks() {
+            ticks.push(&tick.to_string().into());
+        }
         Reflect::set(&result, &"time_ticks_decimal".into(), &ticks)?;
         Reflect::set(&result, &"temporal".into(), &loaded.is_temporal().into())?;
-        Reflect::set(&result, &"coordinate_scope".into(), &"selected local frame; no implicit world/anatomy registration".into())?;
-        Reflect::set(&result, &"admission".into(), &"current typed profiles and selected grid projection".into())?;
+        Reflect::set(
+            &result,
+            &"coordinate_scope".into(),
+            &"selected local frame; no implicit world/anatomy registration".into(),
+        )?;
+        Reflect::set(
+            &result,
+            &"admission".into(),
+            &"current typed profiles and selected grid projection".into(),
+        )?;
         Reflect::set(&result, &"display_conversion".into(),
             &"grayscale = 1-exp(-|E|/(1 V/m)); nearest cell; missing transparent; valid zero opaque; exact source retained".into())?;
-        Reflect::set(&result, &"sonification".into(),
-            &"no automatic EMF sonification".into())?;
+        Reflect::set(
+            &result,
+            &"sonification".into(),
+            &"no automatic EMF sonification".into(),
+        )?;
         Reflect::set(
             &result,
             &JsValue::from_str("nx"),
@@ -1467,8 +1523,16 @@ impl QualiaPortal {
             &JsValue::from_str("cell_count"),
             &JsValue::from_f64(loaded.cell_count as f64),
         )?;
-        let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
-        Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
+        let kind = if loaded.cell_count > 1 {
+            "volume"
+        } else {
+            "cell"
+        };
+        Reflect::set(
+            &result,
+            &JsValue::from_str("kind"),
+            &JsValue::from_str(kind),
+        )?;
         let backend = if self.gpu.is_some() {
             EmfBackend::WebGpu
         } else if self.anatomy_webgl2.is_some() || self.gpu_init_failed {
@@ -1476,12 +1540,17 @@ impl QualiaPortal {
         } else {
             EmfBackend::Pending
         };
-        Reflect::set(&result, &"display_status".into(),
-            &backend.accepted_status().as_str().into())?;
+        Reflect::set(
+            &result,
+            &"display_status".into(),
+            &backend.accepted_status().as_str().into(),
+        )?;
         let gpu = &mut self.gpu;
-        self.last_emf.accept(loaded, backend, |field| {
-            portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
-        }).map_err(|e| JsValue::from_str(&e))?;
+        self.last_emf
+            .accept(loaded, backend, |field| {
+                portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
+            })
+            .map_err(|e| JsValue::from_str(&e))?;
         Ok(result.into())
     }
 
@@ -1496,7 +1565,8 @@ impl QualiaPortal {
         payload: &[u8],
         content_type: &str,
     ) -> Result<JsValue, JsValue> {
-        let text = core::str::from_utf8(payload).map_err(|_| JsValue::from_str("rdf_holograph_utf8"))?;
+        let text =
+            core::str::from_utf8(payload).map_err(|_| JsValue::from_str("rdf_holograph_utf8"))?;
         self.project_rdf_holograph(text, content_type, "")
     }
 
@@ -1549,21 +1619,21 @@ impl QualiaPortal {
             }
             if backend == "none" {
                 if let Some(ref mut webgl2) = self.anatomy_webgl2 {
-                    webgl2.upload_holograph_scene(&self.rdf_scene).map_err(|e| {
-                        let detail = e
-                            .as_string()
-                            .unwrap_or_else(|| "webgl2_holograph_upload_failed".into());
-                        JsValue::from_str(&format!("webgl2_holograph_upload_failed:{detail}"))
-                    })?;
+                    webgl2
+                        .upload_holograph_scene(&self.rdf_scene)
+                        .map_err(|e| {
+                            let detail = e
+                                .as_string()
+                                .unwrap_or_else(|| "webgl2_holograph_upload_failed".into());
+                            JsValue::from_str(&format!("webgl2_holograph_upload_failed:{detail}"))
+                        })?;
                     backend = "webgl2";
                     self.tier = 1;
                 }
             }
         }
         if backend == "none" {
-            return Err(JsValue::from_str(
-                "rdf_holograph_requires_webgl2_or_webgpu",
-            ));
+            return Err(JsValue::from_str("rdf_holograph_requires_webgl2_or_webgpu"));
         }
 
         self.camera.target = [0.0, 0.0, 0.0];
@@ -1887,76 +1957,6 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
-    /// S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
-    /// σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path.
-    ///
-    /// The CCF/HRA reference organs are authored in ONE shared body coordinate space (a brain's vertices
-    /// sit at the head, a bladder's at the pelvis, skin envelops the whole body), so this **preserves
-    /// each organ's TRUE position and relative size**: it accumulates the whole-body bounds across all
-    /// organs and applies **one global centre + scale**, rather than normalising each organ separately
-    /// (which would flatten proportions and shrink the full-body skin mesh to a dot). Governance
-    /// fail-closed per organ, as in `load_10d_colored`.
-    ///
-    /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
-    /// (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
-    /// Returns `{ organs_loaded, organs_refused, total_triangles }`.
-    ///
-    /// Prefer [`Self::load_body_from_qualia_bundle_mixed`] for packs — that path never materialises a
-    /// per-organ JS `Uint8Array` copy (critical on phones).
-    pub fn load_body_organs_colored(&mut self, organs: &Array) -> Result<JsValue, JsValue> {
-        let mut accum = BodyMeshAccum::new();
-        let spans = Array::new();
-        for i in 0..organs.length() {
-            let organ = organs.get(i);
-            let before = accum.positions.len() as u32;
-            let bytes_val = Reflect::get(&organ, &JsValue::from_str("bytes"))
-                .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
-            // One JS→Rust copy only (no secondary clone for CRC).
-            let bytes: Vec<u8> = js_sys::Uint8Array::new(&bytes_val).to_vec();
-            let r = Reflect::get(&organ, &JsValue::from_str("r"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.5) as f32;
-            let g = Reflect::get(&organ, &JsValue::from_str("g"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.6) as f32;
-            let b = Reflect::get(&organ, &JsValue::from_str("b"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.8) as f32;
-            let a = Reflect::get(&organ, &JsValue::from_str("a"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(1.0) as f32;
-            accum.append_organ_10d(&bytes, [r, g, b, a]);
-            let count = accum.positions.len() as u32 - before;
-            if count > 0 {
-                let id = Reflect::get(&organ, &JsValue::from_str("id"))
-                    .ok()
-                    .and_then(|v| v.as_string())
-                    .unwrap_or_default();
-                let span = js_sys::Object::new();
-                Reflect::set(&span, &JsValue::from_str("id"), &JsValue::from_str(&id))?;
-                Reflect::set(
-                    &span,
-                    &JsValue::from_str("vertex_start"),
-                    &JsValue::from_f64(before as f64),
-                )?;
-                Reflect::set(
-                    &span,
-                    &JsValue::from_str("vertex_count"),
-                    &JsValue::from_f64(count as f64),
-                )?;
-                spans.push(&span);
-            }
-        }
-        let result = self.finish_body_mesh_upload(accum)?;
-        Reflect::set(&result, &JsValue::from_str("parts"), &spans)?;
-        self.present_misses = 0;
-        Ok(result)
-    }
-
     /// Load a multi-asset scene: `Array<{bytes: .10d, r,g,b,a, id?}>` (QG-20).
     /// General scene asset loader for environment/game scenes, town layouts,
     /// vehicles, and user props.
@@ -2144,7 +2144,7 @@ impl QualiaPortal {
                     &accum.positions,
                     &accum.colors,
                     Some(&accum.normals),
-                    None,
+                    Some(&accum.tangents),
                     Some(&accum.uv0),
                     &accum.indices,
                     &accum.materials,
@@ -2770,8 +2770,12 @@ impl QualiaPortal {
                     self.tier = 2;
                     gpu.set_tensor_projection_enabled(self.tensor_projection_enabled);
                     self.graphics.apply_to_gpu(&mut gpu);
-                    if let Err(error) = self.last_emf.replay(|field| portal_emf_state::upload(&mut gpu, field)) {
-                        self.description = format!("EMF retained; field upload unavailable: {error}");
+                    if let Err(error) = self
+                        .last_emf
+                        .replay(|field| portal_emf_state::upload(&mut gpu, field))
+                    {
+                        self.description =
+                            format!("EMF retained; field upload unavailable: {error}");
                     }
                     self.gpu = Some(gpu);
                     self.etalon_steward.mark_ready();
@@ -2813,8 +2817,7 @@ impl QualiaPortal {
             }
             let present = if let Some(ref mut gpu) = self.gpu {
                 if self.rdf_scene.node_count() > 0 {
-                    self.camera.yaw =
-                        (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
+                    self.camera.yaw = (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
                     gpu.set_camera_target(
                         self.camera.yaw,
                         self.camera.pitch,
@@ -2823,9 +2826,7 @@ impl QualiaPortal {
                         self.camera.target[1],
                         self.camera.target[2],
                     );
-                    gpu.set_holograph_selected(
-                        self.selected_node.map(|n| n as i32).unwrap_or(-1),
-                    );
+                    gpu.set_holograph_selected(self.selected_node.map(|n| n as i32).unwrap_or(-1));
                 }
                 // The WebGPU swapchain texture tracks the canvas backing store, but the depth
                 // texture is only re-created on `resize()`. If the canvas was resized after init
@@ -2962,9 +2963,7 @@ impl QualiaPortal {
             }
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
                 webgl2.set_holograph_w_angle(self.rdf_holograph_w_angle);
-                webgl2.set_holograph_selected(
-                    self.selected_node.map(|n| n as i32).unwrap_or(-1),
-                );
+                webgl2.set_holograph_selected(self.selected_node.map(|n| n as i32).unwrap_or(-1));
                 self.rdf_holograph_w_angle =
                     (self.rdf_holograph_w_angle + 0.00055) % std::f32::consts::TAU;
                 if self.rdf_scene.node_count() > 0 {

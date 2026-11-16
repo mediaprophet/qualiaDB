@@ -72,6 +72,7 @@ impl PortalGpu {
             Option<TemporalProducerViews<'_>>,
         )>,
     ) -> Result<bool, String> {
+        self.pass_timings.begin_frame();
         if portal_bloom_enabled() != self.bloom_policy_snapshot {
             self.sync_bloom_targets();
         }
@@ -200,9 +201,13 @@ impl PortalGpu {
 
         self.update_mesh_instance_visibility();
         self.write_ao_uniform(&mut encoder);
+        self.pass_timings.marker(&mut encoder, 0);
         self.record_ao_pass(&mut encoder);
+        self.pass_timings.marker(&mut encoder, 1);
         self.record_sun_shadow_pass(&mut encoder);
+        self.pass_timings.marker(&mut encoder, 2);
         self.record_picking_pass(&mut encoder);
+        self.pass_timings.marker(&mut encoder, 3);
 
         let use_bloom = self.hdr_exposure_available();
         let holograph_only = self.holographic.is_some() && self.mesh.is_none();
@@ -274,7 +279,7 @@ impl PortalGpu {
                 }
 
                 if let (Some(mesh), Some(mesh_pipe)) = (self.mesh.as_ref(), mesh_hdr) {
-                    pass.set_pipeline(mesh_pipe);
+                    let mut material_variant = None;
                     pass.set_bind_group(0, &self.mesh_frame_bind, &[]);
                     pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                     pass.set_bind_group(3, self.visible_mesh_instances.bind_group(), &[]);
@@ -288,32 +293,52 @@ impl PortalGpu {
                         if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                             continue;
                         }
+                        if material_variant != Some(draw.missing_material_maps) {
+                            pass.set_pipeline(mesh_pipe.select(draw.missing_material_maps));
+                            material_variant = Some(draw.missing_material_maps);
+                        }
                         pass.set_bind_group(
                             2,
                             &mesh.material_gpu.material_bind_groups[draw.material_index],
                             &[draw.material_offset],
                         );
-                        pass.draw_indexed(
-                            draw.first_index..draw.first_index + draw.index_count,
-                            0,
-                            0..self.visible_mesh_instances.count(),
-                        );
+                        for (indices, instances) in super::super::instance_groups::draw_ranges(
+                            &self.mesh_instance_groups,
+                            draw.first_index,
+                            draw.index_count,
+                            self.visible_mesh_instances.count(),
+                            true,
+                        ) {
+                            pass.draw_indexed(indices, 0, instances);
+                        }
                     }
                     if let Some(blend_pipe) = self.mesh_pipeline_hdr_blend.as_ref() {
                         if !mesh.material_gpu.transparent_draw_order.is_empty() {
-                            pass.set_pipeline(blend_pipe);
+                            let mut material_variant = None;
                             for &draw_index in &mesh.material_gpu.transparent_draw_order {
                                 let draw = &mesh.material_gpu.draws[draw_index];
+                                if material_variant != Some(draw.missing_material_maps) {
+                                    pass.set_pipeline(
+                                        blend_pipe.select(draw.missing_material_maps),
+                                    );
+                                    material_variant = Some(draw.missing_material_maps);
+                                }
                                 pass.set_bind_group(
                                     2,
                                     &mesh.material_gpu.material_bind_groups[draw.material_index],
                                     &[draw.material_offset],
                                 );
-                                pass.draw_indexed(
-                                    draw.first_index..draw.first_index + draw.index_count,
-                                    0,
-                                    0..self.visible_mesh_instances.count(),
-                                );
+                                for (indices, instances) in
+                                    super::super::instance_groups::draw_ranges(
+                                        &self.mesh_instance_groups,
+                                        draw.first_index,
+                                        draw.index_count,
+                                        self.visible_mesh_instances.count(),
+                                        true,
+                                    )
+                                {
+                                    pass.draw_indexed(indices, 0, instances);
+                                }
                             }
                         }
                     }
@@ -398,7 +423,7 @@ impl PortalGpu {
             }
 
             if let Some(mesh) = self.mesh.as_ref() {
-                pass.set_pipeline(&self.mesh_pipeline);
+                let mut material_variant = None;
                 pass.set_bind_group(0, &self.mesh_frame_bind, &[]);
                 pass.set_bind_group(1, &self.mesh_model_bind, &[]);
                 pass.set_bind_group(3, self.visible_mesh_instances.bind_group(), &[]);
@@ -412,31 +437,49 @@ impl PortalGpu {
                     if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                         continue;
                     }
+                    if material_variant != Some(draw.missing_material_maps) {
+                        pass.set_pipeline(self.mesh_pipeline.select(draw.missing_material_maps));
+                        material_variant = Some(draw.missing_material_maps);
+                    }
                     pass.set_bind_group(
                         2,
                         &mesh.material_gpu.material_bind_groups[draw.material_index],
                         &[draw.material_offset],
                     );
-                    pass.draw_indexed(
-                        draw.first_index..draw.first_index + draw.index_count,
-                        0,
-                        0..self.visible_mesh_instances.count(),
-                    );
+                    for (indices, instances) in super::super::instance_groups::draw_ranges(
+                        &self.mesh_instance_groups,
+                        draw.first_index,
+                        draw.index_count,
+                        self.visible_mesh_instances.count(),
+                        true,
+                    ) {
+                        pass.draw_indexed(indices, 0, instances);
+                    }
                 }
                 if !mesh.material_gpu.transparent_draw_order.is_empty() {
-                    pass.set_pipeline(&self.mesh_pipeline_blend);
+                    let mut material_variant = None;
                     for &draw_index in &mesh.material_gpu.transparent_draw_order {
                         let draw = &mesh.material_gpu.draws[draw_index];
+                        if material_variant != Some(draw.missing_material_maps) {
+                            pass.set_pipeline(
+                                self.mesh_pipeline_blend.select(draw.missing_material_maps),
+                            );
+                            material_variant = Some(draw.missing_material_maps);
+                        }
                         pass.set_bind_group(
                             2,
                             &mesh.material_gpu.material_bind_groups[draw.material_index],
                             &[draw.material_offset],
                         );
-                        pass.draw_indexed(
-                            draw.first_index..draw.first_index + draw.index_count,
-                            0,
-                            0..self.visible_mesh_instances.count(),
-                        );
+                        for (indices, instances) in super::super::instance_groups::draw_ranges(
+                            &self.mesh_instance_groups,
+                            draw.first_index,
+                            draw.index_count,
+                            self.visible_mesh_instances.count(),
+                            true,
+                        ) {
+                            pass.draw_indexed(indices, 0, instances);
+                        }
                     }
                 }
                 self.water.record(
@@ -476,6 +519,7 @@ impl PortalGpu {
             }
         }
 
+        self.pass_timings.marker(&mut encoder, 4);
         if let Some((schedule, host_producers)) = temporal {
             self.record_temporal_producers(&mut encoder);
             if let Some(producers) = host_producers {
@@ -513,7 +557,9 @@ impl PortalGpu {
             }
         }
 
+        self.pass_timings.marker(&mut encoder, 5);
         self.record_pick_copy(&mut encoder);
+        self.pass_timings.resolve(&mut encoder);
 
         // VC3: Submit the command buffer. The uniform belt's copy commands
         // are already recorded in the encoder. The belt's advance() calls

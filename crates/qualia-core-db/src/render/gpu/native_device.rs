@@ -96,7 +96,7 @@ pub(super) fn request_offscreen_device() -> Result<(Arc<Device>, Arc<Queue>), St
         let info = adapter.get_info();
         match pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
             label: Some("Qualia native render device"),
-            required_features: etalon::Features::empty(),
+            required_features: adapter.features() & etalon::Features::TIMESTAMP_QUERY,
             required_limits: adapter.limits(),
             ..Default::default()
         })) {

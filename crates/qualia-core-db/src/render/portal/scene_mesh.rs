@@ -15,6 +15,8 @@ use crate::container_10d::header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_
 use crate::container_10d::{MaterialRecord, SubmeshRange};
 use crate::render::body_fit::AnatomyBodyFit;
 use crate::tensor::Tensor10D;
+#[path = "scene_frames.rs"]
+mod frames;
 
 /// A scene upload is a single draw-list submission today. Keep its authored
 /// material ranges below a practical streaming limit before allocating the
@@ -31,6 +33,9 @@ pub(crate) struct SceneMeshAccum {
     pub(crate) uv0: Vec<[f32; 2]>,
     /// Authored source normals survive UV seam duplication and scene merging.
     pub(crate) normals: Vec<[f32; 3]>,
+    /// Source or per-asset generated tangents, including handedness.
+    pub(crate) tangents: Vec<[f32; 4]>,
+    vertex_spans: Vec<(usize, usize)>,
     pub(crate) indices: Vec<u32>,
     /// Deduplicated material records from the source assets' MAT1 sections.
     pub(crate) materials: Vec<MaterialRecord>,
@@ -62,6 +67,8 @@ impl SceneMeshAccum {
             colors: Vec::new(),
             uv0: Vec::new(),
             normals: Vec::new(),
+            tangents: Vec::new(),
+            vertex_spans: Vec::new(),
             indices: Vec::new(),
             materials: Vec::new(),
             material_ranges: Vec::new(),
@@ -168,37 +175,14 @@ impl SceneMeshAccum {
                 return;
             }
         }
-        let local_normals = match container_10d::read_container_mesh_frames_with_limits(
-            &bytes,
-            mesh.positions.len(),
-            container_10d::MeshFrameDecodeLimits {
-                max_vertices: container_10d::MAX_NORMAL_COUNT,
-                max_payload_bytes: 64 * 1024 * 1024,
-                max_decoded_bytes: 256 * 1024 * 1024,
-            },
-        )
-        .map(|frames| frames.and_then(|frames| frames.normals))
-        {
-            Ok(Some(normals)) => normals,
-            Ok(None) => {
-                let mut normals = vec![[0.0; 3]; mesh.positions.len()];
-                if crate::render::mesh_surface_frames::vertex_normals_into(
-                    &mesh.positions,
-                    &mesh.triangles,
-                    &mut normals,
-                )
-                .is_err()
-                {
+        let (local_normals, local_tangents) =
+            match frames::decode_asset_frames(&bytes, &mesh, &local_uv0) {
+                Ok(frames) => frames,
+                Err(_) => {
                     self.assets_refused += 1;
                     return;
                 }
-                normals
-            }
-            Err(_) => {
-                self.assets_refused += 1;
-                return;
-            }
-        };
+            };
         let governance_refused =
             (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
         if governance_refused {
@@ -384,6 +368,7 @@ impl SceneMeshAccum {
             self.positions.push([p[0], p[1], p[2]]);
             self.uv0.push(local_uv0[i]);
             self.normals.push(local_normals[i]);
+            self.tangents.push(local_tangents[i]);
             if use_reading {
                 self.colors.push(surface.as_ref().unwrap()[i]);
             } else {
@@ -397,6 +382,8 @@ impl SceneMeshAccum {
         }
         self.index_spans
             .push((index_start_usize, self.indices.len()));
+        self.vertex_spans
+            .push((base as usize, self.positions.len()));
         // MAT1 and the GPU material lookup require ascending unique IDs.
         // Assets arrive in scene order, which has no relationship to ID order.
         for material in local_materials.drain(..) {
@@ -457,11 +444,15 @@ impl SceneMeshAccum {
         // A nonuniform anatomical fit changes the geometric frame. Recompute
         // once after the cold fit; ordinary uniform orbit normalisation keeps
         // the authored frame intact.
-        let _ = crate::render::mesh_surface_frames::vertex_normals_from_indices_into(
+        frames::reframe_fitted_assets(
             &self.positions,
+            &self.uv0,
             &self.indices,
+            &self.vertex_spans,
+            &self.index_spans,
             &mut self.normals,
-        );
+            &mut self.tangents,
+        )?;
         if !self.nodes.is_empty() {
             let mut pts: Vec<[f32; 3]> = self.nodes.iter().map(|n| [n.x, n.y, n.z]).collect();
             fit.apply_in_place(&mut pts, self.gmin, self.gmax);

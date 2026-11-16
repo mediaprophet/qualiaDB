@@ -4,9 +4,14 @@
 
 mod ao;
 mod atmosphere;
+mod gpu_timing;
+mod instance_group_upload;
+mod instance_group_visibility;
+mod instance_groups;
 mod instance_stream;
 mod instance_visibility;
 mod material_draws;
+mod material_pipelines;
 mod material_textures;
 mod materials;
 mod picking;
@@ -359,6 +364,7 @@ fn default_gpu_tangent(normal: [f32; 3]) -> [f32; 4] {
 }
 
 pub struct PortalGpu {
+    pass_timings: gpu_timing::PassTimings,
     device: Arc<etalon::Device>,
     queue: Arc<etalon::Queue>,
     device_lost: Arc<std::sync::atomic::AtomicBool>,
@@ -393,10 +399,10 @@ pub struct PortalGpu {
     ambient_pipeline_hdr: Option<etalon::RenderPipeline>,
     projector_pipeline_hdr: Option<etalon::RenderPipeline>,
     sky_pipeline_hdr: Option<etalon::RenderPipeline>,
-    mesh_pipeline: etalon::RenderPipeline,
-    mesh_pipeline_blend: etalon::RenderPipeline,
-    mesh_pipeline_hdr: Option<etalon::RenderPipeline>,
-    mesh_pipeline_hdr_blend: Option<etalon::RenderPipeline>,
+    mesh_pipeline: material_pipelines::MaterialPipelines,
+    mesh_pipeline_blend: material_pipelines::MaterialPipelines,
+    mesh_pipeline_hdr: Option<material_pipelines::MaterialPipelines>,
+    mesh_pipeline_hdr_blend: Option<material_pipelines::MaterialPipelines>,
     mesh_material_layout: etalon::BindGroupLayout,
     mesh_texture_layout: etalon::BindGroupLayout,
     mesh_frame_layout: etalon::BindGroupLayout,
@@ -420,6 +426,7 @@ pub struct PortalGpu {
     /// Bounded CPU-side source/scratch storage. These vectors are allocated at renderer creation;
     /// camera-driven culling and compaction reuse them without frame-time heap growth.
     mesh_instance_source: Vec<crate::render::instance_culling::GpuInstanceRecord>,
+    mesh_instance_groups: Vec<instance_groups::MeshInstanceGroup>,
     visible_instance_indices: Vec<u32>,
     visible_instance_scratch: Vec<crate::render::instance_culling::GpuInstanceRecord>,
     last_visibility_key: Option<([[f32; 4]; 4], [[f32; 4]; 4])>,

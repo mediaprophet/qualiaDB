@@ -44,13 +44,13 @@ pub fn generate_terrain_mesh(
 
             // First triangle (bottom-left)
             indices.push(i0);
-            indices.push(i2);
             indices.push(i1);
+            indices.push(i2);
 
             // Second triangle (top-right)
             indices.push(i1);
-            indices.push(i2);
             indices.push(i3);
+            indices.push(i2);
         }
     }
 
@@ -60,6 +60,18 @@ pub fn generate_terrain_mesh(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terrain_faces_point_up_for_flat_and_sloping_heightfields() {
+        for heights in [vec![0.0; 9], vec![0.0, 20.0, 3.0, 8.0, 14.0, 4.0, 6.0, 2.0, 9.0]] {
+            let mesh = generate_terrain_mesh(&heights, 3, 3, 10.0);
+            for face in mesh.indices.chunks_exact(3) {
+                let a=mesh.vertices[face[0] as usize]; let b=mesh.vertices[face[1] as usize]; let c=mesh.vertices[face[2] as usize];
+                let normal_z=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+                assert!(normal_z > 0.0, "Z-up DEM must face above the terrain");
+            }
+        }
+    }
 
     #[test]
     fn test_generate_terrain_mesh() {

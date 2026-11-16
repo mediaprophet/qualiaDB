@@ -9,6 +9,7 @@ pub(super) struct MaterialDraw {
     pub material_offset: u32,
     pub material_index: usize,
     pub opacity_mode: OpacityMode,
+    pub missing_material_maps: bool,
     pub center: [f32; 3],
     /// Conservative model-space bounds used by shadow-cascade range culling.
     pub bounds_min: [f32; 3],
@@ -56,12 +57,18 @@ pub(super) fn build_material_draws(
                 super::materials::MAX_MATERIAL_DRAWS
             ));
         }
+        let uniform = super::materials::MaterialUniform::from(&materials[material_index]);
         draws.push(MaterialDraw {
             first_index: range.first_index,
             index_count: range.index_count,
             material_offset: offset,
             material_index,
             opacity_mode: materials[material_index].opacity_mode,
+            missing_material_maps: super::material_pipelines::has_missing_maps(
+                uniform.flags[0],
+                uniform.texture_flags,
+                uniform.texture_flags_extra,
+            ),
             center: bounds_center(range_min, range_max),
             bounds_min: range_min,
             bounds_max: range_max,

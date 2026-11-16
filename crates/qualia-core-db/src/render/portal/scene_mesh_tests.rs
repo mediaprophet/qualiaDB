@@ -160,3 +160,43 @@ fn authored_normal_survives_merge_and_uniform_orbit_normalisation() {
         assert!((normal[1] - 0.8).abs() < 0.0001);
     }
 }
+
+#[test]
+fn authored_tangents_survive_merge_and_orbit_normalisation() {
+    let base = material_asset(100, 0.34, 0.0);
+    let mesh = crate::render::compile_10d::decode_10d_mesh(&base).unwrap();
+    let bytes = crate::render::compile_10d::compile_mesh_to_10d_with_frames(
+        &mesh,
+        Some(&[[0., 0., 1.]; 3]),
+        Some(&[[0., 1., 0., -1.]; 3]),
+    )
+    .unwrap();
+    let mut scene = SceneMeshAccum::new();
+    scene.append_asset_10d(&bytes, [1.; 4]);
+    scene.append_asset_10d(&base, [1.; 4]);
+    assert_eq!(scene.assets_loaded, 2);
+    assert_eq!(scene.tangents.len(), scene.positions.len());
+    let before = scene.tangents.clone();
+    scene.normalise_to_orbit_frame().unwrap();
+    assert_eq!(scene.tangents, before);
+    for t in &scene.tangents[..3] {
+        assert!(t[1] > 0.9999);
+        assert_eq!(t[3], -1.);
+    }
+}
+#[test]
+fn nonuniform_body_fit_reframes_tangents_with_normals() {
+    let mut scene = SceneMeshAccum::new();
+    scene.append_asset_10d(&material_asset(100, 0.34, 0.), [1.; 4]);
+    let fit = AnatomyBodyFit {
+        arm_span_scale_x: 1.7,
+        chest_radial: 1.3,
+        identity: false,
+        ..Default::default()
+    };
+    scene.apply_body_fit(&fit).unwrap();
+    for (n, t) in scene.normals.iter().zip(&scene.tangents) {
+        assert!((n[0] * t[0] + n[1] * t[1] + n[2] * t[2]).abs() < 1e-5);
+        assert_eq!(t[3].abs(), 1.);
+    }
+}

@@ -1,6 +1,8 @@
 //! Cold mesh upload, validation, material admission and GPU buffer construction.
 
 use super::*;
+#[path = "mesh_upload_limits.rs"]
+mod limits;
 use crate::container_10d::{MaterialRecord, SubmeshRange};
 use crate::render::gpu::materials::create_material_gpu;
 use crate::render::lighting::environment_lighting::{EnvironmentLightingGpu, EnvironmentProbeSet};
@@ -84,6 +86,16 @@ impl PortalGpu {
             return Err(error);
         }
         self.mesh_instance_source.clear();
+        if !self.mesh_instance_groups.is_empty() {
+            if let Some(mesh) = self.mesh.as_ref() {
+                if let Ok((min, max)) =
+                    super::instance_groups::geometry_bounds(&mesh.cpu_positions, &mesh.cpu_indices)
+                {
+                    self.mesh_base_aabb = Some(crate::render::physics::Aabb { min, max });
+                }
+            }
+        }
+        self.mesh_instance_groups.clear();
         if packed_records.is_empty() {
             self.mesh_instance_source.push(
                 crate::render::instance_culling::GpuInstanceRecord::new(IDENTITY_MAT4, 0),
@@ -203,6 +215,10 @@ impl PortalGpu {
     ) -> Result<u32, String> {
         self.last_visibility_key = None;
         if positions.is_empty() || indices.len() < 3 {
+            if !self.mesh_instance_groups.is_empty() {
+                self.set_mesh_instances_packed(&[])
+                    .map_err(|e| format!("instance reset: {e:?}"))?;
+            }
             let generation = self
                 .mesh_generation
                 .checked_add(1)
@@ -224,7 +240,8 @@ impl PortalGpu {
         {
             return Err("mesh material or draw count exceeds renderer limits".to_string());
         }
-        if self.mesh_instances.count() > 1
+        if self.mesh_instance_groups.is_empty()
+            && self.mesh_instances.count() > 1
             && materials
                 .iter()
                 .any(|material| material.opacity_mode == crate::container_10d::OpacityMode::Blend)
@@ -262,6 +279,13 @@ impl PortalGpu {
         }) {
             return Err("mesh TEXCOORD_0 stream is invalid".to_string());
         }
+        limits::check(
+            positions.len(),
+            indices.len(),
+            0,
+            self.device.limits().max_buffer_size,
+        )
+        .map_err(str::to_string)?;
         let normal_workspace = mesh_normals::MeshNormalWorkspace::new(positions, indices)
             .map_err(|error| error.to_string())?;
         let index_count =
@@ -277,6 +301,13 @@ impl PortalGpu {
                 )
             })
             .ok_or_else(|| "mesh material-uniform size overflow".to_string())?;
+        limits::check(
+            positions.len(),
+            indices.len(),
+            material_bytes,
+            self.device.limits().max_buffer_size,
+        )
+        .map_err(str::to_string)?;
         let position_bytes = (positions.len() as u64).checked_mul(12);
         let normal_bytes = (positions.len() as u64).checked_mul(12);
         let tangent_bytes = (positions.len() as u64).checked_mul(16);
@@ -398,6 +429,10 @@ impl PortalGpu {
             indices,
             mesh_reservation,
         )?;
+        if !self.mesh_instance_groups.is_empty() {
+            self.set_mesh_instances_packed(&[])
+                .map_err(|e| format!("instance reset: {e:?}"))?;
+        }
         self.pick_readback.invalidate(false);
         self.pick_semantic_result = None;
         self.mesh = Some(MeshGpu {
@@ -490,6 +525,7 @@ impl PortalGpu {
                 bytemuck::cast_slice(&normals[run_start..run_end]),
             );
         }
+        self.refresh_instance_group_bounds();
     }
 
     /// Whether a mesh surface is resident.

@@ -508,7 +508,7 @@ fn lon_lat_to_global_pixel(lon: f64, lat: f64, zoom: u8) -> (f64, f64) {
     let x = ((lon + 180.0) / 360.0 * world_size).clamp(0.0, world_size - f64::EPSILON);
     let sin_lat = lat.to_radians().sin();
     let y = ((0.5
-        - (0.25 * (1.0 + sin_lat) / (1.0 - sin_lat)).ln() / (4.0 * std::f64::consts::PI))
+        - ((1.0 + sin_lat) / (1.0 - sin_lat)).ln() / (4.0 * std::f64::consts::PI))
         * world_size)
         .clamp(0.0, world_size - f64::EPSILON);
     (x, y)
@@ -556,6 +556,31 @@ fn estimate_tile_count(bbox: (f64, f64, f64, f64), zoom: u8) -> Result<u32, Stri
 mod tests {
     use super::*;
     use crate::domains::geospatial::adapters::DataAdapter;
+
+    #[test]
+    fn mercator_equator_hemispheres_and_inverse_roundtrip() {
+        let world = 256.0 * 8192.0;
+        let equator = lon_lat_to_global_pixel(0.0, 0.0, 13);
+        assert_eq!(equator, (world / 2.0, world / 2.0));
+        for lat in [-80.0_f64, -35.29, 35.29, 80.0] {
+            let (_, y) = lon_lat_to_global_pixel(149.07, lat, 13);
+            let recovered = (std::f64::consts::PI * (1.0 - 2.0 * y / world)).sinh().atan().to_degrees();
+            assert!((recovered - lat).abs() < 1e-10);
+            assert_eq!(y < world / 2.0, lat > 0.0);
+        }
+    }
+
+    #[test]
+    fn canberra_public_reference_requests_cover_canberra_tiles() {
+        let adapter = DemAdapter::terrarium("dem-test").with_zoom(13).unwrap();
+        let mut registry = NetworkDisclosureRegistry::new();
+        registry.register_egress(adapter.adapter_id(), "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/", "Test URL construction only", "No network performed");
+        let requests = adapter.build_fetch_requests((149.06, -35.30, 149.08, -35.28), &registry).unwrap();
+        assert_eq!(requests.len(), 4);
+        assert!(requests.iter().all(|r| r.url.ends_with("/4954.png") || r.url.ends_with("/4955.png")));
+        assert!(requests.iter().any(|r| r.url.ends_with("/7487/4955.png")));
+        assert!(requests.iter().any(|r| r.url.ends_with("/7488/4955.png")));
+    }
 
     fn solid_png(rgb: [u8; 3]) -> Vec<u8> {
         let mut bytes = Vec::new();
