@@ -3086,10 +3086,6 @@ thread_local! {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
-    if !has_webgpu() {
-        PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
-        return Ok(false);
-    }
     reset_portal_gpu_init_flags();
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
     // One adapter request inside try_new_async. A second probe doubles the

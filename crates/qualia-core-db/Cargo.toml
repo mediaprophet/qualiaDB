@@ -232,6 +232,8 @@ etalon = { workspace = true, default-features = false, features = [
     "vulkan",
     "wgsl",
     "webgpu",
+    "webgl",
+    "fragile-send-sync-non-atomic-wasm",
     "spirv"
 ], optional = true }
 etalon-agent = { workspace = true, optional = true }

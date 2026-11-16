@@ -221,8 +221,8 @@ impl PortalGpu {
         let height = canvas.height().max(1);
 
         let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU;
-        let instance = etalon::Instance::new(instance_desc);
+        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU | etalon::Backends::GL;
+        let instance = etalon::util::new_instance_with_webgpu_detection(instance_desc).await;
 
         // Probe already ran without a canvas. Claim only when we are about
         // to present, and only with an adapter that can target this surface.
@@ -269,17 +269,18 @@ impl PortalGpu {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
+        let required_limits = if adapter.get_info().backend == etalon::Backend::Gl {
+            adapter.limits()
+        } else {
+            crate::gpu_context::webgpu_minimum_limits()
+        };
         let (device, queue) = adapter
             .request_device(&etalon::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
                 required_features: adapter.features() & etalon::Features::TIMESTAMP_QUERY,
-                // Request exactly the adapter's advertised limits. `Limits::default()`
-                // under wgpu 30 asks for desktop-tier limits that a browser WebGPU
-                // adapter does not grant, so `request_device` would fail device
-                // validation. `adapter.limits()` never over-requests and still preserves
-                // the non-zero storage-buffer limits the portal pipelines need (unlike
-                // `downlevel_webgl2_defaults`, which zeroes them and blacks out the view).
-                required_limits: crate::gpu_context::webgpu_minimum_limits(),
+                // Request minimum WebGPU limits on WebGPU, or the adapter's advertised
+                // limits on WebGL2 (which pairs with DownlevelFlags::READ_ONLY_STORAGE_EMULATION).
+                required_limits,
                 ..Default::default()
             })
             .await
