@@ -32,6 +32,9 @@
 //! caller-owned buffer and budget. `Workspace::admit_pass` checks the actual
 //! budget supplied for that workspace.
 
+// Production capacity/work accounting lives separately from the arena allocator.
+pub mod production_budget;
+
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // ───────────────────────────────────────────────────────────────────────────

@@ -73,6 +73,8 @@ pub mod curve_skeleton;
 /// area identities).
 pub mod dcel_overlay;
 pub mod ddg_operators;
+pub mod ddg_production;
+pub mod decoded_error_ledger;
 mod decimate_3;
 pub mod decimate_3_semantic;
 pub mod delaunay_2;
@@ -99,6 +101,11 @@ pub mod geometry_integration;
 /// P10.5 — Geometry workspace: caller-owned arenas with byte budgets,
 /// deterministic partition/reduction order, and cancellation.
 pub mod geometry_workspace;
+pub mod attribute_transfer;
+pub mod physical_authority;
+pub mod production_contracts;
+pub mod production_lifecycle;
+pub mod production_runtime;
 pub mod gpu;
 pub mod gpu_3d;
 /// P8.7 — GPU acceleration + CPU oracle for P8 batches.

@@ -18,6 +18,9 @@ use super::expansion::Sign;
 use super::kernel::{FilteredF64Kernel, GeometryKernel};
 use super::primitives::Point3;
 
+pub mod admission;
+pub mod normalized_cost;
+
 /// Per-vertex semantic, topological, and presentation attributes preserved during QEM decimation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SemanticVertexAttributes {
@@ -168,7 +171,13 @@ pub fn compute_extended_collapse_cost(
     if sem_transitions > 0.0 && !weights.semantic_boundary_penalty.is_finite() {
         return None;
     }
-    let q_sem = weights.semantic_boundary_penalty.max(0.0) * sem_transitions;
+    // No semantic transition contributes zero even under a hard (+infinity) policy.
+    // Multiplying infinity by zero would otherwise reject compatible endpoints as NaN.
+    let q_sem = if sem_transitions == 0.0 {
+        0.0
+    } else {
+        weights.semantic_boundary_penalty.max(0.0) * sem_transitions
+    };
 
     // Bifurcation sensitivity quadric: penalizes loss of sampling density in high-sensitivity zones.
     let sens_max = attr_lo
@@ -666,6 +675,60 @@ fn can_collapse<K: GeometryKernel>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hard_semantic_policy_preserves_compatible_nonzero_cost() {
+        let a = SemanticVertexAttributes { normal: [1.0, 0.0, 0.0], uv: [0.125, 0.25], ..Default::default() };
+        let b =
+            SemanticVertexAttributes { normal: [0.0, 1.0, 0.0], uv: [0.5, 0.75], bifurcation_sensitivity: 0.2, ..a };
+        let lo = Point3::new(0.0, 0.0, 0.0);
+        let hi = Point3::new(1.0, 0.0, 0.0);
+        let target = Point3::new(0.5, 0.0, 0.0);
+        let cost = |penalty| {
+            compute_extended_collapse_cost(
+                lo,
+                hi,
+                target,
+                3.0,
+                &a,
+                &b,
+                &SemanticDecimateWeights { semantic_boundary_penalty: penalty, ..Default::default() },
+            )
+        };
+        let baseline = cost(0.0).expect("nonzero reference cost");
+        assert!(baseline.is_finite() && baseline > 3.0);
+        assert_eq!(cost(1e6).unwrap().to_bits(), baseline.to_bits());
+        assert_eq!(cost(f64::INFINITY).unwrap().to_bits(), baseline.to_bits());
+    }
+
+    #[test]
+    fn hard_semantic_policy_rejects_each_transition_and_keeps_lock_guards() {
+        let a = SemanticVertexAttributes::default();
+        let lo = Point3::new(0.0, 0.0, 0.0);
+        let hi = Point3::new(1.0, 0.0, 0.0);
+        let hard = SemanticDecimateWeights { semantic_boundary_penalty: f64::INFINITY, ..Default::default() };
+        let finite = SemanticDecimateWeights { semantic_boundary_penalty: 17.0, ..Default::default() };
+        let variants = [
+            (SemanticVertexAttributes { subpart_tag: 1, ..a }, 1.0),
+            (SemanticVertexAttributes { skeleton_joint_id: 1, ..a }, 1.0),
+            (SemanticVertexAttributes { affordance_boundary: true, ..a }, 1.0),
+            (SemanticVertexAttributes { subpart_tag: 1, skeleton_joint_id: 1, affordance_boundary: true, ..a }, 3.0),
+        ];
+        for (b, transitions) in variants {
+            assert_eq!(compute_extended_collapse_cost(lo, hi, lo, 3.0, &a, &b, &hard), None);
+            assert_eq!(
+                compute_extended_collapse_cost(lo, hi, lo, 3.0, &a, &b, &finite),
+                Some(3.0 + 17.0 * transitions)
+            );
+        }
+        let locked = SemanticVertexAttributes { cluster_border_locked: true, ..a };
+        for weights in [finite, hard] {
+            assert_eq!(compute_extended_collapse_cost(lo, hi, lo, 3.0, &locked, &a, &weights), None);
+            assert_eq!(compute_extended_collapse_cost(lo, hi, lo, 3.0, &a, &locked, &weights), None);
+        }
+    }
+
+
 
     fn planar_grid(nx: usize, ny: usize) -> (Vec<Point3>, Vec<[u32; 3]>) {
         let mut v = Vec::new();
