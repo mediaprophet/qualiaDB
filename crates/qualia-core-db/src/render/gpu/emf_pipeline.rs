@@ -150,7 +150,8 @@ impl super::PortalGpu {
         }
         let field_bytes = checked_field_bytes(expected)
             .ok_or_else(|| "emf_upload_field: field byte size overflow".to_string())?;
-        let max_binding_bytes = u64::from(self.device.limits().max_storage_buffer_binding_size);
+        let max_binding_bytes =
+            super::portal_gpu::effective_readonly_storage_binding_size(&self.device);
         let max_buffer_bytes = self.device.limits().max_buffer_size;
         if field_bytes > max_binding_bytes || field_bytes > max_buffer_bytes {
             return Err(format!(
