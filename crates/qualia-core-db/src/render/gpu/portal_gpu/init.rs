@@ -23,7 +23,7 @@ impl PortalGpu {
         particle_cap: usize,
     ) -> Result<Self, String> {
         let particle_bytes_per_instance = std::mem::size_of::<ParticleInstance>() as u64;
-        let particle_device_limit = u64::from(device.limits().max_storage_buffer_binding_size)
+        let particle_device_limit = super::effective_readonly_storage_binding_size(&device)
             .min(device.limits().max_buffer_size);
         let device_particle_cap =
             usize::try_from(particle_device_limit / particle_bytes_per_instance)

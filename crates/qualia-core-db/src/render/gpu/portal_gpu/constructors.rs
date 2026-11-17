@@ -220,8 +220,17 @@ impl PortalGpu {
         let width = canvas.width().max(1);
         let height = canvas.height().max(1);
 
+        let force_webgl2 = web_sys::window()
+            .and_then(|w| js_sys::Reflect::get(&w, &"location".into()).ok())
+            .and_then(|loc| js_sys::Reflect::get(&loc, &"search".into()).ok())
+            .and_then(|s| s.as_string())
+            .is_some_and(|s| s.contains("webgl2=1"));
         let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU | etalon::Backends::GL;
+        instance_desc.backends = if force_webgl2 {
+            etalon::Backends::GL
+        } else {
+            etalon::Backends::BROWSER_WEBGPU | etalon::Backends::GL
+        };
         let instance = etalon::util::new_instance_with_webgpu_detection(instance_desc).await;
 
         // Probe already ran without a canvas. Claim only when we are about

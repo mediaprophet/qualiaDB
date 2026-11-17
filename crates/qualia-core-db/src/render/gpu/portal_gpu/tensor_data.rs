@@ -38,7 +38,7 @@ impl PortalGpu {
             .get(TENSOR_HEADER_BYTES..)
             .ok_or_else(|| "tensor buffer shorter than header".to_string())?;
         let tensor_bytes = body.len() as u64;
-        let max_binding_bytes = u64::from(self.device.limits().max_storage_buffer_binding_size);
+        let max_binding_bytes = super::effective_readonly_storage_binding_size(&self.device);
         let max_buffer_bytes = self.device.limits().max_buffer_size;
         if tensor_bytes == 0 || tensor_bytes > max_binding_bytes || tensor_bytes > max_buffer_bytes
         {
