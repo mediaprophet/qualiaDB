@@ -34,6 +34,7 @@ mod camera_lens;
 #[path = "../portal_emf_metadata.rs"]
 mod emf_metadata;
 mod emf_preview;
+mod debug_snapshot;
 mod gpu_timing;
 mod instance_groups;
 #[path = "../portal_qac_js.rs"]
@@ -3076,20 +3077,22 @@ thread_local! {
     static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);
     static PENDING_GPU_RESULT: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
     static PENDING_WEBGL2: std::cell::RefCell<Option<AnatomyWebGl2>> = std::cell::RefCell::new(None);
+    static LIVE_PORTAL_GPU_BACKEND: std::cell::RefCell<Option<String>> =
+        std::cell::RefCell::new(None);
 }
 
 /// Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
 /// JS awaits this before constructing the portal and starting the render loop.
 /// The canvas must still be context-free (no 2d context yet) so the WebGPU surface
 /// can bind to it. Returns `true` if the GPU path is now armed; on `false`/throw the portal keeps
-/// the canvas2d fallback.
+/// the canvas2d fallback. The armed backend is `portal_gpu_backend`, not this boolean.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     reset_portal_gpu_init_flags();
+    LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
-    // One adapter request inside try_new_async. A second probe doubles the
-    // wait on a phone and is what used to trip the short timeout.
+    // try_new_async prefers WebGPU and retries GL once. Abort still wins.
     let outcome = race_init(async move {
         if portal_gpu_init_aborted() {
             return "aborted".to_string();
@@ -3099,7 +3102,9 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
                 if portal_gpu_init_aborted() {
                     return "aborted".to_string();
                 }
+                let backend = portal_gpu_backend_from_gpu(&gpu);
                 PENDING_GPU.with(|p| *p.borrow_mut() = Some(gpu));
+                LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = backend);
                 "ok".to_string()
             }
             Err(e) if e == "aborted" => "aborted".to_string(),
@@ -3111,12 +3116,14 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
     PENDING_GPU_RESULT.with(|p| p.set(Some(ready)));
     if !ready {
         PENDING_GPU.with(|p| *p.borrow_mut() = None);
+        LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
     }
     match outcome.as_str() {
         "ok" => Ok(true),
         "timeout" | "no-adapter" | "aborted" => {
             // A late device must not be adopted after the page has given up.
             PENDING_GPU.with(|p| *p.borrow_mut() = None);
+            LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
             Ok(false)
         }
         other => Err(JsValue::from_str(&format!("portal_init_webgpu: {other}"))),
@@ -3132,6 +3139,31 @@ pub fn portal_abort_webgpu() {
     abort_portal_gpu_init();
     PENDING_GPU.with(|p| *p.borrow_mut() = None);
     PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
+    LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
+}
+
+/// Live backend of the pending or last adopted `PortalGpu`.
+///
+/// Reads `gpu_timing_adapter_info()`. Returns `"webgpu"` for
+/// `Backend::BrowserWebGpu` / `Backend::Vulkan`, `"webgl2"` for `Backend::Gl`,
+/// or `None` if no device is armed. Does not consult `navigator.gpu`.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn portal_gpu_backend() -> Option<String> {
+    let pending = PENDING_GPU.with(|p| p.borrow().as_ref().and_then(portal_gpu_backend_from_gpu));
+    if pending.is_some() {
+        return pending;
+    }
+    LIVE_PORTAL_GPU_BACKEND.with(|p| p.borrow().clone())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn portal_gpu_backend_from_gpu(gpu: &PortalGpu) -> Option<String> {
+    match gpu.gpu_timing_adapter_info()?.backend {
+        etalon::Backend::BrowserWebGpu | etalon::Backend::Vulkan => Some("webgpu".to_string()),
+        etalon::Backend::Gl => Some("webgl2".to_string()),
+        _ => None,
+    }
 }
 
 /// True once WebGPU has called `getContext("webgpu")` on the init canvas.

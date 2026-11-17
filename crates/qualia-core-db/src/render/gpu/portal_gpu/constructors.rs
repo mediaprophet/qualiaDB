@@ -3,6 +3,8 @@ use super::super::native_device;
 use super::super::PortalGpu;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 use super::super::{mark_portal_gpu_canvas_claimed, portal_gpu_init_aborted};
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+use wasm_bindgen::JsCast;
 use std::sync::Arc;
 
 impl PortalGpu {
@@ -192,53 +194,152 @@ impl PortalGpu {
         ))
     }
 
-    /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
-    /// cannot block). Native callers use the `try_new` wrapper above.
-    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-    /// True when a browser adapter answers. Does not bind a canvas, so a hang
+    /// True when a browser adapter answers. Probes WebGPU first, then GL.
+    /// Does not bind the presentation canvas or request a device, so a hang
     /// or a miss leaves the 2d tick free to draw.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
     pub async fn adapter_responds() -> bool {
+        if Self::webgpu_adapter_responds().await {
+            return true;
+        }
+        Self::gl_adapter_responds().await
+    }
+
+    /// True when a WebGPU adapter answers. No canvas claim, no `request_device`.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    pub async fn webgpu_adapter_responds() -> bool {
+        Self::adapter_responds_on(etalon::Backends::BROWSER_WEBGPU, None).await
+    }
+
+    /// True when a GL adapter answers on a detached canvas. No presentation
+    /// canvas claim, no `request_device`.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn gl_adapter_responds() -> bool {
+        let Some(canvas) = detached_adapter_probe_canvas() else {
+            return false;
+        };
+        let responded =
+            Self::adapter_responds_on(etalon::Backends::GL, Some(canvas.clone())).await;
+        release_detached_webgl2(&canvas);
+        responded
+    }
+
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn adapter_responds_on(
+        backends: etalon::Backends,
+        canvas: Option<web_sys::HtmlCanvasElement>,
+    ) -> bool {
         let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU;
+        instance_desc.backends = backends;
         let instance = etalon::Instance::new(instance_desc);
+        let surface = match canvas {
+            Some(canvas) => match instance.create_surface(etalon::SurfaceTarget::Canvas(canvas)) {
+                Ok(surface) => Some(surface),
+                Err(_) => return false,
+            },
+            None => None,
+        };
         instance
             .request_adapter(&etalon::RequestAdapterOptions {
                 power_preference: etalon::PowerPreference::HighPerformance,
-                compatible_surface: None,
+                compatible_surface: surface.as_ref(),
                 ..Default::default()
             })
             .await
             .is_ok()
     }
 
+    /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
+    /// cannot block). Native callers use the `try_new` wrapper above.
+    ///
+    /// Default path prefers WebGPU. If adapter/device/surface fails on a WebGPU
+    /// adapter, retries once on a GL-only instance. `?webgl2=1` is GL-only and
+    /// does not retry WebGPU. Abort flags still win.
     #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-    /// Tries `new-async`.
     pub async fn try_new_async(
+        canvas: &web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        if location_forces_webgl2() {
+            return Self::try_new_gl_instance(canvas, particle_cap).await;
+        }
+
+        match Self::try_new_webgpu_instance(canvas, particle_cap).await {
+            Ok(gpu) => Ok(gpu),
+            Err(error) if error == "aborted" => Err(error),
+            Err(webgpu_error) => {
+                if portal_gpu_init_aborted() {
+                    return Err("aborted".into());
+                }
+                match Self::try_new_gl_instance(canvas, particle_cap).await {
+                    Ok(gpu) => Ok(gpu),
+                    Err(error) if error == "aborted" => Err(error),
+                    Err(gl_error) => Err(format!("{webgpu_error}; gl retry: {gl_error}")),
+                }
+            }
+        }
+    }
+
+    /// WebGPU-only instance: adapter and device before claiming the canvas so a
+    /// later GL retry can still bind WebGL2 on the same element.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn try_new_webgpu_instance(
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,
     ) -> Result<Self, String> {
         let width = canvas.width().max(1);
         let height = canvas.height().max(1);
-
-        let force_webgl2 = web_sys::window()
-            .and_then(|w| js_sys::Reflect::get(&w, &"location".into()).ok())
-            .and_then(|loc| js_sys::Reflect::get(&loc, &"search".into()).ok())
-            .and_then(|s| s.as_string())
-            .is_some_and(|s| s.contains("webgl2=1"));
         let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = if force_webgl2 {
-            etalon::Backends::GL
-        } else {
-            etalon::Backends::BROWSER_WEBGPU | etalon::Backends::GL
-        };
-        let instance = etalon::util::new_instance_with_webgpu_detection(instance_desc).await;
+        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU;
+        let instance = etalon::Instance::new(instance_desc);
 
-        // Probe already ran without a canvas. Claim only when we are about
-        // to present, and only with an adapter that can target this surface.
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
+        let adapter = Self::request_portal_adapter(&instance, None).await?;
+        if adapter.get_info().backend == etalon::Backend::Gl {
+            return Err("webgpu instance selected a GL adapter".into());
+        }
 
+        let (device, queue) = Self::request_portal_device(&adapter).await?;
+
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
+        mark_portal_gpu_canvas_claimed();
+        let surface = instance
+            .create_surface(etalon::SurfaceTarget::Canvas(canvas.clone()))
+            .map_err(|e| format!("surface: {e}"))?;
+
+        Self::assemble_portal_gpu(
+            adapter,
+            device,
+            queue,
+            surface,
+            width,
+            height,
+            particle_cap,
+        )
+        .await
+    }
+
+    /// GL-only instance. WebGL2 adapters require a canvas surface before
+    /// `request_adapter`. Uses `adapter.limits()`, which pairs with
+    /// `DownlevelFlags::READ_ONLY_STORAGE_EMULATION`.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn try_new_gl_instance(
+        canvas: &web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        let width = canvas.width().max(1);
+        let height = canvas.height().max(1);
+        let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
+        instance_desc.backends = etalon::Backends::GL;
+        let instance = etalon::Instance::new(instance_desc);
+
+        if portal_gpu_init_aborted() {
+            return Err("aborted".into());
+        }
         mark_portal_gpu_canvas_claimed();
         let surface = instance
             .create_surface(etalon::SurfaceTarget::Canvas(canvas.clone()))
@@ -246,10 +347,29 @@ impl PortalGpu {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
+
+        let adapter = Self::request_portal_adapter(&instance, Some(&surface)).await?;
+        let (device, queue) = Self::request_portal_device(&adapter).await?;
+        Self::assemble_portal_gpu(
+            adapter,
+            device,
+            queue,
+            surface,
+            width,
+            height,
+            particle_cap,
+        )
+        .await
+    }
+
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn request_portal_adapter(
+        instance: &etalon::Instance,
+        surface: Option<&etalon::Surface<'static>>,
+    ) -> Result<etalon::Adapter, String> {
         // Hybrid laptops answer LowPower on the iGPU. Ask for the discrete
         // GPU first; phones that refuse it still get None then LowPower.
-        let mut adapter = None;
-        let mut last_err = String::from("no WebGPU adapter");
+        let mut last_err = String::from("no adapter");
         for pref in [
             etalon::PowerPreference::HighPerformance,
             etalon::PowerPreference::None,
@@ -261,20 +381,22 @@ impl PortalGpu {
             match instance
                 .request_adapter(&etalon::RequestAdapterOptions {
                     power_preference: pref,
-                    compatible_surface: Some(&surface),
+                    compatible_surface: surface,
                     ..Default::default()
                 })
                 .await
             {
-                Ok(found) => {
-                    adapter = Some(found);
-                    break;
-                }
-                Err(e) => last_err = format!("no WebGPU adapter: {e}"),
+                Ok(found) => return Ok(found),
+                Err(e) => last_err = format!("no adapter: {e}"),
             }
         }
-        let adapter = adapter.ok_or(last_err)?;
+        Err(last_err)
+    }
 
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn request_portal_device(
+        adapter: &etalon::Adapter,
+    ) -> Result<(etalon::Device, etalon::Queue), String> {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
@@ -283,7 +405,7 @@ impl PortalGpu {
         } else {
             crate::gpu_context::webgpu_minimum_limits()
         };
-        let (device, queue) = adapter
+        adapter
             .request_device(&etalon::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
                 required_features: adapter.features() & etalon::Features::TIMESTAMP_QUERY,
@@ -293,8 +415,19 @@ impl PortalGpu {
                 ..Default::default()
             })
             .await
-            .map_err(|e| format!("device: {e}"))?;
+            .map_err(|e| format!("device: {e}"))
+    }
 
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    async fn assemble_portal_gpu(
+        adapter: etalon::Adapter,
+        device: etalon::Device,
+        queue: etalon::Queue,
+        surface: etalon::Surface<'static>,
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
@@ -347,5 +480,40 @@ impl PortalGpu {
         portal_gpu.device_lost = device_lost;
         portal_gpu.pass_timings.set_adapter_info(adapter.get_info());
         Ok(portal_gpu)
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+fn location_forces_webgl2() -> bool {
+    web_sys::window()
+        .and_then(|w| js_sys::Reflect::get(&w, &"location".into()).ok())
+        .and_then(|loc| js_sys::Reflect::get(&loc, &"search".into()).ok())
+        .and_then(|s| s.as_string())
+        .is_some_and(|s| s.contains("webgl2=1"))
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+fn detached_adapter_probe_canvas() -> Option<web_sys::HtmlCanvasElement> {
+    web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.create_element("canvas").ok())
+        .and_then(|element| element.dyn_into::<web_sys::HtmlCanvasElement>().ok())
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+fn release_detached_webgl2(canvas: &web_sys::HtmlCanvasElement) {
+    let Ok(Some(context)) = canvas.get_context("webgl2") else {
+        return;
+    };
+    let Ok(context) = context.dyn_into::<web_sys::WebGl2RenderingContext>() else {
+        return;
+    };
+    let Ok(Some(extension)) = context.get_extension("WEBGL_lose_context") else {
+        return;
+    };
+    if let Ok(lose_context) = js_sys::Reflect::get(&extension, &"loseContext".into())
+        .and_then(JsCast::dyn_into::<js_sys::Function>)
+    {
+        let _ = lose_context.call0(&extension);
     }
 }

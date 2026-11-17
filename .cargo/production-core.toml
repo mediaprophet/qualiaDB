@@ -1,3 +1,10 @@
+# Concatenated with .cargo/config.toml rustflags. Include the getrandom
+# wasm_js cfg here so production-core wasm checks stay correct even if
+# config.toml is edited. Include -C debuginfo=0 in this list rather than
+# setting exclusive RUSTFLAGS (which would drop the cfg).
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"', '-C', 'debuginfo=0']
+
 [patch."https://github.com/mediaprophet/etalon.git"]
 naga = { path = "../etalon/naga" }
 etalon = { path = "../etalon/etalon" }

@@ -261,6 +261,17 @@ impl WaterGpu {
         self.index_count > 0
     }
 
+    pub(super) fn debug_snapshot(&self) -> serde_json::Value {
+        serde_json::json!({
+            "has_geometry": self.has_geometry(),
+            "index_count": self.index_count,
+            "colour_alpha": self.uniform.colour_alpha,
+            "hdr_pipeline": self.pipeline_hdr.is_some(),
+            "vertex_buffer": self.vertex_buf.is_some(),
+            "index_buffer": self.index_buf.is_some(),
+        })
+    }
+
     /// Sets `time`.
     pub(super) fn set_time(&mut self, time: f32) {
         self.uniform.wave[0] = time;

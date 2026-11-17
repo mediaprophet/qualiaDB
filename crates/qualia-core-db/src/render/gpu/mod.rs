@@ -678,6 +678,7 @@ impl PortalGpu {
 
 // Phase 0.2a: render/gpu submodules (bloom post-pass, resource builders, particle field).
 mod bloom;
+mod debug_snapshot;
 mod compute;
 mod emf_pipeline;
 #[cfg(target_arch = "wasm32")]

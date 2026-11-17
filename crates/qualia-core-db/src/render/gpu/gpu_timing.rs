@@ -111,6 +111,7 @@ impl PassTimings {
             adapter_info: None,
         }
     }
+    #[cfg_attr(not(all(target_arch = "wasm32", feature = "portal")), allow(dead_code))]
     pub fn set_adapter_info(&mut self, info: etalon::AdapterInfo) {
         self.adapter_info = Some(info);
     }

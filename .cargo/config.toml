@@ -1,2 +1,8 @@
+# getrandom 0.3.x on wasm32-unknown-unknown needs this rustc cfg in addition
+# to Cargo feature wasm_js. getrandom 0.4.x uses the feature alone; the cfg
+# remains required for the 0.3.3 transitive graph (rand / ed25519-dalek).
+# The RUSTFLAGS environment variable replaces these rustflags entirely. Do
+# not set RUSTFLAGS to only `-C debuginfo=0`. Put extra flags in this list
+# (see .cargo/production-core.toml) or include the cfg in RUSTFLAGS.
 [target.wasm32-unknown-unknown]
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"']

@@ -18,10 +18,11 @@ const ADAPTER_PROBE_TIMEOUT_MS: i32 = 4_000;
 
 /// Probe browser graphics APIs without claiming the page's presentation canvas.
 ///
-/// `selected_backend` is a recommendation from API/adapter availability only;
+/// `recommended_backend` is a recommendation from API/adapter availability only;
 /// actual initialization can still fail because of surface compatibility,
-/// memory pressure, or device loss. Callers must use the result of
-/// `portal_init_webgpu` / `portal_init_webgl2` as the final selection receipt.
+/// memory pressure, or device loss. `portal_init_webgpu` remains a boolean so
+/// existing JS callers compile. The live backend receipt is `portal_gpu_backend`
+/// after a successful init (pending or adopted `PortalGpu` adapter info).
 #[wasm_bindgen]
 pub async fn probe_portal_graphics() -> Result<JsValue, JsValue> {
     let webgpu_api_state = browser_webgpu_api_state();
@@ -213,7 +214,7 @@ fn browser_webgpu_api_state() -> CapabilityEvidence {
 
 async fn probe_webgpu_adapter_bounded() -> CapabilityEvidence {
     let adapter_probe = wasm_bindgen_futures::future_to_promise(async {
-        Ok(JsValue::from_f64(if PortalGpu::adapter_responds().await {
+        Ok(JsValue::from_f64(if PortalGpu::webgpu_adapter_responds().await {
             1.0
         } else {
             -1.0
