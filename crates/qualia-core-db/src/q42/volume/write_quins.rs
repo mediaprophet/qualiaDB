@@ -1,5 +1,6 @@
 //! Write a caller-owned Quin slice as a canonical unified v3 `.q42`.
 
+use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 
@@ -35,6 +36,38 @@ pub fn write_sorted_quins_volume_with_author(
     let mut sorted = quins.to_vec();
     sorted.sort_unstable_by_key(|q| q.object);
     let mut builder = UnifiedVolumeBuilder::with_empty_lex().with_author_did(author_did);
+    for (seq, chunk) in sorted.chunks(QUINS_PER_BLOCK).enumerate() {
+        builder.push_block(seq as u64, chunk)?;
+    }
+    builder.finish(path)?;
+    Ok(sorted.len())
+}
+
+/// Same as [`write_sorted_quins_volume_with_author`], embedding a hash→term lexicon
+/// so SPARQL result rows can resolve IRIs instead of raw object hashes.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn write_sorted_quins_volume_with_lex(
+    path: &Path,
+    quins: &[NQuin],
+    lex: &HashMap<u64, String>,
+    author_did: u64,
+) -> io::Result<usize> {
+    if quins.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "refusing to write an empty Q42 volume",
+        ));
+    }
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    let mut sorted = quins.to_vec();
+    sorted.sort_unstable_by_key(|q| q.object);
+    let mut builder = UnifiedVolumeBuilder::with_lex_map(lex)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?
+        .with_author_did(author_did);
     for (seq, chunk) in sorted.chunks(QUINS_PER_BLOCK).enumerate() {
         builder.push_block(seq as u64, chunk)?;
     }

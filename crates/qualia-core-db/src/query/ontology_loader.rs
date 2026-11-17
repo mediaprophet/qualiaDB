@@ -149,34 +149,31 @@ fn find_ontology_dir() -> Option<std::path::PathBuf> {
     None
 }
 
-/// Parse a single Turtle file into NQuins, all placed in `graph_context`.
+/// Parse Turtle/N3 bytes into NQuins plus the hash→term lexicon used by SPARQL lookup.
 ///
 /// Each triple becomes:
 ///   `NQuin { subject = q_hash(subject_iri), predicate = q_hash(pred_iri),
 ///            object = q_hash(object_str), context = graph_context, ... }`
-pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQuin> {
-    use std::fs::File;
-    use std::io::BufReader;
-
-    let file = match File::open(path) {
-        Ok(f) => f,
-        Err(e) => {
-            log::warn!("[ontology_loader] cannot open {:?}: {e}", path);
-            return Vec::new();
-        }
-    };
-
-    let reader = BufReader::new(file);
-    let mut parser = rio_turtle::TurtleParser::new(reader, None);
+pub fn parse_ttl_bytes_to_quins_and_lex(
+    bytes: &[u8],
+    graph_context: u64,
+) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), String> {
+    use rio_api::parser::TriplesParser;
+    let mut parser = rio_turtle::TurtleParser::new(std::io::Cursor::new(bytes), None);
     let mut quins = Vec::new();
-
-    let result = {
-        use rio_api::parser::TriplesParser;
-        parser.parse_all(
+    let mut lex = std::collections::HashMap::new();
+    parser
+        .parse_all(
             &mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
-                let s = q_hash(&t.subject.to_string());
-                let p = q_hash(&t.predicate.to_string());
-                let o = q_hash(&t.object.to_string());
+                let s_str = t.subject.to_string();
+                let p_str = t.predicate.to_string();
+                let o_str = t.object.to_string();
+                let s = q_hash(&s_str);
+                let p = q_hash(&p_str);
+                let o = q_hash(&o_str);
+                lex.entry(s).or_insert(s_str);
+                lex.entry(p).or_insert(p_str);
+                lex.entry(o).or_insert(o_str);
                 quins.push(NQuin {
                     subject: s,
                     predicate: p,
@@ -188,18 +185,33 @@ pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQu
                 Ok(())
             },
         )
+        .map_err(|e| e.to_string())?;
+    Ok((quins, lex))
+}
+
+/// Parse a single Turtle file into NQuins, all placed in `graph_context`.
+pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQuin> {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) => {
+            log::warn!("[ontology_loader] cannot open {:?}: {e}", path);
+            return Vec::new();
+        }
     };
-
-    if let Err(e) = result {
-        log::warn!("[ontology_loader] parse error in {:?}: {e}", path);
+    match parse_ttl_bytes_to_quins_and_lex(&bytes, graph_context) {
+        Ok((quins, _)) => {
+            log::info!(
+                "[ontology_loader] loaded {} quins from {:?}",
+                quins.len(),
+                path
+            );
+            quins
+        }
+        Err(e) => {
+            log::warn!("[ontology_loader] parse error in {:?}: {e}", path);
+            Vec::new()
+        }
     }
-
-    log::info!(
-        "[ontology_loader] loaded {} quins from {:?}",
-        quins.len(),
-        path
-    );
-    quins
 }
 
 /// Load a unified `.q42` volume ontology file.
@@ -275,6 +287,9 @@ mod tests {
         let quins = parse_ttl_to_quins(tmp.path(), 0xCAFE);
         assert!(!quins.is_empty());
         assert!(quins.iter().all(|q| q.context == 0xCAFE));
+        let (from_bytes, lex) = parse_ttl_bytes_to_quins_and_lex(ttl, 0xCAFE).unwrap();
+        assert_eq!(from_bytes.len(), quins.len());
+        assert!(lex.values().any(|t| t.contains("Alice")));
     }
 
     #[test]

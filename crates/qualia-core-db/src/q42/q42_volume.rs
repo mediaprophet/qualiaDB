@@ -68,7 +68,10 @@ pub use volume::{
     IpfsGatewaySegmentFactory,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
+pub use volume::{
+    write_sorted_quins_volume, write_sorted_quins_volume_with_author,
+    write_sorted_quins_volume_with_lex,
+};
 pub use crate::bundle::cbor_ld_manifest::PayloadCatalogueEntry;
 #[path = "volume/payload_catalogue.rs"]
 pub mod payload_catalogue;

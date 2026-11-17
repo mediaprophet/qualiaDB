@@ -191,6 +191,22 @@ pub enum LexError {
     TermTooLong,
 }
 
+impl std::fmt::Display for LexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::InvalidMagic => "invalid Q42 lexicon magic",
+            Self::Truncated => "truncated Q42 lexicon",
+            Self::BadStringOffset => "Q42 lexicon string offset out of range",
+            Self::BadIndex => "Q42 lexicon index out of range",
+            Self::BadEntry => "malformed Q42 lexicon entry",
+            Self::InvalidUtf8 => "Q42 lexicon term is not valid UTF-8",
+            Self::TermTooLong => "Q42 lexicon term exceeds the encoded length budget",
+        })
+    }
+}
+
+impl std::error::Error for LexError {}
+
 /// Zero-allocation view over a memory-mapped `.q42.lex` slice (sorted hash index).
 #[derive(Debug, Clone, Copy)]
 pub struct Q42LexMmap<'a> {

@@ -119,7 +119,10 @@ pub use verify::{
     VerifyLevel,
 };
 #[cfg(not(target_arch = "wasm32"))]
-pub use write_quins::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
+pub use write_quins::{
+    write_sorted_quins_volume, write_sorted_quins_volume_with_author,
+    write_sorted_quins_volume_with_lex,
+};
 
 pub(crate) use index::bidx_block_range_for_hash;
 #[cfg(not(target_arch = "wasm32"))]
