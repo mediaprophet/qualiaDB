@@ -342,3 +342,6 @@ pub fn verify_arrived_range(
 #[cfg(test)]
 #[path = "streaming_loader/tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "streaming_loader/ewm_wasm_tests.rs"]
+mod ewm_wasm_tests;

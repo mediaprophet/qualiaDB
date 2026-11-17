@@ -291,6 +291,13 @@ web-sys = { version = "0.3", features = [
     "WebGlUniformLocation",
     "WebGlVertexArrayObject",
     "console",
+    "Headers",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "AbortController",
+    "AbortSignal",
 ] }
 # Feature-unification shim for stable fips20x/x25519 dependencies that still
 # consume rand_core 0.6/getrandom 0.2 on wasm32.

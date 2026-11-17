@@ -13,6 +13,7 @@ pub mod ebpf_filter;
 pub mod ebpf_firewall;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod fetch_10d;
+pub mod fetch_range_wasm;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod host_topology;
 #[cfg(not(target_arch = "wasm32"))]

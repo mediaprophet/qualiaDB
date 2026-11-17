@@ -175,6 +175,25 @@ pub struct CandidateIdentity {
     pub(crate) entries: u32,
 }
 impl CandidateIdentity {
+    /// Bind a producer-verified four-tuple. Rejects zero descriptor or context.
+    /// Browser hosts must not call `InventoryVerifier::finish`.
+    pub fn from_parts(
+        descriptor: StrongDigest,
+        context: StrongDigest,
+        generation: u64,
+        entries: u32,
+    ) -> Result<Self, DescriptorError> {
+        if descriptor.is_zero() || context.is_zero() {
+            return Err(DescriptorError::Commitment);
+        }
+        Ok(Self {
+            descriptor,
+            context,
+            generation,
+            entries,
+        })
+    }
+
     pub const fn descriptor_id(&self) -> StrongDigest {
         self.descriptor
     }
