@@ -12,8 +12,9 @@
 //!    intersect, and compute the intersection segments.
 //! 3. **Triangle splitting**: For each triangle that intersects, split it
 //!    along the intersection segment(s) into sub-triangles.
-//! 4. **Classification**: For each (sub-)triangle, ray-cast its centroid
-//!    against the other mesh to determine inside/outside.
+//! 4. **Classification**: For each (sub-)triangle, ray-cast a point offset
+//!    from the centroid along the facet outward normal against the other mesh
+//!    so a centroid that sits on the cutting curve is not `OnSurface`.
 //! 5. **Assembly**: Based on the operation:
 //!    - Union: keep fragments outside the other mesh.
 //!    - Intersection: keep fragments inside the other mesh.
@@ -30,10 +31,9 @@
 //! This is a cold builder (uses `Vec` scratch, like `tri_tri_3`'s
 //! `self_intersecting_pairs`). The boolean *decision* (inside/outside) is
 //! driven by `orient_3d` signs via ray casting; the intersection *construction*
-//! (split points) is `f64` and thus approximate. For degenerate coplanar
-//! overlaps, the classification uses the centroid ray-cast which is robust for
-//! well-conditioned inputs but may misclassify near-coplanar configurations
-//! where the centroid lies on the other mesh's surface.
+//! (split points) is `f64` and thus approximate. Fragments are classified from a
+//! point offset along the facet outward normal so a centroid that sits on the
+//! cutting curve is not reported as `OnSurface` of the other solid.
 
 // Bounded authoring adoption is decomposed from this legacy owner.
 pub mod bounded;
@@ -260,11 +260,10 @@ pub fn boolean_3_with_kernel<K: GeometryKernel>(
     // Classify each fragment against the *other* mesh.
     let mut kept: Vec<Tri3> = Vec::new();
     for frag in &fragments {
-        let centroid = tri_centroid(frag.v);
         let side = if frag.from_a {
-            classify_point(centroid, &corners_b)
+            classify_fragment(frag.v, &corners_b)
         } else {
-            classify_point(centroid, &corners_a)
+            classify_fragment(frag.v, &corners_a)
         };
 
         let keep = match (op, frag.from_a, side) {
@@ -427,11 +426,10 @@ pub fn boolean_3_exact(
     // (ExactPoint3 split points), not from the classification ray test.
     let mut kept: Vec<Tri3> = Vec::new();
     for frag in &fragments {
-        let centroid = tri_centroid(frag.v);
         let side = if frag.from_a {
-            classify_point(centroid, &corners_b)
+            classify_fragment(frag.v, &corners_b)
         } else {
-            classify_point(centroid, &corners_a)
+            classify_fragment(frag.v, &corners_a)
         };
 
         let keep = match (op, frag.from_a, side) {
@@ -847,6 +845,39 @@ enum MeshSide {
     Inside,
     Outside,
     OnSurface,
+}
+
+/// Point used to classify a fragment against the other solid: the centroid
+/// pushed a relative epsilon along the facet normal. A centroid on the cut
+/// curve otherwise ray-casts as `OnSurface` and punches holes in the union.
+fn fragment_probe(fragment: [Point3; 3]) -> Point3 {
+    let c = tri_centroid(fragment);
+    let n = tri_normal(fragment[0], fragment[1], fragment[2]);
+    let len2 = n.x * n.x + n.y * n.y + n.z * n.z;
+    if !(len2 > 1e-24) {
+        return c;
+    }
+    let len = len2.sqrt();
+    let edge = |a: Point3, b: Point3| {
+        let dx = a.x - b.x;
+        let dy = a.y - b.y;
+        let dz = a.z - b.z;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    };
+    let scale = (edge(fragment[0], fragment[1])
+        + edge(fragment[1], fragment[2])
+        + edge(fragment[2], fragment[0]))
+        / 3.0;
+    let eps = (scale * 1e-4).clamp(1e-8, 1e-3);
+    Point3::new(
+        c.x + n.x / len * eps,
+        c.y + n.y / len * eps,
+        c.z + n.z / len * eps,
+    )
+}
+
+fn classify_fragment(fragment: [Point3; 3], other: &[[Point3; 3]]) -> MeshSide {
+    classify_point(fragment_probe(fragment), other)
 }
 
 /// Test whether a point is inside, outside, or on the surface of a closed
@@ -1907,5 +1938,41 @@ mod tests {
             (vol - 7.0).abs() < 0.1,
             "exact difference of nested cubes volume ≈ 7, got {vol}"
         );
+    }
+
+    fn cube_corners() -> Vec<[Point3; 3]> {
+        let (v, t) = unit_cube();
+        t.into_iter()
+            .map(|idx| {
+                [
+                    v[idx[0] as usize],
+                    v[idx[1] as usize],
+                    v[idx[2] as usize],
+                ]
+            })
+            .collect()
+    }
+
+    #[test]
+    fn fragment_probe_does_not_treat_cut_adjacent_centroid_as_on_surface() {
+        // Cut-adjacent fragment in the cube's front plane y=0: two vertices on
+        // the face, one past the top edge. The centroid still sits on the face,
+        // so a centroid ray-cast reports OnSurface and Union would drop mesh-1.
+        // The probe is offset along the outward normal (-Y) and classifies
+        // Outside, which Union keeps.
+        let cube = cube_corners();
+        let fragment = [
+            p(0.0, 0.0, 0.5),
+            p(1.0, 0.0, 0.5),
+            p(0.5, 0.0, 1.5),
+        ];
+        let centroid = tri_centroid(fragment);
+        assert!((centroid.x - 0.5).abs() < 1e-12);
+        assert!(centroid.y.abs() < 1e-12);
+        assert!((centroid.z - 5.0 / 6.0).abs() < 1e-12);
+        assert_eq!(classify_point(centroid, &cube), MeshSide::OnSurface);
+        assert_eq!(classify_fragment(fragment, &cube), MeshSide::Outside);
+        let probe = fragment_probe(fragment);
+        assert!(probe.y < 0.0, "probe must leave the cube, got y={}", probe.y);
     }
 }

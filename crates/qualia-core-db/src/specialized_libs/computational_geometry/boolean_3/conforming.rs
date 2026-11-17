@@ -232,7 +232,7 @@ pub fn union_conforming_bounded_into(
                 &mut work,
                 other.len().checked_mul(5).ok_or(Error::Overflow)?,
             )?;
-            let keep = match classify_point(tri_centroid(fragment), other) {
+            let keep = match classify_fragment(fragment, other) {
                 MeshSide::Outside => true,
                 MeshSide::Inside => false,
                 MeshSide::OnSurface => mesh == 0 && normals_align(fragment, other),

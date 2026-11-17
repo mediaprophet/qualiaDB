@@ -216,7 +216,7 @@ pub fn union_exact_bounded_into(
                         .checked_add(1)
                         .ok_or(BoundedUnionError::Overflow)?,
                 )?;
-                let keep = match classify_point(tri_centroid(fragment), other) {
+                let keep = match classify_fragment(fragment, other) {
                     MeshSide::Outside => true,
                     MeshSide::Inside => false,
                     MeshSide::OnSurface => mesh == 0 && normals_align(fragment, other),
