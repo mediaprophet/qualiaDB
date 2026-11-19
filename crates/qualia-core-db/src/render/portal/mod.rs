@@ -3089,15 +3089,40 @@ thread_local! {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
+    portal_init_inner(canvas, false, "portal_init_webgpu").await
+}
+
+/// Create the portal GPU device + surface asynchronously with an explicit backend preference.
+///
+/// When `prefer_webgl2` is `true`, forces `Backends::GL` (WebGL2) directly without attempting
+/// `Backends::BROWSER_WEBGPU`, even on WebGPU-capable browsers. When `false`, behaves identically
+/// to [`portal_init_webgpu`] (prefers WebGPU and retries WebGL2 once on failure).
+/// The armed backend is reported by [`portal_gpu_backend`].
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub async fn portal_init_with_backend(
+    canvas: HtmlCanvasElement,
+    prefer_webgl2: bool,
+) -> Result<bool, JsValue> {
+    portal_init_inner(canvas, prefer_webgl2, "portal_init_with_backend").await
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn portal_init_inner(
+    canvas: HtmlCanvasElement,
+    prefer_webgl2: bool,
+    label: &'static str,
+) -> Result<bool, JsValue> {
     reset_portal_gpu_init_flags();
     LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
     let cap = particle_cap_for_mode(global_vram_ledger().mode(), 2);
-    // try_new_async prefers WebGPU and retries GL once. Abort still wins.
+    // try_new_async_with_backend forces GL when prefer_webgl2 is true; otherwise prefers WebGPU
+    // and retries GL once. Abort still wins.
     let outcome = race_init(async move {
         if portal_gpu_init_aborted() {
             return "aborted".to_string();
         }
-        match PortalGpu::try_new_async(&canvas, cap).await {
+        match PortalGpu::try_new_async_with_backend(&canvas, cap, prefer_webgl2).await {
             Ok(gpu) => {
                 if portal_gpu_init_aborted() {
                     return "aborted".to_string();
@@ -3126,7 +3151,7 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
             LIVE_PORTAL_GPU_BACKEND.with(|p| *p.borrow_mut() = None);
             Ok(false)
         }
-        other => Err(JsValue::from_str(&format!("portal_init_webgpu: {other}"))),
+        other => Err(JsValue::from_str(&format!("{label}: {other}"))),
     }
 }
 

@@ -15,26 +15,45 @@
 //!   gated on `target_arch = "wasm32"` — on a native `wasm-scientific` build the
 //!   module is simply empty (the engine is reached through MCP there).
 
+#[cfg(target_arch = "wasm32")]
 mod cas;
+#[cfg(target_arch = "wasm32")]
 mod crypto;
 mod exact;
+#[cfg(target_arch = "wasm32")]
 mod graph;
+#[cfg(target_arch = "wasm32")]
 mod linalg;
+#[cfg(target_arch = "wasm32")]
 mod numerics;
+#[cfg(target_arch = "wasm32")]
 mod stats;
+#[cfg(target_arch = "wasm32")]
 mod stats_regression;
+#[cfg(target_arch = "wasm32")]
 mod transforms;
+#[cfg(target_arch = "wasm32")]
 mod units;
 
+#[cfg(target_arch = "wasm32")]
 pub use cas::*;
+#[cfg(target_arch = "wasm32")]
 pub use crypto::*;
+#[allow(unused_imports)]
 pub use exact::*;
+#[cfg(target_arch = "wasm32")]
 pub use graph::*;
+#[cfg(target_arch = "wasm32")]
 pub use linalg::*;
+#[cfg(target_arch = "wasm32")]
 pub use numerics::*;
+#[cfg(target_arch = "wasm32")]
 pub use stats::*;
+#[cfg(target_arch = "wasm32")]
 pub use stats_regression::*;
+#[cfg(target_arch = "wasm32")]
 pub use transforms::*;
+#[cfg(target_arch = "wasm32")]
 pub use units::*;
 
 /// Map any `Display` error into a JS string error value.

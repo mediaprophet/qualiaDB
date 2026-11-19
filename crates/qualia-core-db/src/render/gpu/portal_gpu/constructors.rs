@@ -260,7 +260,22 @@ impl PortalGpu {
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,
     ) -> Result<Self, String> {
-        if location_forces_webgl2() {
+        Self::try_new_async_with_backend(canvas, particle_cap, false).await
+    }
+
+    /// Async portal GPU init with explicit backend preference.
+    ///
+    /// When `prefer_webgl2` is `true` (or `?webgl2=1` is set in `window.location.search`),
+    /// initialises a GL-only (`Backends::GL` / WebGL2) instance directly without attempting
+    /// `Backends::BROWSER_WEBGPU`. Otherwise prefers WebGPU and retries GL once on failure.
+    /// Abort flags still win.
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    pub async fn try_new_async_with_backend(
+        canvas: &web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+        prefer_webgl2: bool,
+    ) -> Result<Self, String> {
+        if prefer_webgl2 || location_forces_webgl2() {
             return Self::try_new_gl_instance(canvas, particle_cap).await;
         }
 

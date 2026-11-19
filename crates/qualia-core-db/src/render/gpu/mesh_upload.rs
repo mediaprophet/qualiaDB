@@ -35,8 +35,9 @@ impl PortalGpu {
     /// Replace the shared mesh instance source stream. Camera-facing forward and AO passes are
     /// culled automatically from the active camera; the full source stream remains available to
     /// shadow cascades so off-camera casters are not dropped. Empty input restores the legacy
-    /// single identity instance. Transparent multi-instance draws are refused until per-instance
-    /// back-to-front ordering is available.
+    /// single identity instance. Mixed opaque/mask and `OpacityMode::Blend` draws are admitted:
+    /// opaque/mask submeshes render in the opaque pass and blended submeshes render in the
+    /// transparent pass (`transparent_draw_order`).
     pub fn set_mesh_instances(
         &mut self,
         records: &[crate::render::instance_culling::GpuInstanceRecord],
@@ -52,17 +53,6 @@ impl PortalGpu {
         let record_size = std::mem::size_of::<crate::render::instance_culling::GpuInstanceRecord>();
         if packed_records.len() % record_size != 0 {
             return Err(MeshInstanceUploadError::InvalidTransform { index: 0 });
-        }
-        let record_count = packed_records.len() / record_size;
-        if record_count > 1
-            && self.mesh.as_ref().is_some_and(|mesh| {
-                mesh.material_gpu
-                    .draws
-                    .iter()
-                    .any(|draw| draw.opacity_mode == crate::container_10d::OpacityMode::Blend)
-            })
-        {
-            return Err(MeshInstanceUploadError::TransparentInstancesRequireSortedSubmission);
         }
         self.visible_mesh_instances.replace_packed(
             &self.device,
@@ -239,14 +229,6 @@ impl PortalGpu {
             || ranges.len() > materials::MAX_MATERIAL_DRAWS
         {
             return Err("mesh material or draw count exceeds renderer limits".to_string());
-        }
-        if self.mesh_instance_groups.is_empty()
-            && self.mesh_instances.count() > 1
-            && materials
-                .iter()
-                .any(|material| material.opacity_mode == crate::container_10d::OpacityMode::Blend)
-        {
-            return Err("transparent meshes require sorted per-instance submission".to_string());
         }
         if authored_normals.is_some_and(|normals| {
             normals.len() != positions.len()
