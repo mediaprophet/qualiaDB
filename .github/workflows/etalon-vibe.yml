@@ -99,7 +99,7 @@ jobs:
 
       - name: Install Rust
         shell: pwsh
-        run: rustup toolchain install 1.96.1 --profile minimal
+        run: rustup toolchain install 1.99.1 --profile minimal
 
       - name: Install Node.js
         uses: actions/setup-node@v5
@@ -144,10 +144,10 @@ jobs:
         shell: pwsh
         working-directory: qualia
         run: |
-          cargo +1.96.1 test --manifest-path tools/container-format-conformance/Cargo.toml --target-dir target/conformance-container
+          cargo +1.99.1 test --manifest-path tools/container-format-conformance/Cargo.toml --target-dir target/conformance-container
           if ($LASTEXITCODE -ne 0) { throw 'container-format-conformance failed' }
           Remove-Item -Recurse -Force target/conformance-container -ErrorAction SilentlyContinue
-          cargo +1.96.1 test --manifest-path tools/qbdl-stream-conformance/Cargo.toml --locked --target-dir target/conformance-qbdl
+          cargo +1.99.1 test --manifest-path tools/qbdl-stream-conformance/Cargo.toml --locked --target-dir target/conformance-qbdl
           if ($LASTEXITCODE -ne 0) { throw 'qbdl-stream-conformance failed' }
           Remove-Item -Recurse -Force target/conformance-qbdl -ErrorAction SilentlyContinue
 
@@ -158,7 +158,7 @@ jobs:
           RUST_MIN_STACK: "33554432"
         run: |
           Remove-Item -Recurse -Force target/etalon-vibe-harness/target -ErrorAction SilentlyContinue
-          cargo +1.96.1 test -p qualia-core-db --lib -- q42:: audio:: sensing:: medical::dicom bundle::stream::formats
+          cargo +1.99.1 test -p qualia-core-db --lib -- q42:: audio:: sensing:: medical::dicom bundle::stream::formats
           if ($LASTEXITCODE -ne 0) { throw 'qualia-core-db native EMF/QAC/Sensing/DICOM/Stream tests failed' }
 
       - name: Retain bounded qualification receipt and execution logs
