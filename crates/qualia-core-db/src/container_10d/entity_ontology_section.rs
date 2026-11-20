@@ -266,6 +266,69 @@ pub fn decode_entity_ontology_section_into<'a>(
 
 pub use decode_entity_ontology_section_into as decode_personal_ontology_section_into;
 
+pub const MAX_DEVELOPMENTAL_KEYFRAMES: usize = 256;
+
+/// Encode a slice of [`DevelopmentalKeyframeRecord`] entries into a caller-supplied buffer. Zero heap.
+pub fn encode_developmental_keyframes(
+    keyframes: &[DevelopmentalKeyframeRecord],
+    out: &mut [u8],
+) -> Result<usize, EntityOntologySectionError> {
+    if keyframes.len() > MAX_DEVELOPMENTAL_KEYFRAMES {
+        return Err(EntityOntologySectionError::TooManyAffordances {
+            count: keyframes.len(),
+            max: MAX_DEVELOPMENTAL_KEYFRAMES,
+        });
+    }
+    let needed = keyframes.len() * DEVELOPMENTAL_KEYFRAME_RECORD_SIZE;
+    if out.len() < needed {
+        return Err(EntityOntologySectionError::BufferTooSmall {
+            need: needed,
+            have: out.len(),
+        });
+    }
+    let mut cursor = 0;
+    for kf in keyframes {
+        out[cursor..cursor + DEVELOPMENTAL_KEYFRAME_RECORD_SIZE]
+            .copy_from_slice(bytemuck::bytes_of(kf));
+        cursor += DEVELOPMENTAL_KEYFRAME_RECORD_SIZE;
+    }
+    Ok(needed)
+}
+
+/// Decode [`DevelopmentalKeyframeRecord`] entries from a byte slice into caller storage. Zero heap.
+pub fn decode_developmental_keyframes_into(
+    payload: &[u8],
+    out_keyframes: &mut [DevelopmentalKeyframeRecord],
+) -> Result<usize, EntityOntologySectionError> {
+    if payload.len() % DEVELOPMENTAL_KEYFRAME_RECORD_SIZE != 0 {
+        return Err(EntityOntologySectionError::LengthMismatch {
+            header_len: (payload.len() / DEVELOPMENTAL_KEYFRAME_RECORD_SIZE)
+                * DEVELOPMENTAL_KEYFRAME_RECORD_SIZE,
+            payload_len: payload.len(),
+        });
+    }
+    let count = payload.len() / DEVELOPMENTAL_KEYFRAME_RECORD_SIZE;
+    if count > MAX_DEVELOPMENTAL_KEYFRAMES {
+        return Err(EntityOntologySectionError::TooManyAffordances {
+            count,
+            max: MAX_DEVELOPMENTAL_KEYFRAMES,
+        });
+    }
+    if out_keyframes.len() < count {
+        return Err(EntityOntologySectionError::BufferTooSmall {
+            need: count,
+            have: out_keyframes.len(),
+        });
+    }
+    for (index, target) in out_keyframes[..count].iter_mut().enumerate() {
+        let start = index * DEVELOPMENTAL_KEYFRAME_RECORD_SIZE;
+        *target = bytemuck::pod_read_unaligned(
+            &payload[start..start + DEVELOPMENTAL_KEYFRAME_RECORD_SIZE],
+        );
+    }
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
