@@ -40,6 +40,12 @@ pub fn qualia_backend_override() -> Option<etalon::Backends> {
         let v = raw.trim().to_ascii_lowercase();
         return match v.as_str() {
             "vulkan" | "vk" => Some(etalon::Backends::VULKAN),
+            "cuda" | "nv" | "nvidia" => {
+                crate::inference_modes::set_inference_mode(
+                    crate::inference_modes::InferenceMode::CudaTc,
+                );
+                Some(etalon::Backends::VULKAN)
+            }
             "dx12" | "d3d12" | "directx12" => Some(etalon::Backends::DX12),
             "metal" | "mtl" => Some(etalon::Backends::METAL),
             "gl" | "opengl" | "gles" => Some(etalon::Backends::GL),

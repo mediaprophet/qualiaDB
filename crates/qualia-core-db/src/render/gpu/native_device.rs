@@ -20,12 +20,12 @@ fn parse_backend_override(raw: &str) -> Result<Option<Backends>, String> {
     let backend = match raw.trim().to_ascii_lowercase().as_str() {
         "auto" => return Ok(None),
         "dx12" | "d3d12" => Backends::DX12,
-        "vulkan" | "vk" => Backends::VULKAN,
+        "vulkan" | "vk" | "cuda" | "nv" | "nvidia" => Backends::VULKAN,
         "gl" | "gles" | "opengl" => Backends::GL,
         "metal" => Backends::METAL,
         other => {
             return Err(format!(
-                "unknown QUALIA_RENDER_WGPU_BACKEND '{other}'; expected auto, dx12, vulkan, gl, or metal"
+                "unknown QUALIA_RENDER_WGPU_BACKEND '{other}'; expected auto, cuda, dx12, vulkan, gl, or metal"
             ));
         }
     };

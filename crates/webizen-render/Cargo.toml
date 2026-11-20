@@ -16,7 +16,7 @@ serde = { workspace = true, features = ["derive"] }
 path = "../qualia-core-db"
 optional = true
 default-features = false
-features = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "privacy-he"]
+features = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "cuda", "privacy-he"]
 
 [dependencies.vibe]
 path = "../vibe"

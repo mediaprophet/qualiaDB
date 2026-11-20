@@ -93,7 +93,7 @@ fn registry_backends() -> etalon::Backends {
     {
         match b.trim().to_ascii_lowercase().as_str() {
             "gl" | "gles" => return etalon::Backends::GL,
-            "vulkan" | "vk" => return etalon::Backends::VULKAN,
+            "vulkan" | "vk" | "cuda" | "nv" | "nvidia" => return etalon::Backends::VULKAN,
             "dx12" | "d3d12" => return etalon::Backends::DX12,
             "metal" => return etalon::Backends::METAL,
             _ => {}
