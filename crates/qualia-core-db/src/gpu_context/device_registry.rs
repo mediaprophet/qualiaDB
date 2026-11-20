@@ -74,8 +74,50 @@ fn backend_rank(b: etalon::Backend) -> u8 {
 }
 
 #[inline]
+fn reject_integrated_gpu() -> bool {
+    if let Ok(v) = std::env::var("SYNTH_REJECT_IGPU").or_else(|_| std::env::var("QUALIA_REJECT_IGPU")) {
+        return matches!(v.trim(), "1" | "true" | "yes");
+    }
+    if let Ok(pref) = std::env::var("SYNTH_GPU_PREFERENCE").or_else(|_| std::env::var("QUALIA_GPU_PREFERENCE")) {
+        let p = pref.trim().to_ascii_lowercase();
+        return p == "discrete-only" || p == "no-igpu";
+    }
+    false
+}
+
+#[inline]
+fn registry_backends() -> etalon::Backends {
+    if let Ok(b) = std::env::var("SYNTH_GPU_BACKEND")
+        .or_else(|_| std::env::var("ETALON_BACKEND"))
+        .or_else(|_| std::env::var("WGPU_BACKEND"))
+    {
+        match b.trim().to_ascii_lowercase().as_str() {
+            "gl" | "gles" => return etalon::Backends::GL,
+            "vulkan" | "vk" => return etalon::Backends::VULKAN,
+            "dx12" | "d3d12" => return etalon::Backends::DX12,
+            "metal" => return etalon::Backends::METAL,
+            _ => {}
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // Exclude Backends::GL by default on Windows so WGL never initializes
+        // a hidden OpenGL context on the on-board Intel integrated GPU driver.
+        etalon::Backends::DX12 | etalon::Backends::VULKAN
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        etalon::Backends::VULKAN | etalon::Backends::METAL
+    }
+}
+
+#[inline]
 fn registry_instance() -> &'static etalon::Instance {
-    REGISTRY_INSTANCE.get_or_init(etalon::Instance::default)
+    REGISTRY_INSTANCE.get_or_init(|| {
+        let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
+        desc.backends = registry_backends();
+        etalon::Instance::new(desc)
+    })
 }
 
 /// Enumerate every adapter once (cached), deduped to **one entry per physical circuit**
@@ -87,7 +129,7 @@ fn registry_instance() -> &'static etalon::Instance {
 pub fn enumerate_circuits() -> &'static [CircuitAdapter] {
     ADAPTERS.get_or_init(|| {
         let instance = registry_instance();
-        let raw = pollster::block_on(instance.enumerate_adapters(etalon::Backends::all()));
+        let raw = pollster::block_on(instance.enumerate_adapters(registry_backends()));
         // Dedup by physical (vendor, device); keep the top-ranked backend for each.
         let mut best: std::collections::HashMap<(u32, u32), (u8, etalon::Adapter, GpuAdapterCaps)> =
             std::collections::HashMap::new();
@@ -215,16 +257,22 @@ pub fn auxiliary_circuit_index() -> Option<usize> {
     if circuits.len() < 2 {
         return None;
     }
+    let reject_igpu = reject_integrated_gpu();
     let primary = primary_circuit_index();
     let is_primary = |i: usize| Some(i) == primary;
-    // Prefer a non-primary integrated GPU.
-    if let Some(i) = (0..circuits.len()).find(|&i| {
-        !is_primary(i) && circuits[i].caps.device_type == etalon::DeviceType::IntegratedGpu
-    }) {
-        return Some(i);
+    if !reject_igpu {
+        // Prefer a non-primary integrated GPU only when integrated GPU is not disabled.
+        if let Some(i) = (0..circuits.len()).find(|&i| {
+            !is_primary(i) && circuits[i].caps.device_type == etalon::DeviceType::IntegratedGpu
+        }) {
+            return Some(i);
+        }
     }
-    // Else the first non-primary circuit.
-    (0..circuits.len()).find(|&i| !is_primary(i))
+    // Else the first non-primary circuit that is permitted under the active iGPU policy.
+    (0..circuits.len()).find(|&i| {
+        !is_primary(i)
+            && (!reject_igpu || circuits[i].caps.device_type != etalon::DeviceType::IntegratedGpu)
+    })
 }
 
 /// A device for the **auxiliary** circuit if one exists, else the **primary** shared device, else

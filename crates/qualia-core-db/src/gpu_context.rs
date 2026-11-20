@@ -892,10 +892,10 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         }
         #[cfg(not(feature = "gpu-native-dx12"))]
         {
-            // Prefer VULKAN | GL on Windows portable builds so DiscreteGpu
-            // (NVIDIA/AMD) is selected instead of GL's default Intel integrated GPU context.
-            desc.backends = etalon::Backends::VULKAN | etalon::Backends::GL;
-            log::info!("shared_gpu|backend_default|windows->vulkan_or_gles_portable_build");
+            // Use VULKAN only by default on Windows portable builds so DiscreteGpu
+            // (NVIDIA/AMD) is selected without initializing WGL on the Intel integrated GPU.
+            desc.backends = etalon::Backends::VULKAN;
+            log::info!("shared_gpu|backend_default|windows->vulkan_portable_build");
         }
     }
     let backends = desc.backends;
