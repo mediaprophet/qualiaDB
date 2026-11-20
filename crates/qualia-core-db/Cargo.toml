@@ -12,6 +12,11 @@ name = "qualia-device-benchmark-worker"
 path = "src/bin/qualia-device-benchmark-worker.rs"
 required-features = ["gpu-runtime"]
 
+[[bin]]
+name = "ewm-first-paint"
+path = "src/bin/ewm-first-paint.rs"
+# no required-features; never gpu-runtime
+
 [features]
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-dx12", "wgsl-forge", "privacy-he"]
 
@@ -239,6 +244,7 @@ etalon = { workspace = true, default-features = false, features = [
 etalon-agent = { workspace = true, optional = true }
 etalon-wgsl-forge = { workspace = true }
 etalon-nquin = { workspace = true }
+anvil-core = { workspace = true }
 etalon-tensor = { workspace = true }
 etalon-render = { workspace = true }
 etalon-sim = { workspace = true }
@@ -427,3 +433,6 @@ harness = false
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 etalon-inference = { workspace = true, features = ["native-accelerate"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(anvil_n3_bind)'] }

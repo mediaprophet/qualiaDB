@@ -995,6 +995,22 @@ pub(crate) async fn init_shared_gpu_for_adapter(
         adapter_caps.summary_line(),
         adapter_caps.llm_feature_line()
     );
+    // Git pin `a8f12b3` has no `anvil_bind`. Local N3 is `--config .cargo/production-core.toml`
+    // which path-patches Etalon and sets `--cfg anvil_n3_bind`.
+    #[cfg(all(not(target_arch = "wasm32"), anvil_n3_bind))]
+    {
+        let uuid = etalon_agent::anvil_bind::live_device_uuid(&adapter).await;
+        if uuid.iter().any(|b| *b != 0) {
+            log::info!("shared_gpu|anvil_n3|deviceUUID bound");
+            if let Some(path) = crate::identity::anvil_policy::default_node_profile_path() {
+                match crate::identity::anvil_policy::persist_gpu_uuid(&path, uuid) {
+                    Ok(true) => log::info!("shared_gpu|anvil_n3|wrote {}", path.display()),
+                    Ok(false) => {}
+                    Err(e) => log::info!("shared_gpu|anvil_n3|profile unchanged ({e:?})"),
+                }
+            }
+        }
+    }
     log::info!(
         "shared_gpu|inference_backend|{}|recommend: {}",
         adapter_caps.backend_label(),
