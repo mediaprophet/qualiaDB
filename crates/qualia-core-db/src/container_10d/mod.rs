@@ -17,11 +17,21 @@
 //! Legacy API/file names containing `identity` remain compatibility spellings;
 //! identifiers, qualified referents and integrity digests retain distinct roles.
 
+/// Packed `.10d` / graphics asset ring.
+///
+/// Distinct from the 42 MiB Q42 Sentinel (`SlgArena` / Prolog hot path). Graphics
+/// assets needed a larger zero-heap ring, the same *kind* of exception as p64
+/// LLM work (mmap of the whole model; process VRAM ledger defaults to 6 GiB).
+/// This constant is the packed-container ceiling, not the GPU/produce envelope.
+pub const GRAPHICS_ASSET_RING_BYTES: usize = 128 * 1024 * 1024;
+
+pub mod archetype_ref_section;
 pub mod axis_role;
 pub mod conformance;
 pub mod crc32c;
 pub mod field_section;
 pub mod header;
+pub mod holographic_phase_section;
 pub mod integrity;
 /// Bounded integration of the v2 identity manifest with the versioned section envelope.
 pub mod manifold_identity_container;
@@ -39,6 +49,7 @@ pub mod metric_check;
 pub mod corpus_envelope;
 pub mod metric_trait_gate;
 pub mod morph_section;
+pub mod multiscale_strata_section;
 pub mod node_section;
 pub mod normal_section;
 pub mod provenance_section;
@@ -89,22 +100,49 @@ pub use correspondence_section::{
 };
 pub use voxel_section::*;
 
+pub use archetype_ref_section::{
+    decode_archetype_ref_record, decode_instance_batch_into, decode_instance_overrides_into,
+    encode_archetype_ref_record, encode_instance_batch, encode_instance_overrides,
+    instance_batch_encoded_len, instance_override_encoded_len, ArchetypeDigestAlg,
+    ArchetypeRefError, ArchetypeRefRecord, ArchetypeTargetKind, InstanceBatchHeader,
+    InstanceBatchRecord, InstanceOverrideHeader, SsmInstanceCoeff, ARCHETYPE_REF_RECORD_SIZE,
+    ARCHETYPE_REF_TAG, ARCHETYPE_REF_VERSION, INSTANCE_BATCH_HEADER_SIZE,
+    INSTANCE_BATCH_RECORD_SIZE, INSTANCE_BATCH_TAG, INSTANCE_BATCH_VERSION,
+    INSTANCE_OVERRIDE_HEADER_SIZE, INSTANCE_OVERRIDE_TAG, INSTANCE_OVERRIDE_VERSION,
+    MAX_INSTANCE_BATCH_RECORDS, MAX_INSTANCE_SSM_COEFFS, OVERRIDE_FLAG_BATCH_NODES,
+    OVERRIDE_FLAG_COORDS_10D, OVERRIDE_FLAG_EONT_STATE, OVERRIDE_FLAG_MATERIAL_VARIANT,
+    OVERRIDE_FLAG_MULTISCALE_STRATA, OVERRIDE_FLAG_PROC_SEED, OVERRIDE_FLAG_SSM_WEIGHTS,
+    SSM_INSTANCE_COEFF_SIZE,
+};
 pub use axis_role::{
     AxisRole, AXIS_ORDER, COORDINATE_AXES, MU_AXIS, PROPOSED_AXIS_ROLES, SELECTOR_AXES,
 };
 pub use crc32c::{crc32c, crc32c_update};
 pub use entity_ontology_section::{
-    decode_entity_ontology_section_into, decode_personal_ontology_section_into,
+    decode_developmental_keyframes_into, decode_entity_ontology_section_into,
+    decode_personal_ontology_section_into, encode_developmental_keyframes,
     encode_entity_ontology_section, encode_personal_ontology_section, entity_ontology_encoded_len,
-    personal_ontology_encoded_len, AffordanceBinaryRecord, EntityOntologyMiniHeader,
-    EntityOntologySectionError, PersonalOntologyMiniHeader, PersonalOntologySectionError,
-    AFFORDANCE_RECORD_SIZE, ENTITY_ONTOLOGY_MINI_HEADER_SIZE, ENTITY_ONTOLOGY_SECTION_VERSION,
-    MAGIC_EONT, MAGIC_PONT, MAX_AFFORDANCES_PER_SECTION, PERSONAL_ONTOLOGY_MINI_HEADER_SIZE,
+    personal_ontology_encoded_len, AffordanceBinaryRecord, DevelopmentalKeyframeRecord,
+    EntityOntologyMiniHeader, EntityOntologySectionError, PersonalOntologyMiniHeader,
+    PersonalOntologySectionError, AFFORDANCE_RECORD_SIZE, DEVELOPMENTAL_KEYFRAME_RECORD_SIZE,
+    ENTITY_ONTOLOGY_MINI_HEADER_SIZE, ENTITY_ONTOLOGY_SECTION_VERSION, MAGIC_EONT, MAGIC_PONT,
+    MAX_AFFORDANCES_PER_SECTION, MAX_DEVELOPMENTAL_KEYFRAMES, PERSONAL_ONTOLOGY_MINI_HEADER_SIZE,
     PERSONAL_ONTOLOGY_SECTION_VERSION,
 };
 pub use header::{
     Container10dHeader, HeaderParseError, FLAG_DEFAULT_DISPOSITION_REFUSE, HEADER_BYTE_SIZE,
     HEADER_VERSION, LEGACY_HEADER_VERSION, MAGIC_10D, MAX_SECTION_COUNT, SUPPORTED_HEADER_VERSIONS,
+};
+pub use holographic_phase_section::{
+    decode_holographic_phase_section_into, encode_holographic_phase_section,
+    evaluate_eulerian_streamline_and_drucker_prager_zero_heap,
+    evaluate_hamiltonian_stationary_action_spline_zero_heap,
+    evaluate_hyperbolic_mobius_morphogenesis_zero_heap, fit_m64_holo_record_from_mesh_zero_heap,
+    holographic_phase_encoded_len, select_scale_space_harmonic_cutoff_zero_heap,
+    EulerianWavefieldRecord, HolographicPhaseError, HolographicPhaseHeader,
+    EULERIAN_WAVEFIELD_RECORD_SIZE, GOLDEN_ANGLE_RAD, HOLOGRAPHIC_MAX_RAYMARCH_STEPS,
+    HOLOGRAPHIC_PHASE_HEADER_SIZE, HOLOGRAPHIC_PHASE_TAG, HOLOGRAPHIC_PHASE_VERSION,
+    MAX_EULERIAN_WAVEFIELDS, MAX_HOLO_SEGMENTS,
 };
 pub use impostor_section::{
     decode_impostor_section, encode_impostor_section, hemi_octahedral_decode,
@@ -120,12 +158,27 @@ pub use manifold_identity_v2::{
     decode_manifold_identity_v2, encode_manifold_identity_v2,
     encode_manifold_identity_v2_with_extensions, encoded_len as manifold_identity_v2_encoded_len,
     IntegrityIndexDigest, ManifestV2Error, ManifoldIdentityV2, StableEntityId, TypedFieldRecord,
-    BUILTIN_FIELD_KINDS, FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL,
-    FIELD_KIND_TENSOR, FIELD_KIND_VECTOR, FIELD_KIND_SURFACE_FRAMES, FIELD_KIND_MORPH_TARGETS,
+    BUILTIN_FIELD_KINDS, BUILTIN_FIELD_KIND_NAMES, FIELD_KIND_ARCHETYPE_REF,
+    FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX,
+    FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, FIELD_KIND_INSTANCE_BATCH,
+    FIELD_KIND_INSTANCE_OVERRIDES, FIELD_KIND_MORPH_TARGETS, FIELD_KIND_MULTISCALE_STRATA,
+    FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL, FIELD_KIND_SURFACE_FRAMES,
+    FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, FIELD_KIND_TENSOR, FIELD_KIND_VECTOR,
     MANIFOLD_IDENTITY_V2_AXIS_ORDER,
     MANIFOLD_IDENTITY_V2_FIELD_RECORD_SIZE, MANIFOLD_IDENTITY_V2_HEADER_SIZE,
     MANIFOLD_IDENTITY_V2_MAGIC, MANIFOLD_IDENTITY_V2_MAX_BYTES, MANIFOLD_IDENTITY_V2_MAX_FIELDS,
     MANIFOLD_IDENTITY_V2_VERSION,
+};
+pub use multiscale_strata_section::{
+    decode_multiscale_strata_section_into, decode_symbolic_rdf_cbor_ld,
+    encode_multiscale_strata_section, encode_symbolic_rdf_cbor_ld, multiscale_strata_encoded_len,
+    ComputationalStratumLevel, EmbodimentResolutionState, MultilingualLexicalTerm,
+    MultiscaleStrataError, MultiscaleStrataHeader, NestedStratumNodeRecord,
+    StratumConstituentKind, StratumInteractionRegime, SymbolicRdfCborLdPayload,
+    MAX_NESTED_STRATUM_NODES, MAX_SYMBOLIC_CBOR_LD_BYTES, MULTISCALE_STRATA_HEADER_SIZE,
+    MULTISCALE_STRATA_TAG, MULTISCALE_STRATA_VERSION, NESTED_STRATUM_NODE_SIZE,
+    STRATUM_NO_PARENT, SYMBOLIC_CBOR_LD_HEADER_SIZE, SYMBOLIC_CBOR_LD_TAG,
+    SYMBOLIC_CBOR_LD_VERSION,
 };
 pub use material_container::{
     attach_material_section, material_container_counts, read_material_section_into,

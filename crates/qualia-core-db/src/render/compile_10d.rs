@@ -880,6 +880,781 @@ pub fn compile_developmental_asset(
     })
 }
 
+/// Compile a primary 10D computational or Mode-B Archetype-Instance `.10d` container
+/// without requiring an inline `QuantizedMesh` section.
+///
+/// Supports:
+/// - **Profile 0 (`ComputationalOnly`):** `identity` (`MID2`) + optional `nodes` (`Tensor10DNodes`),
+///   `strata` (`MSTR` `0x0304`, `L0`..=`L6`), and `symbolic_cbor_ld` (`CBLD` `0x0305`).
+/// - **Profile 2 / Mode B (`ArchetypeInstance`):** Adds `archetype_ref` (`AREF` `0x0301`)
+///   referencing a shared Mode-A Archetype `.10d` by its 256-bit digest while overriding
+///   10D coordinates `[q, v, w, x, y, z, t, α, μ, σ]`, multi-scale strata, and symbolic RDF state.
+pub fn compile_computational_instance_to_10d(
+    identity: &crate::container_10d::ManifoldIdentityV2,
+    archetype_ref: Option<&crate::container_10d::ArchetypeRefRecord>,
+    strata: &[crate::container_10d::NestedStratumNodeRecord],
+    coupling_rule_graph_hash: u64,
+    symbolic_cbor_ld: Option<&crate::container_10d::SymbolicRdfCborLdPayload>,
+    nodes: &[Tensor10D],
+) -> Result<Vec<u8>, Compile10dError> {
+    use crate::container_10d::{
+        encode_archetype_ref_record, encode_manifold_identity_v2, encode_multiscale_strata_section,
+        encode_symbolic_rdf_cbor_ld, manifold_identity_v2_encoded_len,
+        multiscale_strata_encoded_len, TypedFieldRecord, ARCHETYPE_REF_RECORD_SIZE,
+        FIELD_KIND_ARCHETYPE_REF, FIELD_KIND_MULTISCALE_STRATA, FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+    };
+
+    let mut sidecar_bytes: Vec<u8> = Vec::new();
+    let mut fields: Vec<TypedFieldRecord> = Vec::new();
+    let mut next_field_id = 1u64;
+
+    if let Some(aref) = archetype_ref {
+        let offset = sidecar_bytes.len() as u64;
+        let mut buf = [0u8; ARCHETYPE_REF_RECORD_SIZE];
+        let written = encode_archetype_ref_record(aref, &mut buf)
+            .map_err(|_| Compile10dError::ExtraSection { kind: "AREF" })?;
+        sidecar_bytes.extend_from_slice(&buf[..written]);
+        fields.push(TypedFieldRecord {
+            field_id: next_field_id,
+            kind: FIELD_KIND_ARCHETYPE_REF,
+            flags: 0,
+            unit_id: 0,
+            payload_section_id: SectionType::FieldSidecar as u32,
+            payload_offset: offset,
+            payload_length: written as u64,
+        });
+        next_field_id += 1;
+    }
+
+    if !strata.is_empty() {
+        let offset = sidecar_bytes.len() as u64;
+        let needed = multiscale_strata_encoded_len(strata.len())
+            .ok_or(Compile10dError::ExtraSection { kind: "MSTR" })?;
+        let mut buf = vec![0u8; needed];
+        let written = encode_multiscale_strata_section(strata, coupling_rule_graph_hash, &mut buf)
+            .map_err(|_| Compile10dError::ExtraSection { kind: "MSTR" })?;
+        sidecar_bytes.extend_from_slice(&buf[..written]);
+        fields.push(TypedFieldRecord {
+            field_id: next_field_id,
+            kind: FIELD_KIND_MULTISCALE_STRATA,
+            flags: 0,
+            unit_id: 0,
+            payload_section_id: SectionType::FieldSidecar as u32,
+            payload_offset: offset,
+            payload_length: written as u64,
+        });
+        next_field_id += 1;
+    }
+
+    if let Some(cbld) = symbolic_cbor_ld {
+        let offset = sidecar_bytes.len() as u64;
+        let encoded = encode_symbolic_rdf_cbor_ld(cbld)
+            .map_err(|_| Compile10dError::ExtraSection { kind: "CBLD" })?;
+        let written = encoded.len();
+        sidecar_bytes.extend_from_slice(&encoded);
+        fields.push(TypedFieldRecord {
+            field_id: next_field_id,
+            kind: FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+            flags: 0,
+            unit_id: 0,
+            payload_section_id: SectionType::FieldSidecar as u32,
+            payload_offset: offset,
+            payload_length: written as u64,
+        });
+    }
+
+    let mid2_len = manifold_identity_v2_encoded_len(fields.len())
+        .map_err(|_| Compile10dError::ExtraSection { kind: "MID2" })?;
+    let mut mid2_bytes = vec![0u8; mid2_len];
+    let mid2_written = encode_manifold_identity_v2(identity, &fields, &mut mid2_bytes)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "MID2" })?;
+    mid2_bytes.truncate(mid2_written);
+
+    let node_payload: Option<Vec<u8>> = if nodes.is_empty() {
+        None
+    } else {
+        let mut buf = vec![0u8; NodeMiniHeader::payload_bytes(nodes.len())];
+        let n = write_node_section_aos(nodes, &mut buf).map_err(Compile10dError::Nodes)?;
+        buf.truncate(n);
+        Some(buf)
+    };
+
+    let mut sections: Vec<SectionInput<'_>> = Vec::new();
+    if let Some(ref np) = node_payload {
+        sections.push(SectionInput {
+            section_type: SectionType::Tensor10DNodes,
+            alignment_tier: AlignmentTier::Page,
+            stride: 0,
+            element_count: 0,
+            payload: np,
+        });
+    }
+    if !sidecar_bytes.is_empty() {
+        sections.push(SectionInput {
+            section_type: SectionType::FieldSidecar,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &sidecar_bytes,
+        });
+    }
+    sections.push(SectionInput {
+        section_type: SectionType::ManifoldIdentityV2,
+        alignment_tier: AlignmentTier::Page,
+        stride: 0,
+        element_count: 0,
+        payload: &mid2_bytes,
+    });
+
+    let total_payload: usize = sections.iter().map(|s| s.payload.len() + 64).sum();
+    let mut out = vec![0u8; 256 + sections.len() * 24 + total_payload];
+    let header = Container10dHeader::proposed();
+    let total_written =
+        encode_container(&header, &sections, &mut out).map_err(Compile10dError::Section)?;
+    out.truncate(total_written);
+    let _ = seal_whole_file_crc32c(&mut out);
+    Ok(out)
+}
+
+/// Losslessly upgrade an existing B-Rep `.10d` container (v1 or v2) into a full
+/// **Holographic Phase-Space + Multi-Scale Computational `.10d` v2 container**.
+///
+/// - Preserves every existing section (`QuantizedMesh`, `Materials`, `TextureCoordinates`,
+///   `SurfaceReading`, `Topology`, `SpatialIndex`, `SkeletalAnimation`, `EntityOntology`,
+///   `ProvenanceSidecar`, etc.) byte-for-byte.
+/// - Fits a 64-byte [`crate::q42::m64_matter::M64HoloRecord`] (`sdf_harmonics: [i8; 12]`,
+///   Hamiltonian eigen-frequencies, damping, allometric bounds, 6-band spectral SPD) and
+///   12-triangle proxy bounding lens (`HolographicPhaseHeader`, `max_raymarch_steps = 32`)
+///   from the mesh and surface reading, encoding them as `FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE` (`0x0306`, `HOLO`).
+/// - Attaches `SectionType::ProceduralSynthesis` (`PROC`, Section `18`) and
+///   `SectionType::ManifoldIdentityV2` (`MID2`, Section `15`) if not already present,
+///   preserving any existing `FieldSidecar` (`NRM1`/`FRM1` normals/tangents or `MRP1` morphs)
+///   as coexisting `MID2` typed field slices.
+pub fn upgrade_legacy_10d_to_holographic_v2(
+    bytes: &[u8],
+    entity_uri: &str,
+    domain_id: u64,
+    coordinates_10d: [f32; 10],
+) -> Result<Vec<u8>, Compile10dError> {
+    use crate::container_10d::{
+        decode_manifold_identity_v2, decode_mesh_section, encode_holographic_phase_section,
+        encode_manifold_identity_v2, encode_procedural_synthesis_section,
+        fit_m64_holo_record_from_mesh_zero_heap, holographic_phase_encoded_len, is_normal_section,
+        manifold_identity_v2_encoded_len, surface_reading::decode_surface_reading,
+        ManifoldIdentityV2, ProceduralSynthesisHeader, StableEntityId, TypedFieldRecord,
+        FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, FIELD_KIND_MORPH_TARGETS, FIELD_KIND_SURFACE_FRAMES,
+        FLAG_ALLOMETRIC_GROWTH, FLAG_CELLULAR_VORONOI, FLAG_IMPLICIT_FILLET,
+        FLAG_PGA_MOTOR_DYNAMICS, MAGIC_PROC, PROCEDURAL_SYNTHESIS_HEADER_SIZE,
+        PROCEDURAL_SYNTHESIS_SECTION_VERSION,
+    };
+    use crate::q_hash;
+
+    let parsed_header = Container10dHeader::parse(bytes).map_err(|_| Compile10dError::BadHeader)?;
+    let descs = parse_section_table(bytes, &parsed_header).map_err(Compile10dError::Section)?;
+
+    let mut mesh_opt = None;
+    let mut surface_opt = None;
+    let mut existing_sidecar: Option<&[u8]> = None;
+    let mut existing_mid2: Option<&[u8]> = None;
+    let mut has_proc = false;
+    let mut preserved_sections: Vec<(SectionType, AlignmentTier, u32, u32, &[u8])> = Vec::new();
+
+    for d in descs {
+        let st = SectionType::from_u8(d.section_type).ok_or(Compile10dError::BadHeader)?;
+        let tier = AlignmentTier::from_u8(d.alignment_tier).unwrap_or(AlignmentTier::Word);
+        let start = d.byte_offset as usize;
+        let end = start
+            .checked_add(d.byte_length as usize)
+            .ok_or(Compile10dError::SectionOutOfBounds)?;
+        let slice = bytes
+            .get(start..end)
+            .ok_or(Compile10dError::SectionOutOfBounds)?;
+
+        match st {
+            SectionType::QuantizedMesh => {
+                mesh_opt = Some(decode_mesh_section(slice).map_err(Compile10dError::Mesh)?);
+                preserved_sections.push((st, tier, d.stride, d.element_count, slice));
+            }
+            SectionType::SurfaceReading => {
+                surface_opt = decode_surface_reading(slice);
+                preserved_sections.push((st, tier, d.stride, d.element_count, slice));
+            }
+            SectionType::FieldSidecar => {
+                existing_sidecar = Some(slice);
+            }
+            SectionType::ManifoldIdentityV2 => {
+                existing_mid2 = Some(slice);
+            }
+            SectionType::ProceduralSynthesis => {
+                has_proc = true;
+                preserved_sections.push((st, tier, d.stride, d.element_count, slice));
+            }
+            _ => {
+                preserved_sections.push((st, tier, d.stride, d.element_count, slice));
+            }
+        }
+    }
+
+    let subj_hash = q_hash(entity_uri);
+    let prov_hash = q_hash(&format!("{entity_uri}#provenance"));
+    let metric_variety = if domain_id == 1 { 2 } else { 0 };
+
+    let proxy_mesh = match mesh_opt {
+        Some(ref m) => m.clone(),
+        None => crate::render::portal_load_10d::synthesize_holographic_proxy_box_mesh(
+            [-0.5, 0.0, -0.5],
+            [0.5, 1.0, 0.5],
+        ),
+    };
+
+    let (holo_hdr, holo_rec) = fit_m64_holo_record_from_mesh_zero_heap(
+        &proxy_mesh,
+        surface_opt.as_deref(),
+        subj_hash,
+        prov_hash,
+        metric_variety,
+    );
+
+    let mut sidecar_combined: Vec<u8> = Vec::new();
+    let mut fields: Vec<TypedFieldRecord> = Vec::new();
+    let mut next_field_id = 1u64;
+
+    if let Some(mid2_bytes) = existing_mid2 {
+        let mut decoded_fields = [TypedFieldRecord::default(); 64];
+        if let Ok((existing_id, fcount)) =
+            decode_manifold_identity_v2(mid2_bytes, &[], &mut decoded_fields)
+        {
+            if decoded_fields[..fcount]
+                .iter()
+                .any(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
+                && has_proc
+            {
+                return Ok(bytes.to_vec());
+            }
+            for f in &decoded_fields[..fcount] {
+                fields.push(*f);
+                if f.field_id >= next_field_id {
+                    next_field_id = f.field_id + 1;
+                }
+            }
+            let _ = existing_id;
+        }
+    }
+
+    if let Some(sc) = existing_sidecar {
+        sidecar_combined.extend_from_slice(sc);
+        if fields.is_empty() && !sc.is_empty() {
+            if is_normal_section(sc) {
+                fields.push(TypedFieldRecord {
+                    field_id: next_field_id,
+                    kind: FIELD_KIND_SURFACE_FRAMES,
+                    flags: 0,
+                    unit_id: 0,
+                    payload_section_id: SectionType::FieldSidecar as u32,
+                    payload_offset: 0,
+                    payload_length: sc.len() as u64,
+                });
+                next_field_id += 1;
+            } else if sc.len() >= 4 && &sc[0..4] == b"MRP1" {
+                fields.push(TypedFieldRecord {
+                    field_id: next_field_id,
+                    kind: FIELD_KIND_MORPH_TARGETS,
+                    flags: 0,
+                    unit_id: 0,
+                    payload_section_id: SectionType::FieldSidecar as u32,
+                    payload_offset: 0,
+                    payload_length: sc.len() as u64,
+                });
+                next_field_id += 1;
+            }
+        }
+    }
+
+    // Align HOLO payload start to 64 bytes inside FieldSidecar
+    while sidecar_combined.len() % 64 != 0 {
+        sidecar_combined.push(0);
+    }
+    let holo_offset = sidecar_combined.len() as u64;
+    let holo_len = holographic_phase_encoded_len(1, 0).unwrap();
+    let mut holo_buf = vec![0u8; holo_len];
+    let holo_written = encode_holographic_phase_section(holo_hdr, &[holo_rec], &[], &mut holo_buf)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+    sidecar_combined.extend_from_slice(&holo_buf[..holo_written]);
+
+    fields.push(TypedFieldRecord {
+        field_id: next_field_id,
+        kind: FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+        flags: 0,
+        unit_id: 0,
+        payload_section_id: SectionType::FieldSidecar as u32,
+        payload_offset: holo_offset,
+        payload_length: holo_written as u64,
+    });
+
+    let mut entity_id_bytes = [0u8; 16];
+    entity_id_bytes[0..8].copy_from_slice(&subj_hash.to_le_bytes());
+    entity_id_bytes[8..16].copy_from_slice(&prov_hash.to_le_bytes());
+    if entity_id_bytes.iter().all(|&b| b == 0) {
+        entity_id_bytes[0] = 1;
+    }
+
+    let identity = ManifoldIdentityV2 {
+        entity_id: StableEntityId(entity_id_bytes),
+        profile_id: 1,
+        domain_id: domain_id.max(1),
+        coordinate_convention_id: 1,
+        coordinates: coordinates_10d,
+        external_digest: None,
+    };
+
+    let mid2_needed = manifold_identity_v2_encoded_len(fields.len())
+        .map_err(|_| Compile10dError::ExtraSection { kind: "MID2" })?;
+    let mut mid2_buf = vec![0u8; mid2_needed];
+    let mid2_written = encode_manifold_identity_v2(&identity, &fields, &mut mid2_buf)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "MID2" })?;
+    mid2_buf.truncate(mid2_written);
+
+    let mut proc_buf = [0u8; PROCEDURAL_SYNTHESIS_HEADER_SIZE];
+    if !has_proc {
+        let proc_hdr = ProceduralSynthesisHeader {
+            magic: MAGIC_PROC,
+            version: PROCEDURAL_SYNTHESIS_SECTION_VERSION,
+            flags: (FLAG_CELLULAR_VORONOI
+                | FLAG_IMPLICIT_FILLET
+                | FLAG_ALLOMETRIC_GROWTH
+                | FLAG_PGA_MOTOR_DYNAMICS) as u16,
+            seed: subj_hash,
+            voronoi_frequency: 12.0,
+            voronoi_jitter: 0.85,
+            fillet_blend_radius: holo_hdr.sdf_smooth_union_radius,
+            fillet_threshold: 0.02,
+            allometry_exponent_k: 0.75,
+            allometry_base_b: 1.0,
+            spiral_growth_rate_k: 0.22,
+            spiral_initial_radius_a: 0.05,
+            motor_frequency_hz: 1.2,
+            motor_damping_ratio: 0.35,
+            critical_stress_threshold: 45.0,
+            reserved_f32: 0.0,
+        };
+        let _ = encode_procedural_synthesis_section(&proc_hdr, &mut proc_buf)
+            .map_err(|_| Compile10dError::ExtraSection { kind: "PROC" })?;
+    }
+
+    let mut sections: Vec<SectionInput<'_>> = preserved_sections
+        .iter()
+        .map(|&(section_type, alignment_tier, stride, element_count, payload)| SectionInput {
+            section_type,
+            alignment_tier,
+            stride,
+            element_count,
+            payload,
+        })
+        .collect();
+
+    sections.push(SectionInput {
+        section_type: SectionType::FieldSidecar,
+        alignment_tier: AlignmentTier::Page,
+        stride: 0,
+        element_count: 0,
+        payload: &sidecar_combined,
+    });
+    sections.push(SectionInput {
+        section_type: SectionType::ManifoldIdentityV2,
+        alignment_tier: AlignmentTier::Page,
+        stride: 0,
+        element_count: 0,
+        payload: &mid2_buf,
+    });
+    if !has_proc {
+        sections.push(SectionInput {
+            section_type: SectionType::ProceduralSynthesis,
+            alignment_tier: AlignmentTier::Page,
+            stride: 0,
+            element_count: 0,
+            payload: &proc_buf,
+        });
+    }
+
+    let total_payload: usize = sections.iter().map(|s| s.payload.len() + 64).sum();
+    let mut out = vec![0u8; 256 + sections.len() * 24 + total_payload];
+    let header = Container10dHeader::proposed();
+    let total_written =
+        encode_container(&header, &sections, &mut out).map_err(Compile10dError::Section)?;
+    out.truncate(total_written);
+    let _ = seal_whole_file_crc32c(&mut out);
+    Ok(out)
+}
+
+/// Source-licensing & provenance governance Tier for converted 3D assets and scenes
+/// (`core-ontologies/source-asset-licensing.n3`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceLicenseTier {
+    /// `CC-BY-NC-ND-4.0` (Sovereign Qualia / Timothy Charles Holborn).
+    SovereignQualiaCcByNcNd,
+    /// `PC-PAYDOWN-1.0` / `PermissiveCommonsPaydown` (`pc:Work` cost-recovery to true commons).
+    PermissiveCommonsPaydown,
+    /// `PerpetualCreativeRoyalty` (Ongoing artist/creator revenue share).
+    PerpetualCreativeRoyalty,
+    /// `SPC` / `SanctuaryProtected` (Inalienable biosphere / human-dignity protection).
+    SanctuaryProtected,
+    /// Permissive upstream open licenses (`CC0-1.0`, `CC-BY-4.0`, `MIT`, `Apache-2.0`, `BSD-3-Clause`).
+    UpstreamPermissiveOpen,
+    /// Upstream ShareAlike or NonCommercial (`CC-BY-SA-4.0`, `CC-BY-NC-4.0`, `CC-BY-NC-SA-4.0`).
+    UpstreamShareAlikeOrNc,
+    /// Upstream custom commercial or proprietary license.
+    UpstreamProprietaryRestricted,
+}
+
+impl SourceLicenseTier {
+    pub fn classify_spdx(spdx: &str) -> Self {
+        let trimmed = spdx.trim();
+        match trimmed {
+            "CC-BY-NC-ND-4.0" => Self::SovereignQualiaCcByNcNd,
+            "PC-PAYDOWN-1.0" | "PermissiveCommonsPaydown" => Self::PermissiveCommonsPaydown,
+            "PerpetualCreativeRoyalty" | "PERPETUAL-ROYALTY-1.0" => Self::PerpetualCreativeRoyalty,
+            "SPC" | "SanctuaryProtected" => Self::SanctuaryProtected,
+            "CC0-1.0" | "CC0" | "CC-BY-4.0" | "MIT" | "Apache-2.0" | "BSD-3-Clause"
+            | "BSD-2-Clause" => Self::UpstreamPermissiveOpen,
+            "CC-BY-SA-4.0" | "CC-BY-NC-4.0" | "CC-BY-NC-SA-4.0" => Self::UpstreamShareAlikeOrNc,
+            _ => Self::UpstreamProprietaryRestricted,
+        }
+    }
+
+    pub fn iri(self) -> &'static str {
+        match self {
+            Self::SovereignQualiaCcByNcNd => {
+                "https://ns.webcivics.net/source-asset-licensing/SovereignQualiaCcByNcNd"
+            }
+            Self::PermissiveCommonsPaydown => {
+                "https://ns.webcivics.net/source-asset-licensing/PermissiveCommonsPaydownTier"
+            }
+            Self::PerpetualCreativeRoyalty => {
+                "https://ns.webcivics.net/source-asset-licensing/PerpetualCreativeRoyaltyTier"
+            }
+            Self::SanctuaryProtected => {
+                "https://ns.webcivics.net/source-asset-licensing/SanctuaryProtectedTier"
+            }
+            Self::UpstreamPermissiveOpen => {
+                "https://ns.webcivics.net/source-asset-licensing/UpstreamPermissiveOpen"
+            }
+            Self::UpstreamShareAlikeOrNc => {
+                "https://ns.webcivics.net/source-asset-licensing/UpstreamShareAlikeOrNc"
+            }
+            Self::UpstreamProprietaryRestricted => {
+                "https://ns.webcivics.net/source-asset-licensing/UpstreamProprietaryRestricted"
+            }
+        }
+    }
+
+    pub fn permits_uncompensated_commercial_use(self) -> bool {
+        matches!(self, Self::UpstreamPermissiveOpen)
+    }
+}
+
+/// Attested source-licensing and provenance descriptor required when converting
+/// existing 3D formatted assets or scenes into Holographic `.10d` v2 + `.q42`.
+#[derive(Debug, Clone)]
+pub struct SourceLicenseAttribution {
+    /// Non-empty SPDX or Qualia license identifier (e.g. `"CC-BY-NC-ND-4.0"`, `"CC-BY-4.0"`, `"PC-PAYDOWN-1.0"`).
+    pub spdx_license: String,
+    /// Original creator / author name or DID (UTF-8).
+    pub creator_name_or_did: String,
+    /// Mandatory UTF-8 attribution and moral-rights notice (travels with artifact via `spc:ArtifactAttachedRule`).
+    pub attribution_notice_utf8: String,
+    /// Optional origin URL, DOI, or catalogue identifier.
+    pub origin_uri: Option<String>,
+    /// Harvest or conversion UNIX epoch timestamp (seconds).
+    pub timestamp_epoch_s: u64,
+    /// Whether to embed the full raw `source_bytes` inside `.10d` `PRV1` (`true`) or a compact digest-bound header.
+    pub embed_full_source_bytes: bool,
+}
+
+/// Result of converting an external 3D asset or multi-node 3D scene into Holographic `.10d` v2 + `.q42`.
+#[derive(Debug, Clone)]
+pub struct Converted3dScenePackage {
+    /// The primary Mode-A Archetype `.10d` v2 container (with `QuantizedMesh`, `HOLO` `0x0306`,
+    /// `PROC` `18`, `MID2` `15`, `CBLD` `0x0305`, `PRV1` `7`, and any `SKL1`/`MRP1`/`MAT4`/`UV01`).
+    pub archetype_10d: Vec<u8>,
+    /// Whole-file CRC-32C of `archetype_10d`.
+    pub archetype_compiled_digest: u32,
+    /// 256-bit BLAKE3 digest of `archetype_10d` used by Mode-B scene node instances (`AREF` `0x0301`).
+    pub archetype_blake3_digest: [u8; 32],
+    /// CRC-32C of the original 3D source bytes.
+    pub source_digest: u32,
+    /// Classified source-licensing tier.
+    pub license_tier: SourceLicenseTier,
+    /// Mode-B instance `.10d` v2 containers for multi-node scene hierarchies (referencing `archetype_10d` via `AREF`).
+    pub instance_10d_containers: Vec<(String, Vec<u8>)>,
+    /// Content-addressed textures extracted from the source 3D file (`.glb`).
+    pub texture_dependencies: Vec<crate::render::assets::TextureDependency>,
+    /// Emitted 48-byte `NQuin` semantic manifest + source-licensing & provenance facts.
+    pub quins: Vec<NQuin>,
+    /// UTF-8 lexicon mapping `NQuin` hashes to their terms.
+    pub lexicon: HashMap<u64, String>,
+}
+
+/// Convert an existing 3D formatted asset or scene (`.glb`/`.gltf` static or living scene with skins/anims/morphs,
+/// `.obj`, `.stl`, or legacy `.10d`) into a Holographic `.10d` v2 package with mandatory source-licensing
+/// & provenance validation (`core-ontologies/source-asset-licensing.n3`).
+///
+/// Fails closed with [`Compile10dError::Provenance`] if `license.spdx_license` or
+/// `license.attribution_notice_utf8` is empty.
+pub fn convert_3d_asset_or_scene_with_license(
+    source_bytes: &[u8],
+    format_hint: Option<&str>,
+    asset_uri: &str,
+    domain_id: u32,
+    coordinates_10d: [f32; 10],
+    license: &SourceLicenseAttribution,
+) -> Result<Converted3dScenePackage, Compile10dError> {
+    use crate::container_10d::{
+        encode_symbolic_rdf_cbor_ld, ArchetypeDigestAlg, ArchetypeRefRecord, ArchetypeTargetKind,
+        ManifoldIdentityV2, MultilingualLexicalTerm, StableEntityId, SymbolicRdfCborLdPayload,
+        OVERRIDE_FLAG_COORDS_10D,
+    };
+    use crate::q_hash;
+
+    if license.spdx_license.trim().is_empty() || license.attribution_notice_utf8.trim().is_empty() {
+        return Err(Compile10dError::Provenance(
+            ProvenanceSectionError::MissingLicence,
+        ));
+    }
+    let license_tier = SourceLicenseTier::classify_spdx(&license.spdx_license);
+    let source_crc = crc32c(source_bytes);
+    let source_blake3: [u8; 32] = *blake3::hash(source_bytes).as_bytes();
+
+    // Detect if input is already a legacy `.10d` file
+    let is_legacy_10d = format_hint == Some("10d")
+        || (source_bytes.len() >= 64 && &source_bytes[0..4] == b"10d\0");
+
+    // Build Symbolic RDF CBOR-LD payload (CBLD 0x0305) carrying UTF-8 provenance & license terms
+    let subj_hash = q_hash(asset_uri);
+    let creator_iri = format!("urn:qualia:agent:{}", license.creator_name_or_did.trim());
+    let creator_hash = q_hash(&creator_iri);
+    let tier_hash = q_hash(license_tier.iri());
+    let p_derived_from = q_hash("http://www.w3.org/ns/prov#wasDerivedFrom");
+    let p_attributed_to = q_hash("https://ns.webcivics.net/permissive-commons/attributedTo");
+    let p_license_tier = q_hash("https://ns.webcivics.net/source-asset-licensing/licenseTier");
+    let p_spdx = q_hash("https://ns.webcivics.net/source-asset-licensing/spdxIdentifier");
+    let p_src_crc = q_hash("https://ns.webcivics.net/source-asset-licensing/sourceCrc32c");
+    let spdx_hash = q_hash(license.spdx_license.trim());
+    let src_node_iri = format!("{asset_uri}#source");
+    let src_node_hash = q_hash(&src_node_iri);
+    let ctx_hash = q_hash("https://ns.webcivics.net/source-asset-licensing/");
+
+    let mk_q = |s: u64, p: u64, o: u64| NQuin {
+        subject: s,
+        predicate: p,
+        object: o,
+        context: ctx_hash,
+        metadata: 0,
+        parity: NQuin::calculate_parity(s, p, o, ctx_hash, 0),
+    };
+
+    let license_quins = vec![
+        mk_q(subj_hash, p_derived_from, src_node_hash),
+        mk_q(subj_hash, p_attributed_to, creator_hash),
+        mk_q(subj_hash, p_license_tier, tier_hash),
+        mk_q(src_node_hash, p_spdx, spdx_hash),
+        mk_q(src_node_hash, p_src_crc, source_crc as u64),
+    ];
+
+    let cbld_payload = SymbolicRdfCborLdPayload {
+        context_iri: "https://qualiadb.org/contexts/10d-symbolic-v2.cbor-ld".to_string(),
+        lexicon: vec![
+            MultilingualLexicalTerm {
+                term_hash: subj_hash,
+                iri_utf8: asset_uri.to_string(),
+                lang_bcp47: Some("en".to_string()),
+                label_utf8: license.attribution_notice_utf8.clone(),
+            },
+            MultilingualLexicalTerm {
+                term_hash: creator_hash,
+                iri_utf8: creator_iri.clone(),
+                lang_bcp47: None,
+                label_utf8: license.creator_name_or_did.clone(),
+            },
+            MultilingualLexicalTerm {
+                term_hash: spdx_hash,
+                iri_utf8: format!("https://spdx.org/licenses/{}", license.spdx_license.trim()),
+                lang_bcp47: None,
+                label_utf8: license.spdx_license.trim().to_string(),
+            },
+        ],
+        nquins: license_quins
+            .iter()
+            .map(|q| [q.subject, q.predicate, q.object, q.context, q.metadata, q.parity])
+            .collect(),
+        n3_logic_rules_utf8: vec![
+            "{ ?emb prov:wasDerivedFrom ?src . ?src src-lic:originalCreator ?c } => { ?emb pc:attributedTo ?c } .".to_string(),
+        ],
+        shacl_shape_iris_utf8: vec![
+            "https://ns.webcivics.net/source-asset-licensing/SourceAssetProvenanceShape".to_string(),
+        ],
+    };
+    let cbld_bytes = encode_symbolic_rdf_cbor_ld(&cbld_payload).unwrap_or_default();
+
+    let media_type = match format_hint {
+        Some("glb") | Some("gltf") => "model/gltf-binary",
+        Some("obj") => "model/obj",
+        Some("stl") => "model/stl",
+        Some("step") | Some("stp") => "model/step",
+        Some("dxf") => "image/vnd.dxf",
+        Some("10d") => "application/x-qualia-10d",
+        _ if is_legacy_10d => "application/x-qualia-10d",
+        _ if source_bytes.starts_with(b"glTF") => "model/gltf-binary",
+        _ => "application/octet-stream",
+    };
+
+    let carried_source = if license.embed_full_source_bytes {
+        source_bytes.to_vec()
+    } else {
+        source_blake3.to_vec()
+    };
+    let prv_sidecar = ProvenanceSidecar::new(
+        carried_source,
+        media_type,
+        license.spdx_license.trim(),
+    )
+    .with_metadata(cbld_bytes, license.timestamp_epoch_s, source_blake3);
+
+    if is_legacy_10d {
+        let upgraded = upgrade_legacy_10d_to_holographic_v2(
+            source_bytes,
+            asset_uri,
+            domain_id as u64,
+            coordinates_10d,
+        )?;
+        let mesh = decode_10d_mesh(&upgraded).unwrap_or_else(|_| {
+            crate::render::portal_load_10d::synthesize_holographic_proxy_box_mesh(
+                [-0.5, 0.0, -0.5],
+                [0.5, 1.0, 0.5],
+            )
+        });
+        let compiled_crc = compiled_digest(&upgraded);
+        let archetype_blake3: [u8; 32] = *blake3::hash(&upgraded).as_bytes();
+        let (mut quins, mut lexicon) =
+            crate::render::assets::mesh_to_nquins_with_digests(&mesh, asset_uri, "10d", source_crc, compiled_crc);
+        quins.extend(license_quins);
+        lexicon.insert(creator_hash, license.creator_name_or_did.clone());
+        lexicon.insert(spdx_hash, license.spdx_license.trim().to_string());
+        lexicon.insert(tier_hash, license_tier.iri().to_string());
+        return Ok(Converted3dScenePackage {
+            archetype_10d: upgraded,
+            archetype_compiled_digest: compiled_crc,
+            archetype_blake3_digest: archetype_blake3,
+            source_digest: source_crc,
+            license_tier,
+            instance_10d_containers: Vec::new(),
+            texture_dependencies: Vec::new(),
+            quins,
+            lexicon,
+        });
+    }
+
+    // Standard 3D format (GLB, OBJ, STL)
+    let fmt_str = format_hint.unwrap_or(if source_bytes.starts_with(b"glTF") {
+        "glb"
+    } else {
+        "obj"
+    });
+    let compiled_organ = compile_organ_asset(
+        source_bytes,
+        format_hint,
+        asset_uri,
+        fmt_str,
+        None,
+        None,
+        Some(&prv_sidecar),
+    )?;
+    let upgraded_10d = upgrade_legacy_10d_to_holographic_v2(
+        &compiled_organ.container_10d,
+        asset_uri,
+        domain_id as u64,
+        coordinates_10d,
+    )?;
+    let compiled_crc = compiled_digest(&upgraded_10d);
+    let archetype_blake3: [u8; 32] = *blake3::hash(&upgraded_10d).as_bytes();
+
+    // If this is a multi-node GLB scene, also generate Mode-B Instance .10d containers for scene nodes!
+    let mut instance_10d_containers = Vec::new();
+    if source_bytes.starts_with(b"glTF") {
+        if let Ok(living_scene) = crate::render::assets::parse_glb_living_scene(source_bytes) {
+            if living_scene.nodes.len() > 1 {
+                let mut arch_id_bytes = [0u8; 16];
+                arch_id_bytes[0..8].copy_from_slice(&subj_hash.to_le_bytes());
+                arch_id_bytes[8..16].copy_from_slice(&(compiled_crc as u64).to_le_bytes());
+
+                for (idx, node) in living_scene.nodes.iter().enumerate() {
+                    let node_name = node
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| format!("node-{idx:04}"));
+                    let node_uri = format!("{asset_uri}#node-{node_name}");
+                    let node_hash = q_hash(&node_uri);
+                    let mut node_id_bytes = [0u8; 16];
+                    node_id_bytes[0..8].copy_from_slice(&node_hash.to_le_bytes());
+                    node_id_bytes[8..16].copy_from_slice(&(idx as u64 + 1).to_le_bytes());
+
+                    let (_, t) = node.local_motor.to_rotation_translation();
+                    let mut node_coords = coordinates_10d;
+                    node_coords[3] += t[0] as f32;
+                    node_coords[4] += t[1] as f32;
+                    node_coords[5] += t[2] as f32;
+
+                    let node_identity = ManifoldIdentityV2 {
+                        entity_id: StableEntityId(node_id_bytes),
+                        profile_id: 2,
+                        domain_id: (domain_id as u64).max(1),
+                        coordinate_convention_id: 1,
+                        coordinates: node_coords,
+                        external_digest: None,
+                    };
+                    let aref = ArchetypeRefRecord::new(
+                        ArchetypeDigestAlg::Blake3_256,
+                        ArchetypeTargetKind::Archetype10D,
+                        OVERRIDE_FLAG_COORDS_10D,
+                        archetype_blake3,
+                        arch_id_bytes,
+                        subj_hash,
+                        idx as u64,
+                    );
+                    if let Ok(inst_bytes) = compile_computational_instance_to_10d(
+                        &node_identity,
+                        Some(&aref),
+                        &[],
+                        subj_hash,
+                        Some(&cbld_payload),
+                        &[],
+                    ) {
+                        instance_10d_containers.push((node_name, inst_bytes));
+                    }
+                }
+            }
+        }
+    }
+
+    let mut quins = compiled_organ.quins;
+    let mut lexicon = compiled_organ.lexicon;
+    quins.extend(license_quins);
+    lexicon.insert(creator_hash, license.creator_name_or_did.clone());
+    lexicon.insert(spdx_hash, license.spdx_license.trim().to_string());
+    lexicon.insert(tier_hash, license_tier.iri().to_string());
+
+    Ok(Converted3dScenePackage {
+        archetype_10d: upgraded_10d,
+        archetype_compiled_digest: compiled_crc,
+        archetype_blake3_digest: archetype_blake3,
+        source_digest: source_crc,
+        license_tier,
+        instance_10d_containers,
+        texture_dependencies: compiled_organ.texture_dependencies,
+        quins,
+        lexicon,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1223,5 +1998,354 @@ mod tests {
             "gestationalAgeDays=44"
         );
         assert!(dev.quins.iter().any(|q| q.object == 18), "carnegieStage=18");
+    }
+
+    #[test]
+    fn compile_computational_instance_to_10d_seals_mid2_aref_mstr_and_cbor_ld_without_mesh() {
+        use crate::container_10d::{
+            decode_archetype_ref_record, decode_container_manifold_identity,
+            decode_multiscale_strata_section_into, decode_symbolic_rdf_cbor_ld, ArchetypeDigestAlg,
+            ArchetypeRefRecord, ArchetypeTargetKind, ComputationalStratumLevel,
+            EmbodimentResolutionState, ManifoldIdentityV2, MultilingualLexicalTerm,
+            NestedStratumNodeRecord, StableEntityId, StratumConstituentKind,
+            StratumInteractionRegime, SymbolicRdfCborLdPayload, TypedFieldRecord,
+            FIELD_KIND_ARCHETYPE_REF, FIELD_KIND_MULTISCALE_STRATA,
+            FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, OVERRIDE_FLAG_COORDS_10D,
+            OVERRIDE_FLAG_MULTISCALE_STRATA, STRATUM_NO_PARENT,
+        };
+        use crate::topology::header::{AnchorDomain, CellAnchor, TopologyInvariants};
+
+        let identity = ManifoldIdentityV2 {
+            entity_id: StableEntityId(*b"tree-inst-000042"),
+            profile_id: 2,
+            domain_id: 1,
+            coordinate_convention_id: 1,
+            coordinates: [1.0, 3.0, 2.0, -23.698, 133.880, 582.4, 100.0, 0.9, 0.99, 0.55],
+            external_digest: None,
+        };
+        let aref = ArchetypeRefRecord::new(
+            ArchetypeDigestAlg::Blake3_256,
+            ArchetypeTargetKind::Archetype10D,
+            OVERRIDE_FLAG_COORDS_10D | OVERRIDE_FLAG_MULTISCALE_STRATA,
+            [0xAB; 32],
+            *b"corymbia-arch-01",
+            0x1234_5678_9ABC_DEF0,
+            0,
+        );
+        let stratum = NestedStratumNodeRecord {
+            host_anchor: CellAnchor {
+                entity_hash: 0x1111_2222,
+                cell_index: 0,
+                anchor_domain: AnchorDomain::SemanticQuin as u8,
+                orientation_sign: 0,
+                material_or_stratum: 6,
+            },
+            parent_node_index: STRATUM_NO_PARENT,
+            stratum_level: ComputationalStratumLevel::L6QuantumChemistry as u8,
+            constituent_kind: StratumConstituentKind::DftExchangeCorrelationGrid as u8,
+            interaction_regime: StratumInteractionRegime::ElectronicExcitation as u8,
+            embodiment_state: EmbodimentResolutionState::ComputationalOnly as u8,
+            quantum_basis_and_xc: (4 << 4) | 2,
+            characteristic_scale_log10_m_q12: -120,
+            taxon_or_ontology_iri_hash: 0x3333_4444,
+            target_archetype_or_qpu_nquin_hash: 0x5555_6666,
+            density_or_abundance_per_m3: 1.0e20,
+            metabolic_flux_or_hartree_energy: -2934.1284,
+            coupled_metric_a_f16: 0,
+            coupled_metric_b_f16: 0,
+            logic_invariants: TopologyInvariants::REIFIED_EDGES,
+            belnap_and_spin_u16: 1,
+            orbital_or_coupling_flags: 136,
+            record_crc32c: 0,
+        };
+        let cbld = SymbolicRdfCborLdPayload {
+            context_iri: "https://qualiadb.org/contexts/10d-symbolic-v2.cbor-ld".to_string(),
+            lexicon: vec![MultilingualLexicalTerm {
+                term_hash: 0x1234_5678_9ABC_DEF0,
+                iri_utf8: "https://intenteco.org/taxa/Corymbia_aparrerinja".to_string(),
+                lang_bcp47: Some("rer".to_string()),
+                label_utf8: "Ilwempe".to_string(),
+            }],
+            nquins: Vec::new(),
+            n3_logic_rules_utf8: Vec::new(),
+            shacl_shape_iris_utf8: Vec::new(),
+        };
+
+        let mut bytes = compile_computational_instance_to_10d(
+            &identity,
+            Some(&aref),
+            &[stratum],
+            0x9999,
+            Some(&cbld),
+            &[],
+        )
+        .unwrap();
+        verify_whole_file_crc32c(&mut bytes).expect("valid whole-file CRC-32C");
+
+        let header = Container10dHeader::parse(&bytes).unwrap();
+        let mut scratch = [TypedFieldRecord::default(); 8];
+        let mut fields = [TypedFieldRecord::default(); 8];
+        let (decoded_id, fcount) =
+            decode_container_manifold_identity(&bytes, &header, &[], &mut scratch, &mut fields)
+                .unwrap();
+        assert_eq!(decoded_id, identity);
+        assert_eq!(fcount, 3);
+        assert_eq!(fields[0].kind, FIELD_KIND_ARCHETYPE_REF);
+        assert_eq!(fields[1].kind, FIELD_KIND_MULTISCALE_STRATA);
+        assert_eq!(fields[2].kind, FIELD_KIND_SYMBOLIC_RDF_CBOR_LD);
+
+        let descs = parse_section_table(&bytes, &header).unwrap();
+        let sidecar_desc = descs
+            .iter()
+            .find(|d| d.typ() == Some(SectionType::FieldSidecar))
+            .unwrap();
+        let sidecar =
+            &bytes[sidecar_desc.byte_offset as usize..][..sidecar_desc.byte_length as usize];
+
+        let decoded_aref = decode_archetype_ref_record(
+            &sidecar[fields[0].payload_offset as usize..][..fields[0].payload_length as usize],
+        )
+        .unwrap();
+        assert_eq!(decoded_aref, aref);
+
+        let mut decoded_strata = [bytemuck::Zeroable::zeroed(); 2];
+        let (_, scount) = decode_multiscale_strata_section_into(
+            &sidecar[fields[1].payload_offset as usize..][..fields[1].payload_length as usize],
+            &mut decoded_strata,
+        )
+        .unwrap();
+        assert_eq!(scount, 1);
+        assert_eq!(decoded_strata[0].stratum_level, 6);
+
+        let decoded_cbld = decode_symbolic_rdf_cbor_ld(
+            &sidecar[fields[2].payload_offset as usize..][..fields[2].payload_length as usize],
+        )
+        .unwrap();
+        assert_eq!(decoded_cbld, cbld);
+    }
+
+    #[test]
+    fn upgrade_legacy_10d_to_holographic_v2_preserves_mesh_and_embeds_holo_proc_mid2() {
+        use crate::container_10d::{
+            decode_container_manifold_identity, decode_holographic_phase_section_into,
+            decode_procedural_synthesis_section, EulerianWavefieldRecord, TypedFieldRecord,
+            FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+        };
+        use crate::q42::m64_matter::M64HoloRecord;
+
+        let legacy_bytes = compile_mesh_to_10d(&cube()).unwrap();
+        let mut upgraded = upgrade_legacy_10d_to_holographic_v2(
+            &legacy_bytes,
+            "https://intenteco.org/taxa/Corymbia_aparrerinja",
+            1,
+            [0.0, 3.0, 2.0, -23.698, 133.880, 582.4, 0.0, 0.9, 0.99, 0.55],
+        )
+        .unwrap();
+        verify_whole_file_crc32c(&mut upgraded).expect("valid whole-file CRC-32C after upgrade");
+
+        // Existing B-Rep QuantizedMesh remains intact
+        let back_mesh = decode_10d_mesh(&upgraded).unwrap();
+        assert_eq!(back_mesh.vertex_count(), 8);
+        assert_eq!(back_mesh.triangle_count(), 12);
+
+        // ManifoldIdentityV2 and HOLO (0x0306) are present and valid
+        let header = Container10dHeader::parse(&upgraded).unwrap();
+        let mut scratch = [TypedFieldRecord::default(); 8];
+        let mut fields = [TypedFieldRecord::default(); 8];
+        let (_id, fcount) = decode_container_manifold_identity(
+            &upgraded,
+            &header,
+            &[],
+            &mut scratch,
+            &mut fields,
+        )
+        .unwrap();
+        assert!(fcount >= 1);
+        let holo_field = fields[..fcount]
+            .iter()
+            .find(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
+            .expect("HOLO field registered in MID2");
+
+        let descs = parse_section_table(&upgraded, &header).unwrap();
+        let sidecar_desc = descs
+            .iter()
+            .find(|d| d.typ() == Some(SectionType::FieldSidecar))
+            .unwrap();
+        let sidecar =
+            &upgraded[sidecar_desc.byte_offset as usize..][..sidecar_desc.byte_length as usize];
+        let holo_slice = &sidecar[holo_field.payload_offset as usize..]
+            [..holo_field.payload_length as usize];
+
+        let mut holo_recs = [bytemuck::Zeroable::zeroed(); 2];
+        let mut wave_recs: [EulerianWavefieldRecord; 1] = [bytemuck::Zeroable::zeroed(); 1];
+        let (holo_hdr, h_count, w_count) =
+            decode_holographic_phase_section_into(holo_slice, &mut holo_recs, &mut wave_recs)
+                .unwrap();
+        assert_eq!(h_count, 1);
+        assert_eq!(w_count, 0);
+        assert!(holo_hdr.max_raymarch_steps <= 32);
+        let rec: M64HoloRecord = holo_recs[0];
+        assert_eq!(rec.metric_variety, 2);
+
+        // ProceduralSynthesis (PROC = 18) is also present
+        let proc_desc = descs
+            .iter()
+            .find(|d| d.typ() == Some(SectionType::ProceduralSynthesis))
+            .expect("PROC section attached");
+        let proc_slice =
+            &upgraded[proc_desc.byte_offset as usize..][..proc_desc.byte_length as usize];
+        let proc_hdr = decode_procedural_synthesis_section(proc_slice).unwrap();
+        assert!(proc_hdr.voronoi_frequency > 0.0);
+
+        // Calling upgrade a second time is idempotent
+        let idempotent = upgrade_legacy_10d_to_holographic_v2(
+            &upgraded,
+            "https://intenteco.org/taxa/Corymbia_aparrerinja",
+            1,
+            [0.0, 3.0, 2.0, -23.698, 133.880, 582.4, 0.0, 0.9, 0.99, 0.55],
+        )
+        .unwrap();
+        assert_eq!(upgraded, idempotent);
+    }
+
+    #[test]
+    fn upgrade_real_existing_ecointent_10d_asset_to_holographic_v2() {
+        use crate::container_10d::{
+            decode_container_manifold_identity, decode_holographic_phase_section_into,
+            EulerianWavefieldRecord, TypedFieldRecord, FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+        };
+        use crate::q42::m64_matter::M64HoloRecord;
+        use std::path::Path;
+
+        let path = Path::new(r"C:\github\eco-intent\acacia-pycnantha\dist\lods\acacia-pycnantha-lod2.10d");
+        if !path.exists() {
+            return;
+        }
+        let raw_bytes = std::fs::read(path).expect("read existing .10d asset");
+        let orig_mesh = decode_10d_mesh(&raw_bytes).expect("decode existing mesh");
+
+        let mut upgraded = upgrade_legacy_10d_to_holographic_v2(
+            &raw_bytes,
+            "https://intenteco.org/taxa/Acacia_pycnantha",
+            1,
+            [0.0, 3.0, 2.0, -35.2809, 149.1300, 580.0, 0.0, 0.92, 0.99, 0.61],
+        )
+        .expect("upgrade real eco-intent .10d asset to holographic v2");
+
+        verify_whole_file_crc32c(&mut upgraded).expect("upgraded real .10d CRC-32C verifies");
+        let up_mesh = decode_10d_mesh(&upgraded).expect("decode upgraded mesh");
+        assert_eq!(up_mesh.vertex_count(), orig_mesh.vertex_count());
+        assert_eq!(up_mesh.triangle_count(), orig_mesh.triangle_count());
+
+        let header = Container10dHeader::parse(&upgraded).unwrap();
+        let mut scratch = [TypedFieldRecord::default(); 16];
+        let mut fields = [TypedFieldRecord::default(); 16];
+        let (_id, fcount) = decode_container_manifold_identity(
+            &upgraded,
+            &header,
+            &[],
+            &mut scratch,
+            &mut fields,
+        )
+        .unwrap();
+        let holo_field = fields[..fcount]
+            .iter()
+            .find(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
+            .expect("HOLO 0x0306 embedded in upgraded real asset");
+
+        let descs = parse_section_table(&upgraded, &header).unwrap();
+        let sidecar_desc = descs
+            .iter()
+            .find(|d| d.typ() == Some(SectionType::FieldSidecar))
+            .unwrap();
+        let sidecar =
+            &upgraded[sidecar_desc.byte_offset as usize..][..sidecar_desc.byte_length as usize];
+        let holo_slice = &sidecar[holo_field.payload_offset as usize..]
+            [..holo_field.payload_length as usize];
+
+        let mut holo_recs: [M64HoloRecord; 2] = [bytemuck::Zeroable::zeroed(); 2];
+        let mut wave_recs: [EulerianWavefieldRecord; 1] = [bytemuck::Zeroable::zeroed(); 1];
+        let (holo_hdr, h_count, _) =
+            decode_holographic_phase_section_into(holo_slice, &mut holo_recs, &mut wave_recs)
+                .unwrap();
+        assert_eq!(h_count, 1);
+        assert!(holo_hdr.max_raymarch_steps <= 32);
+        assert_eq!(holo_recs[0].metric_variety, 2);
+        assert!(holo_recs[0].scale_bounds[0] > 0);
+    }
+
+    #[test]
+    fn convert_3d_asset_or_scene_with_license_enforces_provenance_and_converts_obj_and_10d() {
+        use crate::container_10d::{
+            decode_container_manifold_identity, TypedFieldRecord,
+            FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+        };
+
+        // Missing license fails closed
+        let empty_license = SourceLicenseAttribution {
+            spdx_license: String::new(),
+            creator_name_or_did: "Creator".into(),
+            attribution_notice_utf8: "Copyright Creator".into(),
+            origin_uri: None,
+            timestamp_epoch_s: 1700000000,
+            embed_full_source_bytes: true,
+        };
+        assert!(matches!(
+            convert_3d_asset_or_scene_with_license(
+                TRI_OBJ,
+                Some("obj"),
+                "urn:test:converted:tri",
+                1,
+                [0.0; 10],
+                &empty_license
+            ),
+            Err(Compile10dError::Provenance(
+                ProvenanceSectionError::MissingLicence
+            ))
+        ));
+
+        // Valid CC-BY-NC-ND-4.0 conversion succeeds and seals PRV1 + HOLO + MID2
+        let sovereign_license = SourceLicenseAttribution {
+            spdx_license: "CC-BY-NC-ND-4.0".into(),
+            creator_name_or_did: "Timothy Charles Holborn".into(),
+            attribution_notice_utf8:
+                "Copyright (c) 2026 Timothy Charles Holborn — CC BY-NC-ND 4.0".into(),
+            origin_uri: Some("https://github.com/mediaprophet/qualiaDB".into()),
+            timestamp_epoch_s: 1700000000,
+            embed_full_source_bytes: true,
+        };
+        let mut pkg = convert_3d_asset_or_scene_with_license(
+            TRI_OBJ,
+            Some("obj"),
+            "urn:test:converted:tri",
+            1,
+            [0.0, 3.0, 2.0, 1.0, 2.0, 3.0, 0.0, 1.0, 1.0, 0.5],
+            &sovereign_license,
+        )
+        .expect("convert OBJ with CC-BY-NC-ND-4.0 license");
+
+        assert_eq!(pkg.license_tier, SourceLicenseTier::SovereignQualiaCcByNcNd);
+        assert!(!pkg.license_tier.permits_uncompensated_commercial_use());
+        verify_whole_file_crc32c(&mut pkg.archetype_10d).expect("valid converted .10d CRC-32C");
+
+        let header = Container10dHeader::parse(&pkg.archetype_10d).unwrap();
+        let descs = parse_section_table(&pkg.archetype_10d, &header).unwrap();
+        assert!(
+            descs.iter().any(|d| d.typ() == Some(SectionType::ProvenanceSidecar)),
+            "PRV1 ProvenanceSidecar must be sealed in converted .10d"
+        );
+        let mut scratch = [TypedFieldRecord::default(); 8];
+        let mut fields = [TypedFieldRecord::default(); 8];
+        let (_, fcount) = decode_container_manifold_identity(
+            &pkg.archetype_10d,
+            &header,
+            &[],
+            &mut scratch,
+            &mut fields,
+        )
+        .unwrap();
+        assert!(fields[..fcount]
+            .iter()
+            .any(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE));
     }
 }

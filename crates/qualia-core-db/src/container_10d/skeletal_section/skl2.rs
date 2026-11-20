@@ -28,8 +28,8 @@ pub const SKL2_HEADER_LEN: usize = 32;
 pub const SKL2_NONE_INDEX: u16 = u16::MAX;
 /// Maximum joint descriptors permitted in a single SKL2 payload (Tier-0 limit).
 pub const SKL2_MAX_JOINTS: usize = 256;
-/// Global QualiaDB 42 MB payload sentinel.
-pub const SKL2_MAX_CONTAINER_BYTES: usize = 42 * 1024 * 1024;
+/// Packed `.10d` graphics asset ring (not the 42 MiB Q42 Sentinel).
+pub const SKL2_MAX_CONTAINER_BYTES: usize = crate::container_10d::GRAPHICS_ASSET_RING_BYTES;
 
 /// Joint-level descriptor flags.
 pub const SKL2_JOINT_FLAG_SYMMETRIC: u8 = 1 << 0;
@@ -1073,6 +1073,7 @@ mod tests {
         let mut payload = sample_v2_payload();
         payload.joints[1].landmark_index = SKL2_NONE_INDEX;
         payload.joints[1].actuation_pathway_index = SKL2_NONE_INDEX;
+        payload.joints[1].seal_crc();
         payload.loop_closures.clear();
         payload.landmarks.clear();
         payload.actuation_pathways.clear();

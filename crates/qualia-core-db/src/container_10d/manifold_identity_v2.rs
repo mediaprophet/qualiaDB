@@ -54,9 +54,21 @@ pub const FIELD_KIND_SURFACE_FRAMES: u16 = 0x0200;
 pub const FIELD_KIND_MORPH_TARGETS: u16 = 0x0201;
 /// POET Geometry-Topology Complex (`GTOP`: `PoetGeometryHeader` + `M` `HarbouredGraphHeader`s).
 pub const FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX: u16 = 0x0300;
+/// Content-addressed reference to a Mode-A Archetype `.10d` or sibling `.hmc`/`.emf`/`.qac`/`.m64` resource (`AREF`).
+pub const FIELD_KIND_ARCHETYPE_REF: u16 = 0x0301;
+/// Single-instance realized SSM1/MRP1 PCA coefficients, PGA pose motor, and material variant overrides (`IOVR`).
+pub const FIELD_KIND_INSTANCE_OVERRIDES: u16 = 0x0302;
+/// Multi-instance population state records (`INST`, `N * 64B`) indexed 1:1 with `Tensor10DNodes` (`N * 40B`).
+pub const FIELD_KIND_INSTANCE_BATCH: u16 = 0x0303;
+/// Multi-scale nested computational strata (`MSTR`, `L0`..=`L6`: organs, follicles/tissues, symbionts/fungi/bacteria/parasites, cells, molecules, and quantum chemistry).
+pub const FIELD_KIND_MULTISCALE_STRATA: u16 = 0x0304;
+/// In-envelope Symbolic-AI, RDF 1.2 (`NQuin` / `TAG_EMBEDDED`), N3Logic/SHACL, and UTF-8/UTF-16 multilingual CBOR-LD payload (`CBLD`).
+pub const FIELD_KIND_SYMBOLIC_RDF_CBOR_LD: u16 = 0x0305;
+/// Holographic Phase-Space Manifold (`HOLO`: `HolographicPhaseHeader` + `M64HoloRecord` segments + `EulerianWavefieldRecord` streamlines & 12-triangle proxy lens).
+pub const FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE: u16 = 0x0306;
 // Registry additions preserve MID2 layout. Older readers reject unsupported kinds
 // unless their explicit supported-extension allow-list admits these semantics.
-pub const BUILTIN_FIELD_KINDS: [u16; 8] = [
+pub const BUILTIN_FIELD_KINDS: [u16; 14] = [
     FIELD_KIND_SCALAR,
     FIELD_KIND_VECTOR,
     FIELD_KIND_TENSOR,
@@ -65,10 +77,16 @@ pub const BUILTIN_FIELD_KINDS: [u16; 8] = [
     FIELD_KIND_SURFACE_FRAMES,
     FIELD_KIND_MORPH_TARGETS,
     FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX,
+    FIELD_KIND_ARCHETYPE_REF,
+    FIELD_KIND_INSTANCE_OVERRIDES,
+    FIELD_KIND_INSTANCE_BATCH,
+    FIELD_KIND_MULTISCALE_STRATA,
+    FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+    FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
 ];
 
 /// Canonical `(kind, name)` table for built-in MID2 field kinds.
-pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 8] = [
+pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 14] = [
     (FIELD_KIND_SCALAR, "scalar"),
     (FIELD_KIND_VECTOR, "vector"),
     (FIELD_KIND_TENSOR, "tensor"),
@@ -80,6 +98,12 @@ pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 8] = [
         FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX,
         "geometry_topology_complex",
     ),
+    (FIELD_KIND_ARCHETYPE_REF, "archetype_ref"),
+    (FIELD_KIND_INSTANCE_OVERRIDES, "instance_overrides"),
+    (FIELD_KIND_INSTANCE_BATCH, "instance_batch"),
+    (FIELD_KIND_MULTISCALE_STRATA, "multiscale_strata"),
+    (FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, "symbolic_rdf_cbor_ld"),
+    (FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, "holographic_phase_space"),
 ];
 
 /// Opaque stored continuity identifier. Issuer and uniqueness are not verified

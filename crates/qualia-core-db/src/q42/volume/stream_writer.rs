@@ -49,13 +49,45 @@ pub struct StreamingQ42VolumeWriter {
     publication_sanctuary: bool,
     sanctuary_quin_count: u64,
     merkle_root: [u8; 32],
+    natural_person_did_offset: u64,
+    software_agent_did_offset: u64,
     payload_catalogue_blobs: Vec<PayloadCatalogueBlob>,
     payload_catalogue_bytes: Option<Vec<u8>>,
 }
 
 impl StreamingQ42VolumeWriter {
-    /// Creates a default `StreamingQ42VolumeWriter`.
+    /// Creates a default `StreamingQ42VolumeWriter`, automatically resolving Human vs. Software Agent
+    /// DID root hashes from the lexicon when present (Phase 4 Q42 Root Bifurcation).
     pub fn new(lexicon: &HashMap<u64, String>) -> io::Result<Self> {
+        let mut natural_person_did_offset = 0u64;
+        let mut software_agent_did_offset = 0u64;
+        for (&hash, surface) in lexicon {
+            let lower = surface.to_ascii_lowercase();
+            if natural_person_did_offset == 0
+                && (lower.starts_with("did:q42:person:")
+                    || lower.starts_with("did:webizen:")
+                    || lower.starts_with("did:key:")
+                    || lower.contains("naturalperson")
+                    || lower.contains("author"))
+            {
+                natural_person_did_offset = hash;
+            }
+            if software_agent_did_offset == 0
+                && (lower.starts_with("did:q42:agent:")
+                    || lower.starts_with("did:q42:software:")
+                    || lower.starts_with("urn:qualia:agent:")
+                    || lower.contains("softwareagent")
+                    || lower.contains("synth"))
+            {
+                software_agent_did_offset = hash;
+            }
+        }
+        if natural_person_did_offset == 0 {
+            natural_person_did_offset = crate::q_hash("did:q42:person:sovereign-custodian");
+        }
+        if software_agent_did_offset == 0 {
+            software_agent_did_offset = crate::q_hash("did:q42:agent:qualiadb-synth-compiler");
+        }
         let temp = TempDir::new()?;
         let bidx_path = temp.path().join("bidx.entries");
         let field_ranges_path = temp.path().join("field-ranges.entries");
@@ -85,9 +117,22 @@ impl StreamingQ42VolumeWriter {
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
             merkle_root: [0; 32],
+            natural_person_did_offset,
+            software_agent_did_offset,
             payload_catalogue_blobs: Vec::new(),
             payload_catalogue_bytes: None,
         })
+    }
+
+    /// Explicitly set the Phase 4 Root Bifurcation DID pointers (`natural_person_did_offset`
+    /// and `software_agent_did_offset`) in the 256-byte `Q42VolumeHeader`.
+    pub fn set_root_did_bifurcation(
+        &mut self,
+        natural_person_did_offset: u64,
+        software_agent_did_offset: u64,
+    ) {
+        self.natural_person_did_offset = natural_person_did_offset;
+        self.software_agent_did_offset = software_agent_did_offset;
     }
 
     /// Append a UTF-8 prose/descriptor payload (`ADR 0014`) to the `PCAT` section of this volume.
@@ -364,8 +409,8 @@ impl StreamingQ42VolumeWriter {
             assertion_timestamp: 0,
             dag_root_offset: 0,
             dag_root_length: 0,
-            natural_person_did_offset: 0,
-            software_agent_did_offset: 0,
+            natural_person_did_offset: self.natural_person_did_offset,
+            software_agent_did_offset: self.software_agent_did_offset,
             _reserved: {
                 let mut reserved = [0; 80];
                 reserved[16..24].copy_from_slice(&field_ranges_offset.to_le_bytes());

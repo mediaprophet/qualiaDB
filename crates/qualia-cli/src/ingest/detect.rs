@@ -22,6 +22,8 @@ pub enum SemanticFormat {
     Chk,
     Q42,
     AgentIntentJsonl,
+    /// Declarative YAML-LD-Q42 (`yaml-ld-q42/asset`, `yaml-ld-q42/workspace`, `yaml-ld-q42/hcf`).
+    YamlLdQ42,
     /// 3D mesh asset (Wavefront OBJ, STL, or binary glTF) — geometry → semantic NQuins.
     Mesh,
 }
@@ -47,6 +49,7 @@ impl SemanticFormat {
             SemanticFormat::Chk => "CHK",
             SemanticFormat::Q42 => "Q42",
             SemanticFormat::AgentIntentJsonl => "Agent-Intent-JSONL",
+            SemanticFormat::YamlLdQ42 => "YAML-LD-Q42",
             SemanticFormat::Mesh => "Mesh (OBJ/STL/GLB)",
         }
     }
@@ -135,6 +138,7 @@ pub fn detect_format(path: &Path) -> Option<SemanticFormat> {
         Some("kml") => Some(SemanticFormat::Kml),
         Some("chk") | Some("qchk") => Some(SemanticFormat::Chk),
         Some("q42") => Some(SemanticFormat::Q42),
+        Some("yaml") | Some("yml") => Some(SemanticFormat::YamlLdQ42),
         Some("obj") | Some("stl") | Some("glb") | Some("gltf") => Some(SemanticFormat::Mesh),
         _ => None,
     }

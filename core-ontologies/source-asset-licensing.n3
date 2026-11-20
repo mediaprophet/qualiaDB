@@ -1,0 +1,163 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix odrl:    <http://www.w3.org/ns/odrl/2/> .
+@prefix qudt:    <http://qudt.org/schema/qudt/> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix pc:      <https://ns.webcivics.net/permissive-commons/> .
+@prefix spc:     <https://ns.webcivics.net/social-permissive-commons/> .
+@prefix src-lic: <https://ns.webcivics.net/source-asset-licensing/> .
+
+# ===========================================================================
+# Source-Asset Licensing, Provenance & 3D Scene/Asset Conversion Ontology
+#
+# Governs conversion of existing 3D formatted scenes and assets (.glb/.gltf,
+# .obj+.mtl, .stl, .step/.stp, .dxf, and legacy .10d) into Holographic .10d v2,
+# .q42 semantic manifests, and .hmc bundles.
+#
+# Enforces:
+# 1. Non-strippable source provenance (PRV1 ProvenanceSidecar Sec 7 + CBLD 0x0305).
+# 2. License-tier isolation & high-water-mark restriction inheritance.
+# 3. Permanent creator attribution (pc:attributedTo + spc:ArtifactAttachedRule).
+# 4. Dual-regime obligation contracts (PermissiveCommonsPaydown vs. PerpetualCreativeRoyalty).
+# ===========================================================================
+
+src-lic:SourceAssetRecord a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Source 3D Asset or Scene Record" ;
+    rdfs:comment "An attested record of an original 3D asset or scene file converted into a native .10d / .q42 / .hmc embodiment." .
+
+src-lic:ConvertedEmbodiment a rdfs:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Converted Holographic 10D Embodiment" ;
+    rdfs:comment "A compiled .10d v2 (Mode-A Archetype or Mode-B Instance) + .q42 manifest derived from one or more SourceAssetRecords." .
+
+# --- Source Format & Cryptographic Digests ---------------------------------
+src-lic:sourceFormat a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment "MIME type or canonical format token: model/gltf-binary, model/gltf+json, model/obj, model/stl, model/step, image/vnd.dxf, application/x-qualia-10d-v1." .
+
+src-lic:sourceByteLength a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:integer .
+
+src-lic:sourceCrc32c a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "CRC-32C digest matching .10d ProvenanceSidecar (PRV1) source_digest." .
+
+src-lic:sourceSha256 a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:hexBinary ;
+    rdfs:comment "256-bit SHA-256 digest matching ProvenanceSidecar version_hash." .
+
+src-lic:compiled10dCrc32c a rdf:Property ;
+    rdfs:domain src-lic:ConvertedEmbodiment ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Whole-file CRC-32C of the sealed .10d v2 container." .
+
+src-lic:originUri a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:anyURI ;
+    rdfs:comment "Upstream repository, DOI, CAD standard, or catalogue URI." .
+
+src-lic:originalCreator a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range prov:Agent ;
+    rdfs:comment "Original author/creator (NaturalPerson or Organization) whose attribution must never be stripped." .
+
+src-lic:attributionNotice a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment "UTF-8 attribution and copyright notice bound via spc:ArtifactAttachedRule (travelsWithArtifact = true)." .
+
+# --- Source License Tiers & Compatibility Lattice --------------------------
+src-lic:LicenseTier a rdfs:Class ;
+    rdfs:label "Source License Governance Tier" .
+
+src-lic:SovereignQualiaCcByNcNd a src-lic:LicenseTier ;
+    rdfs:label "CC-BY-NC-ND-4.0 (Sovereign Qualia / Timothy Charles Holborn)" .
+
+src-lic:PermissiveCommonsPaydownTier a src-lic:LicenseTier ;
+    rdfs:label "Permissive Commons Cost-Recovery Paydown (pc:Work -> True Commons)" .
+
+src-lic:PerpetualCreativeRoyaltyTier a src-lic:LicenseTier ;
+    rdfs:label "Perpetual Creative Royalty (Ongoing Creator Revenue Share)" .
+
+src-lic:SanctuaryProtectedTier a src-lic:LicenseTier ;
+    rdfs:label "Sanctuary / Inalienable Biosphere & Human-Dignity Protection (SPC)" .
+
+src-lic:UpstreamPermissiveOpen a src-lic:LicenseTier ;
+    rdfs:label "Upstream Permissive Open (CC0-1.0, CC-BY-4.0, MIT, Apache-2.0, BSD)" .
+
+src-lic:UpstreamShareAlikeOrNc a src-lic:LicenseTier ;
+    rdfs:label "Upstream ShareAlike or NonCommercial (CC-BY-SA-4.0, CC-BY-NC-4.0, CC-BY-NC-SA-4.0)" .
+
+src-lic:UpstreamProprietaryRestricted a src-lic:LicenseTier ;
+    rdfs:label "Upstream Proprietary / Custom Commercial License" .
+
+src-lic:spdxIdentifier a rdf:Property ;
+    rdfs:domain src-lic:SourceAssetRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Non-empty SPDX or Qualia license identifier (e.g., CC-BY-NC-ND-4.0, CC-BY-4.0, CC0-1.0, MIT, PC-PAYDOWN-1.0)." .
+
+src-lic:licenseTier a rdf:Property ;
+    rdfs:range src-lic:LicenseTier .
+
+src-lic:commercialUsePermittedWithoutSettlement a rdf:Property ;
+    rdfs:range xsd:boolean .
+
+src-lic:requiresAttributionPreservation a rdf:Property ;
+    rdfs:range xsd:boolean .
+
+src-lic:derivativesPermittedOutsideEcosystem a rdf:Property ;
+    rdfs:range xsd:boolean .
+
+# --- N3Logic High-Water-Mark Inheritance & Deontic Rules -------------------
+# Rule 1: Every converted embodiment inherits pc:attributedTo from all source creators.
+{
+    ?emb prov:wasDerivedFrom ?src .
+    ?src src-lic:originalCreator ?creator .
+} => {
+    ?emb pc:attributedTo ?creator ;
+         src-lic:requiresAttributionPreservation true .
+} .
+
+# Rule 2: Any asset derived from CC-BY-NC-ND-4.0 or UpstreamShareAlikeOrNc
+# forbids uncompensated/unauthorized commercial exploitation.
+{
+    ?emb prov:wasDerivedFrom ?src .
+    ?src src-lic:licenseTier src-lic:SovereignQualiaCcByNcNd .
+} => {
+    ?emb src-lic:licenseTier src-lic:SovereignQualiaCcByNcNd ;
+         src-lic:commercialUsePermittedWithoutSettlement false ;
+         src-lic:derivativesPermittedOutsideEcosystem false .
+} .
+
+# ===========================================================================
+# SHACL Deterministic Firewalls for Converted 3D Assets & Scenes
+# ===========================================================================
+
+src-lic:SourceAssetProvenanceShape a sh:NodeShape ;
+    sh:targetClass src-lic:SourceAssetRecord ;
+    sh:property [
+        sh:path src-lic:spdxIdentifier ;
+        sh:minCount 1 ;
+        sh:minLength 2 ;
+        sh:message "Converted 3D asset MUST declare a non-empty source license (spdxIdentifier); stripping license context is forbidden."
+    ] ;
+    sh:property [
+        sh:path src-lic:sourceCrc32c ;
+        sh:minCount 1 ;
+        sh:message "Converted 3D asset MUST record sourceCrc32c matching the .10d PRV1 ProvenanceSidecar."
+    ] ;
+    sh:property [
+        sh:path src-lic:attributionNotice ;
+        sh:minCount 1 ;
+        sh:minLength 3 ;
+        sh:message "Converted 3D asset MUST preserve a UTF-8 attributionNotice."
+    ] .

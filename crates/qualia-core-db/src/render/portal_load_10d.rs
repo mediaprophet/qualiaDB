@@ -48,6 +48,9 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     let mut mesh = None;
     let mut provenance_mu: f32 = 0.0;
     let mut has_attestation = false;
+    let mut has_holographic_or_computational = false;
+    let mut proxy_min = [-0.5f32, -0.5, -0.5];
+    let mut proxy_max = [0.5f32, 0.5, 0.5];
 
     for desc in descs.iter() {
         let st = container_10d::SectionType::from_u8(desc.section_type)
@@ -64,9 +67,54 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
                 );
             }
             container_10d::SectionType::Tensor10DNodes => {
+                has_holographic_or_computational = true;
                 if let Ok(t) = container_10d::read_node(payload, 0) {
                     provenance_mu = t.mu;
                 }
+            }
+            container_10d::SectionType::ManifoldIdentityV2 => {
+                has_holographic_or_computational = true;
+                let mut fields = [container_10d::TypedFieldRecord::default(); 32];
+                if let Ok((id, count)) =
+                    container_10d::decode_manifold_identity_v2(payload, &[], &mut fields)
+                {
+                    if provenance_mu == 0.0 {
+                        provenance_mu = id.coordinates[8];
+                    }
+                    // Check if a HOLO phase-space header supplies explicit proxy lens bounds
+                    for f in &fields[..count] {
+                        if f.kind == container_10d::FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE
+                            && f.payload_section_id == container_10d::SectionType::FieldSidecar as u32
+                        {
+                            if let Some(sidecar_desc) = descs.iter().find(|d| {
+                                container_10d::SectionType::from_u8(d.section_type)
+                                    == Some(container_10d::SectionType::FieldSidecar)
+                            }) {
+                                let s_off = sidecar_desc.byte_offset as usize
+                                    + (f.payload_offset as usize);
+                                let s_len = f.payload_length as usize;
+                                if s_off + s_len <= bytes_mut.len()
+                                    && s_len >= container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE
+                                {
+                                    let hdr: container_10d::HolographicPhaseHeader =
+                                        bytemuck::pod_read_unaligned(
+                                            &bytes_mut[s_off
+                                                ..s_off
+                                                    + container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
+                                        );
+                                    if hdr.magic == container_10d::HOLOGRAPHIC_PHASE_TAG {
+                                        proxy_min = hdr.proxy_aabb_min;
+                                        proxy_max = hdr.proxy_aabb_max;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            container_10d::SectionType::ProceduralSynthesis
+            | container_10d::SectionType::EntityOntology => {
+                has_holographic_or_computational = true;
             }
             container_10d::SectionType::ProvenanceSidecar => {
                 if let Ok(view) =
@@ -82,7 +130,13 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         }
     }
 
-    let mesh = mesh.ok_or_else(|| "10d: no mesh section".to_string())?;
+    let mesh = match mesh {
+        Some(m) => m,
+        None if has_holographic_or_computational => {
+            synthesize_holographic_proxy_box_mesh(proxy_min, proxy_max)
+        }
+        None => return Err("10d: no mesh or holographic phase-space section".to_string()),
+    };
     let frames = container_10d::read_container_mesh_frames_with_limits(
         &bytes_mut,
         mesh.vertex_count(),
@@ -192,6 +246,49 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         provenance_mu,
         governance_refused,
     })
+}
+
+/// Synthesize the 12-triangle (8-vertex) Holographic Proxy Bounding Lens (`Mesh`)
+/// for `.10d` containers that operate in pure Holographic Phase-Space / SDF raymarching
+/// or Mode-B Archetype-Reference mode without an inline B-Rep `QuantizedMesh`.
+pub fn synthesize_holographic_proxy_box_mesh(
+    min: [f32; 3],
+    max: [f32; 3],
+) -> crate::render::assets::Mesh {
+    let [x0, y0, z0] = min;
+    let [x1, y1, z1] = [
+        max[0].max(x0 + 1e-3),
+        max[1].max(y0 + 1e-3),
+        max[2].max(z0 + 1e-3),
+    ];
+    crate::render::assets::Mesh {
+        positions: vec![
+            [x0, y0, z0],
+            [x1, y0, z0],
+            [x1, y1, z0],
+            [x0, y1, z0],
+            [x0, y0, z1],
+            [x1, y0, z1],
+            [x1, y1, z1],
+            [x0, y1, z1],
+        ],
+        triangles: vec![
+            [0, 3, 2],
+            [0, 2, 1],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [3, 7, 6],
+            [3, 6, 2],
+            [0, 4, 7],
+            [0, 7, 3],
+            [1, 2, 6],
+            [1, 6, 5],
+        ],
+        min: [x0, y0, z0],
+        max: [x1, y1, z1],
+    }
 }
 
 fn decode_load_10d_materials(

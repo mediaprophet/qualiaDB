@@ -184,6 +184,28 @@ fn load_10d_absent_surface_reading_keeps_empty_colors() {
 }
 
 #[test]
+fn load_10d_computational_holographic_container_without_quantized_mesh_synthesizes_proxy_lens() {
+    use crate::container_10d::{ManifoldIdentityV2, StableEntityId};
+    use crate::render::compile_10d::compile_computational_instance_to_10d;
+
+    let identity = ManifoldIdentityV2 {
+        entity_id: StableEntityId(*b"holo-proxy-00001"),
+        profile_id: 2,
+        domain_id: 1,
+        coordinate_convention_id: 1,
+        coordinates: [0.0, 3.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.5],
+        external_digest: None,
+    };
+    let bytes = compile_computational_instance_to_10d(&identity, None, &[], 0, None, &[])
+        .expect("seal pure computational/holographic .10d without QuantizedMesh");
+    let decoded = decode_load_10d(&bytes)
+        .expect("decode_load_10d must synthesize 12-triangle proxy lens when QuantizedMesh is absent");
+    assert_eq!(decoded.positions.len(), 8, "proxy bounding box has 8 vertices");
+    assert_eq!(decoded.triangle_count, 12, "proxy bounding box has 12 triangles");
+    assert_eq!(decoded.indices.len(), 36);
+}
+
+#[test]
 fn load_10d_uv01_mismatch_is_fail_closed() {
     let mesh = halves_mesh();
     let reading = red_blue_reading();

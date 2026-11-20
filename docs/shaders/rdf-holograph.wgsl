@@ -172,7 +172,7 @@ fn fragment_main(input: VertexOutput) -> HoloFragmentOut {
     var d = 1.0;
     var closest = 8.0;
     var along = 0.0;
-    for (var i = 0; i < 48; i = i + 1) {
+    for (var i = 0; i < 32; i = i + 1) {
         let p = ro + rd * t;
         if kind == 5 {
             d = sdf_sphere(p, scale * 0.92);

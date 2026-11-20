@@ -2,11 +2,16 @@
 
 **Revision:** 1, 12 November 2026. **Status:** Internal implementation-aligned standard. Writers emit version 2; readers also admit version 1 with its section restrictions. This document specifies the envelope and payload registry; the linked companions specify mesh numerics, typed fields, skeletal animation and opaque preservation. See the [format overview](file-formats-overview.md).
 
-## 1. Scope
+## 1. Scope & Computational Primacy
 
-A `.10d` is a typed, sectioned container for geometry, Tensor10D nodes, scientific/presentation fields and associated structures. It is not simply a triangle file, nor is every recognized section automatically executable. The identity is the four bytes `31 30 64 00`. The same physical header layout spans v1/v2; typed MID2 identity belongs to v2.
+A `.10d` is a typed, sectioned binary container whose primary object is the **10D neuro-symbolic computational and epistemic manifold** (`MID2`, `Tensor10DNodes`, `FIEL`, `EONT`, `PROC`, `MSTR`, `CBLD`), with 3D/4D visual geometry (`QuantizedMesh`, `CDAG`, `SKL2`/`SSM1`, `MAT4`), volumetric analysis (`FEMC`, `VOX0`), and spectral fields (`HyperspectralCube`) acting as **bidirectionally coupled secondary embodiments**. It is never merely a triangle file:
+- **Profile 0 (`computational_only`):** Holds a pure computational, hypothesis-synthesis (`q`), or mixed-zone creative manifold (`MID2` + optional `Tensor10DNodes`, `FieldSidecar` `MSTR`/`CBLD`/`GTOP`, `EONT`, `PROC`) with no `QuantizedMesh` required.
+- **Profile 1 / Geometry Mode A (`archetype_inline`):** Holds the primary computational identity plus inline canonical 3D/4D geometry, rigging (`SKL2`/`SSM1`), materials (`MAT4`), and LOD (`CDAG`, `IMPO`, `SURF`) sections.
+- **Profile 2 / Geometry Mode B (`archetype_instance`):** Holds an individual entity's or population's unique 10D coordinates (`MID2` / `Tensor10DNodes`), ontogenetic/wear state (`EONT`), procedural seed (`PROC`), and multi-scale strata (`MSTR`), while referencing a shared Mode-A Archetype `.10d` by its 256-bit digest via `FIELD_KIND_ARCHETYPE_REF = 0x0301` (`AREF`) and supplying per-instance overrides (`IOVR` `0x0302` / `INST` `0x0303`).
 
-EMF electromagnetic cells remain in the sibling `.emf` format. A 10D MID2 field reference and a FIEL declaration may describe or associate that field; they do not create an undocumented EMF-cell section. HMC may bundle the siblings without changing either encoding.
+**Strict No-ASCII Policy:** No human-readable text, ontological label, or identifier in `.10d` uses ASCII text encoding. All human-readable terms, multilingual labels (including Indigenous and non-Latin scripts), and RDF IRIs use **UTF-8** (with lossless **UTF-16** bridge helpers), stored via in-envelope **CBOR / CBOR-LD (`FIELD_KIND_SYMBOLIC_RDF_CBOR_LD = 0x0305`, `CBLD`)** or `.q42` `Q42LEX` tables. Fixed 4-byte binary header tags are 32-bit little-endian numeric format discriminants (`u32`).
+
+EMF electromagnetic cells remain in the sibling `.emf` (`Q42EMF64`) format, spatial/AAC acoustics in `.qac` (`qac\0`), and physical matter/tissue tensors in `.m64` (`m64\0`). A `.10d` `MID2` field reference (`AREF` or `FIELD_KIND_ELECTROMAGNETIC`) and a `FIEL` declaration bind those sibling embodiments inside an `.hmc` (`QBDL`) bundle.
 
 ## 2. Fixed header: 64 bytes
 
@@ -90,18 +95,32 @@ The mini-header stores flags u16 at 0 (bit 0 chooses u16 rather than u32 triangl
 | Spatial index | 32-byte header; maximum 1,048,576 nodes | Validate node ranges and referenced geometry |
 | UV01 | 16-byte header and UV coordinates | Preserve vertex correspondence; seam splitting may change vertex count |
 | Materials | 24-byte header, 24-byte submesh rows; current v4 material records 464 bytes, previous 448 and legacy v1 256 | Select record size by inner version; validate submesh ranges and referenced resources |
-| SurfaceReading | Vertex-order RGBA8 samples | Do not substitute for UV textures, normals or a complete BSDF |
-| EONT | 40-byte header, 48-byte affordance rows; maximum 256 affordances | Interpret permissions/behavior through the application; no implicit execution |
-| IMPO | 64-byte header | Atlas dimensions, orientation and image references must be validated |
-| SURF | 64-byte header, 32-byte records | Validate finite geometry and rendering parameters |
-| VOX0 | 64-byte header, 16-byte nodes | Bound graph traversal and resolve material LUT references |
-| CDAG | 32-byte header, 64-byte node records; maximum 262,144 nodes | Meshlet limits 64 vertices and 124 triangles; validate hierarchy and ranges |
+| 93 | SurfaceReading | Vertex-order RGBA8 samples | Do not substitute for UV textures, normals or a complete BSDF |
+| 94 | EONT | 40-byte header (`OntogeneticStateHeader`), 48-byte affordance rows (max 256), plus optional 32-byte `DevelopmentalKeyframeRecord` rows (`age_days`, `stage`, allometric scales, `mesh_asset_hash`) | Interpret permissions/behavior through the application; no implicit execution |
+| 95 | PROC | 64-byte header (`ProceduralSynthesisHeader`: 64-bit `seed`, cellular Voronoi, implicit SDF fillet, Huxley allometry $y = b \cdot x^k$, log-spiral ODE, PGA motor oscillation, stress-cleavage threshold) | Evaluated zero-heap on CPU/GPU hot paths |
+| 96 | SKL1 / SKL2 / SSM1 | `SectionType::SkeletalAnimation` (`16`): supports `SKL1` (`32B` header, `144B` `f64` motor joints) and `SKL2` (`32B` header, v1 `32B` / v2 `64B` joints, `KinematicSolverRegime`, `LoopClosureConstraintRecord`, `ActuationPathwayRecord`, `SSM1` PCA shape basis) | See [skeletal companion](10d-skeletal-animation.md) |
+| 97 | IMPO | 64-byte header | Atlas dimensions, orientation and image references must be validated |
+| 98 | SURF | 64-byte header, 32-byte records | Validate finite geometry and rendering parameters |
+| 99 | VOX0 | 64-byte header, 16-byte nodes | Bound graph traversal and resolve material LUT references |
+| 100 | CDAG | 32-byte header, 64-byte node records; maximum 262,144 nodes | Meshlet limits 64 vertices and 124 triangles; validate hierarchy and ranges |
 
 Detailed binary implementations are linked in §9. These profile versions are independent of the outer 10D header version. A future payload revision requires its own discriminator and readers; enlarging a struct without a revision is not compatible evolution.
 
-## 6. Typed scientific fields and MID2
+## 6. Typed scientific fields, Multi-Scale Strata (`L0`–`L6`) and MID2
 
-MID2 has a 112-byte header and 48-byte binding rows, with at most 256 bindings. Its kind registry includes scalar 1, vector 2, tensor 3, spectral 4, electromagnetic `0x0100`, frames `0x0200`, morph `0x0201` and geometry/topology complex `0x0300`. These are **not** the same numeric namespace as FIEL type tags. Resolve references under their specific unit, domain, identity and support conventions.
+MID2 has a 112-byte header and 48-byte binding rows, with at most 256 bindings. Its built-in kind registry (`BUILTIN_FIELD_KINDS` in `manifold_identity_v2.rs`, 14 kinds) includes:
+- `0x0001` (`FIELD_KIND_SCALAR`), `0x0002` (`FIELD_KIND_VECTOR`), `0x0003` (`FIELD_KIND_TENSOR`), `0x0004` (`FIELD_KIND_SPECTRAL`)
+- `0x0100` (`FIELD_KIND_ELECTROMAGNETIC`)
+- `0x0200` (`FIELD_KIND_SURFACE_FRAMES`: `NRM1`/`FRM1`), `0x0201` (`FIELD_KIND_MORPH_TARGETS`: `MRP1`)
+- `0x0300` (`FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX`: `GTOP` — `PoetGeometryHeader` + `M` `HarbouredGraphHeader`s)
+- `0x0301` (`FIELD_KIND_ARCHETYPE_REF`: `AREF` — 80-byte content-addressed reference to a Mode-A Archetype `.10d` or sibling `.hmc`/`.emf`/`.qac`/`.m64` resource via 256-bit `BLAKE3`/`SHA-256` digest + `StableEntityId`)
+- `0x0302` (`FIELD_KIND_INSTANCE_OVERRIDES`: `IOVR` — 48-byte header + `K × 8B` realized `SSM1` PCA shape coefficients, `age_days`, `uniform_scale`, and local PGA motor `[f32; 8]`)
+- `0x0303` (`FIELD_KIND_INSTANCE_BATCH`: `INST` — 16-byte header + `N × 64B` cache-line per-instance computational state records indexed 1:1 with `Tensor10DNodes`)
+- `0x0304` (`FIELD_KIND_MULTISCALE_STRATA`: `MSTR` — 32-byte header + `M × 64B` cache-line `NestedStratumNodeRecord` rows encoding the 7-layer multi-scale computational hierarchy from `L0` macro holobiont/assembly, `L1` organs, `L2` tissues/follicles/trichomes, `L3` harboured symbiotic fungi, bacteria, microbiome & parasites, `L4` cells/organelles, `L5` molecular/genomic pathways, down to `L6` **Quantum Physics** — encompassing open-system Lindblad/Redfield quantum dynamics, coherence/entanglement, quantum tunneling, radical-pair spin physics, cavity QED, topological phases, and its quantum chemistry subset: GTO basis sets, OS/HGP/Rys integrals, DIIS/Broyden SCF Hartree energy, autodiff LDA/GGA DFT, and Q-Forge VQE StateVector `NQuin` pointers)
+- `0x0305` (`FIELD_KIND_SYMBOLIC_RDF_CBOR_LD`: `CBLD` — 16-byte header + CRC-32C verified CBOR-LD payload carrying UTF-8/UTF-16 multilingual lexical maps, 48-byte Symbolic-AI / RDF 1.2 `NQuin`s, N3Logic/SLG-VM rule bindings, and SHACL shapes)
+- `0x0306` (`FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE`: `HOLO` — 64-byte `HolographicPhaseHeader` + `N × 64B` `M64HoloRecord` Mode `0x01` records + `W × 64B` `EulerianWavefieldRecord` rows for Hamiltonian stationary-action splines $\delta S = 0$, hyperbolic $v=2$ Möbius morphogenesis, scale-space harmonic LODs $k=0..K$, 6-band 380–780 nm spectral interference, and 12-triangle proxy lens raymarching in `< 32` steps)
+
+These are **not** the same numeric namespace as FIEL type tags. Resolve references under their specific unit, domain, identity and support conventions.
 
 The FIEL v0 schema uses a 12-byte header: u32 magic at 0, u16 version 0 at 4, u16 field count at 6, zero u32 at 8. Its implemented magic integer is `0x4649454c`; little-endian serialization produces bytes `4c 45 49 46` (ASCII `LEIF`). The source calls this schema FIEL, but an implementation must use the actual wire value, not silently change it to the ASCII spelling. That naming/byte-order discrepancy requires a versioned repair if changed.
 

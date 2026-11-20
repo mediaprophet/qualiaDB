@@ -556,6 +556,33 @@ pub fn ingest_json_ld_star(
     })
 }
 
+/// Ingest a declarative `yaml-ld-q42` file (`yaml-ld-q42/asset`, `yaml-ld-q42/workspace`, or `yaml-ld-q42/hcf`)
+/// into a unified `.q42` volume.
+pub fn ingest_yaml_ld_q42(
+    input: &Path,
+    output: &Path,
+) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    let bytes = std::fs::read(input)?;
+    let ctx = qualia_core_db::q_hash("urn:qualia:yaml-ld-q42");
+    let (quins, lex, _shape) =
+        qualia_core_db::q42::yaml_ld_q42::compile_yaml_ld_q42_auto(&bytes, ctx, 1)
+            .map_err(|e| IngestError::Other(e))?;
+    if quins.is_empty() {
+        return Err("yaml-ld-q42 compiled to zero NQuins".into());
+    }
+    let triples_ingested = quins.len() as u64;
+    let lex_entries = lex.len() as u64;
+    let blocks_written = ((quins.len() + QUINS_PER_BLOCK - 1) / QUINS_PER_BLOCK) as u64;
+    qualia_core_db::q42_volume::write_sorted_quins_volume_with_lex(output, &quins, &lex, 0)?;
+    Ok(IngestStats {
+        triples_ingested,
+        blocks_written,
+        lex_entries,
+        lines_skipped: 0,
+        bidx_written: true,
+    })
+}
+
 /// Dispatch to the correct ingest function based on auto-detected format.
 /// Defaults to Restricted access policy (QW-10). Prefer [`ingest_auto_with_policy`].
 pub fn ingest_auto(
@@ -611,6 +638,7 @@ pub fn ingest_auto_with_policy(
         detect::SemanticFormat::AgentIntentJsonl => {
             agent_intent::ingest_agent_intent(input, output)?
         }
+        detect::SemanticFormat::YamlLdQ42 => ingest_yaml_ld_q42(input, output)?,
         detect::SemanticFormat::CborLd => ingest_cbor(input, output)?,
         detect::SemanticFormat::Kml => ingest_kml(input, output)?,
         detect::SemanticFormat::Mesh => ingest_asset(input, output)?,

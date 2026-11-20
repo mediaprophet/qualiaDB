@@ -1,419 +1,133 @@
-# Q42 10D Volumetric Tensor Standard
-
-**Version:** 1.2  
-**Date:** 2026-06-21 (rev; was 1.1 2026-06-17)  
-**Status:** Draft Standard  
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.40
-
-**Changelog (1.2):** §4 made normative — the volume-search metric is selected by the
-**query's** `v` topology class, with an exact euclidean formula and a **GPU/CPU
-determinism requirement** (the GPU compute path MUST compute the identical metric as the
-CPU reference). Implements the metric-unification work in `ALGEBRA_MANIFOLD_PLAN.md` §4.
-
-## Abstract
-
-This standard defines the 10-dimensional volumetric tensor coordinate system [q, v, w, x, y, z, t, α, μ, σ] for the Q42 volumetric tensor system. The system provides absolute mechanical sympathy across heterogeneous hardware (edge phones to A2000 GPUs to scarce QPUs) by mapping neuro-symbolic human-centric logic into raw geometric physics simulations executable via SIMD, GPU texture units, or asynchronous Ground-State Resolvers.
-
-## 1. Coordinate System Definition
-
-### 1.1 Tensor10D Structure
-
-The Tensor10D structure is a 40-byte, zero-heap compatible, stack-allocated structure using fixed-size f32 values for GPU/SIMD compatibility and quantization.
-
-```rust
-#[repr(C)]
-pub struct Tensor10D {
-    pub q: f32,      // Quantum Context / Superposition Index
-    pub v: f32,      // Topological / Algebraic Variety Class
-    pub w: f32,      // Manifold / Domain Index
-    pub x: f32,      // Semantic Topology X coordinate
-    pub y: f32,      // Semantic Topology Y coordinate
-    pub z: f32,      // Semantic Topology Z coordinate
-    pub t: f32,      // Temporal State / Provenance Ledger
-    pub alpha: f32,  // Spectral Amplitude / Dynamic Range / Confidence Weight
-    pub mu: f32,     // Spectral Modulation / Phase / Metadata Carrier
-    pub sigma: f32,  // Spectral Signature / Logical Class Index
-}
-```
-
-### 1.2 Dimension Semantics
-
-**Structural & Quantum Identifiers:**
-
-- **q (Quantum Context):** Manages epistemic superposition
-  - `q = 0`: Collapsed Ground Truth / Classical Axiom (permanent, verified fact)
-  - `q > 0`: Parallel epistemic contexts, pending GSR resolutions, branching "what-if" scenarios
-
-- **v (Topological Class):** Defines geometric "physics rules" for manifold regions
-  - `v = 0`: Euclidean (flat semantic proximity, standard distance)
-  - `v = 1`: Cyclic / Toroidal (feedback loops, circadian rhythms, periodic states)
-  - `v = 2`: Hyperbolic / Tree (hierarchies, family trees, taxonomies)
-  - `v = 3+`: Jurisdictional & Community Boundary Cliques / Community Classes
-
-- **w (Manifold Index):** Domain Index for Multi-Head Bifurcation
-  - `w = 0`: Biological/Medical
-  - `w = 1`: Legal/Jurisdictional (UDHR, APP, My Health Record)
-  - `w = 2`: Personal/Agency (cryptographic preferences, DIDs, consents)
-  - `w = 3`: Environmental/Sensor
-  - `w = 4`: Socioeconomic/Wellbeing (Maslow/QALY)
-
-**Spacetime Dimensions:**
-
-- **x, y, z (Semantic Topology):** 3D spatial coordinates of concepts
-  - Related concepts are physically clustered
-  - Distance between coordinates dictates semantic relevance
-  - Supports bounding-volume queries, kNN, and ray-casting
-
-- **t (Temporal State):** Explicit time or state-version dimension
-  - Medical: Biomarker normal at `t=0`, critical at `t=1`
-  - Legal: Claim valid at `t=2024`, superseded at `t=2026`
-  - Enables verifiable ledger for historical state queries
-
-**Spectral-Logical Payload:**
-
-- **α (Amplitude):** Linear floating-point intensity, energy density, trust/consensus weight
-- **μ (Modulation):** Encodes phase, frequency modulation, or bit-packed metadata for DIDs and cryptographic provenance
-- **σ (Spectral Signature):** Represents chromatic, timbral, or multi-band spectral profile. In the **phenomenal portal**, σ is the shared truth index for both vision (U2) and hearing (U3) — see §1.3.
-
-### 1.3 Phenomenal multi-modal σ projection (U2 + U3)
-
-The Qualia WASM portal projects the same `σ` field into **two last-mile modalities** without duplicating storage:
-
-| Modality | Universe | Projection | Reference |
-|----------|----------|------------|-----------|
-| **Visual** | U2 Viewport | λ_nm = 400 + fract(σ)×300 → CIE 1931 XYZ → linear sRGB | `portal_spectral.rs`, `spectral.wgsl` |
-| **Auditory** | U3 AcousticPlane | same λ_nm → f_hz = lerp(1760, 110, t) where t = (λ_nm−400)/300 | `portal_acoustic.rs` |
-
-Where `fract(σ) = σ - floor(σ)`. Integer wraps on σ must not change either projection.
-
-**High-density sheets:** Full SPD (vision) and STFT/CQT (audio) live in **mmap sidecars** linked at bake time — not inlined in the 40-byte `Tensor10D` stride. Each node carries a 64-bin **preview** derived from σ for hot-path parametric synthesis (`SPECTRAL_PREVIEW_BINS = 64`). Normative audio layouts: [`q42-acoustic-plane-draft.md`](q42-acoustic-plane-draft.md).
-
-**α and μ in audio:**
-
-- **α** — linear gain staging (preserves dynamic-range fidelity; clipping only at DAC under device policy).
-- **μ** — phase / provenance modulation; drives FM index with epistemic **q** in U3 parametric voices.
-
-## 2. Hardware Capability Tiers
-
-### 2.1 Tier Classification
-
-**Tier 0: Strict Edge / Battery Reserve**
-- Hardware: Mobile CPUs, Raspberry Pi, basecamps on night-time battery reserves
-- Execution: SIMD kernels (ARM NEON / x86 AVX2), aggressive quantization
-- Power: < 1W idle, < 5W active
-- Memory: ≤48 MB peak working set
-
-**Tier 1: Mainstream Native**
-- Hardware: Standard laptops, mobile Neural Engines
-- Execution: Hybrid CPU/NPU model, minor heap buffering permitted
-- Power: < 10W idle, < 20W active
-- Memory: ≤256 MB peak working set
-
-**Tier 2: High-Performance Local / Solar Surplus**
-- Hardware: Dedicated GPUs (NVIDIA A2000, Apple Silicon GPU clusters)
-- Execution: GPU VRAM mapping, parallel Texture Mapping Units
-- Power: < 10W idle, < 50W active
-- Memory: ≤2 GB peak working set
-
-**Tier 3: Ground-State Resolver / QPU Escrow**
-- Hardware: Scarce QPUs, classical exhaustion first
-- Execution: Asynchronous, Proof-of-Demand mesh aggregation, stateless escrow
-- Power: Variable based on QPU availability
-- Memory: Stateless operations only
-
-### 2.2 Telemetry-Aware Dispatching
-
-The HardwareTierDispatcher must dynamically route execution based on:
-- Physical capability profiles (CPU cores, GPU memory, NPU availability)
-- Real-time power telemetry (current power draw, battery percentage)
-- Thermal state (CPU/GPU temperature, thermal throttling status)
-- User preferences (performance vs. power conservation)
-
-### 2.3 Execution Strategies
-
-- **SIMDOnly:** Stack-allocated vector processing via ARM NEON / x86 AVX2
-- **HybridCPUNPU:** Hybrid CPU/NPU execution with minor heap buffering
-- **GPUVRAM:** Direct VRAM mapping with parallel Texture Mapping Units
-- **QPUAsync:** Asynchronous quantum context resolution via mesh aggregation
-- **Throttled:** Power/thermal-constrained execution mode
-
-## 3. Zero-Heap Execution Constraints
-
-### 3.1 Hot Path Requirements
-
-- **No Heap Allocation:** Vec, HashMap, Box allocations prohibited in execution paths
-- **Caller-Supplied Buffers:** All output buffers must be provided by the caller
-- **Stack Allocation:** Use `[T; N]` arrays for local state
-- **O(1) Operations:** Graph traversal replaced by geometric bounding-box queries
-
-### 3.2 Buffer Management Pattern
-
-```rust
-// Zero-heap function signature
-pub fn process_tensor(
-    input: &[Tensor10D],
-    output: &mut [f32],  // Caller-supplied buffer
-    count: usize,
-) -> Result<usize, ProcessingError>
-```
-
-### 3.3 Memory Constraints
-
-- **42MB Sentinel:** Any single execution pass must stay within 42 MB of memory
-- **Stack Allocation:** Local state must fit within stack limits (typically 8 MB)
-- **No Dynamic Growth:** Buffer sizes must be known at compile time
-
-## 4. Topological Distance Metrics
-
-### 4.1 Metric selection (NORMATIVE)
-
-The volume-search distance between a **query** tensor `Q` and a **node** tensor `N` is
-selected by the **query's** topological class `⌊Q.v⌋` (the same class applies to every
-node in a given search — it is a property of the query, not of each node):
-
-| `⌊Q.v⌋` | Metric | Fields used |
-|---------|--------|-------------|
-| 0 | Euclidean | x, y, z, t, α, μ, σ |
-| 1 | Cyclic / toroidal | x, y, z (mod 1) |
-| 2 | Hyperbolic | x, y, z |
-| ≥ 3 | Boundary clique | v |
-
-This mirrors `Tensor10D::full_distance` (`crates/qualia-core-db/src/tensor/mod.rs`).
-
-**Euclidean (v = 0)** — the full 7-dimensional form (note: `q, v, w` are NOT part of the
-metric):
-```
-d = √( (Δx)² + (Δy)² + (Δz)² + (Δt)² + (Δα)² + (Δμ)² + (Δσ)² )
-```
-
-**Cyclic (v = 1)** — toroidal wrap on each spatial axis:
-```
-d = √( c(Δx)² + c(Δy)² + c(Δz)² ),   c(δ) = min(|δ|, 1 − |δ|)
-```
-
-**Hyperbolic (v = 2)** — exponential hierarchy over the spatial axes:
-```
-d = ln( e^|Δx| + e^|Δy| + e^|Δz| )
-```
-
-**Boundary (v ≥ 3)** — clique membership:
-```
-d = 0 if Q.v == N.v else 1
-```
-
-A node `N` is a hit iff `d(Q, N) ≤ max_distance`.
-
-### 4.2 GPU/CPU determinism (NORMATIVE)
-
-A conforming implementation MUST compute the **identical** metric (§4.1) on every
-execution path — CPU SIMD, GPU, and any fallback — so a volume search returns the same
-hit set regardless of the hardware that runs it. In particular the GPU compute kernel MUST
-implement all four metrics and dispatch on `⌊Q.v⌋`; it MUST NOT silently restrict to
-euclidean.
-
-Reference implementation:
-- GPU kernel: `crates/qualia-core-db/src/shaders/tensor_volume.wgsl` (`metric_distance`).
-- CPU reference (GPU-independent ground truth): `tensor::volume_gpu::cpu_tensor_search_into`.
-- Substrate CPU fallback: `Q42TensorView::tensor_search_into` (uses `full_distance`).
-
-Earlier revisions only implemented the euclidean branch on the GPU, so results diverged
-from the CPU path for `v ≠ 0`; v1.2 closes this. (See `ALGEBRA_MANIFOLD_PLAN.md` §4.1 and
-the `cpu_tensor_search_honors_topology_class` test.)
-
-### 4.3 Topological Bifurcation
-
-Combined with manifold identifier (w), topological class (v) enables structural "wormholes" for cross-domain correlation:
-- Map topological shape from one w to correlated coordinate in another w
-- Example: "Mobility Impairment" (w=0) → "Disability Accommodation Rights" (w=1)
-- Pure geometric matrix operations without complex Rust logic
-
-## 5. Ground-State Resolver (GSR) Integration
-
-### 5.1 QUBO Problem Format
-
-```rust
-pub struct QuboProblem {
-    pub problem_id: String,
-    pub coefficients: Vec<(usize, usize, f32)>,
-    pub linear_terms: Vec<(usize, f32)>,
-    pub size: usize,
-    pub context_id: u64,
-}
-```
-
-### 5.2 Resolution Process
-
-1. **QPU Resolution:** Async mesh aggregation for quantum context resolution
-2. **Classical Fallback:** Exhaustive search (n≤16) or greedy approximation (n>16)
-3. **Axiom Caching:** Store winning contexts for future reference
-4. **Epistemic Frame Evolution:** Create new t slices when contexts resolve
-
-### 5.3 Result Format
-
-```rust
-pub struct GsrResult {
-    pub problem_id: String,
-    pub winning_context: f32,
-    pub confidence: f32,
-    pub resolved_at: u64,
-    pub compute_time_ms: u64,
-    pub classical_fallback: bool,
-}
-```
-
-## 6. Q42 Volume Integration
-
-### 6.1 NQuin to Tensor10D Mapping
-
-The bridge layer converts between the 48-byte NQuin structure and the 40-byte Tensor10D structure:
-
-- **Quantum Context:** Extract from metadata or context field
-- **Topological Class:** Extract from context or metadata
-- **Manifold Index:** Extract from context field bits [0..55]
-- **Semantic Coordinates:** Extract from object field or use hash-based embedding
-- **Temporal State:** Extract from metadata Lamport clock
-- **Spectral Payload:** Extract from metadata modality payload
-
-### 6.2 Tensor Metadata
-
-```rust
-pub struct TensorMetadata {
-    pub tensor: Tensor10D,
-    pub has_tensor: bool,
-    pub tensor_version: u32,
-}
-```
-
-### 6.3 Query Operations
-
-- **Tensor Search:** Find NQuins within geometric distance threshold
-- **Temporal Query:** Query state at specific time t with tolerance
-- **Manifold Query:** Search across multiple w domains with spatial constraints
-
-## 7. Cryptographic Integration
-
-### 7.1 Sanctuary Lane Cryptography
-
-- **PBKDF2 Key Derivation:** 48-byte derivation [32 bytes cipher key | 16 bytes volume root tweak]
-- **Implicit Nonce Derivation:** XOR-based nonce derivation using volume tweak and chunk index
-- **AEAD Ciphers:** AES-256-GCM integration with zero-heap guarantees
-
-### 7.2 Zero-Heap Cryptographic API
-
-```rust
-pub fn encrypt_sanctuary_chunk(
-    cipher_key: &[u8; 32],
-    volume_tweak: &[u8; 16],
-    chunk_index: u64,
-    plaintext: &[u8],
-    ciphertext_out: &mut [u8],  // Caller-supplied
-    tag_out: &mut [u8],          // Caller-supplied
-    additional_data: Option<&[u8]>,
-) -> Result<usize, String>
-```
-
-## 8. Feature Flags
-
-### 8.1 Tensor Features
-
-- `tensor-10d`: Enables 10D tensor coordinate system and all tensor operations
-- `tensor-gpu`: Enables GPU acceleration (CUDA/Metal/Vulkan)
-- `tensor-npu`: Enables NPU acceleration (Neural Engine)
-- `sanctuary-crypto`: Enables sanctuary lane cryptography
-
-### 8.2 Build Configuration
-
-```bash
-# Enable all tensor features
-cargo build --features tensor-10d,tensor-gpu,tensor-npu,sanctuary-crypto
-
-# Enable only CPU SIMD execution
-cargo build --features tensor-10d
-
-# Enable GPU acceleration
-cargo build --features tensor-10d,tensor-gpu
-```
-
-## 9. Performance Targets
-
-### 9.1 Latency Requirements
-
-- **Single Query:** < 10ms on Tier 0, < 1ms on Tier 2
-- **Batch Processing:** 1000 queries/sec on Tier 0, 100,000 queries/sec on Tier 2
-- **Memory Footprint:** < 100MB active working set on Tier 0
-
-### 9.2 Power Consumption
-
-- **Tier 0 (Idle):** < 1W
-- **Tier 0 (Active):** < 5W
-- **Tier 2 (Idle):** < 10W
-- **Tier 2 (Active):** < 50W
-
-### 9.3 Storage Efficiency
-
-- **Quantization Ratio:** 4:1 (INT8 vs FP32)
-- **Compression:** LZ4 for container storage
-- **Memory Mapping:** Zero-copy load for execution
-
-## 10. Security & Human Agency
-
-### 10.1 Cryptographic Provenance
-
-- **σ Channel:** Encodes cryptographic origin
-- **Sanctuary Lane:** Verified encrypted storage
-- **Mesh Verification:** Trust scores for unverified sources
-
-### 10.2 Zero-Heap Security Benefits
-
-- **No Heap Spraying:** Eliminates memory corruption attack surface
-- **Predictable Memory:** Easier security auditing
-- **Sandbox Safety:** Stack allocation limits attack scope
-
-### 10.3 Principal-Held Data Assets
-
-- **Information Banking:** Pre-processed, mathematically dense
-- **Local-First:** No cloud dependency for inference
-- **Offline Capable:** Full functionality without network
-
-## 11. Compliance & Standards
-
-### 11.1 Human Agency and Privacy
-
-- **GDPR Compliance:** Local-first architecture ensures data never leaves jurisdiction
-- **HIPAA Compliance:** Sanctuary lane encryption for medical data
-- **Accessibility:** Multi-cultural tokenisation layer for oral traditions
-
-### 11.2 Interoperability
-
-- **RDF Integration:** Seamless mapping from NQuin to Tensor10D
-- **SPARQL Support:** Query tensor data via SPARQL extensions
-- **Web Standards:** Compatible with Semantic Web technologies
-
-## 12. Implementation Status
-
-### 12.1 Completed Components
-
-- ✅ Phase 1: Cryptographic infrastructure (PBKDF2, nonce derivation, AEAD)
-- ✅ Phase 2: 10D tensor foundation (all dimensions implemented)
-- ✅ Phase 2.7: GSR Integration (async QPU communication, classical fallback)
-- ✅ Phase 2.8: Hardware-Tier Dispatching (telemetry-aware routing)
-- ✅ Phase 2.9: Zero-Heap Guarantees (Vec allocations resolved)
-- ✅ Phase 2.10: Q42 Volume Integration (NQuin to Tensor10D bridge)
-
-### 12.2 Future Work
-
-- ⏳ Pipeline implementation for ingestion phase
-- ⏳ VM enhancement with tensor opcodes
-- ⏳ Graph theory resolution via pre-computation
-- ⏳ Performance optimization and benchmarking
-
-## 13. References
-
-- **Q42_PIPELINE_CONTAINER_SPEC.md:** Comprehensive architectural specification
-- **CLAUDE.md:** AI agent orientation and architectural boundaries
-- **AGENTS.md:** Multi-agent collaboration ecosystem coordination
-- **ARCHITECTURE.md:** Qualia-DB architecture overview
+# Q42 10D Computational & Epistemic Tensor Standard (`.10d` / `Tensor10D` v2.0)
+
+**Version:** 2.0 (Unified Computational Primacy, Multi-Scale `L0`–`L6` Strata, Symbolic-AI/RDF 1.2 & Container Specification)  
+**Target Architecture:** QualiaDB (`crates/qualia-core-db/src/tensor/` & `crates/qualia-core-db/src/container_10d/`)  
+**Companion Specifications:** [`10d-container-standard.md`](10d-container-standard.md), [`10d-container-format.md`](10d-container-format.md), [`10d-typed-field-payloads.md`](10d-typed-field-payloads.md), [`10d-skeletal-animation.md`](10d-skeletal-animation.md), [`10d-opaque-preservation.md`](10d-opaque-preservation.md), [`yaml-ld-q42-specification.md`](yaml-ld-q42-specification.md)
 
 ---
 
-**Generated with [Devin](https://cli.devin.ai/docs)**
+## 0. Foundational Principles: Computational Primacy, Multi-Scale Reality & Symbolic-AI Grounding
+
+### 0.1 Computational Primacy Over Visual and Auditory Embodiment
+In the QualiaDB and Webizen architecture, **the 3D/4D visual model (`QuantizedMesh`, `CDAG`) or auditory stream (`.qac`) is NEVER the primary entity.**
+1. **The Primary Entity is the Neuro-Symbolic Computational & Epistemic Model:**
+   * Every `.10d` manifold represents **observed empirical reality**, **scientific hypothesis synthesis** (`q` superposition), or **creative/intellectual work in a mixed zone** (where empirical facts, counterfactual simulations, civic policy scenarios, and creative works coexist with explicit epistemic truth and provenance weights).
+   * A pure hypothesis, an unembodied creative or legislative construct, or a multi-scale biophysical field is already a complete, valid `.10d` entity (`Profile 0: ComputationalOnly`) even when no 3D triangle mesh is attached.
+2. **Sensory & Spatial Representations are Bidirectionally Coupled Secondary Embodiments:**
+   * When an entity is embodied in 3D/4D space, its visual geometry (`.10d` Mode-A inline constituency or Mode-B `AREF` archetype reference), physical matter (`.m64`), electromagnetic/radiance fields (`.emf`), and spatial acoustics (`.qac`) act as **coupled projections** driven by—and feeding back into—the primary computational model.
+
+### 0.2 Multi-Scale Nested Computational Depth (`L0` Macro Down to `L6` Quantum Physics)
+While a visual representation of a species (`intenteco`: flora, fauna, funga) or a made-world thing (`qualia-poiesis`: vehicles, buildings, tools, creative works) may initially depict only a macro outer surface (such as the shape of a leaf, dermis, or structural beam), **the underlying `.10d` computational data structure (`FIELD_KIND_MULTISCALE_STRATA = 0x0304`, `MSTR`) encodes the nested multi-scale reality of that entity across seven strata (`L0`–`L6`)**:
+* **`L0` ($10^2\text{ m} \dots 10^{-1}\text{ m}$) — Macro-Entity / Holobiont / System Assembly:** The complete tree, animal, fungal network, building, or vehicle.
+* **`L1` ($10^{-1}\text{ m} \dots 10^{-2}\text{ m}$) — Organ / Anatomical Compartment / Structural Subsystem:** Leaf lamina, vascular cambium, heart, root system; engine block, PCB, structural frame.
+* **`L2` ($10^{-2}\text{ m} \dots 10^{-4}\text{ m}$) — Tissue, Micro-Appendage & Histological Architecture:** **Hair follicles, trichomes, stomatal guard complexes**, epidermis, palisade/spongy mesophyll, xylem tracheids, osteons/trabeculae (`.m64` `M64BioTissueRecord`); weld zones, coatings.
+* **`L3` ($10^{-3}\text{ m} \dots 10^{-6}\text{ m}$) — Harboured Consortia (Symbiotic Fungi, Bacteria, Microbiome & Parasites):** Endophytic and mycorrhizal fungi, phyllosphere/rhizosphere/follicular/gut bacterial biofilms, mites, nematodes, galls, mistletoe, viral/cellular parasites (and timber-rot fungi or corrosion biofilms on made-world things). Each co-habiting organism is anchored via [`CellAnchor`](../../../crates/qualia-core-db/src/topology/header.rs) and references its own canonical `intenteco` taxon and `.10d`/`.q42` model.
+* **`L4` ($10^{-4}\text{ m} \dots 10^{-7}\text{ m}$) — Cellular & Organellar Stratum:** Somatic and meristem/stem cells, chloroplasts, thylakoid membranes, mitochondria, cell walls, turgor pressure, and membrane potential.
+* **`L5` ($10^{-7}\text{ m} \dots 10^{-9}\text{ m}$) — Molecular, Genomic & Biochemical Pathway Stratum:** DNA/RNA/protein sequences (`bioinformatics_align`), enzymatic reaction centers (RuBisCO, ATP synthase, cytochrome P450), structural biopolymers (cellulose, lignin, keratin, collagen), and crystal lattices.
+* **`L6` ($10^{-9}\text{ m} \dots 10^{-15}\text{ m}$) — Quantum Physics Stratum (`L6_QuantumPhysics`):** All **non-classical quantum-mechanical considerations that cannot be reduced to general/classical physics or continuum mathematics** (with Quantum Dynamics and Quantum Chemistry as sub-domains):
+  * **Quantum Coherence, Superposition & Entanglement:** Non-commutative observables ($[\hat{A}, \hat{B}] \neq 0$), density matrices ($\hat{\rho}$), von Neumann entanglement entropy ($S_{\text{vN}}$), and non-local correlations (`QuantumCoherenceAndEntanglement`).
+  * **Open-System Quantum Dynamics, Tunneling & Spin Physics:** GKSL Lindblad / Redfield / HEOM decoherence ($T_1, T_2^*$, `OpenQuantumLindbladDynamics`), WKB/instanton proton and electron barrier tunneling and vibronic exciton coherence (`QuantumTunnelingAndVibronicTransport`), and Zeeman/hyperfine radical-pair spin dynamics such as biological magnetoreception and spintronics (`SpinDynamicsAndRadicalPair`).
+  * **Quantum Electrodynamics (QED) & Topological/Many-Body Quantum Phases:** Cavity QED / polaritonic light-matter coupling and Casimir dispersion (`CavityQedAndPhotonicCoupling`), Berry curvature, Chern invariants, and superconducting/BEC condensates (`TopologicalAndManyBodyQuantumPhase`).
+  * **Quantum Chemistry Subset (Electronic Structure):** Contracted Gaussian-Type Orbitals (`basis_set.rs`: STO-3G, def2-SVP, ECPs), Obara-Saika / Head-Gordon-Pople / Rys molecular integrals (`integrals.rs`), RHF/UHF Self-Consistent Field with DIIS/Broyden convergence to $10^{-8}\text{ Ha}$ (`scf.rs`), Rust-native autodiff LDA/GGA Density Functional Theory (`dft.rs`), and `qualia-q-forge` VQE/QUBO StateVector `NQuin` topological pointers (`qpu_extension.rs`).
+
+Each stratum node carries an explicit `EmbodimentResolutionState` (`ComputationalOnly`, `ProceduralSynthesized`, `ArchetypeReferenced`, `InlineEmbodied`) so deeper strata (`L2`–`L6`) are active in the computational model immediately and can be progressively given 3D/4D visual embodiments over time without changing the container schema.
+
+### 0.3 Symbolic-AI, RDF 1.2, Logic Infrastructure & Strict No-ASCII Policy (UTF-8 / UTF-16 & CBOR / CBOR-LD)
+1. **Strict No-ASCII Policy:**
+   * ASCII cannot represent the world's languages (including Indigenous languages such as Arrernte, non-Latin scripts, and scientific notation).
+   * **All human-readable text, multilingual labels, RDF IRIs, and literals MUST use UTF-8 (or lossless UTF-16 at platform/ABI boundaries), encoded in binary envelopes via CBOR / CBOR-LD (`FIELD_KIND_SYMBOLIC_RDF_CBOR_LD = 0x0305`, `CBLD`) or `.q42` `Q42LEX` tables with BCP-47 `@lang` tags.**
+   * Fixed 4-byte tags in binary headers are 32-bit little-endian numeric format discriminants (`u32`), never ASCII strings.
+2. **Innate Symbolic-AI, RDF 1.2 & Logic Infrastructure:**
+   * Every `.10d` entity and `L0`–`L6` stratum is anchored to a 64-bit RDF `NQuin` semantic identity (`q_hash` of a full UTF-8 IRI, `did:q42:`, or RDF 1.2 / RDF-Star `TAG_EMBEDDED` reified triple ID).
+   * The computational manifold integrates directly with QualiaDB's **N3Logic, SHACL, zero-heap `SLG-VM` tabling solver, Belnap 4-valued paraconsistent logic (`Unknown`, `True`, `False`, `Both`), and Deontic governance (`OP_PERMIT`, `OP_OBLIGE`, `OP_FORBID` + `DEFEATER_BIT`)**.
+
+---
+
+## 1. Canonical 10D Coordinate Basis (`Tensor10D`) & T14 / T67 Reconciliation
+
+### 1.1 The 40-Byte `Tensor10D` Atom (`[q, v, w, x, y, z, t, α, μ, σ]`)
+A `Tensor10D` coordinate point (`crates/qualia-core-db/src/tensor/mod.rs` and `container_10d/axis_role.rs`) is an exact 40-byte ($10 \times \text{f32}$) vector:
+
+$$\mathbf{X}_{10\text{D}} = \begin{bmatrix} q & v & w & x & y & z & t & \alpha & \mu & \sigma \end{bmatrix} \in \mathbb{R}^{10}$$
+
+| Index | Symbol | Field | Canonical `AxisRole` (`axis_role.rs`) | Normative Mathematical & Epistemic Meaning (T67 Reconciled) |
+| :---: | :---: | :--- | :--- | :--- |
+| **0** | $q$ | `q` | `Selector` (`2`) | **Quantum / Epistemic Superposition & Hypothesis Axis:** Selects or weights empirical reality ($q = 0.0$ ground truth or collapsed eigenstate), active scientific hypotheses, and mixed-zone creative counterfactual branches. |
+| **1** | $v$ | `v` | `Selector` (`2`) | **Topological & Physical Metric Regime Selector:** Selects the active metric law (`MetricKind`: Euclidean, Cyclic/Toroidal, Hyperbolic taxonomic tree, Boundary Clique, Spherical HEALPix, Lorentzian Spacetime, Multiply-Connected Portal). |
+| **2** | $w$ | `w` | `Selector` (`2`) | **Domain & Multi-Head Bifurcation Selector:** Routes across domain sub-manifolds (biosphere, made-world, civic/jural, quantum chemistry, clinical). |
+| **3** | $x$ | `x` | `Coordinate` (`1`) | **Spatial Coordinate $X$:** Metric position in SI meters (or local chart frame declared in `MID2`). |
+| **4** | $y$ | `y` | `Coordinate` (`1`) | **Spatial Coordinate $Y$:** Metric position in SI meters. |
+| **5** | $z$ | `z` | `Coordinate` (`1`) | **Spatial Coordinate $Z$:** Metric position / elevation in SI meters. |
+| **6** | $t$ | `t` | `Coordinate` (`1`) | **Coordinate Time $t$:** 4th spacetime dimension (physical, ontogenetic, or simulation coordinate time in SI seconds or days). *Note (T67): `t` is strictly Coordinate Time, never a provenance hash.* |
+| **7** | $\alpha$ | `alpha` | `Coordinate` (`1`) | **Semantic Pull / Conceptual Gravity $\alpha$:** Epistemic salience, structural mass/rigidity coupling, or attentional attractor weight. |
+| **8** | $\mu$ | `mu` | `CoordinateCarrier` (`4`) | **Provenance Weight & Governance Carrier $\mu$:** Dual-role metric coordinate and in-band cryptographic provenance, DID authority, consent, and rights/obligation carrier. |
+| **9** | $\sigma$ | `sigma` | `Coordinate` (`1`) | **Spectral & Logical Class Signature $\sigma$:** Continuous physical/logical signature bridging intrinsic material and quantum properties (`L6` bandgap / reflectance) into downstream sensory projections (**U2** visual / **U3** auditory). |
+
+### 1.2 T14 Disambiguation: `.10d` `Tensor10D` vs. `.p64` `Epistemic10D`
+QualiaDB defines two distinct 10-float structures that MUST NEVER be conflated:
+1. **`Tensor10D` (`crates/qualia-core-db/src/tensor/mod.rs`):** The `[q, v, w, x, y, z, t, α, μ, σ]` spatio-temporal and neuro-symbolic manifold coordinate used in `.10d` containers (`SectionType::Tensor10DNodes = 2` and `MID2 = 15`).
+2. **`Epistemic10D` / `ManifoldCoordinate10D` (`crates/qualia-core-db/src/modalities/manifold.rs`):** The internal cognitive/neural weight modulation vector `[scale, attention_depth, epistemic_weight, topological_spin, temporal_decay, entropy_bias, spatial_phase, recurrence_frequency, density_threshold, manifold_curvature]` used exclusively inside `.p64` cognitive weight containers.
+
+---
+
+## 2. Bridging 48-Byte `NQuin`s and `Tensor10D`
+
+Every 48-byte `NQuin` (`[subject, predicate, object, context, metadata, parity]`, $6 \times \text{u64}$) in `.q42` projects deterministically into `Tensor10D` via `Tensor10D::from_nquin(&quin)`:
+* `subject`, `predicate`, `object` map to normalized coordinates in $[0.0, 1.0]$ across $(x, y, z)$.
+* `context` (bits `0..56` graph namespace, bits `56..63` `SensitivityClass`) maps to $\alpha$ and deontic access gates.
+* `metadata` (Lamport clock, Belnap 4-valued truth status, deontic opcodes) maps to coordinate time $t$ and provenance carrier $\mu$.
+* `parity` ($S \oplus P \oplus O \oplus C$) initializes $\sigma$.
+
+Conversely, inside `.10d` v2 containers, **`CellAnchor`** (`16B` in `GTOP` `0x0300` and `MSTR` `0x0304`) and **`SymbolicRdfCborLdPayload`** (`CBLD` `0x0305`) bind geometric k-cells and multi-scale strata directly back to 64-bit `NQuin` entity hashes and full 48-byte `NQuin` statements.
+
+---
+
+## 3. Topological Metric Regimes ($v$-Axis) & Distance Laws
+
+### 3.1 Registered `MetricKind` Regimes (`metric_check.rs`)
+1. **`Euclidean = 1` ($v = 0$):** Standard 7-axis Euclidean metric over $(x, y, z, t, \alpha, \mu, \sigma)$:
+   $$d_{\text{Euc}}(\mathbf{a}, \mathbf{b}) = \sqrt{\sum_{k \in \{x,y,z,t,\alpha,\mu,\sigma\}} (a_k - b_k)^2}$$
+2. **`CyclicToroidal = 2` ($v = 1$):** Periodic boundary metric on $\mathbb{T}^3$ with period $L = 1.0$:
+   $$\Delta_k = \min\left(|a_k - b_k| \bmod 1.0,\; 1.0 - (|a_k - b_k| \bmod 1.0)\right), \quad k \in \{x, y, z\}$$
+3. **`Hyperbolic = 3` ($v = 2$):** Poincaré ball hyperbolic metric for deep taxonomic trees (`intenteco` Linnaean/phylogenetic hierarchies and `qualia-poiesis` BOM ontologies):
+   $$d_{\text{Hyp}}(\mathbf{u}, \mathbf{v}) = \operatorname{arcosh}\!\left(1 + \frac{2\|\mathbf{u} - \mathbf{v}\|^2}{(1 - \|\mathbf{u}\|^2)(1 - \|\mathbf{v}\|^2)}\right)$$
+4. **`BoundaryClique = 4` ($v \ge 3$):** Topological regime separator $|v_a - v_b|$.
+5. **`SphericalHealpix = 5`:** Equal-area planetary sphere metric ($S^2$) for WGS84 / GIS geodetic manifolds.
+6. **`LorentzianSpacetime = 6`:** Relativistic causal spacetime interval $ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2$.
+7. **`MultiplyConnectedPortal = 7`:** Non-trivial fundamental group $\pi_1(M) \neq 0$ bridged via portal transition motors.
+
+*Note on the 64-Byte `.10d` Header Gate:* Bytes `20..52` of `Container10dHeader` store the 4-branch `CANONICAL_METRIC_TABLE` (`v = 0..=3`) verifying runtime parity with `Tensor10D::full_distance`. Higher metric regimes (`5..=7`) are declared via `MID2` (`coordinate_convention_id` / `domain_id`) and `GTOP` (`PoetGeometryHeader::metric_kind`).
+
+---
+
+## 4. Three `.10d` Embodiment Profiles & Two-Tier Geometry Constituency
+
+Paralleling how `.emf` (`Q42EMF64`), `.qac` (`qac\0`), and `.m64` (`m64\0`) were factored into dedicated domain containers, `.10d` v2 supports three embodiment profiles:
+
+### 4.1 Profile 0 — Pure Computational, Hypothesis & Mixed-Zone `.10d` (`computational_only`)
+* **Sections Present:** `ManifoldIdentityV2` (`MID2`, Sec `15`), optional `Tensor10DNodes` (Sec `2`), optional `FieldSidecar` (Sec `8`: `FIEL`, `GTOP` `0x0300`, `MSTR` `0x0304`, `CBLD` `0x0305`), optional `EntityOntology` (`EONT`, Sec `17`), optional `ProceduralSynthesis` (`PROC`, Sec `18`), optional `ProvenanceSidecar` (Sec `7`).
+* **Purpose:** Represents pure computational models, scientific hypotheses, ecological consortia, quantum chemistry systems, or creative works in a mixed zone without requiring a 3D triangle mesh.
+
+### 4.2 Profile 1 (Geometry Mode A) — Archetype Embodiment `.10d` (`archetype_inline`)
+* **Sections Present:** All Profile-0 computational sections **plus inline 3D/4D geometry and look-dev constituency**: `QuantizedMesh` (`1`), `CorrespondenceMap` (`9`, `FEMC`), `Topology` (`10`), `SpatialIndex` (`11`), `SurfaceReading` (`12`), `Materials` (`13`, `MAT1`..`MAT4`), `TextureCoordinates` (`14`, `UV01`), `SkeletalAnimation` (`16`, `SKL1`/`SKL2` + `SSM1` PCA shape basis), `ImpostorAtlas` (`19`, `IMPO`), `HierarchicalSurfels` (`20`, `SURF`), `HyperspectralCube` (`21`), `VoxelLattice` (`22`, `VOX0`), `ClusterDag` (`23`, `CDAG`).
+* **Purpose:** The canonical master embodiment produced per species repository in `intenteco` or per thing repository in `qualia-poiesis`.
+
+### 4.3 Profile 2 (Geometry Mode B) — Instance / Population `.10d` (`archetype_instance`)
+* **Sections Present:** `ManifoldIdentityV2` (`MID2`, Sec `15`), `FieldSidecar` (Sec `8`) containing **`FIELD_KIND_ARCHETYPE_REF = 0x0301` (`AREF`)** + optional **`FIELD_KIND_INSTANCE_OVERRIDES = 0x0302` (`IOVR`)** + optional **`FIELD_KIND_INSTANCE_BATCH = 0x0303` (`INST`)** + optional **`FIELD_KIND_MULTISCALE_STRATA = 0x0304` (`MSTR`)** + optional **`FIELD_KIND_SYMBOLIC_RDF_CBOR_LD = 0x0305` (`CBLD`)** + optional **`FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE = 0x0306` (`HOLO`)**, plus optional `EntityOntology` (`EONT`, Sec `17`), `ProceduralSynthesis` (`PROC`, Sec `18`), and `Tensor10DNodes` (Sec `2`).
+* **Purpose:** An individual asset in the world (e.g., a specific ghost gum tree at `[x, y, z, t]` with its own age, hydration, endophytic fungi, and 64-bit procedural seed, or a specific 4WD vehicle with its own wear, owner DID, and damage) or a 10,000-entity population cloud (`Tensor10DNodes` + `INST`). It **omits duplicate geometry sections** and references the Mode-A Archetype `.10d` by its 256-bit `BLAKE3`/`SHA-256` digest in `AREF`.
+
+### 4.4 Holographic Phase-Space Primacy (`FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE = 0x0306`, `HOLO`)
+Unlike static polygon formats (`.obj`, `.fbx`, `.gltf`), a `.10d` asset is fundamentally an **in-situ holographic phase-space & thermodynamic energy tensor**:
+* **`HOLO` (`0x0306` in `FieldSidecar`):** Encodes a 64-byte [`HolographicPhaseHeader`](../../../crates/qualia-core-db/src/container_10d/holographic_phase_section.rs) (`u32` tag `HOLO`, `version=1`, `flags`, `max_raymarch_steps <= 32`, `active_harmonic_bands_k <= 12`, `holo_record_count`, `wavefield_record_count`, 12-triangle proxy lens AABB `proxy_aabb_min/max`, `sdf_smooth_union_radius`, `record_crc32c`), followed by `N × 64B` [`M64HoloRecord`](../../../crates/qualia-core-db/src/m64_material.rs) rows (Mode `0x01`: 12 `f16` Bessel/Spherical `sdf_harmonics`, `eigen_frequencies: [u16; 3]`, `damping_ratios: [u8; 3]`, 6-band 380–780 nm `spectral_spd_base: [u8; 6]`) and `W × 64B` [`EulerianWavefieldRecord`](../../../crates/qualia-core-db/src/container_10d/holographic_phase_section.rs) rows.
+* **Hamiltonian Stationary-Action Splines ($\delta S = \delta \int (T - V)\,dt = 0$):** Time $t$ and environmental forces (wind/water drag $F_{\text{drag},k}$) evaluate continuous analytical Cubic Hermite Hamiltonian phase trajectories (`evaluate_hamiltonian_stationary_action_spline_zero_heap`) with zero keyframe tables.
+* **Hyperbolic $v = 2$ Möbius Morphogenesis & Scale-Space Harmonic LODs ($k = 0..K$):** Botanical/biological growth and fractal vascular branching evaluate Poincaré ball Möbius transformations (`evaluate_hyperbolic_mobius_morphogenesis_zero_heap`) with golden-angle ($\Phi \approx 137.50776^\circ$) phyllotaxis and automatic scale-space harmonic truncation ($k = 0..K_{\text{active}}(d)$) that analytically eliminates Nyquist aliasing and polygon LOD pop-in.
+* **12-Triangle Proxy Lens & `< 32` Step Raymarching:** When `SectionType::QuantizedMesh` (`1`) is omitted (or when rendering in holographic proxy mode), `decode_load_10d` automatically synthesizes the 8-vertex, 12-triangle bounding cube lens from `HolographicPhaseHeader` and raymarches the analytical SDF in `< 32` steps (TDR guardrail). Existing B-Rep `.10d` assets convert losslessly via `upgrade_legacy_10d_to_holographic_v2`.
+
+---
+
+## 5. Memory Budgets: 42 MiB Q42 Hot-Path Sentinel vs. Streaming Asset & Scene Containers (> 42 MiB)
+
+1. **42 MiB Q42 Sentinel (`SlgArena` / Symbolic-AI & Prolog Hot Path):**
+   * All Symbolic-AI, `SLG-VM` logical inference, `NQuin` indexing, and per-frame zero-heap evaluation kernels obey the strict **42 MiB Sentinel** zero-heap ceiling.
+2. **Streaming / `mmap` Asset & Scene Containers (`> 42 MiB`, Analogous to `.p64` LLM Weight Files):**
+   * Just as `.p64` LLM weight files exceed 42 MiB via zero-copy `mmap` paging, `.10d`, `.m64`, `.emf`, and `.hmc` asset and scene containers are explicitly permitted to exceed 42 MiB on disk/VRAM (e.g., **128 MiB** per packed `.10d` container and **2 GiB** aggregate in the `production16` quality profile), while all hot-path decoders (`parse_section_table`, `decode_manifold_identity_v2`, `decode_holographic_phase_section_into`, `decode_archetype_ref_record`, `decode_multiscale_strata_section_into`, `select_cut_clusters_zero_heap`) remain strictly zero-heap and caller-buffered.
