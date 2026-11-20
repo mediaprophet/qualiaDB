@@ -36,19 +36,105 @@ fn fallback_backends(is_windows: bool, is_macos: bool) -> ([Backends; 3], usize)
     if is_windows {
         #[cfg(feature = "gpu-native-dx12")]
         {
-            // Prefer the compute/render device where available. GL avoids routing
-            // graphics fallback through the known-problematic Vulkan inference path.
-            ([Backends::DX12, Backends::GL, Backends::VULKAN], 3)
+            // Prefer DX12, then Vulkan (which respects DiscreteGpu selection), then GL last.
+            ([Backends::DX12, Backends::VULKAN, Backends::GL], 3)
         }
         #[cfg(not(feature = "gpu-native-dx12"))]
         {
-            ([Backends::GL, Backends::VULKAN, Backends::METAL], 3)
+            // Prefer Vulkan before GL on Windows portable builds so DiscreteGpu
+            // (NVIDIA/AMD) is selected instead of GL's default Intel integrated GPU context.
+            ([Backends::VULKAN, Backends::GL, Backends::METAL], 3)
         }
     } else if is_macos {
         ([Backends::METAL, Backends::GL, Backends::VULKAN], 3)
     } else {
         ([Backends::VULKAN, Backends::GL, Backends::METAL], 3)
     }
+}
+
+/// GPU adapter preference (`QUALIA_GPU_PREFERENCE` / `SYNTH_GPU_PREFERENCE`):
+/// - `"discrete"` / `"high-performance"` (default): strictly prefer `DeviceType::DiscreteGpu`
+///   and reject `DeviceType::IntegratedGpu` when `QUALIA_REJECT_IGPU=1` or when a discrete
+///   GPU exists on another backend.
+/// - `"integrated"` / `"low-power"`: select `DeviceType::IntegratedGpu`.
+/// - `"name:<substring>"` / `"index:<n>"`: match adapter name or index.
+fn select_preferred_adapter(
+    instance: &etalon::Instance,
+    backend: Backends,
+) -> Result<etalon::Adapter, String> {
+    let pref = std::env::var("SYNTH_GPU_PREFERENCE")
+        .or_else(|_| std::env::var("QUALIA_GPU_PREFERENCE"))
+        .unwrap_or_else(|_| "discrete".to_string())
+        .trim()
+        .to_ascii_lowercase();
+    let reject_igpu = std::env::var("SYNTH_REJECT_IGPU")
+        .or_else(|_| std::env::var("QUALIA_REJECT_IGPU"))
+        .map(|v| matches!(v.trim(), "1" | "true" | "yes"))
+        .unwrap_or(pref == "discrete-only" || pref == "no-igpu");
+
+    let adapters = pollster::block_on(instance.enumerate_adapters(backend));
+    if !adapters.is_empty() {
+        if let Some(sub) = pref.strip_prefix("name:") {
+            let needle = sub.trim();
+            if let Some(found) = adapters
+                .iter()
+                .find(|a| a.get_info().name.to_ascii_lowercase().contains(needle))
+            {
+                return Ok(found.clone());
+            }
+        }
+        if pref == "integrated" || pref == "igpu" || pref == "low-power" {
+            if let Some(found) = adapters
+                .iter()
+                .find(|a| a.get_info().device_type == etalon::DeviceType::IntegratedGpu)
+            {
+                return Ok(found.clone());
+            }
+        } else {
+            // Default: always pick DiscreteGpu first so we never accidentally throttle the Intel iGPU!
+            if let Some(found) = adapters
+                .iter()
+                .find(|a| a.get_info().device_type == etalon::DeviceType::DiscreteGpu)
+            {
+                return Ok(found.clone());
+            }
+            if reject_igpu {
+                return Err(format!(
+                    "no DiscreteGpu found on {backend:?} and integrated GPU is disabled (SYNTH_GPU_PREFERENCE={pref})"
+                ));
+            }
+        }
+    }
+
+    let power_preference = if pref == "integrated" || pref == "igpu" || pref == "low-power" {
+        PowerPreference::LowPower
+    } else {
+        PowerPreference::HighPerformance
+    };
+    let adapter = match pollster::block_on(instance.request_adapter(
+        &etalon::RequestAdapterOptions {
+            power_preference,
+            ..Default::default()
+        },
+    )) {
+        Ok(a) => a,
+        Err(primary_err) => pollster::block_on(instance.request_adapter(
+            &etalon::RequestAdapterOptions {
+                power_preference: PowerPreference::None,
+                ..Default::default()
+            },
+        ))
+        .map_err(|fallback_err| {
+            format!("{backend:?}: primary: {primary_err}; fallback: {fallback_err}")
+        })?,
+    };
+    if reject_igpu && adapter.get_info().device_type == etalon::DeviceType::IntegratedGpu {
+        return Err(format!(
+            "rejected IntegratedGpu '{}' on {backend:?} (discrete-only policy active)",
+            adapter.get_info().name
+        ));
+    }
+    Ok(adapter)
 }
 
 /// Create an offscreen renderer device, trying bounded native backends in order.
@@ -70,26 +156,11 @@ pub(super) fn request_offscreen_device() -> Result<(Arc<Device>, Arc<Queue>), St
         let mut descriptor = InstanceDescriptor::new_without_display_handle();
         descriptor.backends = backend;
         let instance = etalon::Instance::new(descriptor);
-        let adapter = match pollster::block_on(instance.request_adapter(
-            &etalon::RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                ..Default::default()
-            },
-        )) {
+        let adapter = match select_preferred_adapter(&instance, backend) {
             Ok(adapter) => adapter,
-            Err(high_performance_error) => {
-                match pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
-                    power_preference: PowerPreference::LowPower,
-                    ..Default::default()
-                })) {
-                    Ok(adapter) => adapter,
-                    Err(low_power_error) => {
-                        failures.push(format!(
-                        "{backend:?}: high-performance: {high_performance_error}; low-power: {low_power_error}"
-                    ));
-                        continue;
-                    }
-                }
+            Err(err) => {
+                failures.push(err);
+                continue;
             }
         };
 
@@ -142,9 +213,9 @@ mod tests {
         let (backends, count) = fallback_backends(true, false);
         assert_eq!(count, 3);
         #[cfg(feature = "gpu-native-dx12")]
-        assert_eq!(backends, [Backends::DX12, Backends::GL, Backends::VULKAN]);
+        assert_eq!(backends, [Backends::DX12, Backends::VULKAN, Backends::GL]);
         #[cfg(not(feature = "gpu-native-dx12"))]
-        assert_eq!(backends, [Backends::GL, Backends::VULKAN, Backends::METAL]);
+        assert_eq!(backends, [Backends::VULKAN, Backends::GL, Backends::METAL]);
     }
 
     #[test]

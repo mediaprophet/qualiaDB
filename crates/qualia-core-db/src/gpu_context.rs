@@ -892,21 +892,72 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         }
         #[cfg(not(feature = "gpu-native-dx12"))]
         {
-            // Portable builds are intended for browser/viewport use. Keep the
-            // shared inference device on GLES rather than silently selecting
-            // the Vulkan path with its tracked native inference hang.
-            desc.backends = etalon::Backends::GL;
-            log::info!("shared_gpu|backend_default|windows->gles_portable_build");
+            // Prefer VULKAN | GL on Windows portable builds so DiscreteGpu
+            // (NVIDIA/AMD) is selected instead of GL's default Intel integrated GPU context.
+            desc.backends = etalon::Backends::VULKAN | etalon::Backends::GL;
+            log::info!("shared_gpu|backend_default|windows->vulkan_or_gles_portable_build");
         }
     }
+    let backends = desc.backends;
     let instance = etalon::Instance::new(desc);
-    let adapter = instance
-        .request_adapter(&etalon::RequestAdapterOptions {
-            power_preference: etalon::PowerPreference::HighPerformance,
-            ..Default::default()
-        })
-        .await
-        .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+    let pref = std::env::var("SYNTH_GPU_PREFERENCE")
+        .or_else(|_| std::env::var("QUALIA_GPU_PREFERENCE"))
+        .unwrap_or_else(|_| "discrete".to_string())
+        .trim()
+        .to_ascii_lowercase();
+    let reject_igpu = std::env::var("SYNTH_REJECT_IGPU")
+        .or_else(|_| std::env::var("QUALIA_REJECT_IGPU"))
+        .map(|v| matches!(v.trim(), "1" | "true" | "yes"))
+        .unwrap_or(pref == "discrete-only" || pref == "no-igpu");
+
+    let enumerated = instance.enumerate_adapters(backends).await;
+    let picked_from_enum = if let Some(sub) = pref.strip_prefix("name:") {
+        let needle = sub.trim();
+        enumerated
+            .into_iter()
+            .find(|a| a.get_info().name.to_ascii_lowercase().contains(needle))
+    } else if pref == "integrated" || pref == "igpu" || pref == "low-power" {
+        enumerated
+            .into_iter()
+            .find(|a| a.get_info().device_type == etalon::DeviceType::IntegratedGpu)
+    } else {
+        // Strictly prefer DiscreteGpu first so we never default to the Intel on-board iGPU
+        let mut discrete = None;
+        let mut fallback = None;
+        for a in enumerated {
+            if a.get_info().device_type == etalon::DeviceType::DiscreteGpu {
+                discrete = Some(a);
+                break;
+            }
+            if fallback.is_none() && (!reject_igpu || a.get_info().device_type != etalon::DeviceType::IntegratedGpu) {
+                fallback = Some(a);
+            }
+        }
+        discrete.or(fallback)
+    };
+
+    let adapter = match picked_from_enum {
+        Some(a) => a,
+        None => {
+            if reject_igpu {
+                return Err(format!(
+                    "No DiscreteGpu found and integrated GPU is disabled (SYNTH_GPU_PREFERENCE={pref})"
+                ));
+            }
+            let power_preference = if pref == "integrated" || pref == "igpu" || pref == "low-power" {
+                etalon::PowerPreference::LowPower
+            } else {
+                etalon::PowerPreference::HighPerformance
+            };
+            instance
+                .request_adapter(&etalon::RequestAdapterOptions {
+                    power_preference,
+                    ..Default::default()
+                })
+                .await
+                .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?
+        }
+    };
 
     // Primary circuit only: size the process-wide VRAM ledger from the best adapter's dedicated
     // memory (Windows/DXGI). The global ledger models the PRIMARY LLM device's budget, so the
