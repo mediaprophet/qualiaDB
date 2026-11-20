@@ -85,7 +85,7 @@ impl StreamingQ42VolumeWriter {
             }
         }
         if natural_person_did_hash == 0 {
-            natural_person_did_hash = crate::q_hash("did:q42:person:sovereign-custodian");
+            natural_person_did_hash = crate::q_hash("did:q42:person:human-rights-custodian");
         }
         if software_agent_did_hash == 0 {
             software_agent_did_hash = crate::q_hash("did:q42:agent:qualiadb-synth-compiler");

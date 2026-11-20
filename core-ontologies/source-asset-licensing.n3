@@ -79,8 +79,8 @@ src-lic:attributionNotice a rdf:Property ;
 src-lic:LicenseTier a rdfs:Class ;
     rdfs:label "Source License Governance Tier" .
 
-src-lic:SovereignQualiaCcByNcNd a src-lic:LicenseTier ;
-    rdfs:label "CC-BY-NC-ND-4.0 (Sovereign Qualia / Timothy Charles Holborn)" .
+src-lic:AuthorMoralRightsQualiaCcByNcNd a src-lic:LicenseTier ;
+    rdfs:label "CC-BY-NC-ND-4.0 (Author Moral & Material Rights / UDHR Art. 27 / ICESCR Art. 15 / Timothy Charles Holborn)" .
 
 src-lic:PermissiveCommonsPaydownTier a src-lic:LicenseTier ;
     rdfs:label "Permissive Commons Cost-Recovery Paydown (pc:Work -> True Commons)" .
@@ -131,9 +131,9 @@ src-lic:derivativesPermittedOutsideEcosystem a rdf:Property ;
 # forbids uncompensated/unauthorized commercial exploitation.
 {
     ?emb prov:wasDerivedFrom ?src .
-    ?src src-lic:licenseTier src-lic:SovereignQualiaCcByNcNd .
+    ?src src-lic:licenseTier src-lic:AuthorMoralRightsQualiaCcByNcNd .
 } => {
-    ?emb src-lic:licenseTier src-lic:SovereignQualiaCcByNcNd ;
+    ?emb src-lic:licenseTier src-lic:AuthorMoralRightsQualiaCcByNcNd ;
          src-lic:commercialUsePermittedWithoutSettlement false ;
          src-lic:derivativesPermittedOutsideEcosystem false .
 } .

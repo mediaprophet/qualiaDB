@@ -1290,8 +1290,8 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
 /// (`core-ontologies/source-asset-licensing.n3`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceLicenseTier {
-    /// `CC-BY-NC-ND-4.0` (Sovereign Qualia / Timothy Charles Holborn).
-    SovereignQualiaCcByNcNd,
+    /// `CC-BY-NC-ND-4.0` (Author Moral & Material Rights / UDHR Art. 27 / ICESCR Art. 15 / Timothy Charles Holborn).
+    AuthorMoralRightsQualiaCcByNcNd,
     /// `PC-PAYDOWN-1.0` / `PermissiveCommonsPaydown` (`pc:Work` cost-recovery to true commons).
     PermissiveCommonsPaydown,
     /// `PerpetualCreativeRoyalty` (Ongoing artist/creator revenue share).
@@ -1310,7 +1310,7 @@ impl SourceLicenseTier {
     pub fn classify_spdx(spdx: &str) -> Self {
         let trimmed = spdx.trim();
         match trimmed {
-            "CC-BY-NC-ND-4.0" => Self::SovereignQualiaCcByNcNd,
+            "CC-BY-NC-ND-4.0" => Self::AuthorMoralRightsQualiaCcByNcNd,
             "PC-PAYDOWN-1.0" | "PermissiveCommonsPaydown" => Self::PermissiveCommonsPaydown,
             "PerpetualCreativeRoyalty" | "PERPETUAL-ROYALTY-1.0" => Self::PerpetualCreativeRoyalty,
             "SPC" | "SanctuaryProtected" => Self::SanctuaryProtected,
@@ -1323,8 +1323,8 @@ impl SourceLicenseTier {
 
     pub fn iri(self) -> &'static str {
         match self {
-            Self::SovereignQualiaCcByNcNd => {
-                "https://ns.webcivics.net/source-asset-licensing/SovereignQualiaCcByNcNd"
+            Self::AuthorMoralRightsQualiaCcByNcNd => {
+                "https://ns.webcivics.net/source-asset-licensing/AuthorMoralRightsQualiaCcByNcNd"
             }
             Self::PermissiveCommonsPaydown => {
                 "https://ns.webcivics.net/source-asset-licensing/PermissiveCommonsPaydownTier"
@@ -2305,7 +2305,7 @@ mod tests {
         ));
 
         // Valid CC-BY-NC-ND-4.0 conversion succeeds and seals PRV1 + HOLO + MID2
-        let sovereign_license = SourceLicenseAttribution {
+        let moral_rights_license = SourceLicenseAttribution {
             spdx_license: "CC-BY-NC-ND-4.0".into(),
             creator_name_or_did: "Timothy Charles Holborn".into(),
             attribution_notice_utf8:
@@ -2320,11 +2320,11 @@ mod tests {
             "urn:test:converted:tri",
             1,
             [0.0, 3.0, 2.0, 1.0, 2.0, 3.0, 0.0, 1.0, 1.0, 0.5],
-            &sovereign_license,
+            &moral_rights_license,
         )
         .expect("convert OBJ with CC-BY-NC-ND-4.0 license");
 
-        assert_eq!(pkg.license_tier, SourceLicenseTier::SovereignQualiaCcByNcNd);
+        assert_eq!(pkg.license_tier, SourceLicenseTier::AuthorMoralRightsQualiaCcByNcNd);
         assert!(!pkg.license_tier.permits_uncompensated_commercial_use());
         verify_whole_file_crc32c(&mut pkg.archetype_10d).expect("valid converted .10d CRC-32C");
 
