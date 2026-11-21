@@ -1363,6 +1363,21 @@ impl QualiaPortal {
             &JsValue::from_str("governance_refused"),
             &JsValue::from_bool(governance_refused),
         )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("field_representation"),
+            &JsValue::from_str(decoded.field_representation),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("holo_segment_count"),
+            &JsValue::from_f64(decoded.holo_segment_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("active_harmonic_order"),
+            &JsValue::from_f64(decoded.active_harmonic_order as f64),
+        )?;
 
         Ok(result.into())
     }
@@ -2013,6 +2028,21 @@ impl QualiaPortal {
             &result,
             &JsValue::from_str("governance_refused"),
             &JsValue::from_bool(governance_refused),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("field_representation"),
+            &JsValue::from_str(decoded.field_representation),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("holo_segment_count"),
+            &JsValue::from_f64(decoded.holo_segment_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("active_harmonic_order"),
+            &JsValue::from_f64(decoded.active_harmonic_order as f64),
         )?;
 
         Ok(result.into())

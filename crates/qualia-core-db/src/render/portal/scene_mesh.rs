@@ -10,6 +10,7 @@
 //! transformed by the identical normalise mapping, so the pick/projection
 //! substrate stays spatially aligned with the drawn geometry.
 
+use bytemuck::Zeroable;
 use crate::container_10d;
 use crate::container_10d::header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE};
 use crate::container_10d::{MaterialRecord, SubmeshRange};
@@ -116,7 +117,10 @@ impl SceneMeshAccum {
         let mut has_attestation = false;
         let mut has_holographic_or_computational = false;
         let mut proxy_min = [-0.5f32, -0.5, -0.5];
-        let mut proxy_max = [0.5f32, 0.5, 0.5];
+        let mut proxy_max = [0.5f32, 0.5, -0.5];
+        proxy_max[2] = 0.5;
+        let mut decoded_holo_segments: Vec<crate::q42::m64_matter::M64HoloRecord> = Vec::new();
+        let mut holo_max_harmonic_order: u8 = 12;
         for desc in descs.iter() {
             let st = match container_10d::SectionType::from_u8(desc.section_type) {
                 Some(st) => st,
@@ -163,15 +167,30 @@ impl SceneMeshAccum {
                                     if s_off + s_len <= bytes.len()
                                         && s_len >= container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE
                                     {
+                                        let holo_slice = &bytes[s_off..s_off + s_len];
                                         let hdr: container_10d::HolographicPhaseHeader =
                                             bytemuck::pod_read_unaligned(
-                                                &bytes[s_off
-                                                    ..s_off
-                                                        + container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
+                                                &holo_slice
+                                                    [..container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
                                             );
                                         if hdr.magic == container_10d::HOLOGRAPHIC_PHASE_TAG {
                                             proxy_min = hdr.proxy_aabb_min;
                                             proxy_max = hdr.proxy_aabb_max;
+                                            holo_max_harmonic_order = hdr.max_harmonic_order;
+                                            let mut seg_buf = [crate::q42::m64_matter::M64HoloRecord::default();
+                                                container_10d::MAX_FITTED_HOLO_SEGMENTS];
+                                            let mut wf_buf =
+                                                [container_10d::EulerianWavefieldRecord::zeroed(); 4];
+                                            if let Ok((_, sc, _)) =
+                                                container_10d::decode_holographic_phase_section_into(
+                                                    holo_slice,
+                                                    &mut seg_buf,
+                                                    &mut wf_buf,
+                                                )
+                                            {
+                                                decoded_holo_segments
+                                                    .extend_from_slice(&seg_buf[..sc]);
+                                            }
                                         }
                                     }
                                 }
@@ -196,8 +215,17 @@ impl SceneMeshAccum {
             }
         }
 
+        let had_explicit_mesh = mesh.is_some();
         let mesh = match mesh {
             Some(m) => m,
+            None if !decoded_holo_segments.is_empty() => {
+                crate::render::portal_load_10d::synthesize_holographic_segments_mesh(
+                    &decoded_holo_segments,
+                    proxy_min,
+                    proxy_max,
+                    holo_max_harmonic_order.max(1),
+                )
+            }
             None if has_holographic_or_computational => {
                 crate::render::portal_load_10d::synthesize_holographic_proxy_box_mesh(
                     proxy_min, proxy_max,
@@ -207,33 +235,47 @@ impl SceneMeshAccum {
         };
         // An optional rig must be valid and vertex-aligned even before runtime
         // playback is armed. Never silently admit malformed animation content.
-        match container_10d::skeletal_container::read_skeletal_section(&bytes) {
-            Ok(_) | Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => {}
-            Err(_) => {
-                self.assets_refused += 1;
-                return;
+        if had_explicit_mesh {
+            match container_10d::skeletal_container::read_skeletal_section(&bytes) {
+                Ok(_) | Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => {}
+                Err(_) => {
+                    self.assets_refused += 1;
+                    return;
+                }
             }
         }
         let mut local_uv0 = vec![[0.0; 2]; mesh.positions.len()];
-        match container_10d::read_texture_coordinate_section_into(
-            &bytes,
-            mesh.positions.len(),
-            &mut local_uv0,
-        ) {
-            Ok(_) | Err(container_10d::TextureCoordinateContainerError::Missing) => {}
-            Err(_) => {
-                self.assets_refused += 1;
-                return;
+        if had_explicit_mesh {
+            match container_10d::read_texture_coordinate_section_into(
+                &bytes,
+                mesh.positions.len(),
+                &mut local_uv0,
+            ) {
+                Ok(_) | Err(container_10d::TextureCoordinateContainerError::Missing) => {}
+                Err(_) => {
+                    self.assets_refused += 1;
+                    return;
+                }
             }
         }
-        let (local_normals, local_tangents) =
+        let (local_normals, local_tangents) = if had_explicit_mesh {
             match frames::decode_asset_frames(&bytes, &mesh, &local_uv0) {
                 Ok(frames) => frames,
                 Err(_) => {
                     self.assets_refused += 1;
                     return;
                 }
-            };
+            }
+        } else {
+            let mut n = vec![[0.0f32; 3]; mesh.positions.len()];
+            let _ = crate::render::mesh_surface_frames::vertex_normals_into(
+                &mesh.positions,
+                &mesh.triangles,
+                &mut n,
+            );
+            let t = vec![[1.0f32, 0.0, 0.0, 1.0]; mesh.positions.len()];
+            (n, t)
+        };
         let governance_refused =
             (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
         if governance_refused {
@@ -251,7 +293,17 @@ impl SceneMeshAccum {
                 return;
             }
         };
-        let (mut local_materials, mut local_ranges) =
+        let (mut local_materials, mut local_ranges) = if !had_explicit_mesh {
+            (
+                vec![MaterialRecord::legacy_default()],
+                vec![SubmeshRange {
+                    first_index: 0,
+                    index_count,
+                    material_id: MaterialRecord::legacy_default().id,
+                    semantic_id: 0,
+                }],
+            )
+        } else {
             match container_10d::material_container_counts(&bytes) {
                 Ok((material_count, range_count)) => {
                     if material_count == 0
@@ -301,7 +353,8 @@ impl SceneMeshAccum {
                     self.assets_refused += 1;
                     return;
                 }
-            };
+            }
+        };
         // Independently produced .10d files (measured GIS plus authored
         // woodland) reuse small producer material ids. Share identical
         // records; remap a local id that would collide with a different

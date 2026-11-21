@@ -4,6 +4,7 @@
 //! SurfaceReading colour buffer, UV01 stream, and MAT3/MAT4 records that
 //! `load_10d` uploads.
 
+use bytemuck::Zeroable;
 use crate::container_10d;
 use crate::container_10d::header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE};
 use crate::container_10d::{MaterialRecord, SubmeshRange};
@@ -31,6 +32,12 @@ pub struct Load10dGpuBuffers {
     pub provenance_mu: f32,
     /// Header default-refuse with no attestation sidecar.
     pub governance_refused: bool,
+    /// Actual field or geometry representation decoded (`"QuantizedMesh"`, `"HolographicMultiSegmentField"`, `"HolographicProxyBox"`).
+    pub field_representation: &'static str,
+    /// Number of `M64HoloRecord` segments decoded from `HOLO` (`0x0306`).
+    pub holo_segment_count: u16,
+    /// Selected scale-space harmonic detail cutoff $K \in [1, 12]$ (`0` if `HOLO` absent).
+    pub active_harmonic_order: u8,
     pub vertex_count: u32,
     pub triangle_count: u32,
 }
@@ -51,6 +58,8 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     let mut has_holographic_or_computational = false;
     let mut proxy_min = [-0.5f32, -0.5, -0.5];
     let mut proxy_max = [0.5f32, 0.5, 0.5];
+    let mut decoded_holo_segments: Vec<crate::q42::m64_matter::M64HoloRecord> = Vec::new();
+    let mut holo_max_harmonic_order: u8 = 0;
 
     for desc in descs.iter() {
         let st = container_10d::SectionType::from_u8(desc.section_type)
@@ -81,7 +90,7 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
                     if provenance_mu == 0.0 {
                         provenance_mu = id.coordinates[8];
                     }
-                    // Check if a HOLO phase-space header supplies explicit proxy lens bounds
+                    // Check if a HOLO phase-space header supplies explicit proxy lens bounds and segments
                     for f in &fields[..count] {
                         if f.kind == container_10d::FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE
                             && f.payload_section_id == container_10d::SectionType::FieldSidecar as u32
@@ -96,15 +105,30 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
                                 if s_off + s_len <= bytes_mut.len()
                                     && s_len >= container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE
                                 {
+                                    let holo_slice = &bytes_mut[s_off..s_off + s_len];
                                     let hdr: container_10d::HolographicPhaseHeader =
                                         bytemuck::pod_read_unaligned(
-                                            &bytes_mut[s_off
-                                                ..s_off
-                                                    + container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
+                                            &holo_slice
+                                                [..container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
                                         );
                                     if hdr.magic == container_10d::HOLOGRAPHIC_PHASE_TAG {
                                         proxy_min = hdr.proxy_aabb_min;
                                         proxy_max = hdr.proxy_aabb_max;
+                                        holo_max_harmonic_order = hdr.max_harmonic_order;
+                                        let mut seg_buf = [crate::q42::m64_matter::M64HoloRecord::default();
+                                            container_10d::MAX_FITTED_HOLO_SEGMENTS];
+                                        let mut wf_buf =
+                                            [container_10d::EulerianWavefieldRecord::zeroed(); 4];
+                                        if let Ok((_, sc, _)) =
+                                            container_10d::decode_holographic_phase_section_into(
+                                                holo_slice,
+                                                &mut seg_buf,
+                                                &mut wf_buf,
+                                            )
+                                        {
+                                            decoded_holo_segments
+                                                .extend_from_slice(&seg_buf[..sc]);
+                                        }
                                     }
                                 }
                             }
@@ -130,23 +154,49 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         }
     }
 
+    let had_explicit_mesh = mesh.is_some();
+    let active_harmonic_order = if holo_max_harmonic_order > 0 {
+        container_10d::select_scale_space_harmonic_cutoff_zero_heap(1.5, holo_max_harmonic_order)
+            as u8
+    } else {
+        0
+    };
+    let field_representation = if had_explicit_mesh {
+        "QuantizedMesh"
+    } else if !decoded_holo_segments.is_empty() {
+        "HolographicMultiSegmentField"
+    } else {
+        "HolographicProxyBox"
+    };
+    let holo_segment_count = decoded_holo_segments.len() as u16;
+
     let mesh = match mesh {
         Some(m) => m,
+        None if !decoded_holo_segments.is_empty() => synthesize_holographic_segments_mesh(
+            &decoded_holo_segments,
+            proxy_min,
+            proxy_max,
+            active_harmonic_order.max(1),
+        ),
         None if has_holographic_or_computational => {
             synthesize_holographic_proxy_box_mesh(proxy_min, proxy_max)
         }
         None => return Err("10d: no mesh or holographic phase-space section".to_string()),
     };
-    let frames = container_10d::read_container_mesh_frames_with_limits(
-        &bytes_mut,
-        mesh.vertex_count(),
-        container_10d::MeshFrameDecodeLimits {
-            max_vertices: container_10d::MAX_NORMAL_COUNT,
-            max_payload_bytes: 64 * 1024 * 1024,
-            max_decoded_bytes: 256 * 1024 * 1024,
-        },
-    )
-    .map_err(|e| format!("10d frames decode: {e}"))?;
+    let frames = if had_explicit_mesh {
+        container_10d::read_container_mesh_frames_with_limits(
+            &bytes_mut,
+            mesh.vertex_count(),
+            container_10d::MeshFrameDecodeLimits {
+                max_vertices: container_10d::MAX_NORMAL_COUNT,
+                max_payload_bytes: 64 * 1024 * 1024,
+                max_decoded_bytes: 256 * 1024 * 1024,
+            },
+        )
+        .map_err(|e| format!("10d frames decode: {e}"))?
+    } else {
+        None
+    };
     let (authored_normals, authored_tangents) = frames
         .map(|frames| (frames.normals, frames.tangents))
         .unwrap_or((None, None));
@@ -164,19 +214,21 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     }
 
     let mut surface = None;
-    for desc in descs.iter() {
-        if container_10d::SectionType::from_u8(desc.section_type)
-            != Some(container_10d::SectionType::SurfaceReading)
-        {
-            continue;
+    if had_explicit_mesh {
+        for desc in descs.iter() {
+            if container_10d::SectionType::from_u8(desc.section_type)
+                != Some(container_10d::SectionType::SurfaceReading)
+            {
+                continue;
+            }
+            let off = desc.byte_offset as usize;
+            let len = desc.byte_length as usize;
+            if off.saturating_add(len) > bytes_mut.len() {
+                continue;
+            }
+            surface =
+                container_10d::surface_reading::decode_surface_reading(&bytes_mut[off..off + len]);
         }
-        let off = desc.byte_offset as usize;
-        let len = desc.byte_length as usize;
-        if off.saturating_add(len) > bytes_mut.len() {
-            continue;
-        }
-        surface =
-            container_10d::surface_reading::decode_surface_reading(&bytes_mut[off..off + len]);
     }
     let colors = match surface {
         Some(reading) if reading.len() == mesh.vertex_count() => reading,
@@ -190,25 +242,36 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         None => Vec::new(),
     };
 
-    let mut uv0 = vec![[0.0; 2]; mesh.vertex_count()];
-    let uv0 = match container_10d::read_texture_coordinate_section_into(
-        &bytes_mut,
-        mesh.vertex_count(),
-        &mut uv0,
-    ) {
-        Ok(_) => Some(uv0),
-        Err(container_10d::TextureCoordinateContainerError::Missing) => None,
-        Err(container_10d::TextureCoordinateContainerError::CountMismatch { expected, got }) => {
-            return Err(format!(
-                "10d UV01 vertex count {got} does not match mesh count {expected}"
-            ));
+    let uv0 = if had_explicit_mesh {
+        let mut uv0 = vec![[0.0; 2]; mesh.vertex_count()];
+        match container_10d::read_texture_coordinate_section_into(
+            &bytes_mut,
+            mesh.vertex_count(),
+            &mut uv0,
+        ) {
+            Ok(_) => Some(uv0),
+            Err(container_10d::TextureCoordinateContainerError::Missing) => None,
+            Err(container_10d::TextureCoordinateContainerError::CountMismatch {
+                expected,
+                got,
+            }) => {
+                return Err(format!(
+                    "10d UV01 vertex count {got} does not match mesh count {expected}"
+                ));
+            }
+            Err(e) => return Err(format!("10d UV01: {e:?}")),
         }
-        Err(e) => return Err(format!("10d UV01: {e:?}")),
+    } else {
+        None
     };
 
     let mesh_index_count = u32::try_from(mesh.triangles.len().saturating_mul(3))
         .map_err(|_| "10d index count exceeds u32".to_string())?;
-    let (materials, ranges) = decode_load_10d_materials(&bytes_mut, mesh_index_count)?;
+    let (materials, ranges) = if had_explicit_mesh {
+        decode_load_10d_materials(&bytes_mut, mesh_index_count)?
+    } else {
+        (Vec::new(), Vec::new())
+    };
 
     let governance_refused =
         (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
@@ -245,7 +308,105 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         ranges,
         provenance_mu,
         governance_refused,
+        field_representation,
+        holo_segment_count,
+        active_harmonic_order,
     })
+}
+
+/// Reconstruct a cavity-preserving multi-segment Holographic Phase-Space mesh directly from
+/// a slice of 64-byte [`crate::q42::m64_matter::M64HoloRecord`] segments at harmonic cutoff `max_order`.
+///
+/// When a single segment is present, falls back to [`synthesize_holographic_proxy_box_mesh`]
+/// over `[proxy_min, proxy_max]`. When multiple segments are present (e.g. a perforated cervical
+/// vertebra where the central vertebral foramen cell and lateral transverse foramina are unoccupied),
+/// emits a harmonic-modulated local sub-volume for each occupied `M64HoloRecord` segment so all
+/// anatomical canals and apertures remain open across scale-space harmonic cutoffs $K \in \{2, 4, 8, 12\}$.
+pub fn synthesize_holographic_segments_mesh(
+    segments: &[crate::q42::m64_matter::M64HoloRecord],
+    proxy_min: [f32; 3],
+    proxy_max: [f32; 3],
+    max_order: u8,
+) -> crate::render::assets::Mesh {
+    use half::f16;
+    if segments.len() <= 1 {
+        return synthesize_holographic_proxy_box_mesh(proxy_min, proxy_max);
+    }
+
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(segments.len() * 8);
+    let mut triangles: Vec<[u32; 3]> = Vec::with_capacity(segments.len() * 12);
+    let mut gmin = [f32::INFINITY; 3];
+    let mut gmax = [f32::NEG_INFINITY; 3];
+
+    let k_active = (max_order.clamp(1, 12)) as usize;
+    let box_tris: [[u32; 3]; 12] = [
+        [0, 3, 2],
+        [0, 2, 1],
+        [4, 5, 6],
+        [4, 6, 7],
+        [0, 1, 5],
+        [0, 5, 4],
+        [3, 7, 6],
+        [3, 6, 2],
+        [0, 4, 7],
+        [0, 7, 3],
+        [1, 2, 6],
+        [1, 6, 5],
+    ];
+
+    for seg in segments {
+        let cx = f16::from_bits(seg.local_origin[0]).to_f32();
+        let cy = f16::from_bits(seg.local_origin[1]).to_f32();
+        let cz = f16::from_bits(seg.local_origin[2]).to_f32();
+        let half_wx = f16::from_bits(seg.scale_bounds[0]).to_f32().clamp(0.001, 100.0);
+        let half_dz = f16::from_bits(seg.scale_bounds[1]).to_f32().clamp(0.001, 100.0);
+        let half_hy_raw = f16::from_bits(seg.mass_amplitude).to_f32();
+        let half_hy = if half_hy_raw.is_finite() && half_hy_raw > 0.0005 && half_hy_raw < 100.0 {
+            half_hy_raw
+        } else {
+            0.5 * (proxy_max[1] - proxy_min[1]).abs().max(0.01)
+        };
+
+        let mut h_mod = 0.0f32;
+        for m in 0..k_active {
+            h_mod += (seg.sdf_harmonics[m] as f32 / 127.0) * 0.025 / ((m + 1) as f32);
+        }
+        let mod_factor = h_mod.clamp(-0.10, 0.10);
+        let rx = (half_wx * (1.0 + mod_factor)).max(0.001);
+        let ry = half_hy.max(0.001);
+        let rz = (half_dz * (1.0 - mod_factor)).max(0.001);
+
+        let [x0, y0, z0] = [cx - rx, cy - ry, cz - rz];
+        let [x1, y1, z1] = [cx + rx, cy + ry, cz + rz];
+        let base = positions.len() as u32;
+        let corners = [
+            [x0, y0, z0],
+            [x1, y0, z0],
+            [x1, y1, z0],
+            [x0, y1, z0],
+            [x0, y0, z1],
+            [x1, y0, z1],
+            [x1, y1, z1],
+            [x0, y1, z1],
+        ];
+        for c in corners {
+            for axis in 0..3 {
+                gmin[axis] = gmin[axis].min(c[axis]);
+                gmax[axis] = gmax[axis].max(c[axis]);
+            }
+            positions.push(c);
+        }
+        for t in box_tris {
+            triangles.push([base + t[0], base + t[1], base + t[2]]);
+        }
+    }
+
+    crate::render::assets::Mesh {
+        positions,
+        triangles,
+        min: gmin,
+        max: gmax,
+    }
 }
 
 /// Synthesize the 12-triangle (8-vertex) Holographic Proxy Bounding Lens (`Mesh`)

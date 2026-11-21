@@ -311,6 +311,220 @@ fn load_10d_ktx2_rgba_ingests_and_basisu_is_skipped() {
     );
 }
 
+fn build_c1_vertebra_with_three_foramina() -> Mesh {
+    // Bounds matching c1.10d in holo-payloads.json:
+    // X: [-3.78, 3.78], Y: [-0.88, 0.90], Z: [-2.38, 2.13]
+    // Three open vertical foramina:
+    // - vertebral foramen at (0.0, 0.05), radius >= 0.85
+    // - left transverse foramen at (2.65, -0.12), radius >= 0.65
+    // - right transverse foramen at (-2.65, -0.12), radius >= 0.65
+    let min = [-3.78f32, -0.88, -2.38];
+    let max = [3.78f32, 0.90, 2.13];
+    let nx = 24usize;
+    let nz = 16usize;
+    let dx = (max[0] - min[0]) / (nx as f32);
+    let dz = (max[2] - min[2]) / (nz as f32);
+
+    let mut positions = Vec::new();
+    let mut triangles = Vec::new();
+    for iz in 0..nz {
+        let z0 = min[2] + (iz as f32) * dz;
+        let z1 = z0 + dz;
+        let zc = 0.5 * (z0 + z1);
+        for ix in 0..nx {
+            let x0 = min[0] + (ix as f32) * dx;
+            let x1 = x0 + dx;
+            let xc = 0.5 * (x0 + x1);
+
+            let d_vert = ((xc - 0.0).powi(2) + (zc - 0.05).powi(2)).sqrt();
+            let d_left = ((xc - 2.65).powi(2) + (zc - (-0.12)).powi(2)).sqrt();
+            let d_right = ((xc - (-2.65)).powi(2) + (zc - (-0.12)).powi(2)).sqrt();
+            if d_vert < 0.95 || d_left < 0.72 || d_right < 0.72 {
+                continue;
+            }
+            let base = positions.len() as u32;
+            positions.extend_from_slice(&[
+                [x0, min[1], z0],
+                [x1, min[1], z0],
+                [x1, max[1], z0],
+                [x0, max[1], z0],
+                [x0, min[1], z1],
+                [x1, min[1], z1],
+                [x1, max[1], z1],
+                [x0, max[1], z1],
+            ]);
+            for t in [
+                [0, 3, 2],
+                [0, 2, 1],
+                [4, 5, 6],
+                [4, 6, 7],
+                [0, 1, 5],
+                [0, 5, 4],
+                [3, 7, 6],
+                [3, 6, 2],
+            ] {
+                triangles.push([base + t[0], base + t[1], base + t[2]]);
+            }
+        }
+    }
+    Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    }
+}
+
+fn strip_quantized_mesh_section(bytes: &[u8]) -> Vec<u8> {
+    use crate::container_10d::header::Container10dHeader;
+    use crate::container_10d::{
+        encode_container, parse_section_table, seal_whole_file_crc32c, AlignmentTier, SectionInput,
+        SectionType,
+    };
+
+    let hdr = Container10dHeader::parse(bytes).unwrap();
+    let descs = parse_section_table(bytes, &hdr).unwrap();
+    let mut kept = Vec::new();
+    for d in descs {
+        let st = SectionType::from_u8(d.section_type).unwrap();
+        if st == SectionType::QuantizedMesh {
+            continue;
+        }
+        let tier = AlignmentTier::from_u8(d.alignment_tier).unwrap_or(AlignmentTier::Word);
+        let s = d.byte_offset as usize;
+        let e = s + (d.byte_length as usize);
+        kept.push((st, tier, d.stride, d.element_count, &bytes[s..e]));
+    }
+    let inputs: Vec<SectionInput<'_>> = kept
+        .iter()
+        .map(|&(section_type, alignment_tier, stride, element_count, payload)| SectionInput {
+            section_type,
+            alignment_tier,
+            stride,
+            element_count,
+            payload,
+        })
+        .collect();
+    let mut out = vec![0u8; bytes.len()];
+    let written = encode_container(&hdr, &inputs, &mut out).unwrap();
+    out.truncate(written);
+    seal_whole_file_crc32c(&mut out);
+    out
+}
+
+fn vertical_ray_hits_mesh(mesh: &Mesh, rx: f32, rz: f32) -> usize {
+    let mut hits = 0usize;
+    for tri in &mesh.triangles {
+        let a = mesh.positions[tri[0] as usize];
+        let b = mesh.positions[tri[1] as usize];
+        let c = mesh.positions[tri[2] as usize];
+        let v0x = c[0] - a[0];
+        let v0z = c[2] - a[2];
+        let v1x = b[0] - a[0];
+        let v1z = b[2] - a[2];
+        let v2x = rx - a[0];
+        let v2z = rz - a[2];
+        let dot00 = v0x * v0x + v0z * v0z;
+        let dot01 = v0x * v1x + v0z * v1z;
+        let dot02 = v0x * v2x + v0z * v2z;
+        let dot11 = v1x * v1x + v1z * v1z;
+        let dot12 = v1x * v2x + v1z * v2z;
+        let denom = dot00 * dot11 - dot01 * dot01;
+        if denom.abs() < 1e-10 {
+            continue;
+        }
+        let inv = 1.0 / denom;
+        let u = (dot11 * dot02 - dot01 * dot12) * inv;
+        let v = (dot00 * dot12 - dot01 * dot02) * inv;
+        if u >= -1e-4 && v >= -1e-4 && (u + v) <= 1.0001 {
+            hits += 1;
+        }
+    }
+    hits
+}
+
+#[test]
+fn holo_multi_segment_seal_preserves_foramina_and_embeds_prv1_for_meshless_scene_admission() {
+    use crate::render::compile_10d::{
+        compile_mesh_to_10d_with_normals, upgrade_legacy_10d_to_holographic_v2,
+    };
+
+    let mesh = build_c1_vertebra_with_three_foramina();
+    let normals = vec![[0.0f32, 1.0, 0.0]; mesh.positions.len()];
+    // Compile via the ordinary un-provenanced path (with FieldSidecar NRM1 normals)
+    let raw_10d = compile_mesh_to_10d_with_normals(&mesh, &normals).unwrap();
+    let sealed_10d = upgrade_legacy_10d_to_holographic_v2(
+        &raw_10d,
+        "qualia://anatomy/cervical/c1",
+        1,
+        [0.0, 0.0, 0.0, 1.0, 0.0, 0.55, 1.0, 0.5, 0.98, 1.0],
+    )
+    .unwrap();
+
+    // 1. Verify full container with review mesh has PRV1 and is not refused
+    let decoded_full = decode_load_10d(&sealed_10d).unwrap();
+    assert!(
+        !decoded_full.governance_refused,
+        "upgrade_legacy_10d_to_holographic_v2 must embed PRV1 so default-refuse does not reject ordinary .10d assets"
+    );
+    assert_eq!(decoded_full.field_representation, "QuantizedMesh");
+    assert!(
+        decoded_full.holo_segment_count > 1,
+        "perforated vertebra must fit multiple HOLO segments, got {}",
+        decoded_full.holo_segment_count
+    );
+
+    // 2. Strip QuantizedMesh (leaving FieldSidecar with NRM1 + HOLO + MID2 + PROC + PRV1)
+    let meshless_10d = strip_quantized_mesh_section(&sealed_10d);
+    let decoded_meshless = decode_load_10d(&meshless_10d).unwrap();
+    assert!(!decoded_meshless.governance_refused);
+    assert_eq!(
+        decoded_meshless.field_representation,
+        "HolographicMultiSegmentField"
+    );
+    assert_eq!(
+        decoded_meshless.holo_segment_count,
+        decoded_full.holo_segment_count
+    );
+    assert_eq!(decoded_meshless.active_harmonic_order, 12);
+    assert!(
+        decoded_meshless.triangle_count > 12,
+        "meshless HOLO vertebra must synthesize multi-segment mesh (> 12 triangles), got {}",
+        decoded_meshless.triangle_count
+    );
+
+    // 3. Verify all 3 foramina (vertebral, left-transverse, right-transverse) remain open across K in {2, 4, 8, 12}
+    let mut segs = [crate::q42::m64_matter::M64HoloRecord::default();
+        crate::container_10d::MAX_FITTED_HOLO_SEGMENTS];
+    let (hdr, sc) = crate::container_10d::fit_m64_holo_segments_from_mesh_zero_heap(
+        &mesh,
+        None,
+        0x1111,
+        0x2222,
+        2,
+        &mut segs,
+    );
+    for k in [2u8, 4, 8, 12] {
+        let holo_mesh = synthesize_holographic_segments_mesh(
+            &segs[..sc],
+            hdr.proxy_aabb_min,
+            hdr.proxy_aabb_max,
+            k,
+        );
+        for (name, [fx, fz]) in [
+            ("vertebral", [0.0f32, 0.05]),
+            ("left-transverse", [2.65, -0.12]),
+            ("right-transverse", [-2.65, -0.12]),
+        ] {
+            let hits = vertical_ray_hits_mesh(&holo_mesh, fx, fz);
+            assert_eq!(
+                hits, 0,
+                "foramen {name} at ({fx}, {fz}) must remain open in HOLO field at harmonic cutoff K={k}, got {hits} obstructing triangles"
+            );
+        }
+    }
+}
+
 /// When a native adapter exists, upload the same buffers `load_10d` would and
 /// assert the framebuffer is not the grey default. Without an adapter this
 /// returns after the CPU colour-buffer checks above; that buffer is the

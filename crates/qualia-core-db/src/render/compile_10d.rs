@@ -1039,14 +1039,16 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
     use crate::container_10d::{
         decode_manifold_identity_v2, decode_mesh_section, encode_holographic_phase_section,
         encode_manifold_identity_v2, encode_procedural_synthesis_section,
-        fit_m64_holo_record_from_mesh_zero_heap, holographic_phase_encoded_len, is_normal_section,
-        manifold_identity_v2_encoded_len, surface_reading::decode_surface_reading,
-        ManifoldIdentityV2, ProceduralSynthesisHeader, StableEntityId, TypedFieldRecord,
-        FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, FIELD_KIND_MORPH_TARGETS, FIELD_KIND_SURFACE_FRAMES,
-        FLAG_ALLOMETRIC_GROWTH, FLAG_CELLULAR_VORONOI, FLAG_IMPLICIT_FILLET,
-        FLAG_PGA_MOTOR_DYNAMICS, MAGIC_PROC, PROCEDURAL_SYNTHESIS_HEADER_SIZE,
+        fit_m64_holo_segments_from_mesh_zero_heap, holographic_phase_encoded_len,
+        is_normal_section, manifold_identity_v2_encoded_len,
+        surface_reading::decode_surface_reading, ManifoldIdentityV2, ProceduralSynthesisHeader,
+        StableEntityId, TypedFieldRecord, FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+        FIELD_KIND_MORPH_TARGETS, FIELD_KIND_SURFACE_FRAMES, FLAG_ALLOMETRIC_GROWTH,
+        FLAG_CELLULAR_VORONOI, FLAG_IMPLICIT_FILLET, FLAG_PGA_MOTOR_DYNAMICS, MAGIC_PROC,
+        MAX_FITTED_HOLO_SEGMENTS, PROCEDURAL_SYNTHESIS_HEADER_SIZE,
         PROCEDURAL_SYNTHESIS_SECTION_VERSION,
     };
+    use crate::q42::m64_matter::M64HoloRecord;
     use crate::q_hash;
 
     let parsed_header = Container10dHeader::parse(bytes).map_err(|_| Compile10dError::BadHeader)?;
@@ -1057,6 +1059,7 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
     let mut existing_sidecar: Option<&[u8]> = None;
     let mut existing_mid2: Option<&[u8]> = None;
     let mut has_proc = false;
+    let mut has_provenance = false;
     let mut preserved_sections: Vec<(SectionType, AlignmentTier, u32, u32, &[u8])> = Vec::new();
 
     for d in descs {
@@ -1089,6 +1092,10 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
                 has_proc = true;
                 preserved_sections.push((st, tier, d.stride, d.element_count, slice));
             }
+            SectionType::ProvenanceSidecar => {
+                has_provenance = true;
+                preserved_sections.push((st, tier, d.stride, d.element_count, slice));
+            }
             _ => {
                 preserved_sections.push((st, tier, d.stride, d.element_count, slice));
             }
@@ -1107,12 +1114,14 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         ),
     };
 
-    let (holo_hdr, holo_rec) = fit_m64_holo_record_from_mesh_zero_heap(
+    let mut holo_segments = [M64HoloRecord::default(); MAX_FITTED_HOLO_SEGMENTS];
+    let (holo_hdr, holo_seg_count) = fit_m64_holo_segments_from_mesh_zero_heap(
         &proxy_mesh,
         surface_opt.as_deref(),
         subj_hash,
         prov_hash,
         metric_variety,
+        &mut holo_segments,
     );
 
     let mut sidecar_combined: Vec<u8> = Vec::new();
@@ -1175,10 +1184,15 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         sidecar_combined.push(0);
     }
     let holo_offset = sidecar_combined.len() as u64;
-    let holo_len = holographic_phase_encoded_len(1, 0).unwrap();
+    let holo_len = holographic_phase_encoded_len(holo_seg_count, 0).unwrap();
     let mut holo_buf = vec![0u8; holo_len];
-    let holo_written = encode_holographic_phase_section(holo_hdr, &[holo_rec], &[], &mut holo_buf)
-        .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+    let holo_written = encode_holographic_phase_section(
+        holo_hdr,
+        &holo_segments[..holo_seg_count],
+        &[],
+        &mut holo_buf,
+    )
+    .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
     sidecar_combined.extend_from_slice(&holo_buf[..holo_written]);
 
     fields.push(TypedFieldRecord {
@@ -1241,6 +1255,21 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
             .map_err(|_| Compile10dError::ExtraSection { kind: "PROC" })?;
     }
 
+    let mut auto_prov_buf: Vec<u8> = Vec::new();
+    if !has_provenance {
+        let digest_bytes: [u8; 32] = *blake3::hash(bytes).as_bytes();
+        let default_prv = ProvenanceSidecar::new(
+            digest_bytes.to_vec(),
+            "application/x-qualia-10d-v2",
+            "CC-BY-NC-ND-4.0",
+        )
+        .with_metadata(Vec::new(), 1_700_000_000, digest_bytes);
+        auto_prov_buf.resize(provenance_encoded_len(&default_prv), 0);
+        let written = encode_provenance_section(&default_prv, &mut auto_prov_buf)
+            .map_err(Compile10dError::Provenance)?;
+        auto_prov_buf.truncate(written);
+    }
+
     let mut sections: Vec<SectionInput<'_>> = preserved_sections
         .iter()
         .map(|&(section_type, alignment_tier, stride, element_count, payload)| SectionInput {
@@ -1251,6 +1280,16 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
             payload,
         })
         .collect();
+
+    if !has_provenance && !auto_prov_buf.is_empty() {
+        sections.push(SectionInput {
+            section_type: SectionType::ProvenanceSidecar,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &auto_prov_buf,
+        });
+    }
 
     sections.push(SectionInput {
         section_type: SectionType::FieldSidecar,
@@ -2176,12 +2215,12 @@ mod tests {
         let holo_slice = &sidecar[holo_field.payload_offset as usize..]
             [..holo_field.payload_length as usize];
 
-        let mut holo_recs = [bytemuck::Zeroable::zeroed(); 2];
+        let mut holo_recs = [bytemuck::Zeroable::zeroed(); 32];
         let mut wave_recs: [EulerianWavefieldRecord; 1] = [bytemuck::Zeroable::zeroed(); 1];
         let (holo_hdr, h_count, w_count) =
             decode_holographic_phase_section_into(holo_slice, &mut holo_recs, &mut wave_recs)
                 .unwrap();
-        assert_eq!(h_count, 1);
+        assert!(h_count >= 1);
         assert_eq!(w_count, 0);
         assert!(holo_hdr.max_raymarch_steps <= 32);
         let rec: M64HoloRecord = holo_recs[0];
@@ -2263,12 +2302,12 @@ mod tests {
         let holo_slice = &sidecar[holo_field.payload_offset as usize..]
             [..holo_field.payload_length as usize];
 
-        let mut holo_recs: [M64HoloRecord; 2] = [bytemuck::Zeroable::zeroed(); 2];
+        let mut holo_recs: [M64HoloRecord; 32] = [bytemuck::Zeroable::zeroed(); 32];
         let mut wave_recs: [EulerianWavefieldRecord; 1] = [bytemuck::Zeroable::zeroed(); 1];
         let (holo_hdr, h_count, _) =
             decode_holographic_phase_section_into(holo_slice, &mut holo_recs, &mut wave_recs)
                 .unwrap();
-        assert_eq!(h_count, 1);
+        assert!(h_count >= 1);
         assert!(holo_hdr.max_raymarch_steps <= 32);
         assert_eq!(holo_recs[0].metric_variety, 2);
         assert!(holo_recs[0].scale_bounds[0] > 0);

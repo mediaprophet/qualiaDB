@@ -2,13 +2,14 @@
 #![cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 
 use super::{SystemTelemetry, VolumetricRenderer};
+use bytemuck::Zeroable;
 use image::ImageEncoder;
 use qualia_core_db::container_10d::{
     self as c, header::Container10dHeader, MeshFrameDecodeLimits, SectionType,
 };
 use std::io::{self, Write};
 
-pub const MAX_REVIEW_10D_BYTES: usize = 42 * 1024 * 1024;
+pub const MAX_REVIEW_10D_BYTES: usize = qualia_core_db::container_10d::GRAPHICS_ASSET_RING_BYTES;
 pub const MAX_REVIEW_SIDE: u32 = 2048;
 pub const MAX_REVIEW_PIXELS: usize = 2048 * 2048;
 const MAX_REVIEW_VERTICES: usize = 262_144;
@@ -107,6 +108,9 @@ pub struct ReviewGeometry {
     pub tangents: &'static str,
     pub texture_coordinates: &'static str,
     pub materials: &'static str,
+    pub field_representation: &'static str,
+    pub holo_segment_count: u16,
+    pub active_harmonic_order: u8,
     pub lighting: ReviewLighting,
     pub screen_space_ao_available: bool,
     pub screen_space_ao_radius_m: f32,
@@ -214,6 +218,9 @@ impl VolumetricRenderer {
         let mut texture_coordinates_payload = None;
         let mut surface_payload = None;
         let mut node_admission = None;
+        let mut mid2_payload = None;
+        let mut sidecar_payload = None;
+        let mut has_holo_or_proc = false;
         for section in sections {
             let offset = section.byte_offset as usize;
             let end = offset.checked_add(section.byte_length as usize)
@@ -224,7 +231,16 @@ impl VolumetricRenderer {
                 SectionType::Materials => material_payload = Some(payload),
                 SectionType::TextureCoordinates => texture_coordinates_payload = Some(payload),
                 SectionType::SurfaceReading => surface_payload = Some(payload),
+                SectionType::FieldSidecar => sidecar_payload = Some(payload),
+                SectionType::ManifoldIdentityV2 => {
+                    has_holo_or_proc = true;
+                    mid2_payload = Some(payload);
+                }
+                SectionType::ProceduralSynthesis | SectionType::EntityOntology => {
+                    has_holo_or_proc = true;
+                }
                 SectionType::Tensor10DNodes => {
+                    has_holo_or_proc = true;
                     let (node_header, _) = c::node_section::parse_node_header(payload)
                         .map_err(|e| format!("10d node preflight: {e:?}"))?;
                     let count = node_header.node_count as usize;
@@ -239,27 +255,109 @@ impl VolumetricRenderer {
             }
         }
 
-        // Core's canonical mesh header admits counts and payload extent before
-        // decode_mesh_section allocates vertex and triangle vectors.
-        let mesh_payload = mesh_payload.ok_or("10d has no QuantizedMesh")?;
-        let (mesh_header, _) = c::parse_mesh_header(mesh_payload)
-            .map_err(|e| format!("10d mesh preflight: {e:?}"))?;
-        let vertex_count = mesh_header.vertex_count as usize;
-        let triangle_count = mesh_header.triangle_count as usize;
-        if vertex_count > profile.max_vertices || (profile.require_renderable_mesh && vertex_count == 0) {
-            return Err("10d vertex count exceeds the selected loader profile".into());
-        }
-        if triangle_count > profile.max_triangles || (profile.require_renderable_mesh && triangle_count == 0) {
-            return Err("10d triangle count exceeds the selected loader profile".into());
-        }
-        let mesh = c::decode_mesh_section(mesh_payload).map_err(|e| format!("10d mesh decode: {e:?}"))?;
-        if mesh.positions.len() != vertex_count || mesh.triangles.len() != triangle_count {
-            return Err("decoded 10d mesh counts differ from canonical header".into());
+        let mut decoded_holo_segments: Vec<qualia_core_db::q42::m64_matter::M64HoloRecord> = Vec::new();
+        let mut holo_max_harmonic_order: u8 = 0;
+        let mut proxy_min = [-0.5f32, -0.5, -0.5];
+        let mut proxy_max = [0.5f32, 0.5, 0.5];
+        if let (Some(mid2_bytes), Some(sidecar_bytes)) = (mid2_payload, sidecar_payload) {
+            let mut fields = [c::TypedFieldRecord::default(); 32];
+            if let Ok((_id, count)) = c::decode_manifold_identity_v2(mid2_bytes, &[], &mut fields) {
+                for f in &fields[..count] {
+                    if f.kind == c::FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE
+                        && f.payload_section_id == SectionType::FieldSidecar as u32
+                    {
+                        let s_off = f.payload_offset as usize;
+                        let s_len = f.payload_length as usize;
+                        if s_off.saturating_add(s_len) <= sidecar_bytes.len()
+                            && s_len >= c::HOLOGRAPHIC_PHASE_HEADER_SIZE
+                        {
+                            let holo_slice = &sidecar_bytes[s_off..s_off + s_len];
+                            let hdr: c::HolographicPhaseHeader =
+                                bytemuck::pod_read_unaligned(&holo_slice[..c::HOLOGRAPHIC_PHASE_HEADER_SIZE]);
+                            if hdr.magic == c::HOLOGRAPHIC_PHASE_TAG {
+                                proxy_min = hdr.proxy_aabb_min;
+                                proxy_max = hdr.proxy_aabb_max;
+                                holo_max_harmonic_order = hdr.max_harmonic_order;
+                                let mut seg_buf = [qualia_core_db::q42::m64_matter::M64HoloRecord::default();
+                                    c::MAX_FITTED_HOLO_SEGMENTS];
+                                let mut wf_buf = [c::EulerianWavefieldRecord::zeroed(); 4];
+                                if let Ok((_, sc, _)) = c::decode_holographic_phase_section_into(
+                                    holo_slice,
+                                    &mut seg_buf,
+                                    &mut wf_buf,
+                                ) {
+                                    decoded_holo_segments.extend_from_slice(&seg_buf[..sc]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        let frames = c::read_container_mesh_frames_with_limits(
-            &verified, vertex_count, profile.frame_limits,
-        ).map_err(|e| format!("10d authored normals/tangents: {e:?}"))?;
+        let had_explicit_mesh = mesh_payload.is_some();
+        let active_harmonic_order = if holo_max_harmonic_order > 0 {
+            c::select_scale_space_harmonic_cutoff_zero_heap(1.5, holo_max_harmonic_order) as u8
+        } else {
+            0
+        };
+        let field_representation = if had_explicit_mesh {
+            "QuantizedMesh"
+        } else if !decoded_holo_segments.is_empty() {
+            "HolographicMultiSegmentField"
+        } else {
+            "HolographicProxyBox"
+        };
+        let holo_segment_count = decoded_holo_segments.len() as u16;
+
+        // Core's canonical mesh header admits counts and payload extent before
+        // decode_mesh_section allocates vertex and triangle vectors. When QuantizedMesh
+        // is absent in a meshless Holographic 10D v2 container, synthesize from HOLO.
+        let (mesh, vertex_count, triangle_count) = if let Some(mesh_payload) = mesh_payload {
+            let (mesh_header, _) = c::parse_mesh_header(mesh_payload)
+                .map_err(|e| format!("10d mesh preflight: {e:?}"))?;
+            let vertex_count = mesh_header.vertex_count as usize;
+            let triangle_count = mesh_header.triangle_count as usize;
+            if vertex_count > profile.max_vertices || (profile.require_renderable_mesh && vertex_count == 0) {
+                return Err("10d vertex count exceeds the selected loader profile".into());
+            }
+            if triangle_count > profile.max_triangles || (profile.require_renderable_mesh && triangle_count == 0) {
+                return Err("10d triangle count exceeds the selected loader profile".into());
+            }
+            let mesh = c::decode_mesh_section(mesh_payload).map_err(|e| format!("10d mesh decode: {e:?}"))?;
+            if mesh.positions.len() != vertex_count || mesh.triangles.len() != triangle_count {
+                return Err("decoded 10d mesh counts differ from canonical header".into());
+            }
+            (mesh, vertex_count, triangle_count)
+        } else if !decoded_holo_segments.is_empty() {
+            let mesh = qualia_core_db::render::portal_load_10d::synthesize_holographic_segments_mesh(
+                &decoded_holo_segments,
+                proxy_min,
+                proxy_max,
+                active_harmonic_order.max(1),
+            );
+            let vc = mesh.positions.len();
+            let tc = mesh.triangles.len();
+            (mesh, vc, tc)
+        } else if has_holo_or_proc {
+            let mesh = qualia_core_db::render::portal_load_10d::synthesize_holographic_proxy_box_mesh(
+                proxy_min,
+                proxy_max,
+            );
+            let vc = mesh.positions.len();
+            let tc = mesh.triangles.len();
+            (mesh, vc, tc)
+        } else {
+            return Err("10d has no QuantizedMesh".into());
+        };
+
+        let frames = if had_explicit_mesh {
+            c::read_container_mesh_frames_with_limits(
+                &verified, vertex_count, profile.frame_limits,
+            ).map_err(|e| format!("10d authored normals/tangents: {e:?}"))?
+        } else {
+            None
+        };
         let (mut normals, mut tangents, normals_label, tangents_label) = match frames {
             Some(frame) => {
                 let normals = frame.normals;
@@ -270,17 +368,20 @@ impl VolumetricRenderer {
             }
             None => (None, None, "absent-renderer-derived", "absent-renderer-derived"),
         };
-        let texture_coordinates = if let Some(payload) = texture_coordinates_payload {
-            let mut uv = Vec::new();
-            uv.try_reserve_exact(vertex_count).map_err(|_| "UV01 allocation refused")?;
-            uv.resize(vertex_count, [0.0f32; 2]);
-            let decoded = c::decode_texture_coordinates_into(payload, vertex_count, &mut uv)
-                .map_err(|e| format!("10d UV01 decode: {e:?}"))?;
-            if decoded != vertex_count { return Err("10d UV01 count differs from mesh".into()); }
-            Some(uv)
+        let texture_coordinates = if had_explicit_mesh {
+            if let Some(payload) = texture_coordinates_payload {
+                let mut uv = Vec::new();
+                uv.try_reserve_exact(vertex_count).map_err(|_| "UV01 allocation refused")?;
+                uv.resize(vertex_count, [0.0f32; 2]);
+                let decoded = c::decode_texture_coordinates_into(payload, vertex_count, &mut uv)
+                    .map_err(|e| format!("10d UV01 decode: {e:?}"))?;
+                if decoded != vertex_count { return Err("10d UV01 count differs from mesh".into()); }
+                Some(uv)
+            } else { None }
         } else { None };
 
-        let colors = if let Some(payload) = surface_payload {
+        let colors = if had_explicit_mesh && surface_payload.is_some() {
+            let payload = surface_payload.unwrap();
             if payload.len() < 8 || &payload[..4] != c::surface_reading::SURFACE_READING_MAGIC {
                 return Err("present SurfaceReading section has invalid SRD1 header".into());
             }
@@ -329,7 +430,8 @@ impl VolumetricRenderer {
         let index_count = triangle_count.checked_mul(3).ok_or("triangle index count overflow")?;
         indices.try_reserve_exact(index_count).map_err(|_| "mesh index allocation refused")?;
         for triangle in &mesh.triangles { indices.extend_from_slice(triangle); }
-        let (materials, ranges, materials_label) = if let Some(payload) = material_payload {
+        let (materials, ranges, materials_label) = if had_explicit_mesh && material_payload.is_some() {
+            let payload = material_payload.unwrap();
             let (material_count, range_count) = c::material_section_counts(payload)
                 .map_err(|e| format!("MAT1 header: {e:?}"))?;
             if material_count > c::MAX_MATERIALS
@@ -417,6 +519,9 @@ impl VolumetricRenderer {
             tangents: tangents_label,
             texture_coordinates: if texture_coordinates.is_some() { "authored-UV01" } else { "absent" },
             materials: materials_label,
+            field_representation,
+            holo_segment_count,
+            active_harmonic_order,
             lighting: REVIEW_LIGHTING,
             screen_space_ao_available: self.inner.screen_space_ao_available(),
             screen_space_ao_radius_m: 0.05,

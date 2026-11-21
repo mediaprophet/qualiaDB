@@ -138,11 +138,12 @@ pub use holographic_phase_section::{
     evaluate_eulerian_streamline_and_drucker_prager_zero_heap,
     evaluate_hamiltonian_stationary_action_spline_zero_heap,
     evaluate_hyperbolic_mobius_morphogenesis_zero_heap, fit_m64_holo_record_from_mesh_zero_heap,
-    holographic_phase_encoded_len, select_scale_space_harmonic_cutoff_zero_heap,
-    EulerianWavefieldRecord, HolographicPhaseError, HolographicPhaseHeader,
-    EULERIAN_WAVEFIELD_RECORD_SIZE, GOLDEN_ANGLE_RAD, HOLOGRAPHIC_MAX_RAYMARCH_STEPS,
-    HOLOGRAPHIC_PHASE_HEADER_SIZE, HOLOGRAPHIC_PHASE_TAG, HOLOGRAPHIC_PHASE_VERSION,
-    MAX_EULERIAN_WAVEFIELDS, MAX_HOLO_SEGMENTS,
+    fit_m64_holo_segments_from_mesh_zero_heap, holographic_phase_encoded_len,
+    select_scale_space_harmonic_cutoff_zero_heap, EulerianWavefieldRecord, HolographicPhaseError,
+    HolographicPhaseHeader, EULERIAN_WAVEFIELD_RECORD_SIZE, GOLDEN_ANGLE_RAD,
+    HOLOGRAPHIC_MAX_RAYMARCH_STEPS, HOLOGRAPHIC_PHASE_HEADER_SIZE, HOLOGRAPHIC_PHASE_TAG,
+    HOLOGRAPHIC_PHASE_VERSION, MAX_EULERIAN_WAVEFIELDS, MAX_FITTED_HOLO_SEGMENTS,
+    MAX_HOLO_SEGMENTS,
 };
 pub use impostor_section::{
     decode_impostor_section, encode_impostor_section, hemi_octahedral_decode,
