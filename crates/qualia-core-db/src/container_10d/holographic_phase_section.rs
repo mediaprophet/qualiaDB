@@ -756,20 +756,32 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
         }
 
         for iz in iz0..=iz1 {
-            let cz = min[2] + ((iz as f32) + 0.5) * cell_dz;
-            if cz < tmin_z - 1e-5 || cz > tmax_z + 1e-5 {
-                continue;
-            }
+            let z_lo = min[2] + (iz as f32) * cell_dz;
+            let z_hi = z_lo + cell_dz;
+            let cz = 0.5 * (z_lo + z_hi);
             for ix in ix0..=ix1 {
-                let cx = min[0] + ((ix as f32) + 0.5) * cell_dx;
-                if cx < tmin_x - 1e-5 || cx > tmax_x + 1e-5 {
-                    continue;
-                }
-                if point_in_triangle_xz(cx, cz, a, b, c) {
-                    let cid = iz * G + ix;
-                    cell_tri_counts[cid] += 1;
+                let x_lo = min[0] + (ix as f32) * cell_dx;
+                let x_hi = x_lo + cell_dx;
+                let cx = 0.5 * (x_lo + x_hi);
+                let cid = iz * G + ix;
+                // Record the full vertical extent [tmin_y, tmax_y] of any triangle overlapping
+                // this cell's horizontal footprint so sloping superior/inferior laminae do not
+                // underestimate run_ymax/run_ymin at off-center Z positions within the cell.
+                if tmax_x >= x_lo - 1e-5
+                    && tmin_x <= x_hi + 1e-5
+                    && tmax_z >= z_lo - 1e-5
+                    && tmin_z <= z_hi + 1e-5
+                {
                     cell_ymin[cid] = cell_ymin[cid].min(tmin_y);
                     cell_ymax[cid] = cell_ymax[cid].max(tmax_y);
+                }
+                if cz >= tmin_z - 1e-5
+                    && cz <= tmax_z + 1e-5
+                    && cx >= tmin_x - 1e-5
+                    && cx <= tmax_x + 1e-5
+                    && point_in_triangle_xz(cx, cz, a, b, c)
+                {
+                    cell_tri_counts[cid] += 1;
                     if surface_reading.is_some() {
                         cell_rgb[cid][0] += tri_col[0];
                         cell_rgb[cid][1] += tri_col[1];

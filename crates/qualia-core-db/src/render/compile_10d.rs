@@ -1133,24 +1133,40 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         if let Ok((existing_id, fcount)) =
             decode_manifold_identity_v2(mid2_bytes, &[], &mut decoded_fields)
         {
-            if decoded_fields[..fcount]
-                .iter()
-                .any(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
+            // Only short-circuit if there is no mesh to re-fit HOLO from and all v2 sections exist.
+            if mesh_opt.is_none()
+                && decoded_fields[..fcount]
+                    .iter()
+                    .any(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
                 && has_proc
+                && has_provenance
             {
                 return Ok(bytes.to_vec());
             }
             for f in &decoded_fields[..fcount] {
-                fields.push(*f);
-                if f.field_id >= next_field_id {
-                    next_field_id = f.field_id + 1;
+                if f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE {
+                    continue;
+                }
+                let mut f_copy = *f;
+                if f.payload_section_id == SectionType::FieldSidecar as u32 {
+                    if let Some(sc) = existing_sidecar {
+                        let s = f.payload_offset as usize;
+                        let e = s.saturating_add(f.payload_length as usize);
+                        if let Some(sub) = sc.get(s..e) {
+                            let new_off = sidecar_combined.len() as u64;
+                            sidecar_combined.extend_from_slice(sub);
+                            f_copy.payload_offset = new_off;
+                        }
+                    }
+                }
+                fields.push(f_copy);
+                if f_copy.field_id >= next_field_id {
+                    next_field_id = f_copy.field_id + 1;
                 }
             }
             let _ = existing_id;
         }
-    }
-
-    if let Some(sc) = existing_sidecar {
+    } else if let Some(sc) = existing_sidecar {
         sidecar_combined.extend_from_slice(sc);
         if fields.is_empty() && !sc.is_empty() {
             if is_normal_section(sc) {
