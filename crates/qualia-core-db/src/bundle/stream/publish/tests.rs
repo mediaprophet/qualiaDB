@@ -133,3 +133,7 @@ mod roundtrip;
 
 #[path = "tests/independent.rs"]
 mod independent;
+
+#[cfg(not(target_arch = "wasm32"))]
+#[path = "tests/ewm_first_paint.rs"]
+mod ewm_first_paint;
