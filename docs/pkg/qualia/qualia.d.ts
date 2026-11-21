@@ -62,7 +62,7 @@ export class QualiaHud {
      * Updates position and dimensions for auto-sized items (`w == 0.0` or `h == 0.0`).
      * Replace the presentation document directly from binary W3C CBOR-LD (`0xD9 0x0501`).
      */
-    set_document_cbor_ld(bytes: Uint8Array | number[]): void;
+    set_document_cbor_ld(bytes: Uint8Array): void;
     /**
      * Replace the presentation document. Bounds and size are checked before adoption.
      */
@@ -84,10 +84,6 @@ export class QualiaPortal {
      * SharedArrayBuffer byte length for zero-copy U3 handoff (requires COOP/COEP).
      */
     acoustic_sab_byte_length(): number;
-    /**
-     * Whether a baked STFT/CQT sidecar is pinned on the portal.
-     */
-    acoustic_sidecar_pinned(): boolean;
     /**
      * Serialized `AcousticUniform` bytes for AudioWorklet `SharedArrayBuffer` handoff.
      */
@@ -118,14 +114,6 @@ export class QualiaPortal {
      * Phase 2 — whether the artefact's proposed motion is currently being refused (clamped).
      */
     artefact_refused(): boolean;
-    /**
-     * Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
-     */
-    bake_cqt_sidecar_demo(frames: number): Uint8Array;
-    /**
-     * Cold-bake STFT sidecar for selected tensor node; pins bytes for hot frame reads.
-     */
-    bake_stft_sidecar_demo(frames: number): Uint8Array;
     /**
      * Cold-path Scene / Anatomy lifecycle receipt. Success requires a retained upload
      * and at least one presented renderer frame.
@@ -161,6 +149,7 @@ export class QualiaPortal {
      * Camera zoom (eye distance in world units).
      */
     camera_zoom(): number;
+    clear_qac(): void;
     /**
      * Clears scene activities idle since `idle`.
      */
@@ -172,7 +161,7 @@ export class QualiaPortal {
     /**
      * Compact ABI-v2 records by stable visible indices into caller-owned bytes, preserving IDs.
      */
-    compact_mesh_instance_records(source_records: Uint8Array | number[], visible_indices: Uint32Array | number[], compacted_output: Uint8Array): number;
+    compact_mesh_instance_records(source_records: Uint8Array, visible_indices: Uint32Array, compacted_output: Uint8Array): number;
     /**
      * Complete a host recovery attempt. The host reports `webgpu`, `webgl2`,
      * or `canvas2d`; recovered GPU backends re-upload the retained reduced
@@ -192,7 +181,13 @@ export class QualiaPortal {
      * transforms use 16 column-major floats, and the view-projection matrix uses 16 floats.
      * Invalid bounds fail open; returned indices preserve source order.
      */
-    cull_mesh_instance_indices(bounds_min: Float32Array | number[], bounds_max: Float32Array | number[], transforms_column_major: Float32Array | number[], view_projection_column_major: Float32Array | number[], visible_indices: Uint32Array): number;
+    cull_mesh_instance_indices(bounds_min: Float32Array, bounds_max: Float32Array, transforms_column_major: Float32Array, view_projection_column_major: Float32Array, visible_indices: Uint32Array): number;
+    /**
+     * Observable sky / water / mesh occupancy and GLES unpack counters.
+     * Cold diagnostic path only (host receipt cadence). HAL counters on the
+     * render submit path are atomics.
+     */
+    debug_scene_snapshot(): any;
     /**
      * Phase 2 — visible **deterministic refusal**: slide the artefact along +X (prismatic joint)
      * into a world bound; the admission gate refuses poses that would leave the bound, so the
@@ -242,6 +237,10 @@ export class QualiaPortal {
      */
     exposure_transform_available(): boolean;
     /**
+     * Poll completed GPU timestamps without blocking. Call at diagnostic cadence, not per frame.
+     */
+    gpu_pass_timings(): any;
+    /**
      * The last hardware backend refused even reduced geometry. The host must
      * replace the context-bound canvas and settle on Canvas2D for this scene.
      */
@@ -269,9 +268,10 @@ export class QualiaPortal {
     holograph_label_overlays(canvas_w: number, canvas_h: number): any;
     /**
      * Inspect physical interpretation and original PCM without applying a
-     * display or listening conversion. Exact clock integers remain in metadata_json.
+     * display or listening conversion. Exact clock integers remain in metadata_tlv_le.
      */
-    inspect_emf(bytes: Uint8Array | number[]): any;
+    inspect_emf(bytes: Uint8Array): any;
+    inspect_qac(bytes: Uint8Array): any;
     /**
      * Drop accumulated temporal history (e.g. after a camera cut or
      * scene swap) so the next frame isn't ghosted.
@@ -294,7 +294,7 @@ export class QualiaPortal {
      *
      * Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
      */
-    load_10d(bytes: Uint8Array | number[]): any;
+    load_10d(bytes: Uint8Array): any;
     /**
      * S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
      * RGBA. The host resolves each organ's body-system percept
@@ -304,7 +304,7 @@ export class QualiaPortal {
      * refactored helper: the portal path is wasm+GPU-only and not runtime-testable here, so the proven
      * `load_10d` is left untouched — unify them in the browser-test pass when the anatomy GLBs land.)
      */
-    load_10d_colored(bytes: Uint8Array | number[], r: number, g: number, b: number, a: number): any;
+    load_10d_colored(bytes: Uint8Array, r: number, g: number, b: number, a: number): any;
     /**
      * Load a multi-asset scene: `Array<{bytes: .10d, r,g,b,a, id?}>` (QG-20).
      * General scene asset loader for environment/game scenes, town layouts,
@@ -323,7 +323,7 @@ export class QualiaPortal {
      * renders the real body. Returns the same `{organs_loaded, organs_refused,
      * total_triangles}` summary.
      */
-    load_body_from_qualia_bundle(bytes: Uint8Array | number[]): any;
+    load_body_from_qualia_bundle(bytes: Uint8Array): any;
     /**
      * Like [`Self::load_body_from_qualia_bundle`] but honours the **mixer's per-body-system
      * channels**: `system_levels` is a JS object `{ <system_id>: <level 0..1> }`. An organ whose
@@ -335,7 +335,7 @@ export class QualiaPortal {
      * Decodes organs **in Rust** from the pack buffer — no per-organ JS `Uint8Array` materialisation.
      * That cut peak heap by ~1–2× pack size and is the phone-safe path.
      */
-    load_body_from_qualia_bundle_mixed(bytes: Uint8Array | number[], system_levels: any, disabled_parts: any): any;
+    load_body_from_qualia_bundle_mixed(bytes: Uint8Array, system_levels: any, disabled_parts: any): any;
     /**
      * S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
      * σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path.
@@ -356,18 +356,20 @@ export class QualiaPortal {
      */
     load_body_organs_colored(organs: Array<any>): any;
     /**
-     * Load a sibling `Q42EMF64` field and return its dimensions, integrity,
-     * exact interpretation JSON and original PCM tracks. The visible projection
-     * is a declared derivative. V3 does not update implicit sigma sonification.
-     * `frequency_hz` is null for v3; `kind` is volume when cell_count exceeds one.
+     * Load a current typed field, retaining original bytes independently of display.
+     * Rendering is a declared electric-field-magnitude derivative in local grid coordinates.
      */
-    load_emf(bytes: Uint8Array | number[]): any;
+    load_emf(bytes: Uint8Array): any;
+    /**
+     * Select a field explicitly when a recording contains several grids or streams.
+     */
+    load_emf_selected(bytes: Uint8Array, descriptor_id: number, frame_id: number, clock_id: number, stream_id: number): any;
     /**
      * Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
      * residency identity. Replaying the same asset returns the existing receipt without
      * rebuilding the GPU mesh; a different digest replaces the resident mesh.
      */
-    load_hmc_mesh(hmc_bytes: Uint8Array | number[], asset_key: string): any;
+    load_hmc_mesh(hmc_bytes: Uint8Array, asset_key: string): any;
     /**
      * Parse a JSON scene payload, stash it as `last_parsed`, and
      * return the parsed record.
@@ -377,7 +379,11 @@ export class QualiaPortal {
      * Parse a `.q42` (CBOR-LD) payload, stash it as `last_parsed`,
      * and return the parsed record.
      */
-    load_q42(bytes: Uint8Array | number[]): any;
+    load_q42(bytes: Uint8Array): any;
+    /**
+     * Admit and retain an explicitly selected actual PCM/STFT entry; no autoplay.
+     */
+    load_qac(bytes: Uint8Array, selected_entry: number): any;
     /**
      * Layout an RDF document as a holographic semantic graph and upload it to
      * the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
@@ -386,7 +392,7 @@ export class QualiaPortal {
      * Scene construction uses the bundled cinema-graph.vibe (Qualia host Scene.*).
      * Returns `{ node_count, triple_count, truncated, backend, labels, layout }`.
      */
-    load_rdf_graph(payload: Uint8Array | number[], content_type: string): any;
+    load_rdf_graph(payload: Uint8Array, content_type: string): any;
     /**
      * UTF-8 RDF document helper for `load_rdf_graph`.
      */
@@ -407,7 +413,7 @@ export class QualiaPortal {
      * or a KTX2/BasisU payload the adapter cannot transcode (mesh still draws).
      * Call before scene submission so the material bind groups see residency.
      */
-    load_texture_encoded(digest: Uint8Array | number[], mime: string, encoded: Uint8Array | number[], role: number, cutoff: number): boolean;
+    load_texture_encoded(digest: Uint8Array, mime: string, encoded: Uint8Array, role: number, cutoff: number): boolean;
     /**
      * Byte stride of the packed mesh-instance record ABI exposed by `set_mesh_instances`.
      */
@@ -426,12 +432,11 @@ export class QualiaPortal {
      * Frame the camera on a tensor node (`Maps_to_node`).
      */
     navigate_to_node(index: number): void;
-    /**
-     * Construct the portal on `canvas`: detect the device tier, mint a
-     * session nonce + spectator standpoint, sample ambient telemetry,
-     * and paint the first frame.
-     */
     constructor(canvas: HTMLCanvasElement);
+    /**
+     * Lightweight paint-free QAC container reader: no DOM canvas, WebGPU, or paint loop.
+     */
+    static new_qac_reader(): QualiaPortal;
     /**
      * Select at pixel; returns index immediately on CPU fallback, else `-1` until next `tick`.
      */
@@ -447,12 +452,12 @@ export class QualiaPortal {
      * (one per `.10d` entry), so the demo can offer per-system *and* per-part select/deselect driven by
      * what is actually in the loaded pack, not a hardcoded list. Read-only.
      */
-    pack_manifest(bytes: Uint8Array | number[]): any;
+    pack_manifest(bytes: Uint8Array): any;
     /**
      * Build the packed ABI from caller-owned column-major transforms and low/high ID words.
      * Output must hold `instance_count * mesh_instance_record_stride()` bytes.
      */
-    pack_mesh_instance_records(transforms_column_major: Float32Array | number[], semantic_id_words: Uint32Array | number[], packed_output: Uint8Array): number;
+    pack_mesh_instance_records(transforms_column_major: Float32Array, semantic_id_words: Uint32Array, packed_output: Uint8Array): number;
     /**
      * Pick the nearest resource crystal at canvas pixels. `-1` on miss.
      */
@@ -486,6 +491,10 @@ export class QualiaPortal {
      * when the ring is full.
      */
     push_sonic_token_raw(raw: bigint): boolean;
+    /**
+     * Exact little-endian bytes plus layout; decimal index avoids JS Number rounding.
+     */
+    qac_window(start_record_decimal: string, records: number, channel: number): any;
     /**
      * Draw EMF slice z=0, t=0 on a WebGPU
      * canvas no larger than 1024². The existing phase/sigma shader is a
@@ -611,12 +620,13 @@ export class QualiaPortal {
      * Upload packed IBL probe coefficients plus a fallback radiance
      * colour; `false`/error when the GPU backend can't take them.
      */
-    set_environment_probe_data(packed_probes: Float32Array | number[], fallback_radiance: Float32Array | number[]): boolean;
+    set_environment_probe_data(packed_probes: Float32Array, fallback_radiance: Float32Array): boolean;
     /**
      * Configure manual exposure compensation in stops (EV), clamped to -8…+8.
      * The configured value is retained while the GPU output path is unavailable.
      */
     set_exposure_compensation(ev: number): boolean;
+    set_gpu_pass_timing_enabled(enabled: boolean): void;
     /**
      * Compatibility alias for hosts using the original HDR-specific API name.
      */
@@ -626,12 +636,16 @@ export class QualiaPortal {
      */
     set_lighting(sun_x: number, sun_y: number, sun_z: number, sun_intensity: number, ambient_intensity: number): void;
     /**
+     * Bind exact prototype triangle spans to disjoint native instance-record spans.
+     */
+    set_mesh_instance_groups(abi_version: number, descriptors: Uint32Array, packed_records: Uint8Array): any;
+    /**
      * Replace the current WebGPU mesh instance stream from caller-owned packed records.
      * Each 128-byte record is the native `GpuInstanceRecord` ABI: column-major world transform,
      * inverse-transpose normal frame, low/high `u32` semantic identity words, orientation sign,
      * and zero padding. Callers may compact by CPU visibility indices before passing this slice.
      */
-    set_mesh_instances(abi_version: number, packed_records: Uint8Array | number[]): number;
+    set_mesh_instances(abi_version: number, packed_records: Uint8Array): number;
     /**
      * Apply an authored atmospheric sky preset:
      * - 0: Cyber-Dark / Deep Void
@@ -676,7 +690,7 @@ export class QualiaPortal {
     /**
      * Apply a flat `f32` telemetry sample block to the HUD model.
      */
-    set_telemetry(floats: Float32Array | number[]): void;
+    set_telemetry(floats: Float32Array): void;
     /**
      * Replace the standpoint temporal slice/window and push it to the
      * GPU when active.
@@ -689,7 +703,7 @@ export class QualiaPortal {
     /**
      * Replace the water surface mesh using world-space XYZ triples and triangle indices.
      */
-    set_water_geometry(positions_xyz: Float32Array | number[], indices: Uint32Array | number[]): boolean;
+    set_water_geometry(positions_xyz: Float32Array, indices: Uint32Array): boolean;
     /**
      * Set water-surface appearance — RGBA colour, wave amplitude and
      * frequency, and mesh `quality` tier.
@@ -756,13 +770,13 @@ export class QualiaPortal {
      * — then uploaded to the GPU. `hint` is an optional lowercase extension ("obj"/"stl"/"glb");
      * empty = sniff from the bytes. Returns the triangle count (0 if the GPU path isn't active).
      */
-    upload_mesh_asset(bytes: Uint8Array | number[], hint: string): number;
+    upload_mesh_asset(bytes: Uint8Array, hint: string): number;
     /**
      * Upload a packed tensor buffer: stores it, feeds the resident
      * substrate and VRAM ledger, forwards to the GPU (promoting the
      * tier to 2 on success), and updates the description line.
      */
-    upload_tensor_buffer(bytes: Uint8Array | number[]): void;
+    upload_tensor_buffer(bytes: Uint8Array): void;
     /**
      * Configured temperature/tint bias in stops, including while graphics is unavailable.
      */
@@ -771,7 +785,7 @@ export class QualiaPortal {
      * Write posed XYZ triples into an authored scene span. Compact backends
      * receive the replay mesh's mapped positions, never original offsets.
      */
-    write_part_vertices(start: number, xyz: Float32Array | number[]): void;
+    write_part_vertices(start: number, xyz: Float32Array): void;
 }
 
 /**
@@ -824,13 +838,13 @@ export class WasmQ42Session {
     /**
      * Load an existing durable Q42 session from journal bytes and optional base Quin snapshot bytes.
      */
-    static load_from_bytes(journal_bytes: Uint8Array | number[], base_quins_bytes: Uint8Array | number[]): WasmQ42Session;
+    static load_from_bytes(journal_bytes: Uint8Array, base_quins_bytes: Uint8Array): WasmQ42Session;
     /**
      * Creates a new durable Q42 session for `world_did_hash` over an
      * in-memory journal; `base_digest_bytes` supplies the 32-byte base digest
      * (shorter inputs error).
      */
-    constructor(world_did_hash: bigint, base_digest_bytes: Uint8Array | number[]);
+    constructor(world_did_hash: bigint, base_digest_bytes: Uint8Array);
     /**
      * Check if a Quin matching the given pattern exists in the active session (0 = wildcard).
      */
@@ -842,7 +856,7 @@ export class WasmQ42Session {
     /**
      * Rewind session state to a specific simulation/historical tick.
      */
-    rewind_to_tick(base_quins_bytes: Uint8Array | number[], target_tick: bigint): void;
+    rewind_to_tick(base_quins_bytes: Uint8Array, target_tick: bigint): void;
     /**
      * Discards all staged adds/removes in the open transaction.
      */
@@ -866,7 +880,7 @@ export class WasmSimulationWorld {
      * Compute group formation destinations for `count` agents (QG-11).
      * Returns interleaved destination coordinates: [x0, y0, x1, y1, ...].
      */
-    compute_group_formation(target_x: number, target_y: number, count: number, obstacles: Uint8Array | number[], width: number, height: number): Int32Array;
+    compute_group_formation(target_x: number, target_y: number, count: number, obstacles: Uint8Array, width: number, height: number): Int32Array;
     /**
      * Deterministic hash of the world state (for replay verification).
      */
@@ -879,7 +893,7 @@ export class WasmSimulationWorld {
      * Deterministic 2D grid pathfinder (QG-11).
      * Returns interleaved waypoint coordinates: [x0, y0, x1, y1, ...].
      */
-    find_path_grid(start_x: number, start_y: number, target_x: number, target_y: number, obstacles: Uint8Array | number[], width: number, height: number): Int32Array;
+    find_path_grid(start_x: number, start_y: number, target_x: number, target_y: number, obstacles: Uint8Array, width: number, height: number): Int32Array;
     /**
      * X position of `entity_id` in millimetres, or `None` if unregistered.
      */
@@ -930,7 +944,7 @@ export class WebEngine {
     /**
      * Loads a `.q42` volume from bytes.
      */
-    load_q42(bytes: Uint8Array | number[]): any;
+    load_q42(bytes: Uint8Array): any;
     /**
      * Mounts a QApp under DOM `root_id`.
      */
@@ -1146,13 +1160,13 @@ export function enforce_rights_ontology(subject_did: bigint): boolean;
  * Runs ontological entity verification over a `.10d` container and returns
  * the report as a JS value (`NULL` on serialization failure).
  */
-export function entity_verify_10d_wasm(bytes: Uint8Array | number[]): any;
+export function entity_verify_10d_wasm(bytes: Uint8Array): any;
 
 /**
  * Runs ontological entity verification over an `.hmc` bundle and returns
  * the report as a JS value (`NULL` on serialization failure).
  */
-export function entity_verify_bundle_wasm(bytes: Uint8Array | number[]): any;
+export function entity_verify_bundle_wasm(bytes: Uint8Array): any;
 
 /**
  * Enumerate ASP stable-model world contexts (`enumerate_stable_models`).
@@ -1250,7 +1264,7 @@ export function exact_rational_mul(val: any): any;
 /**
  * Executes `ntriples-query`.
  */
-export function execute_ntriples_query(query: string, db_bytes: Uint8Array | number[], max_results: number): string;
+export function execute_ntriples_query(query: string, db_bytes: Uint8Array, max_results: number): string;
 
 /**
  * WASM: exports a tensor buffer.
@@ -1305,7 +1319,7 @@ export function geometry_execute_json(args: string): string;
  *
  * Returns the index of the nearest site, or -1 if the point set is empty.
  */
-export function geometry_nearest_site(points: Float64Array | number[], qx: number, qy: number): number;
+export function geometry_nearest_site(points: Float64Array, qx: number, qy: number): number;
 
 /**
  * Robust 2-D orientation predicate.
@@ -1512,7 +1526,7 @@ export function list_capabilities_wasm(): any;
  * Lists the entries (key, kind, offset, length) of an HMC bundle as a JS
  * array; errors when the bundle fails to parse.
  */
-export function list_hmc_bundle_entries_wasm(bundle_bytes: Uint8Array | number[]): any;
+export function list_hmc_bundle_entries_wasm(bundle_bytes: Uint8Array): any;
 
 /**
  * Names that are intentionally native-only (UE-035/044/045) — never stubbed in browser.
@@ -1705,17 +1719,17 @@ export function ols_multiple_wasm(val: any): any;
  * This is the canonical packing path — **the JS ingest worker must call this**
  * instead of reimplementing the SuperBlock layout in JavaScript.
  */
-export function pack_quins_into_superblock(seq_id: bigint, owner_did: bigint, raw_quin_bytes: Uint8Array | number[]): Uint8Array;
+export function pack_quins_into_superblock(seq_id: bigint, owner_did: bigint, raw_quin_bytes: Uint8Array): Uint8Array;
 
 /**
  * Package exposure receipt: context + shapes + vibe AST digests (UE-053).
  */
-export function package_exposure_manifest_wasm(shapes_json: string, vibe_program_cbor?: Uint8Array | number[] | null): any;
+export function package_exposure_manifest_wasm(shapes_json: string, vibe_program_cbor?: Uint8Array | null): any;
 
 /**
  * WASM bridge: parse-cbor-ld.
  */
-export function parse_cbor_ld_wasm(payload: Uint8Array | number[]): any;
+export function parse_cbor_ld_wasm(payload: Uint8Array): any;
 
 /**
  * Parses CSV text per `CsvParseParams` field mappings into Quins via
@@ -1777,6 +1791,15 @@ export function plan_device_storage_wasm(val: any): any;
 export function portal_abort_webgpu(): void;
 
 /**
+ * Live backend of the pending or last adopted `PortalGpu`.
+ *
+ * Reads `gpu_timing_adapter_info()`. Returns `"webgpu"` for
+ * `Backend::BrowserWebGpu` / `Backend::Vulkan`, `"webgl2"` for `Backend::Gl`,
+ * or `None` if no device is armed. Does not consult `navigator.gpu`.
+ */
+export function portal_gpu_backend(): string | undefined;
+
+/**
  * Bind a hardware WebGL2 Anatomy renderer before `QualiaPortal` construction.
  * This is selected only after capability probing proves that WebGPU has no
  * usable adapter and WebGL2 context creation succeeds.
@@ -1788,9 +1811,19 @@ export function portal_init_webgl2(canvas: HTMLCanvasElement): boolean;
  * JS awaits this before constructing the portal and starting the render loop.
  * The canvas must still be context-free (no 2d context yet) so the WebGPU surface
  * can bind to it. Returns `true` if the GPU path is now armed; on `false`/throw the portal keeps
- * the canvas2d fallback.
+ * the canvas2d fallback. The armed backend is `portal_gpu_backend`, not this boolean.
  */
 export function portal_init_webgpu(canvas: HTMLCanvasElement): Promise<boolean>;
+
+/**
+ * Create the portal GPU device + surface asynchronously with an explicit backend preference.
+ *
+ * When `prefer_webgl2` is `true`, forces `Backends::GL` (WebGL2) directly without attempting
+ * `Backends::BROWSER_WEBGPU`, even on WebGPU-capable browsers. When `false`, behaves identically
+ * to [`portal_init_webgpu`] (prefers WebGPU and retries WebGL2 once on failure).
+ * The armed backend is reported by [`portal_gpu_backend`].
+ */
+export function portal_init_with_backend(canvas: HTMLCanvasElement, prefer_webgl2: boolean): Promise<boolean>;
 
 /**
  * True once WebGPU has called `getContext("webgpu")` on the init canvas.
@@ -1806,10 +1839,11 @@ export function predict_receptor_binding_wasm(): number;
 /**
  * Probe browser graphics APIs without claiming the page's presentation canvas.
  *
- * `selected_backend` is a recommendation from API/adapter availability only;
+ * `recommended_backend` is a recommendation from API/adapter availability only;
  * actual initialization can still fail because of surface compatibility,
- * memory pressure, or device loss. Callers must use the result of
- * `portal_init_webgpu` / `portal_init_webgl2` as the final selection receipt.
+ * memory pressure, or device loss. `portal_init_webgpu` remains a boolean so
+ * existing JS callers compile. The live backend receipt is `portal_gpu_backend`
+ * after a successful init (pending or adopted `PortalGpu` adapter info).
  */
 export function probe_portal_graphics(): Promise<any>;
 
@@ -1832,7 +1866,7 @@ export function rdfc10_graph_hash_wasm(val: any): any;
  * returning the raw bytes; errors on parse failure, missing key, or checksum
  * mismatch.
  */
-export function read_hmc_bundle_entry_wasm(bundle_bytes: Uint8Array | number[], key: string): Uint8Array;
+export function read_hmc_bundle_entry_wasm(bundle_bytes: Uint8Array, key: string): Uint8Array;
 
 /**
  * Read a cached SuperBlock from the OPFS vault.
@@ -1873,7 +1907,7 @@ export function sample_browser_telemetry_wasm(): any;
  * Bounded stride sample of packed 48-byte Quins. Browser graphs cannot mmap
  * `.q42` files; this is the WASM-safe equivalent of `mmap_sample_quins`.
  */
-export function sample_packed_quins_wasm(db_bytes: Uint8Array | number[], max_quins: number): Uint8Array;
+export function sample_packed_quins_wasm(db_bytes: Uint8Array, max_quins: number): Uint8Array;
 
 /**
  * Serializes the given Quins to CSV text following the provided column
@@ -1884,12 +1918,12 @@ export function serialize_csv_wasm(val: any): any;
 /**
  * Continuous Mathematical Serialization into Float64Array
  */
-export function serialize_float64_array(data: Float64Array | number[]): Float64Array;
+export function serialize_float64_array(data: Float64Array): Float64Array;
 
 /**
  * Packs an array of floats into a Uint8Array strictly typed buffer to avoid IEEE-754 truncation
  */
-export function serialize_float_array(data: Float32Array | number[]): Uint8Array;
+export function serialize_float_array(data: Float32Array): Uint8Array;
 
 /**
  * Serializes the given Quins to a JSON payload following the provided
@@ -2200,7 +2234,7 @@ export function validate_shacl_constraint_wasm(val: any): any;
 /**
  * Validates raw packed 48-byte Quins against a list of JSON ShapeSpecs.
  */
-export function validate_shacl_graph_wasm(db_bytes: Uint8Array | number[], shapes_json: string): any;
+export function validate_shacl_graph_wasm(db_bytes: Uint8Array, shapes_json: string): any;
 
 /**
  * Full graph SHACL validation from N3/N-Triples data and JSON ShapeSpecs.
@@ -2232,7 +2266,7 @@ export function verify_backup_manifest_wasm(manifest: any, payload_sha256_hex: s
 /**
  * Verify a signed law package (JSON) against an Ed25519 public key.
  */
-export function verify_law_package_wasm(json: string, public_key: Uint8Array | number[]): boolean;
+export function verify_law_package_wasm(json: string, public_key: Uint8Array): boolean;
 
 /**
  * Multiple OLS + verification report with Civics calculation receipt.
@@ -2250,17 +2284,17 @@ export function verify_regression_model_wasm(val: any): any;
  * Returns JSON: `{"valid":bool,"total":N,"bad":[indices...]}`
  * A non-empty `bad` array indicates sector corruption.
  */
-export function verify_superblock_ecc(block_bytes: Uint8Array | number[]): string;
+export function verify_superblock_ecc(block_bytes: Uint8Array): string;
 
 /**
  * WASM bridge: convex-hull-2d.
  */
-export function wasm_convex_hull_2d(points_flat: Float64Array | number[]): Uint32Array;
+export function wasm_convex_hull_2d(points_flat: Float64Array): Uint32Array;
 
 /**
  * WASM bridge: delaunay-triangulation-2d.
  */
-export function wasm_delaunay_triangulation_2d(points_flat: Float64Array | number[]): Uint32Array;
+export function wasm_delaunay_triangulation_2d(points_flat: Float64Array): Uint32Array;
 
 /**
  * Polls the local Webizen for pending agreements waiting for the user's signature.
@@ -2286,7 +2320,7 @@ export function webizen_sign_agreement(_agreement_id: bigint, _private_key_mock:
  * File name: `block_XXXXXXXX.qblk` (zero-padded 8-digit decimal index).
  * Compatible with the naming convention used by the JS VFS class.
  */
-export function write_opfs_block(block_index: number, block_bytes: Uint8Array | number[]): Promise<void>;
+export function write_opfs_block(block_index: number, block_bytes: Uint8Array): Promise<void>;
 
 /**
  * Forward discrete Fourier transform `X[k] = Σ_n x[n] e^{-2πi kn/N}`
@@ -2509,8 +2543,10 @@ export interface InitOutput {
     readonly parse_yaml_ld_q42_wasm: (a: number, b: number, c: number, d: bigint, e: number, f: bigint) => [number, number, number];
     readonly plan_device_storage_wasm: (a: any) => [number, number, number];
     readonly portal_abort_webgpu: () => void;
+    readonly portal_gpu_backend: () => [number, number];
     readonly portal_init_webgl2: (a: any) => [number, number, number];
     readonly portal_init_webgpu: (a: any) => any;
+    readonly portal_init_with_backend: (a: any, b: number) => any;
     readonly portal_webgpu_canvas_claimed: () => number;
     readonly predict_receptor_binding_wasm: () => number;
     readonly probe_portal_graphics: () => any;
@@ -2527,7 +2563,6 @@ export interface InitOutput {
     readonly qualiahud_set_document_json: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
     readonly qualiaportal_acoustic_sab_byte_length: (a: number) => number;
-    readonly qualiaportal_acoustic_sidecar_pinned: (a: number) => number;
     readonly qualiaportal_acoustic_uniform_bytes: (a: number) => [number, number, number];
     readonly qualiaportal_acoustic_uniform_float_count: (a: number) => number;
     readonly qualiaportal_acoustic_uniform_floats: (a: number) => [number, number, number];
@@ -2535,8 +2570,6 @@ export interface InitOutput {
     readonly qualiaportal_animate_artefact: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly qualiaportal_animation_snapshot_json: (a: number) => [number, number, number, number];
     readonly qualiaportal_artefact_refused: (a: number) => number;
-    readonly qualiaportal_bake_cqt_sidecar_demo: (a: number, b: number) => [number, number, number];
-    readonly qualiaportal_bake_stft_sidecar_demo: (a: number, b: number) => [number, number, number];
     readonly qualiaportal_body_render_receipt: (a: number) => [number, number, number];
     readonly qualiaportal_budget_collapses_3d: (a: number, b: number) => number;
     readonly qualiaportal_camera_pitch: (a: number) => number;
@@ -2545,6 +2578,7 @@ export interface InitOutput {
     readonly qualiaportal_camera_target_z: (a: number) => number;
     readonly qualiaportal_camera_yaw: (a: number) => number;
     readonly qualiaportal_camera_zoom: (a: number) => number;
+    readonly qualiaportal_clear_qac: (a: number) => void;
     readonly qualiaportal_clear_scene_activities: (a: number, b: bigint) => [number, number];
     readonly qualiaportal_collapse_node_q: (a: number, b: number) => [number, number];
     readonly qualiaportal_compact_mesh_instance_records: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: any) => [number, number, number];
@@ -2552,6 +2586,7 @@ export interface InitOutput {
     readonly qualiaportal_control_pending: (a: number) => number;
     readonly qualiaportal_create_acoustic_sab: (a: number) => [number, number, number];
     readonly qualiaportal_cull_mesh_instance_indices: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: any) => [number, number, number];
+    readonly qualiaportal_debug_scene_snapshot: (a: number) => [number, number, number];
     readonly qualiaportal_demo_artefact_refusal: (a: number) => void;
     readonly qualiaportal_drain_control_commands: (a: number, b: number) => number;
     readonly qualiaportal_drain_sonic_tokens: (a: number, b: number) => [number, number, number];
@@ -2563,6 +2598,7 @@ export interface InitOutput {
     readonly qualiaportal_etalon_worker_state: (a: number) => number;
     readonly qualiaportal_exposure_compensation: (a: number) => number;
     readonly qualiaportal_exposure_transform_available: (a: number) => number;
+    readonly qualiaportal_gpu_pass_timings: (a: number) => [number, number, number];
     readonly qualiaportal_graphics_recovery_canvas_only: (a: number) => number;
     readonly qualiaportal_graphics_recovery_requested: (a: number) => number;
     readonly qualiaportal_hdr_exposure_available: (a: number) => number;
@@ -2570,6 +2606,7 @@ export interface InitOutput {
     readonly qualiaportal_hdr_scene_available: (a: number) => number;
     readonly qualiaportal_holograph_label_overlays: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_inspect_emf: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_inspect_qac: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_invalidate_temporal_history: (a: number) => void;
     readonly qualiaportal_last_parsed: (a: number) => any;
     readonly qualiaportal_load_10d: (a: number, b: number, c: number) => [number, number, number];
@@ -2579,9 +2616,11 @@ export interface InitOutput {
     readonly qualiaportal_load_body_from_qualia_bundle_mixed: (a: number, b: number, c: number, d: any, e: any) => [number, number, number];
     readonly qualiaportal_load_body_organs_colored: (a: number, b: any) => [number, number, number];
     readonly qualiaportal_load_emf: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_load_emf_selected: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly qualiaportal_load_hmc_mesh: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_q42: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_load_qac: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly qualiaportal_load_rdf_graph: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_rdf_graph_text: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_rdf_graph_vibe: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
@@ -2592,6 +2631,7 @@ export interface InitOutput {
     readonly qualiaportal_mount_qapp: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_navigate_to_node: (a: number, b: number) => [number, number];
     readonly qualiaportal_new: (a: any) => [number, number, number];
+    readonly qualiaportal_new_qac_reader: () => number;
     readonly qualiaportal_observe_node_at: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_operational_mode: (a: number) => number;
     readonly qualiaportal_pack_manifest: (a: number, b: number, c: number) => [number, number, number];
@@ -2603,6 +2643,7 @@ export interface InitOutput {
     readonly qualiaportal_publish_acoustic_sab: (a: number, b: any) => [number, number];
     readonly qualiaportal_push_control_command: (a: number, b: bigint) => number;
     readonly qualiaportal_push_sonic_token_raw: (a: number, b: bigint) => number;
+    readonly qualiaportal_qac_window: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_render_emf_preview: (a: number, b: number) => [number, number, number];
     readonly qualiaportal_resize: (a: number, b: any, c: number, d: number) => [number, number];
     readonly qualiaportal_restore_animation_snapshot_json: (a: number, b: number, c: number) => [number, number];
@@ -2632,8 +2673,10 @@ export interface InitOutput {
     readonly qualiaportal_set_display_mode: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_set_environment_probe_data: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_set_exposure_compensation: (a: number, b: number) => number;
+    readonly qualiaportal_set_gpu_pass_timing_enabled: (a: number, b: number) => void;
     readonly qualiaportal_set_hdr_exposure_compensation: (a: number, b: number) => number;
     readonly qualiaportal_set_lighting: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly qualiaportal_set_mesh_instance_groups: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly qualiaportal_set_mesh_instances: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly qualiaportal_set_preserve_authored_frame: (a: number, b: number) => void;
     readonly qualiaportal_set_screen_space_ao: (a: number, b: number, c: number, d: number) => void;
@@ -2779,19 +2822,19 @@ export interface InitOutput {
     readonly xform_z_geometric: (a: any) => [number, number, number];
     readonly xform_z_transform: (a: any) => [number, number, number];
     readonly xform_z_unit_step: (a: any) => [number, number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h38e7e642ab627860: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h38e7e642ab627860_414: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h38e7e642ab627860_415: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h7b949ab170621146: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__ha3a3f9b66eed9539: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h91c9f44592f0dd1a: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__heca99f998697a495: (a: number, b: number) => void;
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___js_sys_39ec4474943eca9c___Function_fn_wasm_bindgen_169716e839161e07___JsValue_____wasm_bindgen_169716e839161e07___sys__Undefined___js_sys_39ec4474943eca9c___Function_fn_wasm_bindgen_169716e839161e07___JsValue_____wasm_bindgen_169716e839161e07___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___wasm_bindgen_169716e839161e07___JsValue__core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_169716e839161e07___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___wasm_bindgen_169716e839161e07___sys__JsNullable_etalon_78b4bfed847703d___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_169716e839161e07___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___wasm_bindgen_169716e839161e07___sys__JsNullable_etalon_78b4bfed847703d___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_169716e839161e07___JsError___true__423: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___wasm_bindgen_169716e839161e07___sys__JsNullable_etalon_78b4bfed847703d___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_37ee0ce0c4cd57d5___result__Result_____wasm_bindgen_169716e839161e07___JsError___true__424: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke___etalon_78b4bfed847703d___backend__webgpu__webgpu_sys__gen_GpuDeviceLostInfo__GpuDeviceLostInfo______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_169716e839161e07___convert__closures_____invoke_______true_: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_destroy_closure: (a: number, b: number) => void;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __externref_drop_slice: (a: number, b: number) => void;

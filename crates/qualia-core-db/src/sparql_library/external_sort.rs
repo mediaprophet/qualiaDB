@@ -315,10 +315,12 @@ impl ExternalSorter {
         let lex_map = match self.lex.memory_map() {
             Some(map) => map.clone(),
             None => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "lexicon spilled to disk; republish with --segment-mib so lexicon shards stay bounded",
-                ));
+                let mut collected = std::collections::HashMap::new();
+                self.lex.for_each_sorted(|hash, term| {
+                    collected.insert(hash, term);
+                    Ok(())
+                })?;
+                collected
             }
         };
         let mut writer = StreamingQ42VolumeWriter::new(&lex_map)?;

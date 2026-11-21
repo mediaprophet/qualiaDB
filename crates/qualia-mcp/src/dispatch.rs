@@ -25,6 +25,11 @@ pub fn enforce_fiduciary_tool_dispatch(
         b"get_graph_stats" => get_graph_stats(payload.arguments_raw),
         b"list_ontologies" => list_ontologies(payload.arguments_raw),
         b"ingest_ontology" => ingest_ontology(payload.arguments_raw),
+        b"q42_import" => q42_import(payload.arguments_raw),
+        b"q42_ingest_job" => q42_ingest_job(payload.arguments_raw),
+        b"q42_volume" => q42_volume(payload.arguments_raw),
+        b"q42_verify_graph" => q42_verify_graph(payload.arguments_raw),
+        b"q42_solid_export" => q42_solid_export(payload.arguments_raw),
         b"get_did_info" => get_did_info(payload.arguments_raw),
         b"get_wallet_status" => get_wallet_status(payload.arguments_raw),
 

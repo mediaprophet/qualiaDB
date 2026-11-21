@@ -446,6 +446,35 @@ mod range_q42_exec {
         quin_scratch: &mut [NQuin],
         out: &mut [BindingRow],
     ) -> Result<Q42RangeTripleSelectPage, String> {
+        execute_range_triple_select_page_with_resolver_into(
+            volume,
+            plan,
+            ctx,
+            None,
+            cursor,
+            compressed,
+            decoded,
+            quin_scratch,
+            out,
+        )
+    }
+
+    /// Execute one bounded page of a simple SELECT/ASK physical plan with an
+    /// optional [`crate::sparql_ast::TextResolver`] so string/regex/geo FILTER
+    /// expressions can resolve terms directly from the memory-mapped Q42LEX.
+    pub fn execute_range_triple_select_page_with_resolver_into<
+        S: crate::q42_volume::Q42RangeSource,
+    >(
+        volume: &crate::q42_volume::Q42RangeVolume<S>,
+        plan: Q42RangeTripleSelectPlan,
+        ctx: &SparqlQueryContext,
+        resolver: Option<crate::sparql_ast::TextResolver<'_>>,
+        cursor: Q42RangeTripleSelectCursor,
+        compressed: &mut [u8],
+        decoded: &mut [u8],
+        quin_scratch: &mut [NQuin],
+        out: &mut [BindingRow],
+    ) -> Result<Q42RangeTripleSelectPage, String> {
         let source_page = execute_range_triple_page_into(
             volume,
             plan.subject,
@@ -467,7 +496,12 @@ mod range_q42_exec {
             let mut accepted = true;
             for filter in plan.filters.iter().take(plan.filter_count as usize) {
                 if !matches!(
-                    ExpressionEvaluator::evaluate(*filter, ctx, &out[index]),
+                    ExpressionEvaluator::evaluate_with_resolver(
+                        *filter,
+                        ctx,
+                        &out[index],
+                        resolver
+                    ),
                     Ok(EvalResult::Boolean(true))
                 ) {
                     accepted = false;

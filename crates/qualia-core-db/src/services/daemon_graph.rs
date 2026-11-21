@@ -90,19 +90,23 @@ impl DaemonGraphStore {
     }
 
     #[inline]
-    fn contains_subject_predicate_context(
+    fn contains_quin(
         &self,
         subject: u64,
         predicate: u64,
+        object: u64,
         context: u64,
     ) -> bool {
-        self.as_slice()
-            .iter()
-            .any(|q| q.subject == subject && q.predicate == predicate && q.context == context)
+        self.as_slice().iter().any(|q| {
+            q.subject == subject
+                && q.predicate == predicate
+                && q.object == object
+                && q.context == context
+        })
     }
 
     fn push_unique(&mut self, quin: NQuin) -> bool {
-        if self.contains_subject_predicate_context(quin.subject, quin.predicate, quin.context) {
+        if self.contains_quin(quin.subject, quin.predicate, quin.object, quin.context) {
             return false;
         }
         self.push(quin)
@@ -243,6 +247,12 @@ fn merge_graph_lexicon(entries: HashMap<u64, String>) {
             map.entry(k).or_insert(v);
         }
     }
+}
+
+/// Extend the resident daemon graph lexicon with `(hash -> term)` mappings from
+/// an ingested ontology or `.q42` volume.
+pub fn extend_graph_lexicon(entries: HashMap<u64, String>) {
+    merge_graph_lexicon(entries);
 }
 
 /// Resolve a term hash to its literal text via the resident graph's lexicon.

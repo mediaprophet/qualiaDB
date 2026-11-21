@@ -149,6 +149,54 @@ fn find_ontology_dir() -> Option<std::path::PathBuf> {
     None
 }
 
+/// Parse RDF bytes of an explicit [`crate::query::ingest_job::IngestRdfFormat`]
+/// into NQuins plus the `hash -> term` lexicon used by SPARQL lookup.
+///
+/// Uses [`crate::query::ingest_formats::parse_triples_format`] so IRIs are hashed
+/// as bare URI strings (`http://...`, without `<...>`) and literals as bare lexical
+/// values (or inline-packed typed literals), matching `sparql_parser` and
+/// `ingest::streaming_import_rdf`.
+pub fn parse_rdf_bytes_to_quins_and_lex(
+    bytes: &[u8],
+    format: crate::query::ingest_job::IngestRdfFormat,
+    graph_context: u64,
+) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), String> {
+    let mut quins = Vec::new();
+    let mut lex = std::collections::HashMap::new();
+    crate::query::ingest_formats::parse_triples_format(
+        format,
+        std::io::BufReader::new(std::io::Cursor::new(bytes)),
+        None,
+        &mut |raw| {
+            let s = q_hash(&raw.subject);
+            let p = q_hash(&raw.predicate);
+            let is_inline = raw.packed_object.is_some();
+            let o = raw
+                .packed_object
+                .unwrap_or_else(|| q_hash(&raw.object) & crate::query::ingest_formats::OBJECT_IRI_MASK);
+            let ctx = if raw.context != 0 {
+                raw.context
+            } else {
+                graph_context
+            };
+            lex.entry(s).or_insert(raw.subject);
+            lex.entry(p).or_insert(raw.predicate);
+            if !is_inline {
+                lex.entry(o).or_insert(raw.object);
+            }
+            quins.push(NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: ctx,
+                metadata: 0,
+                parity: s ^ p ^ o ^ ctx,
+            });
+        },
+    )?;
+    Ok((quins, lex))
+}
+
 /// Parse Turtle/N3 bytes into NQuins plus the hash→term lexicon used by SPARQL lookup.
 ///
 /// Each triple becomes:
@@ -158,48 +206,29 @@ pub fn parse_ttl_bytes_to_quins_and_lex(
     bytes: &[u8],
     graph_context: u64,
 ) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), String> {
-    use rio_api::parser::TriplesParser;
-    let mut parser = rio_turtle::TurtleParser::new(std::io::Cursor::new(bytes), None);
-    let mut quins = Vec::new();
-    let mut lex = std::collections::HashMap::new();
-    parser
-        .parse_all(
-            &mut |t: rio_api::model::Triple| -> Result<(), std::io::Error> {
-                let s_str = t.subject.to_string();
-                let p_str = t.predicate.to_string();
-                let o_str = t.object.to_string();
-                let s = q_hash(&s_str);
-                let p = q_hash(&p_str);
-                let o = q_hash(&o_str);
-                lex.entry(s).or_insert(s_str);
-                lex.entry(p).or_insert(p_str);
-                lex.entry(o).or_insert(o_str);
-                quins.push(NQuin {
-                    subject: s,
-                    predicate: p,
-                    object: o,
-                    context: graph_context,
-                    metadata: 0,
-                    parity: s ^ p ^ o ^ graph_context,
-                });
-                Ok(())
-            },
-        )
-        .map_err(|e| e.to_string())?;
-    Ok((quins, lex))
+    parse_rdf_bytes_to_quins_and_lex(
+        bytes,
+        crate::query::ingest_job::IngestRdfFormat::Turtle,
+        graph_context,
+    )
 }
 
-/// Parse a single Turtle file into NQuins, all placed in `graph_context`.
+/// Parse an RDF/OWL/Turtle/N3/NT/JSON-LD file into NQuins + lexicon, placed in `graph_context`.
+pub fn parse_rdf_file_to_quins_and_lex(
+    path: &std::path::Path,
+    graph_context: u64,
+) -> Result<(Vec<NQuin>, std::collections::HashMap<u64, String>), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("cannot open {:?}: {e}", path))?;
+    let path_str = path.to_string_lossy();
+    let fmt = crate::query::ingest_job::infer_rdf_format(&path_str);
+    parse_rdf_bytes_to_quins_and_lex(&bytes, fmt, graph_context)
+}
+
+/// Parse a single RDF/Turtle/OWL file into NQuins, all placed in `graph_context`.
 pub fn parse_ttl_to_quins(path: &std::path::Path, graph_context: u64) -> Vec<NQuin> {
-    let bytes = match std::fs::read(path) {
-        Ok(b) => b,
-        Err(e) => {
-            log::warn!("[ontology_loader] cannot open {:?}: {e}", path);
-            return Vec::new();
-        }
-    };
-    match parse_ttl_bytes_to_quins_and_lex(&bytes, graph_context) {
-        Ok((quins, _)) => {
+    match parse_rdf_file_to_quins_and_lex(path, graph_context) {
+        Ok((quins, lex)) => {
+            crate::daemon_graph::extend_graph_lexicon(lex);
             log::info!(
                 "[ontology_loader] loaded {} quins from {:?}",
                 quins.len(),
@@ -223,6 +252,9 @@ pub fn load_q42_file(path: &std::path::Path) -> Vec<NQuin> {
             return Vec::new();
         }
     };
+    if let Ok(lex) = crate::q42_lex::Q42Lexicon::load_for_q42(path) {
+        crate::daemon_graph::extend_graph_lexicon(lex.entries);
+    }
     log::info!(
         "[ontology_loader] loaded {} quins from unified volume {:?}",
         all_quins.len(),

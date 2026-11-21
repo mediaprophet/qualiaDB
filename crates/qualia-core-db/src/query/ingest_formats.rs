@@ -187,13 +187,24 @@ fn pack_n3_triple(t: N3Triple<'_>, context: u64) -> RawTriple {
 
 fn parse_n3_stream<R, F>(mut reader: R, on_triple: &mut F) -> Result<(), String>
 where
-    R: Read,
+    R: BufRead,
     F: FnMut(RawTriple),
 {
     let mut text = String::new();
     reader
         .read_to_string(&mut text)
         .map_err(|e| format!("N3 read: {e}"))?;
+    if !text.contains("=>") && !text.contains("<=") && !text.contains("{") {
+        let mut p = TurtleParser::new(Cursor::new(text.as_bytes()), None);
+        if p.parse_all(&mut |t| {
+            on_triple(pack_rio_triple(t, 0));
+            Ok(()) as Result<(), rio_turtle::TurtleError>
+        })
+        .is_ok()
+        {
+            return Ok(());
+        }
+    }
     let mut parser = N3Parser::new(&text);
     let mut rule_idx = 0usize;
     parser

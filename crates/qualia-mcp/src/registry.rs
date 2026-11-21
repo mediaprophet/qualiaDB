@@ -13,8 +13,8 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         // ── Graph & Codebase Audit ──────────────────────────────────────────
         McpToolDescriptor {
             name: "query_sparql",
-            description: "Execute a SPARQL query against the in-process daemon graph or a .q42 vault (pass vault_path: 'audit' for codebase.q42).",
-            input_schema: r#"{"type":"object","required":["query"],"properties":{"query":{"type":"string"},"limit":{"type":"integer"},"vault_path":{"type":"string"}}}"#,
+            description: "Execute a SPARQL query against the in-process daemon graph, a .q42 vault (pass vault_path: 'audit' for codebase.q42, or any .q42 path), or a SPARQL HTTP(S) endpoint.",
+            input_schema: r#"{"type":"object","required":["query"],"properties":{"query":{"type":"string"},"limit":{"type":"integer"},"vault_path":{"type":"string"},"endpoint":{"type":"string"},"format":{"type":"string","enum":["json","xml","tsv","csv","ntriples"]}}}"#,
         },
         McpToolDescriptor {
             name: "query_graph",
@@ -38,8 +38,33 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "ingest_ontology",
-            description: "Parse TTL/N3/q42 ontology file and extend the daemon graph.",
-            input_schema: r#"{"type":"object","required":["path"],"properties":{"path":{"type":"string"},"context_hash":{"type":"integer"}}}"#,
+            description: "Parse OWL/RDF/XML/TTL/N3/NT/NQ/TriG/JSON-LD/YAML-LD/q42 ontology file (or compile large files to .q42) and extend the daemon graph.",
+            input_schema: r#"{"type":"object","required":["path"],"properties":{"path":{"type":"string"},"context_hash":{"type":"integer"},"out_q42":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "q42_import",
+            description: "Stream-import any RDF/OWL/XML/Turtle/N3/NT/NQ/TriG/JSON-LD/YAML-LD/CBOR-LD file or URL (including .gz/.zst, up to multi-GiB) into a canonical .q42 volume or multi-segment volume set using QualiaDB's parallel external-sort engine.",
+            input_schema: r#"{"type":"object","properties":{"input":{"type":"string","description":"Source RDF/OWL file path"},"url":{"type":"string","description":"HTTP(S) RDF/OWL dump URL"},"output":{"type":"string","description":"Destination .q42 file path"},"mode":{"type":"string","enum":["complete","strip_literals"]},"strip_literals":{"type":"boolean"},"segment_mib":{"type":"integer","description":"Optional max segment size in MiB for multi-segment volume sets"},"job_dir":{"type":"string","description":"Optional durable job directory for resumable/attested imports"},"resume":{"type":"boolean"},"omit_predicates":{"type":"string"},"omit_preset":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "q42_ingest_job",
+            description: "Manage durable QualiaDB RDF->Q42 ingest jobs: status, inspect, compare source attestation, continue/resume, publish, or append RDF onto an existing .q42 volume root.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["status","inspect","compare","continue","publish","append"]},"dir":{"type":"string"},"path":{"type":"string"},"root":{"type":"string"},"extra":{"type":"string"},"url":{"type":"string"},"attestation":{"type":"string"},"against":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "q42_volume",
+            description: "Inspect, verify, audit RDF/OWL sources, compact volume sets, migrate v2->v3/v4, or classify publication policy (Permissive Commons vs Sanctuary) for .q42 volumes.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["inspect","verify","audit_source","compact","migrate","classify"]},"path":{"type":"string"},"source_root":{"type":"string"},"out_dir":{"type":"string"},"level":{"type":"string","enum":["fast","standard","exhaustive"]},"top":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "q42_verify_graph",
+            description: "Run QualiaDB's bounded-memory encoded-set and ground-graph isomorphism proof verifying that a .q42 volume is a faithful lossless encoding of its source RDF/OWL/Turtle/N-Triples file.",
+            input_schema: r#"{"type":"object","required":["input","dataset"],"properties":{"input":{"type":"string","description":"Source RDF/OWL/TTL/NT file"},"dataset":{"type":"string","description":"Target .q42 volume path"},"memory_mib":{"type":"integer"},"temp_gib":{"type":"integer"},"omit_predicates":{"type":"string"},"omit_preset":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "q42_solid_export",
+            description: "Export a .q42 volume to a W3C Solid LDP pod RDF bundle.",
+            input_schema: r#"{"type":"object","required":["input","output"],"properties":{"input":{"type":"string"},"output":{"type":"string"}}}"#,
         },
         McpToolDescriptor {
             name: "get_did_info",

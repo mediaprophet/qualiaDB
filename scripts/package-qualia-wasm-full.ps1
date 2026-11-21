@@ -6,7 +6,7 @@ param(
     [string]$OutputName = "qualia_core_db",
     [ValidateSet("Full", "Portal")]
     [string]$FlagProfile = "Full",
-    [string]$Toolchain = "1.96.1",
+    [string]$Toolchain = "1.99.1",
     # Bounds generated output eligible for promotion; Cargo's managed build cache
     # and compiler memory are separate from this deployment artifact budget.
     [long]$ArtifactBudgetBytes = 256MB

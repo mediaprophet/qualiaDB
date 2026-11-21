@@ -41,8 +41,37 @@ pub fn parse_sparql_full(
 
 fn strip_prefix_declarations(query: &str) -> (String, HashMap<String, String>) {
     let mut prefixes = HashMap::new();
+    let mut rest = query.trim();
+    loop {
+        let upper_prefix = rest
+            .get(..6)
+            .is_some_and(|s| s.eq_ignore_ascii_case("PREFIX"))
+            && rest
+                .as_bytes()
+                .get(6)
+                .is_some_and(|b| b.is_ascii_whitespace());
+        if !upper_prefix {
+            break;
+        }
+        let after_kw = rest[6..].trim_start();
+        let Some(colon) = after_kw.find(':') else {
+            break;
+        };
+        let prefix = after_kw[..colon].trim().to_string();
+        let after_colon = after_kw[colon + 1..].trim_start();
+        if let Some(open) = after_colon.strip_prefix('<') {
+            let Some(close) = open.find('>') else {
+                break;
+            };
+            let iri = open[..close].to_string();
+            prefixes.insert(prefix, iri);
+            rest = open[close + 1..].trim_start();
+        } else {
+            break;
+        }
+    }
     let mut body = String::new();
-    for line in query.lines() {
+    for line in rest.lines() {
         let trimmed = line.trim();
         let upper = trimmed.to_ascii_uppercase();
         if upper.starts_with("PREFIX") {
@@ -57,7 +86,7 @@ fn strip_prefix_declarations(query: &str) -> (String, HashMap<String, String>) {
         body.push_str(trimmed);
     }
     if body.is_empty() {
-        (query.to_string(), prefixes)
+        (rest.to_string(), prefixes)
     } else {
         (body, prefixes)
     }

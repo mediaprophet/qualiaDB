@@ -114,6 +114,9 @@ impl SceneMeshAccum {
         let mut mesh = None;
         let mut nodes = Vec::new();
         let mut has_attestation = false;
+        let mut has_holographic_or_computational = false;
+        let mut proxy_min = [-0.5f32, -0.5, -0.5];
+        let mut proxy_max = [0.5f32, 0.5, 0.5];
         for desc in descs.iter() {
             let st = match container_10d::SectionType::from_u8(desc.section_type) {
                 Some(st) => st,
@@ -132,11 +135,53 @@ impl SceneMeshAccum {
                     }
                 }
                 container_10d::SectionType::Tensor10DNodes => {
+                    has_holographic_or_computational = true;
                     let mut i = 0usize;
                     while let Ok(n) = container_10d::read_node(payload, i) {
                         nodes.push(n);
                         i += 1;
                     }
+                }
+                container_10d::SectionType::ManifoldIdentityV2 => {
+                    has_holographic_or_computational = true;
+                    let mut fields = [container_10d::TypedFieldRecord::default(); 32];
+                    if let Ok((_id, count)) =
+                        container_10d::decode_manifold_identity_v2(payload, &[], &mut fields)
+                    {
+                        for f in &fields[..count] {
+                            if f.kind == container_10d::FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE
+                                && f.payload_section_id
+                                    == container_10d::SectionType::FieldSidecar as u32
+                            {
+                                if let Some(sidecar_desc) = descs.iter().find(|d| {
+                                    container_10d::SectionType::from_u8(d.section_type)
+                                        == Some(container_10d::SectionType::FieldSidecar)
+                                }) {
+                                    let s_off = sidecar_desc.byte_offset as usize
+                                        + (f.payload_offset as usize);
+                                    let s_len = f.payload_length as usize;
+                                    if s_off + s_len <= bytes.len()
+                                        && s_len >= container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE
+                                    {
+                                        let hdr: container_10d::HolographicPhaseHeader =
+                                            bytemuck::pod_read_unaligned(
+                                                &bytes[s_off
+                                                    ..s_off
+                                                        + container_10d::HOLOGRAPHIC_PHASE_HEADER_SIZE],
+                                            );
+                                        if hdr.magic == container_10d::HOLOGRAPHIC_PHASE_TAG {
+                                            proxy_min = hdr.proxy_aabb_min;
+                                            proxy_max = hdr.proxy_aabb_max;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                container_10d::SectionType::ProceduralSynthesis
+                | container_10d::SectionType::EntityOntology => {
+                    has_holographic_or_computational = true;
                 }
                 container_10d::SectionType::ProvenanceSidecar => {
                     if let Ok(view) =
@@ -151,8 +196,14 @@ impl SceneMeshAccum {
             }
         }
 
-        let Some(mesh) = mesh else {
-            return;
+        let mesh = match mesh {
+            Some(m) => m,
+            None if has_holographic_or_computational => {
+                crate::render::portal_load_10d::synthesize_holographic_proxy_box_mesh(
+                    proxy_min, proxy_max,
+                )
+            }
+            None => return,
         };
         // An optional rig must be valid and vertex-aligned even before runtime
         // playback is armed. Never silently admit malformed animation content.
@@ -200,7 +251,7 @@ impl SceneMeshAccum {
                 return;
             }
         };
-        let (mut local_materials, local_ranges) =
+        let (mut local_materials, mut local_ranges) =
             match container_10d::material_container_counts(&bytes) {
                 Ok((material_count, range_count)) => {
                     if material_count == 0
@@ -251,13 +302,40 @@ impl SceneMeshAccum {
                     return;
                 }
             };
-        if local_materials.iter().any(|material| {
-            self.materials
+        // Independently produced .10d files (measured GIS plus authored
+        // woodland) reuse small producer material ids. Share identical
+        // records; remap a local id that would collide with a different
+        // MAT1 so mixed-origin first-paint can merge.
+        let existing_ids: Vec<u64> = self.materials.iter().map(|material| material.id).collect();
+        let mut taken = existing_ids.clone();
+        taken.extend(local_materials.iter().map(|material| material.id));
+        let mut next_id = existing_ids.iter().copied().max().unwrap_or(0).saturating_add(1);
+        let mut rewrite: Vec<(u64, u64)> = Vec::new();
+        for material in &mut local_materials {
+            let old = material.id;
+            let share = self
+                .materials
                 .iter()
-                .any(|present| present.id == material.id && present != material)
-        }) {
-            self.assets_refused += 1;
-            return;
+                .any(|present| present.id == old && present == material);
+            let free = !existing_ids.contains(&old);
+            if share || free {
+                continue;
+            }
+            while taken.contains(&next_id) {
+                next_id = next_id.saturating_add(1);
+            }
+            rewrite.push((old, next_id));
+            material.id = next_id;
+            taken.push(next_id);
+            next_id = next_id.saturating_add(1);
+        }
+        for range in &mut local_ranges {
+            if let Some((_, new_id)) = rewrite
+                .iter()
+                .find(|(old, _)| *old == range.material_id)
+            {
+                range.material_id = *new_id;
+            }
         }
         let index_start = match u32::try_from(self.indices.len()) {
             Ok(start) => start,
@@ -424,7 +502,7 @@ impl SceneMeshAccum {
         if fit_bytes
             .saturating_mul(self.animation.actors.len())
             .saturating_add(self.animation.resident_bytes)
-            > 42 * 1024 * 1024
+            > crate::container_10d::GRAPHICS_ASSET_RING_BYTES
         {
             return Err("animated fit budget exceeded");
         }
