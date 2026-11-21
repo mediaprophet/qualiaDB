@@ -17,7 +17,7 @@ $patchBlock = Get-EtalonPatchBlock $metadata
 foreach ($name in $packageNames) {
     if ($patchBlock -notmatch "(?m)^$([regex]::Escape($name)) = \{ path = ") { throw "Missing local workspace override: $name" }
 }
-$metadata.packages = @($packages | Sort-Object name -Descending)
+$metadata.packages = @($packages | Sort-Object { $_.name } -Descending)
 if ((Get-EtalonPatchBlock $metadata) -cne $patchBlock) { throw 'Local overrides must be deterministic' }
 $metadata.workspace_members += 'missing-member'
 try { $null = Get-EtalonPatchBlock $metadata; throw 'Incomplete workspace accepted' } catch {
@@ -63,7 +63,7 @@ fn gpu_compute_readback_matches_cpu_and_rejects_invalid_requests() {
     panic!("GPU execution must not run in CPU-only mode");
 }
 '@)
-& rustc +1.96.1 --test --edition 2021 $source -o $binary
+& rustc +1.99.1 --test --edition 2021 $source -o $binary
 if ($LASTEXITCODE -ne 0) { throw 'Tiny libtest selection fixture failed to compile' }
 $cpu = Get-ProductTestSelection $true
 if ($cpu.expected.Count -ne 2 -or @($cpu.expected.Values | Where-Object { $_ -ne 'cpu' }).Count) { throw 'CPU-only selection must require two CPU receipts' }

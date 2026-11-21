@@ -251,7 +251,7 @@ function Get-EtalonPatchBlock($Metadata) {
     # copies of the same public types when Etalon adds a transitive dependency.
     $members = @($Metadata.workspace_members)
     if (-not $members.Count) { throw 'Etalon metadata has no workspace members' }
-    $packages = @($Metadata.packages | Where-Object { $members -contains $_.id } | Sort-Object name)
+    $packages = @($Metadata.packages | Where-Object { $members -contains $_.id } | Sort-Object { $_.name })
     if ($packages.Count -ne $members.Count) { throw 'Etalon workspace metadata is incomplete' }
     $names = @{}
     $patches = foreach ($package in $packages) {
