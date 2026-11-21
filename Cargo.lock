@@ -777,6 +777,7 @@ dependencies = [
 [[package]]
 name = "anvil-core"
 version = "0.1.0"
+source = "git+https://github.com/mediaprophet/anvil.git?rev=4d8e5be4dd8c0014fd0cb9acf42b4058af14ca3c#4d8e5be4dd8c0014fd0cb9acf42b4058af14ca3c"
 
 [[package]]
 name = "anyhow"

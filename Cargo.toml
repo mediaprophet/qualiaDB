@@ -55,7 +55,7 @@ qualia-audio = { path = "crates/qualia-audio" }
 qualia-sim = { path = "crates/qualia-sim" }
 qualia-geospatial = { path = "crates/qualia-geospatial" }
 qualia-mcp = { path = "crates/qualia-mcp" }
-anvil-core = { path = "../anvil/crates/anvil-core", default-features = false, features = ["vault-security"] }
+anvil-core = { git = "https://github.com/mediaprophet/anvil.git", rev = "4d8e5be4dd8c0014fd0cb9acf42b4058af14ca3c", default-features = false, features = ["vault-security"] }
 
 # External crates harmonised across the workspace
 anyhow = "1.0.104"
