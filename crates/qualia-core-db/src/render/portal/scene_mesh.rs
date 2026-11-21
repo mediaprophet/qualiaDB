@@ -429,36 +429,41 @@ impl SceneMeshAccum {
             return;
         }
 
-        let actor = match container_10d::skeletal_container::read_skeletal_section(&bytes) {
-            Ok(section) => {
-                if self.animation.actors.len() >= 256 {
-                    self.assets_refused += 1;
-                    return;
-                }
-                let budget = (42usize * 1024 * 1024).saturating_sub(self.animation.resident_bytes);
-                let indices: Vec<u32> = mesh.triangles.iter().flatten().copied().collect();
-                match crate::render::skeletal::SkeletalPlayer::from_section_with_budget(
-                    &section,
-                    &mesh.positions,
-                    &local_normals,
-                    &local_uv0,
-                    &indices,
-                    budget,
-                ) {
-                    Ok(player) => Some(super::scene_animation::SceneActor {
-                        start: self.positions.len() as u32,
-                        player,
-                    }),
-                    Err(_) => {
+        let actor = if !had_explicit_mesh {
+            None
+        } else {
+            match container_10d::skeletal_container::read_skeletal_section(&bytes) {
+                Ok(section) => {
+                    if self.animation.actors.len() >= 256 {
                         self.assets_refused += 1;
                         return;
                     }
+                    let budget =
+                        (42usize * 1024 * 1024).saturating_sub(self.animation.resident_bytes);
+                    let indices: Vec<u32> = mesh.triangles.iter().flatten().copied().collect();
+                    match crate::render::skeletal::SkeletalPlayer::from_section_with_budget(
+                        &section,
+                        &mesh.positions,
+                        &local_normals,
+                        &local_uv0,
+                        &indices,
+                        budget,
+                    ) {
+                        Ok(player) => Some(super::scene_animation::SceneActor {
+                            start: self.positions.len() as u32,
+                            player,
+                        }),
+                        Err(_) => {
+                            self.assets_refused += 1;
+                            return;
+                        }
+                    }
                 }
-            }
-            Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => None,
-            Err(_) => {
-                self.assets_refused += 1;
-                return;
+                Err(container_10d::skeletal_container::SkeletalContainerError::Missing) => None,
+                Err(_) => {
+                    self.assets_refused += 1;
+                    return;
+                }
             }
         };
         if let Some(actor) = actor {

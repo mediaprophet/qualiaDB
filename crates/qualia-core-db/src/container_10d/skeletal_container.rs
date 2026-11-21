@@ -26,7 +26,7 @@ pub enum SkeletalContainerError {
 }
 
 fn checked_header(bytes: &[u8]) -> Result<Container10dHeader, SkeletalContainerError> {
-    if bytes.len() > 42 * 1024 * 1024 {
+    if bytes.len() > super::GRAPHICS_ASSET_RING_BYTES {
         return Err(SkeletalContainerError::CountLimit);
     }
     let header = Container10dHeader::parse(bytes).map_err(SkeletalContainerError::Header)?;
@@ -47,6 +47,13 @@ fn find_skeletal_slice(
 ) -> Result<(usize, &[u8]), SkeletalContainerError> {
     let header = checked_header(bytes)?;
     let sections = parse_section_table(bytes, &header).map_err(SkeletalContainerError::Sections)?;
+    let section = sections
+        .iter()
+        .find(|s| s.typ() == Some(SectionType::SkeletalAnimation))
+        .ok_or(SkeletalContainerError::Missing)?;
+    if section.stride != 0 || section.element_count != 0 {
+        return Err(SkeletalContainerError::InvalidDescriptor);
+    }
     let mesh = sections
         .iter()
         .find(|s| s.typ() == Some(SectionType::QuantizedMesh))
@@ -55,13 +62,6 @@ fn find_skeletal_slice(
         &bytes[mesh.byte_offset as usize..(mesh.byte_offset + mesh.byte_length) as usize],
     )
     .map_err(SkeletalContainerError::Mesh)?;
-    let section = sections
-        .iter()
-        .find(|s| s.typ() == Some(SectionType::SkeletalAnimation))
-        .ok_or(SkeletalContainerError::Missing)?;
-    if section.stride != 0 || section.element_count != 0 {
-        return Err(SkeletalContainerError::InvalidDescriptor);
-    }
     let slice =
         &bytes[section.byte_offset as usize..(section.byte_offset + section.byte_length) as usize];
     Ok((mesh_header.vertex_count as usize, slice))
@@ -166,7 +166,7 @@ pub fn attach_skeletal_section_into(
         Err(error) => return Err(SkeletalContainerError::Sections(error)),
         Ok(needed) => needed,
     };
-    if needed > 42 * 1024 * 1024 {
+    if needed > super::GRAPHICS_ASSET_RING_BYTES {
         return Err(SkeletalContainerError::CountLimit);
     }
     let written = encode_container(&header, &inputs[..sections.len() + 1], out)

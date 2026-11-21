@@ -476,6 +476,14 @@ fn holo_multi_segment_seal_preserves_foramina_and_embeds_prv1_for_meshless_scene
 
     // 2. Strip QuantizedMesh (leaving FieldSidecar with NRM1 + HOLO + MID2 + PROC + PRV1)
     let meshless_10d = strip_quantized_mesh_section(&sealed_10d);
+    // Verify read_skeletal_section returns Missing (not MissingMesh!) on a static meshless .10d
+    assert!(
+        matches!(
+            crate::container_10d::skeletal_container::read_skeletal_section(&meshless_10d),
+            Err(crate::container_10d::skeletal_container::SkeletalContainerError::Missing)
+        ),
+        "static meshless .10d without SkeletalAnimation must report SkeletalContainerError::Missing so scene loader admits it"
+    );
     let decoded_meshless = decode_load_10d(&meshless_10d).unwrap();
     assert!(!decoded_meshless.governance_refused);
     assert_eq!(

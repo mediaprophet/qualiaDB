@@ -670,89 +670,16 @@ fn point_in_triangle_xz(px: f32, pz: f32, a: [f32; 3], b: [f32; 3], c: [f32; 3])
     (u >= eps) && (v >= eps) && (u + v <= 1.0 - eps)
 }
 
-#[inline]
-fn orient_2d_xz(ax: f32, az: f32, bx: f32, bz: f32, cx: f32, cz: f32) -> f32 {
-    (bx - ax) * (cz - az) - (bz - az) * (cx - ax)
-}
-
-#[inline]
-fn segments_intersect_xz(
-    p1x: f32,
-    p1z: f32,
-    p2x: f32,
-    p2z: f32,
-    q1x: f32,
-    q1z: f32,
-    q2x: f32,
-    q2z: f32,
-) -> bool {
-    let o1 = orient_2d_xz(p1x, p1z, p2x, p2z, q1x, q1z);
-    let o2 = orient_2d_xz(p1x, p1z, p2x, p2z, q2x, q2z);
-    let o3 = orient_2d_xz(q1x, q1z, q2x, q2z, p1x, p1z);
-    let o4 = orient_2d_xz(q1x, q1z, q2x, q2z, p2x, p2z);
-    (o1 * o2 < 0.0) && (o3 * o4 < 0.0)
-}
-
-/// Exact 2D triangle-box overlap test in the XZ plane (`[x0, x1] x [z0, z1]`).
-#[inline]
-fn triangle_overlaps_cell_xz(
-    a: [f32; 3],
-    b: [f32; 3],
-    c: [f32; 3],
-    x0: f32,
-    x1: f32,
-    z0: f32,
-    z1: f32,
-) -> bool {
-    let tmin_x = a[0].min(b[0]).min(c[0]);
-    let tmax_x = a[0].max(b[0]).max(c[0]);
-    let tmin_z = a[2].min(b[2]).min(c[2]);
-    let tmax_z = a[2].max(b[2]).max(c[2]);
-    if tmax_x < x0 || tmin_x > x1 || tmax_z < z0 || tmin_z > z1 {
-        return false;
-    }
-    for v in [a, b, c] {
-        if v[0] >= x0 && v[0] <= x1 && v[2] >= z0 && v[2] <= z1 {
-            return true;
-        }
-    }
-    let cx = 0.5 * (x0 + x1);
-    let cz = 0.5 * (z0 + z1);
-    if point_in_triangle_xz(cx, cz, a, b, c)
-        || point_in_triangle_xz(x0, z0, a, b, c)
-        || point_in_triangle_xz(x1, z0, a, b, c)
-        || point_in_triangle_xz(x1, z1, a, b, c)
-        || point_in_triangle_xz(x0, z1, a, b, c)
-    {
-        return true;
-    }
-    let tri_edges = [(a, b), (b, c), (c, a)];
-    let box_edges = [
-        (x0, z0, x1, z0),
-        (x1, z0, x1, z1),
-        (x1, z1, x0, z1),
-        (x0, z1, x0, z0),
-    ];
-    for (p1, p2) in tri_edges {
-        for &(bx1, bz1, bx2, bz2) in &box_edges {
-            if segments_intersect_xz(p1[0], p1[2], p2[0], p2[2], bx1, bz1, bx2, bz2) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Partition a triangle [`Mesh`] into up to [`MAX_FITTED_HOLO_SEGMENTS`] occupied $8 \times 8$
-/// columnar XZ cells and fit a distinct 64-byte [`M64HoloRecord`] (`local_origin`, per-cell XZ
-/// half-widths in `scale_bounds`, Y half-height in `mass_amplitude`, 12 local Bessel/spherical
-/// harmonics `sdf_harmonics`, and spectral reflectance) to each occupied cell.
+/// Partition a triangle [`Mesh`] into up to [`MAX_FITTED_HOLO_SEGMENTS`] connected row-run
+/// [`M64HoloRecord`] segments over a high-resolution $24 \times 24$ XZ occupancy grid (`local_origin`,
+/// per-run XZ half-widths in `scale_bounds`, Y half-height in `mass_amplitude`, 12 local Bessel/spherical
+/// harmonics `sdf_harmonics`, and spectral reflectance).
 ///
 /// Unlike [`fit_m64_holo_record_from_mesh_zero_heap`] (which collapses an entire perforated structure
-/// such as a cervical vertebra with a vertebral foramen and left/right transverse foramina into a
-/// single segment), this tests exact 2D XZ triangle overlap per cell so all un-occluded perforations
-/// and canals remain empty in the `HOLO` (`0x0306`) phase-space field across all harmonic cutoffs
-/// $K \in \{2, 4, 8, 12\}$. Zero heap beyond `mesh`.
+/// into a single segment) or isolated cell pillars (which leave exterior gaps between columns),
+/// merging contiguous occupied XZ cells along each Z row with an overlapping Z half-depth
+/// (`0.58 * cell_dz`) guarantees connected bone manifolds while keeping all distinct anatomical
+/// canals and foramina enclosed and open across harmonic cutoffs $K \in \{2, 4, 8, 12\}$. Zero heap.
 pub fn fit_m64_holo_segments_from_mesh_zero_heap(
     mesh: &Mesh,
     surface_reading: Option<&[[f32; 4]]>,
@@ -781,9 +708,10 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
         (max[2] - min[2]).max(1e-4),
     ];
 
-    // 8x8 XZ columnar grid (64 cells <= MAX_FITTED_HOLO_SEGMENTS) resolves central and lateral
-    // perforations (such as cervical vertebral and transverse foramina) without spilling across voids.
-    const G: usize = 8;
+    // 24x24 XZ fine sampling grid (576 cells), merged along X into <= 64 connected row-run segments.
+    // Resolves narrow lateral canals (e.g. C2/C6/C7 transverse foramina) while guaranteeing
+    // overlap between adjacent runs so open canals are enclosed rather than leaking to the exterior.
+    const G: usize = 24;
     const CELLS: usize = G * G;
     let cell_dx = ext[0] / (G as f32);
     let cell_dz = ext[2] / (G as f32);
@@ -828,12 +756,16 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
         }
 
         for iz in iz0..=iz1 {
-            let z0 = min[2] + (iz as f32) * cell_dz;
-            let z1 = z0 + cell_dz;
+            let cz = min[2] + ((iz as f32) + 0.5) * cell_dz;
+            if cz < tmin_z - 1e-5 || cz > tmax_z + 1e-5 {
+                continue;
+            }
             for ix in ix0..=ix1 {
-                let x0 = min[0] + (ix as f32) * cell_dx;
-                let x1 = x0 + cell_dx;
-                if triangle_overlaps_cell_xz(a, b, c, x0, x1, z0, z1) {
+                let cx = min[0] + ((ix as f32) + 0.5) * cell_dx;
+                if cx < tmin_x - 1e-5 || cx > tmax_x + 1e-5 {
+                    continue;
+                }
+                if point_in_triangle_xz(cx, cz, a, b, c) {
                     let cid = iz * G + ix;
                     cell_tri_counts[cid] += 1;
                     cell_ymin[cid] = cell_ymin[cid].min(tmin_y);
@@ -852,26 +784,47 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
     for iz in 0..G {
         let z0 = min[2] + (iz as f32) * cell_dz;
         let z1 = z0 + cell_dz;
-        for ix in 0..G {
-            let cid = iz * G + ix;
-            if cell_tri_counts[cid] == 0 || seg_count >= MAX_FITTED_HOLO_SEGMENTS {
+        let mut ix = 0usize;
+        while ix < G {
+            let cid0 = iz * G + ix;
+            if cell_tri_counts[cid0] == 0 {
+                ix += 1;
                 continue;
             }
-            let x0 = min[0] + (ix as f32) * cell_dx;
-            let x1 = x0 + cell_dx;
-            let ymin = cell_ymin[cid].max(min[1]);
-            let ymax = cell_ymax[cid].min(max[1]).max(ymin + 1e-3);
+            if seg_count >= MAX_FITTED_HOLO_SEGMENTS {
+                break;
+            }
+            let start_ix = ix;
+            let mut run_tris = 0u32;
+            let mut run_ymin = f32::INFINITY;
+            let mut run_ymax = f32::NEG_INFINITY;
+            let mut run_rgb = [0.0f32; 3];
+            while ix < G && cell_tri_counts[iz * G + ix] > 0 {
+                let cid = iz * G + ix;
+                run_tris += cell_tri_counts[cid];
+                run_ymin = run_ymin.min(cell_ymin[cid]);
+                run_ymax = run_ymax.max(cell_ymax[cid]);
+                run_rgb[0] += cell_rgb[cid][0];
+                run_rgb[1] += cell_rgb[cid][1];
+                run_rgb[2] += cell_rgb[cid][2];
+                ix += 1;
+            }
+            let end_ix = ix;
+            let x0 = min[0] + (start_ix as f32) * cell_dx;
+            let x1 = min[0] + (end_ix as f32) * cell_dx;
+            let ymin = run_ymin.max(min[1]);
+            let ymax = run_ymax.min(max[1]).max(ymin + 1e-3);
 
             let ccenter = [0.5 * (x0 + x1), 0.5 * (ymin + ymax), 0.5 * (z0 + z1)];
-            // Bound half-widths to 0.44 of cell pitch so even under maximum +12% harmonic
-            // modulation (0.44 * 1.12 = 0.4928 < 0.5), occupied cells never bleed into an
-            // adjacent empty foramen cell.
-            let half_wx = (0.44 * cell_dx).max(0.001);
-            let half_dz = (0.44 * cell_dz).max(0.001);
+            // Add a small overlap margin (+0.08 * cell_dx in X and 0.58 * cell_dz in Z) so
+            // adjacent row runs remain solidly connected across Z rows even when harmonic
+            // modulation scales radius_z by (1 - 0.10) = 0.90 (0.58 * 0.90 = 0.522 > 0.50).
+            let half_wx = (0.5 * (x1 - x0) + 0.08 * cell_dx).max(0.001);
+            let half_dz = (0.58 * cell_dz).max(0.001);
             let half_hy = (0.5 * (ymax - ymin)).max(0.02 * ext[1]).max(0.001);
             let cell_radius = 0.5 * (half_wx + half_dz);
 
-            // Fit 12 local harmonics for vertices near this cell
+            // Fit 12 local harmonics for vertices in this row run
             let mut accum = [0.0f32; 12];
             let mut weight_sum = [0.0f32; 12];
             for p in &mesh.positions {
@@ -899,16 +852,18 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
             for m in 0..12 {
                 if weight_sum[m] > 1e-5 {
                     let norm = (accum[m] / weight_sum[m]).clamp(-1.0, 1.0);
-                    sdf_harmonics[m] = (norm * 127.0).round() as i8;
+                    // Damp local harmonic amplitude so scale-space modulation refines surface
+                    // contour without shifting segment walls across narrow canals.
+                    sdf_harmonics[m] = (norm * 42.0).round() as i8;
                 }
             }
 
             let mut spectral_spd_base = single_rec.spectral_spd_base;
-            if surface_reading.is_some() && cell_tri_counts[cid] > 0 {
-                let inv = 1.0 / (cell_tri_counts[cid] as f32);
-                let r8 = (cell_rgb[cid][0] * inv * 255.0).round() as u8;
-                let g8 = (cell_rgb[cid][1] * inv * 255.0).round() as u8;
-                let b8 = (cell_rgb[cid][2] * inv * 255.0).round() as u8;
+            if surface_reading.is_some() && run_tris > 0 {
+                let inv = 1.0 / (run_tris as f32);
+                let r8 = (run_rgb[0] * inv * 255.0).round() as u8;
+                let g8 = (run_rgb[1] * inv * 255.0).round() as u8;
+                let b8 = (run_rgb[2] * inv * 255.0).round() as u8;
                 spectral_spd_base = [
                     b8,
                     ((b8 as u16 + g8 as u16) / 2) as u8,
@@ -927,9 +882,6 @@ pub fn fit_m64_holo_segments_from_mesh_zero_heap(
             ];
             rec.semantic_node_idx = (seg_count as u8).min(255);
             rec.parent_joint_offset = if seg_count == 0 { 0 } else { -(seg_count as i16) };
-            // Store XZ half-extents `[half_wx, half_dz]` in `scale_bounds` and vertical
-            // half-height `half_hy` in `mass_amplitude` so field-only proxy reconstruction
-            // preserves non-overlapping columnar aperture bounds.
             rec.scale_bounds = [
                 f16::from_f32(half_wx).to_bits(),
                 f16::from_f32(half_dz).to_bits(),
