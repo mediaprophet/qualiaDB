@@ -9,6 +9,193 @@ use crate::container_10d;
 use crate::container_10d::header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE};
 use crate::container_10d::{MaterialRecord, SubmeshRange};
 
+#[path = "sdf_brick_surface.rs"]
+mod sdf_brick_surface;
+pub(crate) use sdf_brick_surface::decode_sdfb_mesh;
+pub use sdf_brick_surface::{decode_sdfb_cutaway, SectionPlane, SdfCutawaySurface};
+#[path = "portal_assembly_mesh.rs"]
+mod assembly_mesh;
+pub use assembly_mesh::{
+    assembly_residency_digest, decode_hmc_leaf_assembly, decode_hmc_leaf_cutaway,
+    resolve_hmc_section_iris, LoadAssemblyCutaway, LoadAssemblyGpuBuffers, SectionLeafOccurrence,
+};
+
+/// Two-bit geometric region carried with a semantic surface pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PickSurfaceRegion {
+    UncutSurface = 0b00,
+    CutTissueWall = 0b01,
+    InternalCavityLumen = 0b10,
+}
+
+impl PickSurfaceRegion {
+    pub const fn from_u8(region: u8) -> Option<Self> {
+        match region {
+            0 => Some(Self::UncutSurface),
+            1 => Some(Self::CutTissueWall),
+            2 => Some(Self::InternalCavityLumen),
+            _ => None,
+        }
+    }
+}
+
+/// GPU draw identity captured before asynchronous visibility can change.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SemanticSurfacePick {
+    pub instance_slot: u32,
+    pub semantic_id: u64,
+    pub surface_region: PickSurfaceRegion,
+}
+
+/// A verified leaf reference and its authored transform, borrowed from an HMC.
+pub struct AdmittedAssemblyLeaf<'a> {
+    pub slot: usize,
+    pub semantic_id: u64,
+    pub key: &'a str,
+    pub bytes: &'a [u8],
+    pub overrides: container_10d::InstanceOverrideHeader,
+    pub coefficients: Vec<container_10d::SsmInstanceCoeff>,
+}
+
+/// Verify the selected assembly, semantic model and leaf digests before resolving
+/// the ordered AREF/IOVR pairs and INST identities for the renderer.
+pub fn admit_leaf_assembly<'a>(
+    bundle: &'a crate::bundle::BundleReader<'a>,
+    assembly_key: &str,
+) -> Result<Vec<AdmittedAssemblyLeaf<'a>>, String> {
+    use container_10d::{
+        decode_archetype_ref_record, decode_instance_batch_into, ArchetypeDigestAlg,
+        InstanceBatchRecord, SsmInstanceCoeff, TypedFieldRecord, TypedPayloadResolver,
+        FIELD_KIND_ARCHETYPE_REF, FIELD_KIND_INSTANCE_BATCH, MANIFOLD_IDENTITY_V2_MAX_FIELDS,
+        MAX_INSTANCE_SSM_COEFFS,
+    };
+
+    let assembly = bundle.get(assembly_key).ok_or("Assembly entry missing from HMC")?;
+    if bundle.entry(assembly_key).is_none_or(|entry| entry.kind != "10d")
+        || !bundle.verify_entry(assembly_key)
+    {
+        return Err("HMC assembly entry failed its 10D kind or SHA-256 check".into());
+    }
+    let header = Container10dHeader::parse(assembly).map_err(|error| error.to_string())?;
+    if header.header_crc32c != container_10d::compute_whole_file_crc32c(assembly) {
+        return Err("HMC leaf assembly has a mismatched 10D checksum".into());
+    }
+    let mut scratch = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    let mut records = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    let view = TypedPayloadResolver::new(assembly, &[], &mut scratch, &mut records)
+        .map_err(|error| error.to_string())?;
+    if header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE != 0 {
+        use container_10d::provenance_section::{decode_provenance_section, validate_provenance};
+        let payload = view.section_payload(container_10d::SectionType::ProvenanceSidecar)
+            .ok_or("HMC leaf assembly has no required root attestation")?;
+        let provenance = decode_provenance_section(payload).map_err(|error| format!("{error:?}"))?;
+        validate_provenance(&provenance).map_err(|error| format!("{error:?}"))?;
+    }
+    let count = view.instance_override_count().map_err(|error| error.to_string())?;
+    if count == 0 || view.payloads_of_kind(FIELD_KIND_ARCHETYPE_REF).count() != count {
+        return Err("HMC leaf assembly requires an AREF for each IOVR".into());
+    }
+    let mut batches = view.payloads_of_kind(FIELD_KIND_INSTANCE_BATCH);
+    let batch = batches.next().ok_or("HMC leaf assembly requires INST")?
+        .map_err(|error| error.to_string())?;
+    if batches.next().is_some() {
+        return Err("HMC leaf assembly requires one ordered INST batch".into());
+    }
+    let mut instances = vec![InstanceBatchRecord::default(); count];
+    let (_, instance_count) = decode_instance_batch_into(batch.bytes, &mut instances)
+        .map_err(|error| format!("Invalid INST batch: {error:?}"))?;
+    if instance_count != count {
+        return Err("INST record count differs from AREF and IOVR".into());
+    }
+
+    let model = crate::bundle::semantic_model::open_semantic_model(bundle)
+        .map_err(|error| error.to_string())?;
+    let mut page = vec![0; 1024 * 1024];
+    let mut lexical = [0; 4096];
+    let mut verified_semantics = std::collections::HashSet::new();
+    let mut require_iri = |hash| -> Result<(), String> {
+        if verified_semantics.contains(&hash) {
+            return Ok(());
+        }
+        let len = model.lookup_lexicon_hash_into(hash, &mut page, &mut lexical)
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| format!("Unresolved assembly semantic identity {hash:#018x}"))?;
+        let iri = std::str::from_utf8(&lexical[..len]).map_err(|error| error.to_string())?;
+        if hash == 0 || !crate::bundle::semantic_model::valid_iri(iri) || crate::q_hash(iri) != hash {
+            return Err(format!("Invalid assembly semantic binding for {hash:#018x}"));
+        }
+        verified_semantics.insert(hash);
+        Ok(())
+    };
+
+    let mut admitted = Vec::with_capacity(count);
+    let mut coefficient_scratch = [SsmInstanceCoeff::default(); MAX_INSTANCE_SSM_COEFFS];
+    let mut leaf_ids = std::collections::HashSet::with_capacity(count);
+    let mut verified_leaves = std::collections::HashSet::with_capacity(count);
+    for (slot, (reference, instance)) in view.payloads_of_kind(FIELD_KIND_ARCHETYPE_REF)
+        .zip(instances).enumerate()
+    {
+        let reference = reference.map_err(|error| error.to_string())?;
+        let aref = decode_archetype_ref_record(reference.bytes)
+            .map_err(|error| format!("Invalid AREF at slot {slot}: {error:?}"))?;
+        require_iri(aref.taxon_or_class_iri_hash)?;
+        require_iri(instance.entity_id_hash)?;
+        if !leaf_ids.insert(instance.entity_id_hash) {
+            return Err(format!("Duplicate assembly instance identity at slot {slot}"));
+        }
+        let entry_selector = crate::bundle::semantic_model::hmc_entry_key_iri;
+        let mut matches = bundle.entries().iter().filter(|entry| {
+            crate::q_hash(&entry.key) == aref.subresource_key_hash
+                || crate::q_hash(&entry_selector(&entry.key)) == aref.subresource_key_hash
+        });
+        let entry = matches.next().ok_or_else(|| format!("Missing AREF leaf at slot {slot}"))?;
+        if matches.next().is_some()
+            || entry.key == assembly_key
+            || entry.kind != "10d"
+            || aref.digest_alg != ArchetypeDigestAlg::Sha256 as u8
+            || entry.sha256.as_slice() != aref.archetype_digest.as_slice()
+        {
+            return Err(format!("Invalid or ambiguous SHA-256 AREF leaf at slot {slot}"));
+        }
+        if crate::q_hash(&entry_selector(&entry.key)) == aref.subresource_key_hash {
+            require_iri(aref.subresource_key_hash)?;
+        }
+        let bytes = bundle.get(&entry.key).ok_or("AREF leaf range is missing")?;
+        let first_use = verified_leaves.insert(entry.key.as_str());
+        if first_use && !bundle.verify_entry(&entry.key) {
+            return Err(format!("AREF leaf SHA-256 check failed at slot {slot}"));
+        }
+        let mut leaf_scratch = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+        let mut leaf_fields = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+        let leaf = TypedPayloadResolver::new(bytes, &[], &mut leaf_scratch, &mut leaf_fields)
+            .map_err(|error| error.to_string())?;
+        if leaf.identity().map(|identity| identity.entity_id.0) != Some(aref.archetype_entity_id) {
+            return Err(format!("AREF entity identity mismatch at slot {slot}"));
+        }
+        if first_use {
+            if let Some(sdf) = container_10d::sdf_brick_section::read_container_sdfb(bytes)? {
+                for brick in sdf.bricks() {
+                    require_iri(brick.wall_semantic_id())?;
+                    require_iri(brick.lumen_semantic_id())?;
+                }
+            }
+        }
+        let bound = view.instance_override_into(slot, &mut coefficient_scratch)
+            .map_err(|error| error.to_string())?
+            .ok_or("IOVR disappeared after assembly admission")?;
+        admitted.push(AdmittedAssemblyLeaf {
+            slot,
+            semantic_id: instance.entity_id_hash,
+            key: &entry.key,
+            bytes,
+            overrides: bound.header,
+            coefficients: coefficient_scratch[..bound.coefficient_count].to_vec(),
+        });
+    }
+    Ok(admitted)
+}
+
 /// Orbit-framed mesh buffers `load_10d` passes to GPU upload.
 #[derive(Debug, Clone)]
 pub struct Load10dGpuBuffers {
@@ -32,7 +219,7 @@ pub struct Load10dGpuBuffers {
     pub provenance_mu: f32,
     /// Header default-refuse with no attestation sidecar.
     pub governance_refused: bool,
-    /// Actual field or geometry representation decoded (`"QuantizedMesh"`, `"HolographicMultiSegmentField"`, `"HolographicProxyBox"`).
+    /// Actual field or geometry representation decoded.
     pub field_representation: &'static str,
     /// Number of `M64HoloRecord` segments decoded from `HOLO` (`0x0306`).
     pub holo_segment_count: u16,
@@ -44,10 +231,17 @@ pub struct Load10dGpuBuffers {
 
 /// Parse a sealed `.10d` into the GPU upload arguments `QualiaPortal::load_10d` uses.
 pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
+    decode_load_10d_in_frame(bytes, true)
+}
+
+pub(crate) fn decode_load_10d_in_frame(bytes: &[u8], orbit_fit: bool) -> Result<Load10dGpuBuffers, String> {
     let mut bytes_mut = bytes.to_vec();
     let header = Container10dHeader::parse(&bytes_mut).map_err(|e| format!("10d header: {e}"))?;
 
     container_10d::verify_whole_file_crc32c(&mut bytes_mut).map_err(|e| format!("10d CRC: {e}"))?;
+    validate_bound_instance_overrides(&bytes_mut)?;
+    let sdf = decode_sdfb_mesh(&bytes_mut)?;
+    let has_sdf = sdf.is_some();
 
     let descs = container_10d::parse_section_table(&bytes_mut, &header)
         .map_err(|e| format!("10d section table: {e}"))?;
@@ -70,10 +264,12 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
 
         match st {
             container_10d::SectionType::QuantizedMesh => {
-                mesh = Some(
-                    container_10d::decode_mesh_section(payload)
-                        .map_err(|e| format!("10d mesh decode: {e}"))?,
-                );
+                if !has_sdf {
+                    mesh = Some(
+                        container_10d::decode_mesh_section(payload)
+                            .map_err(|e| format!("10d mesh decode: {e}"))?,
+                    );
+                }
             }
             container_10d::SectionType::Tensor10DNodes => {
                 has_holographic_or_computational = true;
@@ -161,7 +357,9 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     } else {
         0
     };
-    let field_representation = if had_explicit_mesh {
+    let field_representation = if has_sdf {
+        "SignedDistanceBrickSurface"
+    } else if had_explicit_mesh {
         "QuantizedMesh"
     } else if !decoded_holo_segments.is_empty() {
         "HolographicMultiSegmentField"
@@ -170,7 +368,10 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     };
     let holo_segment_count = decoded_holo_segments.len() as u16;
 
-    let mesh = match mesh {
+    let (mesh, sdf_ranges) = if let Some(surface) = sdf {
+        (surface.mesh, Some(surface.ranges))
+    } else {
+        let mesh = match mesh {
         Some(m) => m,
         None if !decoded_holo_segments.is_empty() => synthesize_holographic_segments_mesh(
             &decoded_holo_segments,
@@ -182,6 +383,8 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
             synthesize_holographic_proxy_box_mesh(proxy_min, proxy_max)
         }
         None => return Err("10d: no mesh or holographic phase-space section".to_string()),
+        };
+        (mesh, None)
     };
     let frames = if had_explicit_mesh {
         container_10d::read_container_mesh_frames_with_limits(
@@ -267,7 +470,9 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
 
     let mesh_index_count = u32::try_from(mesh.triangles.len().saturating_mul(3))
         .map_err(|_| "10d index count exceeds u32".to_string())?;
-    let (materials, ranges) = if had_explicit_mesh {
+    let (materials, ranges) = if let Some(ranges) = sdf_ranges {
+        (vec![MaterialRecord::legacy_default()], ranges)
+    } else if had_explicit_mesh {
         decode_load_10d_materials(&bytes_mut, mesh_index_count)?
     } else {
         (Vec::new(), Vec::new())
@@ -276,19 +481,17 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     let governance_refused =
         (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
 
-    let c = mesh.centroid();
-    let ext = [
-        mesh.max[0] - mesh.min[0],
-        mesh.max[1] - mesh.min[1],
-        mesh.max[2] - mesh.min[2],
-    ];
-    let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
-    let s = 1.6 / span;
-    let positions: Vec<[f32; 3]> = mesh
-        .positions
-        .iter()
-        .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
-        .collect();
+    let vertex_count = mesh.positions.len() as u32;
+    let positions = if orbit_fit {
+        let c = mesh.centroid();
+        let span = (0..3).map(|axis| mesh.max[axis] - mesh.min[axis]).fold(1e-6, f32::max);
+        let s = 1.6 / span;
+        mesh.positions.iter()
+            .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
+            .collect()
+    } else {
+        mesh.positions
+    };
     let indices: Vec<u32> = mesh
         .triangles
         .iter()
@@ -296,7 +499,7 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         .collect();
 
     Ok(Load10dGpuBuffers {
-        vertex_count: mesh.positions.len() as u32,
+        vertex_count,
         triangle_count: mesh.triangles.len() as u32,
         positions,
         colors,
@@ -312,6 +515,16 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
         holo_segment_count,
         active_harmonic_order,
     })
+}
+
+pub(crate) fn validate_bound_instance_overrides(bytes: &[u8]) -> Result<(), String> {
+    use container_10d::{TypedFieldRecord, TypedPayloadResolver, MANIFOLD_IDENTITY_V2_MAX_FIELDS};
+
+    let mut scratch = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    let mut fields = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    TypedPayloadResolver::new(bytes, &[], &mut scratch, &mut fields)
+        .and_then(|view| view.validate_instance_overrides())
+        .map_err(|error| error.to_string())
 }
 
 /// Reconstruct a cavity-preserving multi-segment Holographic Phase-Space mesh directly from
@@ -547,7 +760,7 @@ pub fn upload_load_10d_to_gpu_with_textures(
 
     bind_and_upload_textures(gpu, &mut materials, texture_bytes);
 
-    gpu.upload_mesh_colored_with_frames_and_materials_and_uv0(
+    let triangles = gpu.upload_mesh_colored_with_frames_and_materials_and_uv0(
         &decoded.positions,
         &decoded.colors,
         decoded.normals.as_deref(),
@@ -556,7 +769,26 @@ pub fn upload_load_10d_to_gpu_with_textures(
         &decoded.indices,
         &materials,
         &ranges,
-    )
+    )?;
+    if decoded.field_representation == "SignedDistanceBrickSurface" {
+        // Each indexed chunk owns one identity transform. The existing native
+        // group pass picks the visible chunk's full 64-bit wall hash.
+        use crate::render::instance_culling::GpuInstanceRecord;
+        const IDENTITY: [[f32; 4]; 4] = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ];
+        let mut groups = Vec::with_capacity(ranges.len() * 4);
+        let mut instances = Vec::with_capacity(ranges.len());
+        for (slot, range) in ranges.iter().enumerate() {
+            groups.extend([range.first_index, range.index_count, slot as u32, 1]);
+            instances.push(GpuInstanceRecord::new(IDENTITY, range.semantic_id));
+        }
+        gpu.set_mesh_instance_groups_packed(&groups, bytemuck::cast_slice(&instances))?;
+    }
+    Ok(triangles)
 }
 
 #[cfg(feature = "gpu-runtime")]

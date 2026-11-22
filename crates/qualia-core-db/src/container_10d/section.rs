@@ -124,6 +124,9 @@ pub enum SectionType {
     VoxelLattice = 22,
     /// Nanite-style hierarchical meshlet cluster DAG (`CDAG`) for continuous GPU-driven LOD.
     ClusterDag = 23,
+    /// Sparse signed-distance bricks (`SDFB`).
+    SignedDistanceBrick = 24,
+    // Slots 25–27 are reserved for new typed field sections.
 }
 
 impl SectionType {
@@ -165,6 +168,7 @@ impl SectionType {
             21 => Some(SectionType::HyperspectralCube),
             22 => Some(SectionType::VoxelLattice),
             23 => Some(SectionType::ClusterDag),
+            24 => Some(SectionType::SignedDistanceBrick),
             _ => None,
         }
     }
@@ -195,8 +199,18 @@ impl SectionType {
                 | SectionType::HyperspectralCube
                 | SectionType::VoxelLattice
                 | SectionType::ClusterDag
+                | SectionType::SignedDistanceBrick
         )
     }
+}
+
+#[cfg(test)]
+#[test]
+fn sdfb_section_slot_is_registered_without_consuming_neighboring_slots() {
+    assert_eq!(SectionType::SignedDistanceBrick as u8, 24);
+    assert_eq!(SectionType::from_u8(24), Some(SectionType::SignedDistanceBrick));
+    assert!(SectionType::SignedDistanceBrick.is_implemented());
+    assert!((25..=27).all(|slot| SectionType::from_u8(slot).is_none()));
 }
 
 /// Alignment tier for a section's start offset. The tier determines the

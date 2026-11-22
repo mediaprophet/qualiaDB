@@ -269,6 +269,83 @@ impl ParamSpec {
     }
 }
 
+/// QUDT unit IRI and optional numeric domain bounds for a parameter.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParamQudtBoundsSpec {
+    /// Parameter name matching `ParamSpec::name`.
+    pub name: &'static str,
+    /// Canonical QUDT unit IRI.
+    pub qudt_unit_iri: &'static str,
+    /// IEEE-754 bits of the inclusive lower bound, or negative infinity.
+    pub min_value_f64_bits: u64,
+    /// IEEE-754 bits of the inclusive upper bound, or positive infinity.
+    pub max_value_f64_bits: u64,
+    /// Whether an inclusive numeric range is declared (`1`) or absent (`0`).
+    pub has_numeric_bounds: u8,
+}
+
+impl ParamQudtBoundsSpec {
+    /// Declares a unit without restricting the value's numeric range.
+    #[inline]
+    pub const fn unit_only(name: &'static str, qudt_unit_iri: &'static str) -> Self {
+        Self {
+            name,
+            qudt_unit_iri,
+            min_value_f64_bits: f64::NEG_INFINITY.to_bits(),
+            max_value_f64_bits: f64::INFINITY.to_bits(),
+            has_numeric_bounds: 0,
+        }
+    }
+
+    /// Declares a unit and inclusive numeric bounds.
+    #[inline]
+    pub const fn bounded_f64(
+        name: &'static str,
+        qudt_unit_iri: &'static str,
+        min_val: f64,
+        max_val: f64,
+    ) -> Self {
+        Self {
+            name,
+            qudt_unit_iri,
+            min_value_f64_bits: min_val.to_bits(),
+            max_value_f64_bits: max_val.to_bits(),
+            has_numeric_bounds: 1,
+        }
+    }
+
+    #[inline]
+    pub fn min_f64(self) -> f64 {
+        f64::from_bits(self.min_value_f64_bits)
+    }
+
+    #[inline]
+    pub fn max_f64(self) -> f64 {
+        f64::from_bits(self.max_value_f64_bits)
+    }
+}
+
+#[cfg(test)]
+mod param_qudt_bounds_tests {
+    use super::ParamQudtBoundsSpec;
+
+    #[test]
+    fn unit_and_inclusive_bounds_preserve_ieee_bits() {
+        const METER: &str = "http://qudt.org/vocab/unit/M";
+        const BOUNDED: ParamQudtBoundsSpec =
+            ParamQudtBoundsSpec::bounded_f64("offset", METER, -0.0, 0.25);
+        const UNIT_ONLY: ParamQudtBoundsSpec = ParamQudtBoundsSpec::unit_only("offset", METER);
+        assert_eq!(BOUNDED.qudt_unit_iri, METER);
+        assert_eq!(BOUNDED.has_numeric_bounds, 1);
+        assert_eq!(BOUNDED.min_f64().to_bits(), (-0.0f64).to_bits());
+        assert_eq!(BOUNDED.max_f64(), 0.25);
+        assert_eq!(UNIT_ONLY.has_numeric_bounds, 0);
+        assert_eq!(UNIT_ONLY.min_f64(), f64::NEG_INFINITY);
+        assert_eq!(UNIT_ONLY.max_f64(), f64::INFINITY);
+    }
+}
+
 /// Static descriptor for a single extension function.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

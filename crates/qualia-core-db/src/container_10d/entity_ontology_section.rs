@@ -242,7 +242,13 @@ pub fn decode_entity_ontology_section_into<'a>(
     }
 
     let expected_len = entity_ontology_encoded_len(count);
-    if payload.len() != expected_len {
+    let keyframe_count = header.reserved_u32 as usize;
+    let expected_with_keyframes = if keyframe_count <= MAX_DEVELOPMENTAL_KEYFRAMES {
+        expected_len.saturating_add(keyframe_count * DEVELOPMENTAL_KEYFRAME_RECORD_SIZE)
+    } else {
+        expected_len
+    };
+    if payload.len() != expected_len && payload.len() != expected_with_keyframes {
         return Err(EntityOntologySectionError::LengthMismatch {
             header_len: expected_len,
             payload_len: payload.len(),

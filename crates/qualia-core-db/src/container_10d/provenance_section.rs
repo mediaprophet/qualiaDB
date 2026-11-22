@@ -64,7 +64,7 @@ pub const MAX_PROVENANCE_FIELD: usize = 16 * 1024 * 1024;
 /// 60      4     media_len:u32      (source media-type utf8 length)
 /// 64      4     licence_len:u32
 /// 68      4     vc_len:u32
-/// 72      4     metadata_len:u32   (Schema.org / Dublin Core semantic JSON-LD length)
+/// 72      4     metadata_len:u32   (Schema.org / Dublin Core semantic CBOR-LD length)
 /// 76      4     reserved_pad:u32   (padding for 80-byte alignment)
 /// ```
 #[repr(C)]

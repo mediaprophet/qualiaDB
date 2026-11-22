@@ -11,6 +11,7 @@ pub mod gpu_morph;
 pub mod gpu_skin;
 pub mod ik_motor;
 pub mod player;
+pub mod semantic_motion;
 
 pub use fauna_rig::{
     FaunaBiomechanicalArchetype, FaunaSkeletalRig10d, FAUNA_MAX_JOINTS, FAUNA_PARENT_INDICES,

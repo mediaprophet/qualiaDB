@@ -9,6 +9,10 @@ rustflags = ['--cfg', 'getrandom_backend="wasm_js"', '-C', 'debuginfo=0']
 [build]
 rustflags = ['--cfg', 'anvil_n3_bind']
 
+[patch."https://github.com/mediaprophet/anvil.git"]
+anvil-core = { path = "../anvil/crates/anvil-core" }
+anvil-gpu = { path = "../anvil/crates/anvil-gpu" }
+
 [patch."https://github.com/mediaprophet/etalon.git"]
 naga = { path = "../etalon/naga" }
 etalon = { path = "../etalon/etalon" }

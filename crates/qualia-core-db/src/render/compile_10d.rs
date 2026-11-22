@@ -1048,9 +1048,19 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         MAX_FITTED_HOLO_SEGMENTS, PROCEDURAL_SYNTHESIS_HEADER_SIZE,
         PROCEDURAL_SYNTHESIS_SECTION_VERSION,
     };
+    use crate::container_10d::{
+        decode_symbolic_rdf_cbor_ld, encode_multiscale_strata_section,
+        encode_symbolic_rdf_cbor_ld, multiscale_strata_encoded_len, MultilingualLexicalTerm,
+        NestedStratumNodeRecord, SymbolicRdfCborLdPayload, FIELD_KIND_MULTISCALE_STRATA,
+        FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, MANIFOLD_IDENTITY_V2_MAX_FIELDS,
+    };
     use crate::q42::m64_matter::M64HoloRecord;
+    use crate::bundle::semantic_model::{holo_address_payload, validated_holo_header, HOLO_ADDRESS_CONTEXT};
     use crate::q_hash;
 
+    const GEOMETRY_CONTEXT: &str = "https://qualiadb.org/contexts/10d-geometry-v1";
+    const ASSET_CLASS: &str = "https://qualiadb.org/ontology/hmc#SpatialAsset";
+    const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     let parsed_header = Container10dHeader::parse(bytes).map_err(|_| Compile10dError::BadHeader)?;
     let descs = parse_section_table(bytes, &parsed_header).map_err(Compile10dError::Section)?;
 
@@ -1104,6 +1114,9 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
 
     let subj_hash = q_hash(entity_uri);
     let prov_hash = q_hash(&format!("{entity_uri}#provenance"));
+    if subj_hash == 0 || !crate::bundle::semantic_model::valid_iri(entity_uri) {
+        return Err(Compile10dError::ExtraSection { kind: "CBLD identity" });
+    }
     let metric_variety = if domain_id == 1 { 2 } else { 0 };
 
     let proxy_mesh = match mesh_opt {
@@ -1127,12 +1140,13 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
     let mut sidecar_combined: Vec<u8> = Vec::new();
     let mut fields: Vec<TypedFieldRecord> = Vec::new();
     let mut next_field_id = 1u64;
+    let mut has_geometry_cbld = false;
 
     if let Some(mid2_bytes) = existing_mid2 {
-        let mut decoded_fields = [TypedFieldRecord::default(); 64];
-        if let Ok((existing_id, fcount)) =
+        let mut decoded_fields = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+        let (prior_identity, fcount) =
             decode_manifold_identity_v2(mid2_bytes, &[], &mut decoded_fields)
-        {
+                .map_err(|_| Compile10dError::ExtraSection { kind: "MID2" })?;
             // Only short-circuit if there is no mesh to re-fit HOLO from and all v2 sections exist.
             if mesh_opt.is_none()
                 && decoded_fields[..fcount]
@@ -1140,11 +1154,34 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
                     .any(|f| f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE)
                 && has_proc
                 && has_provenance
+                && decoded_fields[..fcount].iter().any(|f| f.kind == FIELD_KIND_SYMBOLIC_RDF_CBOR_LD)
+                && decoded_fields[..fcount].iter().any(|f| f.kind == FIELD_KIND_MULTISCALE_STRATA)
             {
-                return Ok(bytes.to_vec());
+                return append_holo_addresses_to_existing_10d(
+                    bytes, &parsed_header, &prior_identity, &decoded_fields[..fcount], entity_uri,
+                );
             }
+            let mut old_holo_addresses = Vec::new();
+            let mut expected_holo_addresses = Vec::new();
             for f in &decoded_fields[..fcount] {
                 if f.kind == FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE {
+                    if f.payload_section_id == SectionType::FieldSidecar as u32 {
+                        let offset = usize::try_from(f.payload_offset)
+                            .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+                        let length = usize::try_from(f.payload_length)
+                            .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+                        let end = offset.checked_add(length)
+                            .ok_or(Compile10dError::ExtraSection { kind: "HOLO" })?;
+                        let old = existing_sidecar.and_then(|sidecar| sidecar.get(offset..end))
+                            .ok_or(Compile10dError::ExtraSection { kind: "HOLO" })?;
+                        let prior = validated_holo_header(old)
+                            .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+                        if prior.nquin_subject_hash == subj_hash {
+                            expected_holo_addresses.push(holo_address_payload(
+                                entity_uri, f.field_id, prior.holo_segment_count,
+                            ).map_err(|_| Compile10dError::ExtraSection { kind: "CBLD HOLO addresses" })?);
+                        }
+                    }
                     continue;
                 }
                 let mut f_copy = *f;
@@ -1153,6 +1190,24 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
                         let s = f.payload_offset as usize;
                         let e = s.saturating_add(f.payload_length as usize);
                         if let Some(sub) = sc.get(s..e) {
+                            if f.kind == FIELD_KIND_SYMBOLIC_RDF_CBOR_LD {
+                                let payload = decode_symbolic_rdf_cbor_ld(sub)
+                                    .map_err(|_| Compile10dError::ExtraSection { kind: "CBLD" })?;
+                                if payload.context_iri == HOLO_ADDRESS_CONTEXT {
+                                    old_holo_addresses.push(payload);
+                                    continue;
+                                }
+                                if payload.context_iri == GEOMETRY_CONTEXT {
+                                    if !payload.lexicon.iter().any(|term| {
+                                        term.term_hash == subj_hash && term.iri_utf8 == entity_uri
+                                    }) {
+                                        return Err(Compile10dError::ExtraSection {
+                                            kind: "CBLD identity",
+                                        });
+                                    }
+                                    has_geometry_cbld = true;
+                                }
+                            }
                             let new_off = sidecar_combined.len() as u64;
                             sidecar_combined.extend_from_slice(sub);
                             f_copy.payload_offset = new_off;
@@ -1161,11 +1216,15 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
                 }
                 fields.push(f_copy);
                 if f_copy.field_id >= next_field_id {
-                    next_field_id = f_copy.field_id + 1;
+                    next_field_id = f_copy.field_id.checked_add(1)
+                        .ok_or(Compile10dError::ExtraSection { kind: "MID2" })?;
                 }
             }
-            let _ = existing_id;
-        }
+            for old in old_holo_addresses {
+                let matched = expected_holo_addresses.iter().position(|expected| expected == &old)
+                    .ok_or(Compile10dError::ExtraSection { kind: "CBLD HOLO addresses" })?;
+                expected_holo_addresses.swap_remove(matched);
+            }
     } else if let Some(sc) = existing_sidecar {
         sidecar_combined.extend_from_slice(sc);
         if fields.is_empty() && !sc.is_empty() {
@@ -1195,6 +1254,169 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         }
     }
 
+    let prov_iri = format!("{entity_uri}#provenance");
+    let predicate = q_hash(RDF_TYPE);
+    let object = q_hash(ASSET_CLASS);
+    let context = q_hash(GEOMETRY_CONTEXT);
+    let mut extra_cbld_iris: Vec<String> = Vec::new();
+    let mut rewritten_mat_buf: Vec<u8> = Vec::new();
+    let mut rewritten_eont_buf: Vec<u8> = Vec::new();
+    if existing_mid2.is_none() {
+        if let Some(ref mesh) = mesh_opt {
+            let index_count = (mesh.triangle_count() * 3) as u32;
+            for entry in &mut preserved_sections {
+                if entry.0 == SectionType::Materials {
+                    use crate::container_10d::material_section::{
+                        decode_material_section_into, encode_material_section,
+                        encoded_len as mat_encoded_len, material_section_counts, MaterialRecord,
+                        SubmeshRange,
+                    };
+                    if let Ok((m_count, r_count)) = material_section_counts(entry.4) {
+                        let mut mats = vec![MaterialRecord::legacy_default(); m_count];
+                        let mut rngs = vec![
+                            SubmeshRange {
+                                first_index: 0,
+                                index_count: 0,
+                                material_id: 0,
+                                semantic_id: 0,
+                            };
+                            r_count
+                        ];
+                        if decode_material_section_into(entry.4, index_count, &mut mats, &mut rngs)
+                            .is_ok()
+                        {
+                            for (idx, rng) in rngs.iter_mut().enumerate() {
+                                let sub_iri = format!("{entity_uri}#submesh-{idx}");
+                                rng.semantic_id = q_hash(&sub_iri);
+                                extra_cbld_iris.push(sub_iri);
+                            }
+                            if let Some(needed) = mat_encoded_len(mats.len(), rngs.len()) {
+                                rewritten_mat_buf = vec![0u8; needed];
+                                if let Ok(written) = encode_material_section(
+                                    &mats,
+                                    &rngs,
+                                    index_count,
+                                    &mut rewritten_mat_buf,
+                                ) {
+                                    rewritten_mat_buf.truncate(written);
+                                } else {
+                                    rewritten_mat_buf.clear();
+                                }
+                            }
+                        }
+                    }
+                } else if entry.0 == SectionType::EntityOntology {
+                    use crate::container_10d::{
+                        AffordanceBinaryRecord, EntityOntologyMiniHeader, AFFORDANCE_RECORD_SIZE,
+                        ENTITY_ONTOLOGY_MINI_HEADER_SIZE, MAX_AFFORDANCES_PER_SECTION,
+                    };
+                    if entry.4.len() >= ENTITY_ONTOLOGY_MINI_HEADER_SIZE {
+                        let hdr: EntityOntologyMiniHeader = bytemuck::pod_read_unaligned(
+                            &entry.4[..ENTITY_ONTOLOGY_MINI_HEADER_SIZE],
+                        );
+                        let count = hdr.affordance_count as usize;
+                        let needed_min =
+                            ENTITY_ONTOLOGY_MINI_HEADER_SIZE + count * AFFORDANCE_RECORD_SIZE;
+                        if count <= MAX_AFFORDANCES_PER_SECTION && entry.4.len() >= needed_min {
+                            rewritten_eont_buf = entry.4.to_vec();
+                            for idx in 0..count {
+                                let off = ENTITY_ONTOLOGY_MINI_HEADER_SIZE
+                                    + idx * AFFORDANCE_RECORD_SIZE;
+                                let mut rec: AffordanceBinaryRecord = bytemuck::pod_read_unaligned(
+                                    &rewritten_eont_buf[off..off + AFFORDANCE_RECORD_SIZE],
+                                );
+                                let act_iri = format!("{entity_uri}#affordance-action-{idx}");
+                                rec.action_id = q_hash(&act_iri);
+                                extra_cbld_iris.push(act_iri);
+                                if rec.required_capability_hash != 0 {
+                                    let cap_iri =
+                                        format!("{entity_uri}#affordance-capability-{idx}");
+                                    rec.required_capability_hash = q_hash(&cap_iri);
+                                    extra_cbld_iris.push(cap_iri);
+                                }
+                                if rec.emitted_topic_hash != 0 {
+                                    let top_iri = format!("{entity_uri}#affordance-topic-{idx}");
+                                    rec.emitted_topic_hash = q_hash(&top_iri);
+                                    extra_cbld_iris.push(top_iri);
+                                }
+                                rewritten_eont_buf[off..off + AFFORDANCE_RECORD_SIZE]
+                                    .copy_from_slice(bytemuck::bytes_of(&rec));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut lexicon: Vec<MultilingualLexicalTerm> =
+        [entity_uri, &prov_iri, RDF_TYPE, ASSET_CLASS, GEOMETRY_CONTEXT]
+            .into_iter()
+            .map(|iri| MultilingualLexicalTerm {
+                term_hash: q_hash(iri),
+                iri_utf8: iri.to_owned(),
+                lang_bcp47: None,
+                label_utf8: String::new(),
+            })
+            .collect();
+    for iri in &extra_cbld_iris {
+        let term_hash = q_hash(iri);
+        if !lexicon.iter().any(|t| t.term_hash == term_hash) {
+            lexicon.push(MultilingualLexicalTerm {
+                term_hash,
+                iri_utf8: iri.clone(),
+                lang_bcp47: None,
+                label_utf8: String::new(),
+            });
+        }
+    }
+    let payload = SymbolicRdfCborLdPayload {
+        context_iri: GEOMETRY_CONTEXT.into(),
+        lexicon,
+        nquins: vec![[
+            subj_hash, predicate, object, context, 0,
+            crate::NQuin::calculate_parity(subj_hash, predicate, object, context, 0),
+        ]],
+        n3_logic_rules_utf8: Vec::new(),
+        shacl_shape_iris_utf8: Vec::new(),
+    };
+    let cbld = encode_symbolic_rdf_cbor_ld(&payload)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "CBLD" })?;
+    let has_strata = fields.iter().any(|field| field.kind == FIELD_KIND_MULTISCALE_STRATA);
+    let mut add_field = |kind, payload: &[u8]| -> Result<(), Compile10dError> {
+        let current_id = next_field_id;
+        next_field_id = current_id.checked_add(1)
+            .ok_or(Compile10dError::ExtraSection { kind: "MID2" })?;
+        fields.push(TypedFieldRecord {
+            field_id: current_id,
+            kind,
+            flags: 0,
+            unit_id: 0,
+            payload_section_id: SectionType::FieldSidecar as u32,
+            payload_offset: sidecar_combined.len() as u64,
+            payload_length: payload.len() as u64,
+        });
+        sidecar_combined.extend_from_slice(payload);
+        Ok(())
+    };
+    // An existing stratum hierarchy remains authored data. Legacy geometry has
+    // only enough evidence for one root stratum.
+    if !has_geometry_cbld {
+        add_field(FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, &cbld)?;
+    }
+    if !has_strata {
+        let mut root = <NestedStratumNodeRecord as bytemuck::Zeroable>::zeroed();
+        root.host_anchor.entity_hash = subj_hash;
+        root.host_anchor.anchor_domain = 0xff;
+        root.parent_node_index = u16::MAX;
+        root.taxon_or_ontology_iri_hash = object;
+        root.embodiment_state = crate::container_10d::EmbodimentResolutionState::InlineEmbodied as u8;
+        let mut strata = vec![0; multiscale_strata_encoded_len(1)
+            .ok_or(Compile10dError::ExtraSection { kind: "MSTR" })?];
+        let written = encode_multiscale_strata_section(&[root], 0, &mut strata)
+            .map_err(|_| Compile10dError::ExtraSection { kind: "MSTR" })?;
+        add_field(FIELD_KIND_MULTISCALE_STRATA, &strata[..written])?;
+    }
+
     // Align HOLO payload start to 64 bytes inside FieldSidecar
     while sidecar_combined.len() % 64 != 0 {
         sidecar_combined.push(0);
@@ -1211,8 +1433,9 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
     .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
     sidecar_combined.extend_from_slice(&holo_buf[..holo_written]);
 
+    let holo_field_id = next_field_id;
     fields.push(TypedFieldRecord {
-        field_id: next_field_id,
+        field_id: holo_field_id,
         kind: FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
         flags: 0,
         unit_id: 0,
@@ -1220,6 +1443,22 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
         payload_offset: holo_offset,
         payload_length: holo_written as u64,
     });
+    let sealed_holo = validated_holo_header(&holo_buf[..holo_written])
+        .map_err(|_| Compile10dError::ExtraSection { kind: "HOLO" })?;
+    let projection = holo_address_payload(entity_uri, holo_field_id, sealed_holo.holo_segment_count)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "CBLD HOLO addresses" })?;
+    let projection = encode_symbolic_rdf_cbor_ld(&projection)
+        .map_err(|_| Compile10dError::ExtraSection { kind: "CBLD HOLO addresses" })?;
+    fields.push(TypedFieldRecord {
+        field_id: holo_field_id.checked_add(1).ok_or(Compile10dError::ExtraSection { kind: "MID2" })?,
+        kind: FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+        flags: 0,
+        unit_id: 0,
+        payload_section_id: SectionType::FieldSidecar as u32,
+        payload_offset: sidecar_combined.len() as u64,
+        payload_length: projection.len() as u64,
+    });
+    sidecar_combined.extend_from_slice(&projection);
 
     let mut entity_id_bytes = [0u8; 16];
     entity_id_bytes[0..8].copy_from_slice(&subj_hash.to_le_bytes());
@@ -1288,12 +1527,25 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
 
     let mut sections: Vec<SectionInput<'_>> = preserved_sections
         .iter()
-        .map(|&(section_type, alignment_tier, stride, element_count, payload)| SectionInput {
-            section_type,
-            alignment_tier,
-            stride,
-            element_count,
-            payload,
+        .map(|&(section_type, alignment_tier, stride, element_count, payload)| {
+            let actual_payload = if section_type == SectionType::Materials
+                && !rewritten_mat_buf.is_empty()
+            {
+                &rewritten_mat_buf[..]
+            } else if section_type == SectionType::EntityOntology
+                && !rewritten_eont_buf.is_empty()
+            {
+                &rewritten_eont_buf[..]
+            } else {
+                payload
+            };
+            SectionInput {
+                section_type,
+                alignment_tier,
+                stride,
+                element_count,
+                payload: actual_payload,
+            }
         })
         .collect();
 
@@ -1337,6 +1589,109 @@ pub fn upgrade_legacy_10d_to_holographic_v2(
     let total_written =
         encode_container(&header, &sections, &mut out).map_err(Compile10dError::Section)?;
     out.truncate(total_written);
+    let _ = seal_whole_file_crc32c(&mut out);
+    Ok(out)
+}
+
+fn append_holo_addresses_to_existing_10d(
+    bytes: &[u8],
+    header: &Container10dHeader,
+    identity: &crate::container_10d::ManifoldIdentityV2,
+    fields: &[crate::container_10d::TypedFieldRecord],
+    root: &str,
+) -> Result<Vec<u8>, Compile10dError> {
+    use crate::bundle::semantic_model::{holo_address_payload, validated_holo_header, HOLO_ADDRESS_CONTEXT};
+    use crate::container_10d::{
+        decode_symbolic_rdf_cbor_ld, encode_manifold_identity_v2, encode_symbolic_rdf_cbor_ld,
+        manifold_identity_v2_encoded_len, TypedFieldRecord, TypedPayloadResolver,
+        FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+        MANIFOLD_IDENTITY_V2_MAX_FIELDS,
+    };
+
+    let error = || Compile10dError::ExtraSection { kind: "CBLD HOLO addresses" };
+    let mut scratch = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    let mut decoded = [TypedFieldRecord::default(); MANIFOLD_IDENTITY_V2_MAX_FIELDS];
+    let view = TypedPayloadResolver::new(bytes, &[], &mut scratch, &mut decoded)
+        .map_err(|_| error())?;
+    let mut pending = Vec::new();
+    for field in view.payloads_of_kind(FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE) {
+        let field = field.map_err(|_| error())?;
+        let holo = validated_holo_header(field.bytes).map_err(|_| error())?;
+        if holo.nquin_subject_hash != crate::q_hash(root) {
+            return Err(error());
+        }
+        pending.push(holo_address_payload(root, field.record.field_id, holo.holo_segment_count)
+            .map_err(|_| error())?);
+    }
+    for field in view.payloads_of_kind(FIELD_KIND_SYMBOLIC_RDF_CBOR_LD) {
+        let field = field.map_err(|_| error())?;
+        let payload = decode_symbolic_rdf_cbor_ld(field.bytes).map_err(|_| error())?;
+        if payload.context_iri == HOLO_ADDRESS_CONTEXT {
+            let index = pending.iter().position(|expected| expected == &payload).ok_or_else(error)?;
+            pending.remove(index);
+        }
+    }
+    if pending.is_empty() {
+        return Ok(bytes.to_vec());
+    }
+
+    let mut sidecar = view.section_payload(SectionType::FieldSidecar).unwrap_or_default().to_vec();
+    let mut fields = fields.to_vec();
+    for payload in pending {
+        let encoded = encode_symbolic_rdf_cbor_ld(&payload).map_err(|_| error())?;
+        let field_id = fields.last().map_or(0, |field| field.field_id).checked_add(1)
+            .ok_or_else(error)?;
+        fields.push(TypedFieldRecord {
+            field_id,
+            kind: FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
+            flags: 0,
+            unit_id: 0,
+            payload_section_id: SectionType::FieldSidecar as u32,
+            payload_offset: sidecar.len() as u64,
+            payload_length: encoded.len() as u64,
+        });
+        sidecar.extend_from_slice(&encoded);
+    }
+    let needed = manifold_identity_v2_encoded_len(fields.len()).map_err(|_| error())?;
+    let mut new_identity = vec![0; needed];
+    let written = encode_manifold_identity_v2(identity, &fields, &mut new_identity).map_err(|_| error())?;
+    new_identity.truncate(written);
+
+    let mut sections = Vec::new();
+    for descriptor in parse_section_table(bytes, header).map_err(Compile10dError::Section)? {
+        let kind = descriptor.typ().ok_or(Compile10dError::BadHeader)?;
+        let mut section = SectionInput {
+            section_type: kind,
+            alignment_tier: AlignmentTier::from_u8(descriptor.alignment_tier)
+                .ok_or(Compile10dError::BadHeader)?,
+            stride: descriptor.stride,
+            element_count: descriptor.element_count,
+            payload: view.section_payload(kind).ok_or(Compile10dError::SectionOutOfBounds)?,
+        };
+        match kind {
+            SectionType::FieldSidecar => section.payload = &sidecar,
+            SectionType::ManifoldIdentityV2 => section.payload = &new_identity,
+            _ => {}
+        }
+        sections.push(section);
+    }
+    if !sections.iter().any(|section| section.section_type == SectionType::FieldSidecar) {
+        sections.push(SectionInput {
+            section_type: SectionType::FieldSidecar, alignment_tier: AlignmentTier::Page,
+            stride: 0, element_count: 0, payload: &sidecar,
+        });
+    }
+    let needed = match encode_container(header, &sections, &mut []) {
+        Err(crate::container_10d::SectionTableError::OutputBufferTooSmall { needed, .. }) => needed,
+        Err(other) => return Err(Compile10dError::Section(other)),
+        Ok(_) => return Err(error()),
+    };
+    if needed > 128 * 1024 * 1024 {
+        return Err(Compile10dError::ExtraSection { kind: "HOLO projection exceeds the 128 MiB 10D ring" });
+    }
+    let mut out = vec![0; needed];
+    let written = encode_container(header, &sections, &mut out).map_err(Compile10dError::Section)?;
+    out.truncate(written);
     let _ = seal_whole_file_crc32c(&mut out);
     Ok(out)
 }

@@ -108,6 +108,9 @@ impl QualiaPortal {
             return Ok(());
         }
         let dt = (dt_ms as f64 * 0.001).min(1.0);
+        if self.tick_scene_semantic_motion(dt, self.scene_animation.reduced_motion)? {
+            return Ok(());
+        }
         let empty = ActivityCue {
             token: 1,
             joint: 1,

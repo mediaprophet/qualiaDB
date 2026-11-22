@@ -4,9 +4,11 @@
 
 mod binary;
 pub mod skl2;
+mod skl2_builder;
 mod validation;
 use crate::render::skeletal::{Clip, Joint, Key, SkinWeight, Track};
 pub use binary::{encode_skeletal_section_into, SkeletalSection};
+pub use skl2_builder::{Skl2BuildError, seal_authored_skl2_into};
 pub use skl2::{
     ActuationPathwayRecord, EpistemicProvenanceWord, KinematicSolverRegime,
     LoopClosureConstraintRecord, SkeletalSectionPayload, Skl2JointDescriptorV1,

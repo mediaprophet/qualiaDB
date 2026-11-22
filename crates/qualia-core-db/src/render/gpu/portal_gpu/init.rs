@@ -711,8 +711,7 @@ impl PortalGpu {
                 cache: None,
             });
 
-        let pick_staging_size =
-            u64::from(checked_padded_bytes_per_row(1).expect("one-pixel pick row always fits"));
+        let pick_staging_size = etalon_render::picking_readback::MESH_REGION_PICK_STAGING_BYTES;
         let pick_staging_reservation = crate::gpu_context::global_vram_ledger()
             .try_reserve_graphics(
                 crate::gpu_context::VramResourceClass::UploadStaging,
@@ -950,6 +949,8 @@ impl PortalGpu {
                 crate::render::instance_culling::MAX_GPU_MESH_INSTANCES,
             ),
             pick_semantic_result: None,
+            pick_group_metadata: Vec::new(),
+            pick_group_iris: Default::default(),
             ambient_pipeline,
             projector_pipeline,
             sky_pipeline,

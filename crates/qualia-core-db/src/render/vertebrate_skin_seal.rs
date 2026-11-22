@@ -27,7 +27,7 @@ pub(super) fn seal_skin(bytes: &[u8], rig: &FaunaSkeletalRig10d, authored: Optio
     let mut payload = vec![0; counts.encoded_len().ok_or("skin exceeds SKL1 limits")?];
     encode_skeletal_section_into(&SkeletalData { joints, joint_ids: &ids, skin: &skin, clips: &clips, tracks: &tracks, keys: &keys }, &mut payload).map_err(|e| format!("invalid anatomy skin: {e:?}"))?;
     let capacity = bytes.len().checked_add(payload.len()).and_then(|n| n.checked_add(4096)).ok_or("container size overflow")?;
-    if capacity > 42 * 1024 * 1024 { return Err("skeletal container exceeds budget".into()); }
+    if capacity > crate::container_10d::GRAPHICS_ASSET_RING_BYTES { return Err("skeletal container exceeds budget".into()); }
     let mut out = vec![0; capacity];
     let len = attach_skeletal_section_into(bytes, &payload, &mut out).map_err(|e| format!("attach anatomy skin: {e:?}"))?;
     out.truncate(len);

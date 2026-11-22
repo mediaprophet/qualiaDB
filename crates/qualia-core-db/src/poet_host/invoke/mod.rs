@@ -40,6 +40,7 @@ mod net;
 mod nlp;
 pub mod os_shared_services;
 mod poet_shell;
+pub mod production_category_a;
 pub mod qdnf_bridge;
 mod render;
 mod research;

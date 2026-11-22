@@ -721,6 +721,7 @@ fn object_range(quins: &[NQuin]) -> io::Result<(u64, u64)> {
 
 /// Incremental builder for large external-sort merges (one SuperBlock at a time).
 pub struct UnifiedVolumeBuilder {
+    fixed_timestamp_ms: Option<u64>,
     lex_bytes: Vec<u8>,
     volume_manifest: Option<Vec<u8>>,
     block_ranges: Vec<(u64, u64)>,
@@ -748,6 +749,7 @@ impl UnifiedVolumeBuilder {
     /// (hash → term string).
     pub fn with_lex_map(lex: &HashMap<u64, String>) -> Result<Self, LexError> {
         Ok(Self {
+            fixed_timestamp_ms: None,
             lex_bytes: encode_lex(lex)?,
             volume_manifest: None,
             block_ranges: Vec::new(),
@@ -770,6 +772,7 @@ impl UnifiedVolumeBuilder {
     /// Create a builder with a lexicon that supports embedded triples (LexiconEntry).
     pub fn with_lex_entries(lex: &HashMap<u64, LexiconEntry>) -> Result<Self, LexError> {
         Ok(Self {
+            fixed_timestamp_ms: None,
             lex_bytes: encode_lex_with_entries(lex)?,
             volume_manifest: None,
             block_ranges: Vec::new(),
@@ -864,6 +867,21 @@ impl UnifiedVolumeBuilder {
         self
     }
 
+    /// Use a supplied timestamp for both the volume assertion and its Merkle-DAG commits.
+    pub fn with_fixed_timestamp_ms(mut self, timestamp: u64) -> Self {
+        self.fixed_timestamp_ms = Some(timestamp);
+        self
+    }
+
+    fn assertion_timestamp(&self) -> u64 {
+        self.fixed_timestamp_ms.unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|duration| duration.as_millis() as u64)
+                .unwrap_or(0)
+        })
+    }
+
     /// Affirm this tiny embedded volume is a Permissive Commons catalog.
     pub fn with_permissive_commons(mut self) -> Self {
         self.publication_commons = true;
@@ -931,10 +949,7 @@ impl UnifiedVolumeBuilder {
         self.data_blob.extend_from_slice(&compressed);
 
         // Commit this SuperBlock to the Merkle-DAG.
-        let ts = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
+        let ts = self.assertion_timestamp();
         let msg = format!("ingest block {seq_id}");
         self.last_dag_hash = if self.last_dag_hash == [0u8; 32] {
             self.dag_store
@@ -990,10 +1005,7 @@ impl UnifiedVolumeBuilder {
         let block_dir_length = block_count * BlockDirectoryEntry::SIZE as u64;
         let data_offset = block_dir_offset + block_dir_length;
 
-        let assertion_timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
+        let assertion_timestamp = self.assertion_timestamp();
 
         // Serialize the Merkle-DAG and compute layout.
         let dag_bytes = self.dag_store.serialize();

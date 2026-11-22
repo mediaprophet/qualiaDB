@@ -8,6 +8,7 @@ use crate::topology::csr_view::{slice_pod, HarbouredCsrView};
 use crate::topology::header::{
     AnchorDomain, GraphEmbedRole, HarbouredGraphHeader, PoetGeometryHeader, TopologyError,
 };
+use crate::topology::sheaf::{read_gtop_sheaf_metadata, GtopSheafView};
 
 /// Zero-copy view over a `GTOP` Geometry-Topology Complex segment harbouring $M$ graphs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -15,6 +16,7 @@ pub struct PoetGeometryView<'a> {
     segment: &'a [u8],
     header: &'a PoetGeometryHeader,
     graph_headers: &'a [HarbouredGraphHeader],
+    sheaf: Option<GtopSheafView<'a>>,
 }
 
 impl<'a> PoetGeometryView<'a> {
@@ -31,20 +33,33 @@ impl<'a> PoetGeometryView<'a> {
             return Err(TopologyError::InvalidComplexKind(header.complex_kind));
         }
 
+        let sheaf = read_gtop_sheaf_metadata(segment).map_err(TopologyError::InvalidSheafMetadata)?;
+        let base = &segment[..sheaf.map_or(segment.len(), |metadata| metadata.base_segment_bytes)];
         let count = header.harboured_graph_count as usize;
         let graph_headers =
-            slice_pod::<HarbouredGraphHeader>(segment, header.graph_dir_offset, count)?;
+            slice_pod::<HarbouredGraphHeader>(base, header.graph_dir_offset, count)?;
 
         Ok(Self {
             segment,
             header,
             graph_headers,
+            sheaf,
         })
     }
 
     #[inline]
     pub const fn segment(&self) -> &'a [u8] {
         self.segment
+    }
+
+    #[inline]
+    pub const fn sheaf_metadata(&self) -> Option<GtopSheafView<'a>> {
+        self.sheaf
+    }
+
+    #[inline]
+    fn base_segment(&self) -> &'a [u8] {
+        &self.segment[..self.sheaf.map_or(self.segment.len(), |metadata| metadata.base_segment_bytes)]
     }
 
     #[inline]
@@ -78,7 +93,7 @@ impl<'a> PoetGeometryView<'a> {
                     slot,
                     count: self.header.harboured_graph_count,
                 })?;
-        HarbouredCsrView::from_segment_bytes(self.segment, gh)
+        HarbouredCsrView::from_segment_bytes(self.base_segment(), gh)
     }
 
     /// Resolve a harboured graph by its 64-bit `graph_id` (`q_hash`), returning `(slot, view)`.
@@ -90,7 +105,7 @@ impl<'a> PoetGeometryView<'a> {
         while idx < self.graph_headers.len() {
             let gh = &self.graph_headers[idx];
             if gh.graph_id == graph_id {
-                let view = HarbouredCsrView::from_segment_bytes(self.segment, gh)?;
+                let view = HarbouredCsrView::from_segment_bytes(self.base_segment(), gh)?;
                 return Ok((idx as u16, view));
             }
             idx += 1;
@@ -111,7 +126,7 @@ impl<'a> PoetGeometryView<'a> {
         while idx < self.graph_headers.len() {
             let gh = &self.graph_headers[idx];
             if gh.embed_role == role_u8 {
-                let view = HarbouredCsrView::from_segment_bytes(self.segment, gh)?;
+                let view = HarbouredCsrView::from_segment_bytes(self.base_segment(), gh)?;
                 return Ok((idx as u16, view));
             }
             idx += 1;

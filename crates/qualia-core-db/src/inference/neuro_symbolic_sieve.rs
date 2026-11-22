@@ -173,6 +173,23 @@ pub struct NeuroSymbolicSieve {
 }
 
 impl NeuroSymbolicSieve {
+    /// Build the fixed grammar from token bindings already resolved by a vocabulary reader.
+    pub fn from_admitted_slots(states: [&[SieveSlot]; 3]) -> Result<Self, SieveError> {
+        let mut sieve = Self::empty_fsm();
+        for (mask, slots) in sieve.masks.iter_mut().zip(states) {
+            if slots.is_empty() || slots.len() > MAX_SIEVE_ALLOW {
+                return Err(SieveError::Misaligned);
+            }
+            for slot in slots {
+                if slot.lexicon_hash == 0 || mask.lexicon_hash_for(slot.token_id).is_some() {
+                    return Err(SieveError::Misaligned);
+                }
+                mask.push(slot.token_id, slot.lexicon_hash);
+            }
+        }
+        Ok(sieve)
+    }
+
     /// Exact initial owned mask/state identity after cold lexicon resolution.
     /// Execution mutates only this private request's state, never the lex file.
     #[allow(dead_code)]

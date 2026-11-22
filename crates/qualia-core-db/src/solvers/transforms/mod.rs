@@ -14,6 +14,7 @@
 
 pub mod fourier;
 pub mod laplace;
+pub mod spectral_fft;
 pub mod ztransform;
 
 pub use fourier::{dft, dft_accelerated, idft, Cplx};

@@ -19,6 +19,7 @@ pub mod qpu;
 pub mod activation;
 pub mod attention;
 pub mod calculus;
+pub mod category_kan_operad;
 pub mod exact;
 pub mod feed_forward;
 pub mod fuzzy_query;

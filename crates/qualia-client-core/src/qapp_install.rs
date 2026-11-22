@@ -639,6 +639,221 @@ pub fn uninstall_package(
     Ok(())
 }
 
+/// Phase-1 Qap launch target kinds (`D0`, no `APP_STATE` dependency).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LaunchKind {
+    /// Phase-1 native RSX card (e.g. Anatomy seed card or native Poet volume).
+    NativeRsxCard,
+    /// Declarative `yaml-ld-q42` workspace/surface manifest.
+    YamlLd,
+    /// Standalone native child binary/process.
+    NativeProcess,
+}
+
+/// Toolkit-independent launch plan resolved directly from `{storage}/Qapps/{package_id}` (`D0`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LaunchPlan {
+    pub package_id: String,
+    pub version: String,
+    pub package_dir: PathBuf,
+    pub entrypoint: PathBuf,
+    pub kind: LaunchKind,
+}
+
+/// One capability family entry on a Qap install lease sheet (`D3` / `KD-11`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LeaseFamily {
+    pub id: String,
+    pub grant: bool,
+}
+
+/// Sentinel capability lease sheet emitted at Qap install time (`D3` / `KD-11`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LeaseSheet {
+    pub package_id: String,
+    pub version: String,
+    pub who_plane_subject: Option<String>,
+    pub guardian_install: bool,
+    #[serde(rename = "default")]
+    pub default_policy: String,
+    pub families: Vec<LeaseFamily>,
+}
+
+/// Build a fail-closed `LeaseSheet` from a `QappPackageManifest` (`D3`).
+///
+/// In `InstallPolicy::Production`, an empty capability family list fails closed.
+pub fn build_lease_sheet(
+    manifest: &QappPackageManifest,
+    policy: InstallPolicy,
+    guardian_install: bool,
+) -> Result<LeaseSheet, QappInstallError> {
+    let package_id = package_id_from_manifest(manifest);
+    validate_package_id(&package_id)?;
+    let version = normalize_version_label(&manifest.version);
+
+    let mut families = Vec::new();
+    if let Some(ext) = &manifest.x_qualia {
+        for req in &ext.requires {
+            if !req.capability.trim().is_empty() {
+                families.push(LeaseFamily {
+                    id: req.capability.trim().to_string(),
+                    // Guardian installs cannot automatically widen dependent grants.
+                    grant: !guardian_install && req.required,
+                });
+            }
+        }
+        for ont in &ext.required_ontologies {
+            if !ont.trim().is_empty() {
+                families.push(LeaseFamily {
+                    id: format!("graph.ontology:{}", ont.trim()),
+                    grant: false,
+                });
+            }
+        }
+    }
+    for shape in &manifest.required_shapes {
+        if !shape.trim().is_empty() {
+            families.push(LeaseFamily {
+                id: format!("shacl.shape:{}", shape.trim()),
+                grant: false,
+            });
+        }
+    }
+
+    if policy == InstallPolicy::Production && families.is_empty() {
+        return Err(QappInstallError::ManifestInvalid(
+            "production lease sheet cannot have empty capability families".into(),
+        ));
+    }
+
+    Ok(LeaseSheet {
+        package_id,
+        version,
+        who_plane_subject: None,
+        guardian_install,
+        default_policy: "deny".into(),
+        families,
+    })
+}
+
+/// Resolve a `LaunchPlan` for an installed Qap without touching `APP_STATE` (`D0`).
+pub fn plan_qapp_launch(
+    storage: &Path,
+    package_id: &str,
+    entry: Option<&str>,
+) -> Result<LaunchPlan, QappInstallError> {
+    validate_package_id(package_id)?;
+    if is_package_revoked(storage, package_id) {
+        return Err(QappInstallError::PackageRevoked(package_id.into()));
+    }
+    let package_dir = resolve_active_package_dir(storage, package_id);
+    let manifest_path = package_dir.join(QAPP_PACKAGE_MANIFEST);
+    if !manifest_path.is_file() {
+        return Err(QappInstallError::ManifestMissing);
+    }
+    let content = fs::read_to_string(&manifest_path)?;
+    let manifest: QappPackageManifest = serde_json::from_str(&content)
+        .map_err(|e| QappInstallError::ManifestInvalid(e.to_string()))?;
+    let version = normalize_version_label(&manifest.version);
+
+    let ext = manifest.x_qualia.as_ref();
+    let entry_rel = entry
+        .and_then(|k| {
+            ext.and_then(|x| x.entrypoints.get(k).cloned())
+                .or_else(|| Some(k.to_string()))
+        })
+        .or_else(|| ext.and_then(|x| x.entrypoints.get("native").cloned()))
+        .or_else(|| ext.and_then(|x| x.entrypoints.get("yaml_ld").cloned()))
+        .or_else(|| ext.and_then(|x| x.entrypoints.get("web").cloned()))
+        .unwrap_or_else(|| "index.html".into());
+
+    if !relative_path_ok(&entry_rel) {
+        return Err(QappInstallError::PathTraversal(entry_rel));
+    }
+
+    let kind = if entry_rel.ends_with(".yaml") || entry_rel.ends_with(".yml") {
+        LaunchKind::YamlLd
+    } else if ext
+        .map(|x| x.preferred_launch_mode == "native-process")
+        .unwrap_or(false)
+    {
+        LaunchKind::NativeProcess
+    } else {
+        LaunchKind::NativeRsxCard
+    };
+
+    Ok(LaunchPlan {
+        package_id: package_id_from_manifest(&manifest),
+        version,
+        entrypoint: package_dir.join(&entry_rel),
+        package_dir,
+        kind,
+    })
+}
+
+/// Synthesize a uniform `qapp.json` manifest in `target_dir` from a `yaml-ld-q42` file (`D2`).
+pub fn synthesize_qapp_json_from_yaml_ld(
+    yaml_path: &Path,
+    target_dir: &Path,
+) -> Result<QappPackageManifest, QappInstallError> {
+    let raw = fs::read_to_string(yaml_path)?;
+    let yaml_val: serde_yaml::Value = serde_yaml::from_str(&raw)
+        .map_err(|e| QappInstallError::ManifestInvalid(format!("yaml-ld-q42 parse error: {e}")))?;
+
+    let name = yaml_val
+        .get("name")
+        .and_then(|v| v.as_str())
+        .or_else(|| yaml_val.get("@id").and_then(|v| v.as_str()))
+        .unwrap_or("YamlLdWorkspace")
+        .rsplit(['/', ':', '#'])
+        .next()
+        .unwrap_or("YamlLdWorkspace")
+        .trim()
+        .to_string();
+    validate_package_id(&name)?;
+
+    let version = yaml_val
+        .get("version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("0.1.0")
+        .to_string();
+
+    fs::create_dir_all(target_dir)?;
+    let yaml_file_name = yaml_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("manifest.q42.yaml")
+        .to_string();
+    let copied_yaml = target_dir.join(&yaml_file_name);
+    if yaml_path != copied_yaml {
+        fs::copy(yaml_path, &copied_yaml)?;
+    }
+
+    let mut entrypoints = HashMap::new();
+    entrypoints.insert("yaml_ld".into(), yaml_file_name);
+
+    let manifest = QappPackageManifest {
+        name: name.clone(),
+        version,
+        required_shapes: vec!["q42:YamlLdWorkspaceShape".into()],
+        dev_port: None,
+        x_qualia: Some(crate::qapp_registry::QappHostExtension {
+            app_id: format!("did:q42:qap:{}:v0.1.0", name.to_ascii_lowercase()),
+            display_name: name,
+            category: "yaml-ld-q42".into(),
+            preferred_launch_mode: "yaml-ld".into(),
+            supports_offline: true,
+            entrypoints,
+            ..Default::default()
+        }),
+    };
+
+    let json = serde_json::to_string_pretty(&manifest)
+        .map_err(|e| QappInstallError::ManifestInvalid(e.to_string()))?;
+    fs::write(target_dir.join(QAPP_PACKAGE_MANIFEST), json)?;
+    Ok(manifest)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

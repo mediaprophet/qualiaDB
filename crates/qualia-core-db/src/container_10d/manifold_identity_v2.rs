@@ -66,9 +66,17 @@ pub const FIELD_KIND_MULTISCALE_STRATA: u16 = 0x0304;
 pub const FIELD_KIND_SYMBOLIC_RDF_CBOR_LD: u16 = 0x0305;
 /// Holographic Phase-Space Manifold (`HOLO`: `HolographicPhaseHeader` + `M64HoloRecord` segments + `EulerianWavefieldRecord` streamlines & 12-triangle proxy lens).
 pub const FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE: u16 = 0x0306;
+/// Sparse, narrow-band signed-distance bricks (`SDFB`).
+pub const FIELD_KIND_SIGNED_DISTANCE_BRICK: u16 = 0x0307;
+pub const SIGNED_DISTANCE_BRICK_TAG: [u8; 4] = *b"SDFB";
+/// Reserved for typed three-dimensional particle sets.
+pub const FIELD_KIND_PARTICLE_SET: u16 = 0x0308;
+/// Additional field slots reserved for the morphism expansion.
+pub const RESERVED_EXPANSION_FIELD_KINDS: [u16; 2] = [0x0309, 0x030A];
+
 // Registry additions preserve MID2 layout. Older readers reject unsupported kinds
 // unless their explicit supported-extension allow-list admits these semantics.
-pub const BUILTIN_FIELD_KINDS: [u16; 14] = [
+pub const BUILTIN_FIELD_KINDS: [u16; 15] = [
     FIELD_KIND_SCALAR,
     FIELD_KIND_VECTOR,
     FIELD_KIND_TENSOR,
@@ -83,10 +91,11 @@ pub const BUILTIN_FIELD_KINDS: [u16; 14] = [
     FIELD_KIND_MULTISCALE_STRATA,
     FIELD_KIND_SYMBOLIC_RDF_CBOR_LD,
     FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE,
+    FIELD_KIND_SIGNED_DISTANCE_BRICK,
 ];
 
 /// Canonical `(kind, name)` table for built-in MID2 field kinds.
-pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 14] = [
+pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 15] = [
     (FIELD_KIND_SCALAR, "scalar"),
     (FIELD_KIND_VECTOR, "vector"),
     (FIELD_KIND_TENSOR, "tensor"),
@@ -104,6 +113,7 @@ pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 14] = [
     (FIELD_KIND_MULTISCALE_STRATA, "multiscale_strata"),
     (FIELD_KIND_SYMBOLIC_RDF_CBOR_LD, "symbolic_rdf_cbor_ld"),
     (FIELD_KIND_HOLOGRAPHIC_PHASE_SPACE, "holographic_phase_space"),
+    (FIELD_KIND_SIGNED_DISTANCE_BRICK, "signed_distance_brick"),
 ];
 
 /// Opaque stored continuity identifier. Issuer and uniqueness are not verified
@@ -214,6 +224,12 @@ pub enum ManifestV2Error {
     InvalidPayloadReference { field_index: usize },
     PayloadRangeOverflow { field_index: usize },
     LengthOverflow,
+}
+
+impl core::fmt::Display for ManifestV2Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 
 /// Encode built-in field kinds into a caller-owned buffer. Extension kinds
@@ -562,3 +578,17 @@ fn get_u64(bytes: &[u8], offset: usize) -> u64 {
 #[cfg(test)]
 #[path = "manifold_identity_v2_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[test]
+fn expansion_field_kinds_reserve_a_unique_nonoverlapping_range() {
+    assert_eq!(FIELD_KIND_SIGNED_DISTANCE_BRICK, 0x0307);
+    assert_eq!(FIELD_KIND_PARTICLE_SET, 0x0308);
+    assert_eq!(RESERVED_EXPANSION_FIELD_KINDS, [0x0309, 0x030A]);
+    assert!(is_known_kind(FIELD_KIND_SIGNED_DISTANCE_BRICK, &[]));
+    for tag in [FIELD_KIND_PARTICLE_SET].into_iter().chain(RESERVED_EXPANSION_FIELD_KINDS) {
+        assert!(!is_known_kind(tag, &[]));
+    }
+    assert!(BUILTIN_FIELD_KINDS.windows(2).all(|pair| pair[0] < pair[1]));
+    assert!(BUILTIN_FIELD_KINDS.iter().copied().eq(BUILTIN_FIELD_KIND_NAMES.map(|(tag, _)| tag)));
+}

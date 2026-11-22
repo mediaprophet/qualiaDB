@@ -76,6 +76,8 @@ impl PortalGpu {
             return Err(error);
         }
         self.mesh_instance_source.clear();
+        self.pick_group_metadata.clear();
+        self.pick_group_iris.clear();
         if !self.mesh_instance_groups.is_empty() {
             if let Some(mesh) = self.mesh.as_ref() {
                 if let Ok((min, max)) =
@@ -213,6 +215,8 @@ impl PortalGpu {
                 .mesh_generation
                 .checked_add(1)
                 .ok_or_else(|| "mesh generation exhausted".to_string())?;
+            self.pick_readback.invalidate(false);
+            self.pick_semantic_result = None;
             self.mesh = None;
             self.shadow_map_dirty = true;
             self.mesh_generation = generation;
@@ -513,5 +517,10 @@ impl PortalGpu {
     /// Whether a mesh surface is resident.
     pub fn has_mesh(&self) -> bool {
         self.mesh.is_some()
+    }
+
+    #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    pub(crate) fn mesh_generation(&self) -> u64 {
+        self.mesh_generation
     }
 }

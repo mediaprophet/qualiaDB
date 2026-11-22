@@ -163,7 +163,7 @@ fn parse_slice_idents(src: &str, const_name: &str) -> Option<Vec<String>> {
             i += ident.len();
             continue;
         }
-        i += 1;
+        i += body[i..].chars().next()?.len_utf8();
     }
     Some(names)
 }
@@ -188,7 +188,7 @@ fn parse_slice_strings(src: &str, const_name: &str) -> Option<Vec<String>> {
                 continue;
             }
         }
-        i += 1;
+        i += body[i..].chars().next()?.len_utf8();
     }
     Some(ids)
 }
@@ -242,14 +242,20 @@ fn take_string_lit(after_open_quote: &str) -> Option<(String, usize)> {
                     b'r' => out.push('\r'),
                     b'\\' => out.push('\\'),
                     b'"' => out.push('"'),
-                    other => out.push(other as char),
+                    other if other.is_ascii() => out.push(other as char),
+                    _ => return None,
                 }
                 i += 1;
             }
             b'"' => return Some((out, i + 1)),
-            c => {
+            c if c.is_ascii() => {
                 out.push(c as char);
                 i += 1;
+            }
+            _ => {
+                let c = after_open_quote[i..].chars().next()?;
+                out.push(c);
+                i += c.len_utf8();
             }
         }
     }

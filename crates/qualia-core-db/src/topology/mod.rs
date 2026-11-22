@@ -10,6 +10,7 @@
 //! - [`pullback`]: 10D manifold frustum pullback traversal and T16 `Epistemic10D` projection.
 //! - [`induce_intrinsic`]: Tier-2 induction of intrinsic graphs from `computational_geometry` complexes.
 //! - [`compactor`]: Tier-2 `GTOP` segment builder and delta-ring sealing engine.
+//! - [`sheaf`]: optional versioned stalk schema and zero-copy restriction CSR footer.
 
 pub mod compactor;
 pub mod csr_view;
@@ -19,6 +20,7 @@ pub mod header;
 pub mod induce_intrinsic;
 pub mod invariants;
 pub mod pullback;
+pub mod sheaf;
 #[cfg(test)]
 mod tests;
 
@@ -30,3 +32,4 @@ pub use header::*;
 pub use induce_intrinsic::*;
 pub use invariants::*;
 pub use pullback::*;
+pub use sheaf::*;

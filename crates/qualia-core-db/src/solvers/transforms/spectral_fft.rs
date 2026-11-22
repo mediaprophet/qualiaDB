@@ -1,5 +1,5 @@
 //! Exact `f64` O(N log N) Cooley-Tukey radix-2 & Bluestein chirp-z arbitrary-length
-//! 1D/2D/3D FFT/IFFT, `fftshift`/`ifftshift`, Marple analytic Hilbert envelope, and windows.
+//! 1D/2D/3D FFT/IFFT, spectrum shifts, analytic Hilbert envelope, and windows.
 use crate::solvers::transforms::fourier::Cplx;
 use core::f64::consts::PI;
 
@@ -87,13 +87,16 @@ fn fft_pow2_inplace(buf: &mut [Cplx], sign: f64) {
 /// Bluestein Chirp-Z O(M log M) arbitrary-length 1D unscaled transform.
 fn fft_bluestein(buf: &[Cplx], sign: f64) -> Result<Vec<Cplx>, SpectralError> {
     let n = buf.len();
-    let m = (2 * n - 1).checked_next_power_of_two().ok_or(SpectralError::SizeLimit)?;
+    let period = n.checked_mul(2).ok_or(SpectralError::SizeLimit)?;
+    let m = (period - 1).checked_next_power_of_two().ok_or(SpectralError::SizeLimit)?;
     let mut a = vec![(0.0, 0.0); m];
     let mut b = vec![(0.0, 0.0); m];
     let mut chirps = Vec::with_capacity(n);
 
     for k in 0..n {
-        let theta = sign * PI * ((k * k) % (2 * n)) as f64 / n as f64;
+        let k_wide = k as u128;
+        let phase_index = (k_wide * k_wide) % period as u128;
+        let theta = sign * PI * phase_index as f64 / n as f64;
         let w = (theta.cos(), theta.sin());
         chirps.push(w);
         a[k] = cmul(buf[k], w);
@@ -179,11 +182,12 @@ pub fn ifftshift_1d<T: Copy>(data: &[T], out: &mut [T]) {
 }
 
 pub fn fft_2d(data: &[Cplx], rows: usize, cols: usize, inverse: bool) -> Result<Vec<Cplx>, SpectralError> {
-    if rows == 0 || cols == 0 || data.len() != rows * cols {
+    let total = rows.checked_mul(cols).ok_or(SpectralError::SizeLimit)?;
+    if total == 0 || data.len() != total {
         return Err(SpectralError::ShapeMismatch);
     }
     validate_finite_complex(data)?;
-    let mut work = vec![(0.0, 0.0); rows * cols];
+    let mut work = vec![(0.0, 0.0); total];
     for r in 0..rows {
         let row = &data[r * cols..(r + 1) * cols];
         let tf = if inverse { ifft_1d(row)? } else { fft_1d(row)? };
@@ -239,9 +243,13 @@ pub fn fftshift_3d<T: Copy + Default>(
     cols: usize,
     inverse: bool,
 ) -> Result<Vec<T>, SpectralError> {
-    let plane = rows * cols;
-    if data.len() != slices * plane {
+    let plane = rows.checked_mul(cols).ok_or(SpectralError::SizeLimit)?;
+    let total = slices.checked_mul(plane).ok_or(SpectralError::SizeLimit)?;
+    if data.len() != total {
         return Err(SpectralError::ShapeMismatch);
+    }
+    if total == 0 {
+        return Ok(Vec::new());
     }
     let sz = if inverse { slices.div_ceil(2) } else { slices / 2 };
     let sy = if inverse { rows.div_ceil(2) } else { rows / 2 };

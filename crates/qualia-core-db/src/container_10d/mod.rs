@@ -44,6 +44,7 @@ pub use manifold_identity_container::{
 };
 /// Version-2 manifold identity and typed scientific/presentation field manifest.
 pub mod manifold_identity_v2;
+pub mod sdf_brick_section;
 pub mod mesh_section;
 pub mod metric_check;
 pub mod corpus_envelope;
@@ -251,6 +252,7 @@ pub use provenance_section::{
     PROVENANCE_SECTION_VERSION,
 };
 pub use typed_payloads::{
+    BoundInstanceOverride, InstanceOverrideIdentity,
     inspect_container_mesh_frames, read_container_mesh_frames,
     read_container_mesh_frames_into, read_container_mesh_frames_with_limits,
     read_container_morph_targets_into, TypedPayload,

@@ -19,7 +19,7 @@ pub mod advancing_front;
 /// P10.3 — Allocation counter for zero-heap hot-path verification (test-only).
 #[cfg(test)]
 pub mod allocation_counter;
-mod alpha_shape;
+pub mod alpha_shape;
 /// P13.8 - Anisotropic remeshing with crease/feature preservation and
 /// BVH-pruned surface projection.
 pub mod anisotropic_remesh;
@@ -78,13 +78,13 @@ pub mod decoded_error_ledger;
 mod decimate_3;
 pub mod decimate_3_semantic;
 pub mod delaunay_2;
-mod delaunay_3;
+pub mod delaunay_3;
 /// P13.2 — Delaunay refinement for PSLGs with Steiner points (Ruppert).
 pub mod delaunay_refine;
 mod determinism_corpus;
 pub mod deterministic_geometry;
 pub mod differential_growth;
-mod distance;
+pub mod distance;
 pub mod dual_quaternion_skinning;
 /// P12.2 — Exact 2D arrangement with exact-construction intersection points.
 pub mod exact_arrangement;
@@ -121,7 +121,7 @@ mod hull;
 mod hull_3;
 mod incircle;
 mod insphere;
-mod isosurface;
+pub mod isosurface;
 mod kd_tree;
 mod kernel;
 /// P11.7 — Kirkpatrick hierarchy for guaranteed O(log n) point location
@@ -166,7 +166,7 @@ pub mod polygon_soup;
 /// P11.4 — Simple-polygon, polygon-with-holes, and PSLG validation.
 pub mod polygon_validation;
 pub mod power_diagram;
-mod primitives;
+pub mod primitives;
 /// P13.4 — Quadtree/octree balanced meshing (size-field refinement, 2:1
 /// balance, conforming 2-D triangulation with hanging-node templates, 3-D
 /// hex/tet extraction).

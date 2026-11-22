@@ -107,6 +107,18 @@ impl SceneMeshAccum {
         if container_10d::verify_whole_file_crc32c(&mut bytes).is_err() {
             return;
         }
+        if crate::render::portal_load_10d::validate_bound_instance_overrides(&bytes).is_err() {
+            self.assets_refused += 1;
+            return;
+        }
+        let sdf = match crate::render::portal_load_10d::decode_sdfb_mesh(&bytes) {
+            Ok(surface) => surface,
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
+            }
+        };
+        let has_sdf = sdf.is_some();
         let descs = match container_10d::parse_section_table(&bytes, &header) {
             Ok(d) => d,
             Err(_) => return,
@@ -134,8 +146,10 @@ impl SceneMeshAccum {
             let payload = &bytes[off..off + len];
             match st {
                 container_10d::SectionType::QuantizedMesh => {
-                    if let Ok(m) = container_10d::decode_mesh_section(payload) {
-                        mesh = Some(m);
+                    if !has_sdf {
+                        if let Ok(m) = container_10d::decode_mesh_section(payload) {
+                            mesh = Some(m);
+                        }
                     }
                 }
                 container_10d::SectionType::Tensor10DNodes => {
@@ -216,7 +230,10 @@ impl SceneMeshAccum {
         }
 
         let had_explicit_mesh = mesh.is_some();
-        let mesh = match mesh {
+        let (mesh, sdf_ranges) = if let Some(surface) = sdf {
+            (surface.mesh, Some(surface.ranges))
+        } else {
+            let mesh = match mesh {
             Some(m) => m,
             None if !decoded_holo_segments.is_empty() => {
                 crate::render::portal_load_10d::synthesize_holographic_segments_mesh(
@@ -232,6 +249,8 @@ impl SceneMeshAccum {
                 )
             }
             None => return,
+            };
+            (mesh, None)
         };
         // An optional rig must be valid and vertex-aligned even before runtime
         // playback is armed. Never silently admit malformed animation content.
@@ -293,7 +312,9 @@ impl SceneMeshAccum {
                 return;
             }
         };
-        let (mut local_materials, mut local_ranges) = if !had_explicit_mesh {
+        let (mut local_materials, mut local_ranges) = if let Some(ranges) = sdf_ranges {
+            (vec![MaterialRecord::legacy_default()], ranges)
+        } else if !had_explicit_mesh {
             (
                 vec![MaterialRecord::legacy_default()],
                 vec![SubmeshRange {

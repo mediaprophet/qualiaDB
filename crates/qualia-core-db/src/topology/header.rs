@@ -465,6 +465,7 @@ pub enum TopologyError {
     BufferTooSmall,
     UnalignedBuffer,
     InvalidHeaderSize,
+    InvalidSheafMetadata(super::sheaf::GtopSheafError),
     InvalidComplexKind(u8),
     InvalidMorphology(u8),
     InvalidEmbedRole(u8),

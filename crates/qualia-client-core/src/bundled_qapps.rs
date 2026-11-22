@@ -237,6 +237,23 @@ pub fn seed_qapp_if_missing(
     Ok(true)
 }
 
+/// Phase-1 seed helper (`D4`): install only the tracked `bundled/qapps/Anatomy` tree
+/// into `{storage}/Qapps/Anatomy` without requiring `APP_STATE`.
+pub fn seed_anatomy_only(
+    storage_path: impl AsRef<Path>,
+) -> Result<crate::qapp_install::QappRegistryEntry, String> {
+    let storage = storage_path.as_ref();
+    let source = resolve_bundled_qapp_source("Anatomy")
+        .ok_or_else(|| "Bundled qapp source not found for Anatomy".to_string())?;
+    crate::qapp_install::install_package_atomic(
+        storage,
+        &source,
+        crate::qapp_install::InstallPolicy::Development,
+        None,
+    )
+    .map_err(|e| e.to_string())
+}
+
 /// Replace an installed qapp with files from `source_dir` and re-register capabilities.
 pub fn upgrade_qapp_from_source(
     storage_path: &Path,

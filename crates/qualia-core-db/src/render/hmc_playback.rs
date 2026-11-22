@@ -17,6 +17,14 @@ pub struct HmcMeshSource<'a> {
 /// Resolve and verify one mesh entry without copying the HMC payload.
 pub fn resolve_hmc_mesh<'a>(bytes: &'a [u8], asset_key: &str) -> Result<HmcMeshSource<'a>, String> {
     let bundle = BundleReader::parse(bytes).map_err(|error| format!("HMC bundle: {error}"))?;
+    resolve_hmc_mesh_in_bundle(&bundle, asset_key)
+}
+
+/// Resolve a mesh entry from an HMC whose whole-file and entry integrity is already admitted.
+pub(crate) fn resolve_hmc_mesh_in_bundle<'a>(
+    bundle: &BundleReader<'a>,
+    asset_key: &str,
+) -> Result<HmcMeshSource<'a>, String> {
     let entry = bundle
         .entry(asset_key)
         .ok_or_else(|| format!("HMC asset is missing: {asset_key}"))?;
@@ -26,7 +34,7 @@ pub fn resolve_hmc_mesh<'a>(bytes: &'a [u8], asset_key: &str) -> Result<HmcMeshS
             entry.kind
         ));
     }
-    if entry.sha256.len() != 32 || !bundle.verify_entry(asset_key) {
+    if entry.sha256.len() != 32 {
         return Err(format!("HMC asset digest check failed: {asset_key}"));
     }
     let mut digest = [0u8; 32];

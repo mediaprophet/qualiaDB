@@ -7,4 +7,7 @@ pub use frames::{
     read_container_mesh_frames_into, read_container_mesh_frames_with_limits,
 };
 pub use readers::read_container_morph_targets_into;
-pub use resolver::{TypedPayload, TypedPayloadError, TypedPayloadResolver};
+pub use resolver::{
+    BoundInstanceOverride, InstanceOverrideIdentity, TypedPayload, TypedPayloadError,
+    TypedPayloadResolver,
+};

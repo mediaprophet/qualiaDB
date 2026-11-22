@@ -8,6 +8,64 @@ use wasm_bindgen::JsCast;
 use std::sync::Arc;
 
 impl PortalGpu {
+    /// Create a linear RGBA8 offscreen target on the verified shared physical GPU.
+    /// Strict production callers use this path to reject software devices and
+    /// renderer-specific adapter fallback. The ordinary portal path is unchanged.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn new_offscreen_shared_hardware(width: u32, height: u32) -> Result<Self, String> {
+        if width == 0 || height == 0 {
+            return Err("Offscreen rendering requires positive dimensions".into());
+        }
+        let needs_worker = tokio::runtime::Handle::try_current().is_ok_and(|handle| {
+            handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::CurrentThread
+        });
+        // The shared GPU initializer can block only on a multithreaded Tokio worker.
+        let shared = if needs_worker {
+            std::thread::Builder::new()
+                .name("portal-offscreen-gpu-admission".into())
+                .spawn(crate::gpu_context::try_shared_gpu)
+                .map_err(|error| {
+                    format!("CapabilityUnavailable: cannot probe renderer GPU: {error}")
+                })?
+                .join()
+                .map_err(|_| "CapabilityUnavailable: renderer GPU probe failed".to_string())?
+        } else {
+            crate::gpu_context::try_shared_gpu()
+        }
+        .ok_or("CapabilityUnavailable: shared renderer GPU is unavailable")?;
+        let info = shared.adapter.get_info();
+        if !matches!(
+            info.device_type,
+            etalon::DeviceType::DiscreteGpu | etalon::DeviceType::IntegratedGpu
+        ) {
+            return Err(format!(
+                "CapabilityUnavailable: shared adapter {} is not an admitted physical GPU",
+                info.name
+            ));
+        }
+        let dimension_limit = shared.device.limits().max_texture_dimension_2d;
+        if width > dimension_limit || height > dimension_limit {
+            return Err(format!(
+                "Offscreen dimensions exceed the adapter's {dimension_limit}-pixel limit"
+            ));
+        }
+        let mut renderer = pollster::block_on(Self::from_device(
+            Arc::new(shared.device.clone()),
+            Arc::new(shared.queue.clone()),
+            width,
+            height,
+            etalon::TextureFormat::Rgba8Unorm,
+            None,
+            None,
+            0,
+        ))
+        .map_err(|error| {
+            format!("CapabilityUnavailable: offscreen GPU initialization failed: {error}")
+        })?;
+        renderer.pass_timings.set_adapter_info(info);
+        Ok(renderer)
+    }
+
     /// Build a native offscreen renderer on QualiaDB's process-wide shared GPU device.
     ///
     /// The output target is linear `Rgba8Unorm`. Call [`Self::render`] and then

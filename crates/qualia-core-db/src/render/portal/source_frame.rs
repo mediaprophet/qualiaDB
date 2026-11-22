@@ -122,7 +122,7 @@ impl QualiaPortal {
     }
     fn clear_source_pose_selection(&mut self) {
         self.selected_node = None;
-        self.selected_semantic_id = None;
+        self.selected_semantic_pick = None;
         self.pending_gpu_pick = false;
     }
 }

@@ -6,7 +6,7 @@ pub fn warm_cuda_context() -> bool {
     etalon_inference::backends::cuda::warm_cuda_context()
 }
 
-pub(crate) fn cached_tuning_digest() -> [u8; 32] {
+pub fn cached_tuning_digest() -> [u8; 32] {
     install_execution_policy();
     etalon_inference::backends::cuda::cached_tuning_digest()
 }

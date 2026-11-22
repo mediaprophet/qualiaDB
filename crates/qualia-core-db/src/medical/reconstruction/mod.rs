@@ -5,8 +5,9 @@ pub mod fbp;
 pub mod inference;
 pub mod mri;
 pub mod pet_osem;
-pub mod spectral_fft;
 pub mod ultrasound_das;
+
+pub use crate::solvers::transforms::spectral_fft;
 
 pub use anatomy_reg::{
     register_patient_to_anatomy, AnatomyRegError, AnatomyTransform,

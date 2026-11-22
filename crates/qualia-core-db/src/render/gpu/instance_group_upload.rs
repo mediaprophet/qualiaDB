@@ -2,6 +2,30 @@ use super::{instance_groups::*, PortalGpu};
 use crate::render::instance_culling::GpuInstanceRecord;
 
 impl PortalGpu {
+    /// Refresh the matrices of admitted native instances while retaining their draw groups and IDs.
+    pub fn update_semantic_assembly_instances(&mut self, records: &[GpuInstanceRecord]) -> Result<(), String> {
+        if self.mesh_instance_groups.is_empty() || records.len() != self.mesh_instance_source.len() {
+            return Err("Semantic assembly motion requires matching admitted instance groups".into());
+        }
+        if records.iter().zip(&self.mesh_instance_source).any(|(record, prior)| record.semantic_id_words != prior.semantic_id_words) {
+            return Err("Semantic assembly motion changed an admitted instance identity".into());
+        }
+        let bounds = world_bounds(&self.mesh_instance_groups, records).ok_or("Non-finite animated assembly bounds")?;
+        let packed = bytemuck::cast_slice(records);
+        self.visible_mesh_instances.replace_packed(&self.device, &self.queue, &self.mesh_instance_layout, packed)
+            .map_err(|error| format!("Semantic assembly visibility upload: {error:?}"))?;
+        if let Err(error) = self.mesh_instances.replace_packed(&self.device, &self.queue, &self.mesh_instance_layout, packed) {
+            let old = bytemuck::cast_slice(&self.mesh_instance_source);
+            let _ = self.visible_mesh_instances.replace_packed(&self.device, &self.queue, &self.mesh_instance_layout, old);
+            return Err(format!("Semantic assembly shadow upload: {error:?}"));
+        }
+        self.mesh_instance_source.copy_from_slice(records);
+        self.mesh_base_aabb = Some(crate::render::physics::Aabb { min: bounds.0, max: bounds.1 });
+        self.last_visibility_key = None;
+        self.shadow_map_dirty = true;
+        Ok(())
+    }
+
     /// Descriptors partition index and ABI-record streams as [first_index, count, first_record, count].
     pub fn set_mesh_instance_groups_packed(
         &mut self,

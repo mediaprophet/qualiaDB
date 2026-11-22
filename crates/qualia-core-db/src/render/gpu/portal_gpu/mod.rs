@@ -8,6 +8,7 @@ pub(super) mod picking;
 pub(super) mod readback;
 pub(super) mod render_frame;
 pub(super) mod settings;
+mod section_plane;
 pub(super) mod tensor_data;
 pub(super) mod uniforms;
 

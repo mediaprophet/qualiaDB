@@ -4,6 +4,7 @@
 //! visible-instance slot; the CPU resolves that slot through a frame snapshot to the original
 //! 64-bit semantic identity. The snapshot is retained until asynchronous map completion.
 
+use super::instance_groups::MeshInstanceGroup;
 use crate::render::instance_culling::GpuInstanceRecord;
 
 pub(super) use etalon_render::picking::MESH_PICK_FLAG;
@@ -18,9 +19,41 @@ pub(super) fn snapshot_semantic_ids(
     etalon_render::picking::snapshot_ids(source, out, |record| record.semantic_id())
 }
 
+/// Translate a compact draw slot back into its pre-cull source instance index.
+/// Group culling stores each selection relative to the corresponding prototype's
+/// source range, while the draw uses a compact range across all prototypes.
+pub(super) fn visible_to_source_slot(
+    visible_slot: usize,
+    selected: &[u32],
+    groups: &[MeshInstanceGroup],
+    source_count: usize,
+) -> Option<u32> {
+    if groups.is_empty() {
+        let slot = *selected.get(visible_slot)?;
+        return ((slot as usize) < source_count).then_some(slot);
+    }
+    let visible_slot = u32::try_from(visible_slot).ok()?;
+    // Failed group visibility clears all visible ranges and never records a mesh pick.
+    let index = groups.partition_point(|group| group.visible.end <= visible_slot);
+    let group = groups.get(index)?;
+    if !group.visible.contains(&visible_slot) {
+        return None;
+    }
+    let relative = visible_slot - group.visible.start;
+    let selected_index = group.source.start.checked_add(relative)?;
+    let slot = group
+        .source
+        .start
+        .checked_add(*selected.get(selected_index as usize)?)?;
+    (group.source.contains(&slot) && (slot as usize) < source_count).then_some(slot)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{decode_mesh_slot, encode_mesh_slot, snapshot_semantic_ids, MESH_PICK_FLAG};
+    use super::{
+        decode_mesh_slot, encode_mesh_slot, snapshot_semantic_ids, visible_to_source_slot,
+        MeshInstanceGroup, MESH_PICK_FLAG,
+    };
     use crate::render::instance_culling::GpuInstanceRecord;
 
     const IDENTITY: [[f32; 4]; 4] = [
@@ -51,5 +84,38 @@ mod tests {
         assert_eq!(snapshot_semantic_ids(&records, &mut snapshot), Some(2));
         assert_eq!(snapshot, [0x0123_4567_89ab_cdef, u64::MAX]);
         assert_eq!(snapshot_semantic_ids(&records, &mut [0]), None);
+    }
+
+    #[test]
+    fn compact_pick_slots_resolve_original_indices_across_culled_groups() {
+        let groups = [
+            MeshInstanceGroup {
+                indices: 0..3,
+                source: 0..2,
+                visible: 0..0,
+                bounds_min: [0.0; 3],
+                bounds_max: [1.0; 3],
+            },
+            MeshInstanceGroup {
+                indices: 3..6,
+                source: 2..5,
+                visible: 0..2,
+                bounds_min: [0.0; 3],
+                bounds_max: [1.0; 3],
+            },
+            MeshInstanceGroup {
+                indices: 6..9,
+                source: 5..6,
+                visible: 2..3,
+                bounds_min: [0.0; 3],
+                bounds_max: [1.0; 3],
+            },
+        ];
+        let selected = [0, 0, 0, 2, 0, 0];
+        assert_eq!(visible_to_source_slot(0, &selected, &groups, 6), Some(2));
+        assert_eq!(visible_to_source_slot(1, &selected, &groups, 6), Some(4));
+        assert_eq!(visible_to_source_slot(2, &selected, &groups, 6), Some(5));
+        assert_eq!(visible_to_source_slot(3, &selected, &groups, 6), None);
+        assert_eq!(visible_to_source_slot(0, &[2, 3], &[], 4), Some(2));
     }
 }

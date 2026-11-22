@@ -57,6 +57,12 @@ impl PortalGpu {
         let compacted_count = if compacted.is_ok() {
             visible_count
         } else {
+            for (index, output) in self.visible_instance_indices[..source_count]
+                .iter_mut()
+                .enumerate()
+            {
+                *output = index as u32;
+            }
             self.visible_instance_scratch[..source_count]
                 .copy_from_slice(&self.mesh_instance_source);
             source_count

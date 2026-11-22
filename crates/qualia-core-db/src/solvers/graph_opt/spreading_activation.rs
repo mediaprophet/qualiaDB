@@ -8,7 +8,7 @@
 //! to PCA and mutual information on the same router. Kernel-class `Reduction` (the
 //! per-hop weighted sums); bounded iteration, CPU reference.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// A directed weighted edge `from → to` with non-negative `weight`.
 #[derive(Debug, Clone, Copy)]
@@ -42,7 +42,8 @@ pub fn spreading_activation(
         }
     }
     // Wavefront of "newly activated this hop".
-    let mut current: HashMap<usize, f64> = HashMap::new();
+    // Traverse by stable node order so floating-point accumulation is reproducible.
+    let mut current: BTreeMap<usize, f64> = BTreeMap::new();
     for &(node, a) in seeds {
         if node < n_nodes && a > 0.0 {
             *current.entry(node).or_insert(0.0) += a;
@@ -54,7 +55,7 @@ pub fn spreading_activation(
         if current.is_empty() {
             break;
         }
-        let mut next: HashMap<usize, f64> = HashMap::new();
+        let mut next: BTreeMap<usize, f64> = BTreeMap::new();
         for (&node, &a) in &current {
             for &(to, w) in &adj[node] {
                 let contrib = a * w * decay;

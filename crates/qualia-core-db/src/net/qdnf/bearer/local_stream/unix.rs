@@ -38,16 +38,19 @@ pub const fn windows_process_evidence() -> bool {
 }
 
 /// Two-OS-process Linux/WSL delivery is not established by unit tests here.
+#[cfg_attr(not(test), allow(dead_code))]
 pub const fn linux_wsl_two_process_evidence() -> bool {
     false
 }
 
 /// This adapter never claims two-host Ethernet.
+#[cfg_attr(not(test), allow(dead_code))]
 pub const fn physical_two_host_from_this_module() -> bool {
     false
 }
 
 /// Existing local-ipc-v1 profile. Not a new registry variant.
+#[cfg_attr(not(test), allow(dead_code))]
 pub const fn profile() -> BearerProfile {
     BearerProfile::LocalIpcV1
 }

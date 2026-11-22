@@ -22,6 +22,7 @@ pub mod ode_advanced;
 pub mod ode_solver;
 pub mod potential;
 pub mod quadrature;
+pub mod reverse_tape;
 pub mod tensor_integrity;
 pub mod tensor_provenance;
 pub mod workspace;

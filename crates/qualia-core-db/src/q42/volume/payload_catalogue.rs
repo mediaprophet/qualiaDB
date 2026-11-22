@@ -25,6 +25,8 @@ pub const GTOP_SECTION_MAGIC: [u8; 4] = *b"GTOP";
 #[allow(dead_code)]
 pub const PAYLOAD_KIND_GEOMETRY_TOPOLOGY: u32 = 0x4754_4F50;
 pub const GTOP_SECTION_VERSION: u32 = 1;
+/// Same envelope layout as v1, with an obligatory GTOP cellular-sheaf footer.
+pub const GTOP_SHEAF_SECTION_VERSION: u32 = 2;
 pub const GTOP_SECTION_HEADER_BYTES: usize = 16;
 pub const GTOP_CATALOGUE_ROLE: &str = "geometry_topology_complex";
 pub const GTOP_MIME_TYPE: &str = "application/x-qualia-gtop";
@@ -401,21 +403,28 @@ pub fn is_gtop_section(section_bytes: &[u8]) -> bool {
     section_bytes.len() >= 4 && &section_bytes[0..4] == &GTOP_SECTION_MAGIC
 }
 
-/// Wrap a raw 64B-aligned `GTOP` geometry segment in a self-describing 16-byte `"GTOP"` v1 envelope.
+/// Wrap a raw GTOP segment in the 16-byte envelope. A verified sheaf extension selects v2.
 pub fn encode_gtop_section(segment_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    let sheaf = crate::topology::read_gtop_sheaf_metadata(segment_bytes).map_err(|e| e.to_string())?;
+    let version = if sheaf.is_some() {
+        crate::topology::admit_gtop_segment_sheaf(segment_bytes).map_err(|e| e.to_string())?;
+        GTOP_SHEAF_SECTION_VERSION
+    } else {
+        GTOP_SECTION_VERSION
+    };
     let len = u32::try_from(segment_bytes.len())
         .map_err(|_| "GTOP segment byte length exceeds u32::MAX".to_string())?;
     let crc = crc32c::crc32c(segment_bytes);
     let mut out = Vec::with_capacity(GTOP_SECTION_HEADER_BYTES + segment_bytes.len());
     out.extend_from_slice(&GTOP_SECTION_MAGIC);
-    out.extend_from_slice(&GTOP_SECTION_VERSION.to_le_bytes());
+    out.extend_from_slice(&version.to_le_bytes());
     out.extend_from_slice(&len.to_le_bytes());
     out.extend_from_slice(&crc.to_le_bytes());
     out.extend_from_slice(segment_bytes);
     Ok(out)
 }
 
-/// Verify and unwrap a `"GTOP"` v1 section envelope back into its inner segment slice.
+/// Verify and unwrap a GTOP section envelope back into its inner segment slice.
 pub fn decode_gtop_section(section_bytes: &[u8]) -> Result<&[u8], String> {
     if section_bytes.len() < GTOP_SECTION_HEADER_BYTES {
         return Err("GTOP section shorter than 16-byte header".to_string());
@@ -424,7 +433,7 @@ pub fn decode_gtop_section(section_bytes: &[u8]) -> Result<&[u8], String> {
         return Err("invalid GTOP section magic (expected GTOP)".to_string());
     }
     let version = u32::from_le_bytes(section_bytes[4..8].try_into().unwrap());
-    if version != GTOP_SECTION_VERSION {
+    if version != GTOP_SECTION_VERSION && version != GTOP_SHEAF_SECTION_VERSION {
         return Err(format!("unsupported GTOP section version {version}"));
     }
     let expected_len = u32::from_le_bytes(section_bytes[8..12].try_into().unwrap()) as usize;
@@ -441,6 +450,14 @@ pub fn decode_gtop_section(section_bytes: &[u8]) -> Result<&[u8], String> {
         return Err(format!(
             "GTOP section CRC-32C mismatch: expected {expected_crc:#010x}, got {actual_crc:#010x}"
         ));
+    }
+    let sheaf = if version == GTOP_SHEAF_SECTION_VERSION {
+        crate::topology::admit_gtop_segment_sheaf(payload)
+    } else {
+        crate::topology::read_gtop_sheaf_metadata(payload)
+    }.map_err(|e| e.to_string())?;
+    if (version == GTOP_SHEAF_SECTION_VERSION) != sheaf.is_some() {
+        return Err("GTOP envelope version does not match its sheaf footer presence".into());
     }
     Ok(payload)
 }

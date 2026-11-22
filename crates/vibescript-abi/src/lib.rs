@@ -4,6 +4,7 @@
 #![no_std]
 
 pub mod descriptor;
+pub mod qudt_units;
 pub mod effects;
 pub mod identity;
 pub mod lifecycle;
@@ -12,8 +13,8 @@ pub mod sdk;
 pub mod version;
 
 pub use descriptor::{
-    FuncDescriptor, OntologicalContract, ParamSpec, ProviderDescriptor, SubNamespaceDescriptor,
-    VibeNamespaceProvider,
+    FuncDescriptor, OntologicalContract, ParamQudtBoundsSpec, ParamSpec, ProviderDescriptor,
+    SubNamespaceDescriptor, VibeNamespaceProvider,
 };
 pub use effects::{
     AsyncExecutionClass, DeterminismGuarantee, EffectSet, ExecutionMode, ResourceEnvelope,

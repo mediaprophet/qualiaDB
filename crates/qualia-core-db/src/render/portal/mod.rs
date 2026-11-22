@@ -40,7 +40,7 @@ mod instance_groups;
 #[path = "../portal_qac_js.rs"]
 mod qac_js;
 mod scene_loader;
-use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
+use crate::render::hmc_playback::{resolve_hmc_mesh_in_bundle, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
 };
@@ -109,6 +109,8 @@ struct ProjectedNode {
 mod body_scene;
 mod scene_animation;
 mod scene_mesh;
+mod sdf_section;
+mod semantic_motion;
 mod source_frame;
 pub(crate) use scene_mesh::BodyMeshAccum;
 #[allow(unused_imports)]
@@ -161,7 +163,7 @@ pub struct QualiaPortal {
     camera: CameraState,
     camera_fly: CameraFlyTo,
     selected_node: Option<u32>,
-    selected_semantic_id: Option<u64>,
+    selected_semantic_pick: Option<crate::render::portal_load_10d::SemanticSurfacePick>,
     #[cfg(target_arch = "wasm32")]
     pending_gpu_pick: bool,
     session_nonce: u64,
@@ -195,6 +197,7 @@ pub struct QualiaPortal {
     /// the draw, so a failed present can still paint. Not the lit look.
     cpu_body: Option<CpuBodyMesh>,
     scene_animation: scene_animation::SceneAnimation,
+    semantic_motion: semantic_motion::SceneSemanticMotion,
     /// Last `set_sky_preset` value, applied when a GPU is adopted later.
     sky_preset: Option<u32>,
     /// Last atmosphere profile, preserved when callers override the sky clear colour.
@@ -243,7 +246,7 @@ impl QualiaPortal {
             camera: CameraState::default(),
             camera_fly: CameraFlyTo::default(),
             selected_node: None,
-            selected_semantic_id: None,
+            selected_semantic_pick: None,
             #[cfg(target_arch = "wasm32")]
             pending_gpu_pick: false,
             session_nonce,
@@ -271,6 +274,7 @@ impl QualiaPortal {
             preserve_authored_frame: false,
             cpu_body: None,
             scene_animation: scene_animation::SceneAnimation::default(),
+            semantic_motion: semantic_motion::SceneSemanticMotion::default(),
             sky_preset: None,
             atmosphere_preset: 0,
             hdr_exposure_ev: crate::render::output::DEFAULT_HDR_EXPOSURE_EV,
@@ -530,10 +534,21 @@ impl QualiaPortal {
         canvas_w: u32,
         canvas_h: u32,
     ) -> Result<(), JsValue> {
+        if !x.is_finite() || !y.is_finite() {
+            return Err(JsValue::from_str("Pick coordinates must be finite"));
+        }
+        #[cfg(target_arch = "wasm32")]
+        if self
+            .gpu
+            .as_ref()
+            .is_some_and(|gpu| gpu.pick_readback_pending())
+        {
+            return Err(JsValue::from_str("GPU picking is already pending"));
+        }
         // A new pick must not expose the preceding result while GPU readback
         // is pending or after a miss.
         self.selected_node = None;
-        self.selected_semantic_id = None;
+        self.selected_semantic_pick = None;
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
             gpu.queue_pick(x, y);
@@ -664,9 +679,34 @@ impl QualiaPortal {
 
     /// Selected mesh semantic identity as hexadecimal, or an empty string while absent/pending.
     pub fn selected_semantic_id(&self) -> String {
-        self.selected_semantic_id
-            .map(|identity| format!("{identity:016x}"))
+        self.selected_semantic_pick
+            .map(|pick| format!("{:016x}", pick.semantic_id))
             .unwrap_or_default()
+    }
+
+    /// The latest mesh pick, including its source slot and two-bit surface region.
+    /// The semantic ID remains hexadecimal so JavaScript never truncates a u64.
+    pub fn selected_semantic_pick(&self) -> Result<JsValue, JsValue> {
+        let Some(pick) = self.selected_semantic_pick else {
+            return Ok(JsValue::NULL);
+        };
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("instance_slot"),
+            &JsValue::from_f64(f64::from(pick.instance_slot)),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("semantic_id_hex"),
+            &JsValue::from_str(&format!("{:016x}", pick.semantic_id)),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("surface_region"),
+            &JsValue::from_f64(f64::from(pick.surface_region as u8)),
+        )?;
+        Ok(result.into())
     }
 
     /// Frame the camera on a tensor node (`Maps_to_node`).
@@ -677,7 +717,7 @@ impl QualiaPortal {
             .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
         let t = read_tensor_at(tensor, index as usize).map_err(|e| JsValue::from_str(e))?;
         self.selected_node = Some(index);
-        self.selected_semantic_id = None;
+        self.selected_semantic_pick = None;
         let target = camera_frame_node([t.x, t.y, t.z]);
         self.camera_fly = CameraFlyTo::start_toward(target);
         Ok(())
@@ -1312,6 +1352,9 @@ impl QualiaPortal {
     /// Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
     pub fn load_10d(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         self.hmc_mesh_residency.clear();
+        self.selected_node = None;
+        self.selected_semantic_pick = None;
+        self.pending_gpu_pick = None;
         let decoded = crate::render::portal_load_10d::decode_load_10d(bytes)
             .map_err(|e| JsValue::from_str(&e))?;
 
@@ -1773,13 +1816,22 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
-    /// Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
-    /// residency identity. Replaying the same asset returns the existing receipt without
-    /// rebuilding the GPU mesh; a different digest replaces the resident mesh.
+    /// Load a verified `.10d` asset or native leaf assembly from an HMC bundle.
+    /// Replaying the resident digest returns its receipt without another upload.
     pub fn load_hmc_mesh(&mut self, hmc_bytes: &[u8], asset_key: &str) -> Result<JsValue, JsValue> {
-        let source =
-            resolve_hmc_mesh(hmc_bytes, asset_key).map_err(|error| JsValue::from_str(&error))?;
-        if let Some(receipt) = self.hmc_mesh_residency.resident(source.digest) {
+        use crate::render::portal_load_10d::{assembly_residency_digest, decode_hmc_leaf_assembly};
+
+        let bundle = crate::bundle::BundleReader::parse(hmc_bytes)
+            .map_err(|error| JsValue::from_str(&format!("HMC bundle: {error}")))?;
+        let source = resolve_hmc_mesh_in_bundle(&bundle, asset_key)
+            .map_err(|error| JsValue::from_str(&error))?;
+        if !bundle.verify_entry(asset_key) {
+            return Err(JsValue::from_str("HMC mesh entry failed SHA-256 verification"));
+        }
+        let assembly_digest = assembly_residency_digest(&bundle, source.bytes, source.digest)
+            .map_err(|error| JsValue::from_str(&error))?;
+        let digest = assembly_digest.unwrap_or(source.digest);
+        if let Some(receipt) = self.hmc_mesh_residency.resident(digest) {
             let result = js_sys::Object::new();
             Reflect::set(
                 &result,
@@ -1804,7 +1856,40 @@ impl QualiaPortal {
             return Ok(result.into());
         }
 
-        let loaded = self.load_10d(source.bytes)?;
+        let loaded = if assembly_digest.is_some() {
+            let assembly = decode_hmc_leaf_assembly(&bundle, asset_key)
+                .map_err(|error| JsValue::from_str(&error))?;
+            let gpu = self.gpu.as_mut().ok_or_else(|| {
+                JsValue::from_str("Native HMC leaf assembly requires active WebGPU")
+            })?;
+            self.hmc_mesh_residency.clear();
+            self.selected_node = None;
+            self.selected_semantic_pick = None;
+            self.pending_gpu_pick = None;
+            assembly.upload(gpu).map_err(|error| JsValue::from_str(&error))?;
+            self.tier = 2;
+            self.description = format!(
+                "{} verified leaves · {} triangles · T2",
+                assembly.instances.len(), assembly.triangle_count,
+            );
+            let result = js_sys::Object::new();
+            for (key, value) in [
+                ("vertex_count", f64::from(assembly.vertex_count)),
+                ("triangle_count", f64::from(assembly.triangle_count)),
+                ("instance_count", assembly.instances.len() as f64),
+                ("tier", f64::from(self.tier)),
+            ] {
+                Reflect::set(&result, &JsValue::from_str(key), &JsValue::from_f64(value))?;
+            }
+            Reflect::set(
+                &result,
+                &JsValue::from_str("field_representation"),
+                &JsValue::from_str("NativeLeafAssembly"),
+            )?;
+            result.into()
+        } else {
+            self.load_10d(source.bytes)?
+        };
         let vertex_count = Reflect::get(&loaded, &JsValue::from_str("vertex_count"))?
             .as_f64()
             .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_vertex_count"))?;
@@ -1812,7 +1897,7 @@ impl QualiaPortal {
             .as_f64()
             .ok_or_else(|| JsValue::from_str("hmc_mesh_result_missing_triangle_count"))?;
         let receipt = self.hmc_mesh_residency.record_upload(
-            source.digest,
+            digest,
             u32::try_from(vertex_count as u64)
                 .map_err(|_| JsValue::from_str("hmc_mesh_vertex_count_overflow"))?,
             u32::try_from((triangle_count as u64).saturating_mul(3))
@@ -1820,6 +1905,7 @@ impl QualiaPortal {
             u32::try_from(triangle_count as u64)
                 .map_err(|_| JsValue::from_str("hmc_mesh_triangle_count_overflow"))?,
         );
+        self.semantic_motion.record_model(digest, &bundle);
         Reflect::set(
             &loaded,
             &JsValue::from_str("generation"),
@@ -2835,9 +2921,9 @@ impl QualiaPortal {
                         if self.pending_gpu_pick {
                             if let Some(idx) = gpu.poll_pick_readback() {
                                 self.selected_node = Some(idx);
-                                self.selected_semantic_id = None;
-                            } else if let Some(identity) = gpu.poll_semantic_pick_readback() {
-                                self.selected_semantic_id = Some(identity);
+                                self.selected_semantic_pick = None;
+                            } else if let Some(pick) = gpu.poll_semantic_pick_with_metadata() {
+                                self.selected_semantic_pick = Some(pick);
                                 self.selected_node = None;
                             }
                             if !gpu.pick_readback_pending() {

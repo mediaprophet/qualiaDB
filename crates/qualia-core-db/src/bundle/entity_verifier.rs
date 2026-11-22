@@ -257,17 +257,23 @@ pub fn verify_entity_10d(bytes: &[u8]) -> Entity10dVerification {
                             }
                         }
                         Some(SectionType::EntityOntology) => {
-                            if sec_bytes.len() >= 32 {
-                                use crate::container_10d::entity_ontology_section::EntityOntologyMiniHeader;
-                                let mini: &EntityOntologyMiniHeader =
-                                    bytemuck::from_bytes(&sec_bytes[..32]);
-                                affordances = Some(AffordanceVerificationSummary {
-                                    entity_did_hash: mini.entity_did_hash,
-                                    taxon_iri_hash: mini.taxon_iri_hash,
-                                    affordance_count: mini.affordance_count,
-                                    energy_permill: mini.energy_permill,
-                                    damage_permill: mini.damage_permill,
-                                });
+                            use crate::container_10d::entity_ontology_section::{
+                                decode_entity_ontology_section_into, AffordanceBinaryRecord,
+                                MAX_AFFORDANCES_PER_SECTION,
+                            };
+                            let mut records: [AffordanceBinaryRecord; MAX_AFFORDANCES_PER_SECTION] =
+                                [bytemuck::Zeroable::zeroed(); MAX_AFFORDANCES_PER_SECTION];
+                            match decode_entity_ontology_section_into(sec_bytes, &mut records) {
+                                Ok((mini, _)) => {
+                                    affordances = Some(AffordanceVerificationSummary {
+                                        entity_did_hash: mini.entity_did_hash,
+                                        taxon_iri_hash: mini.taxon_iri_hash,
+                                        affordance_count: mini.affordance_count,
+                                        energy_permill: mini.energy_permill,
+                                        damage_permill: mini.damage_permill,
+                                    });
+                                }
+                                Err(error) => violations.push(format!("entity ontology section decode error: {error:?}")),
                             }
                         }
                         Some(SectionType::QuantizedMesh) => {

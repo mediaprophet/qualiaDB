@@ -2,6 +2,9 @@
 //!
 //! Phenomenal viewport: projector (depth write) → ambient → optional T2 Kawase bloom.
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use etalon_render::vbd_spatial_filter;
+
 mod ao;
 mod atmosphere;
 mod gpu_timing;
@@ -392,7 +395,10 @@ pub struct PortalGpu {
     pick_readback: etalon_render::picking_readback::PickingReadback<
         crate::gpu_context::VramReservation<'static>,
     >,
-    pick_semantic_result: Option<u64>,
+    pick_semantic_result: Option<crate::render::portal_load_10d::SemanticSurfacePick>,
+    /// Values aligned with the cold source stream for partitioned section draws.
+    pick_group_metadata: Vec<etalon_render::picking_readback::MeshPickMetadata>,
+    pick_group_iris: std::collections::BTreeMap<u64, String>,
     ambient_pipeline: etalon::RenderPipeline,
     projector_pipeline: etalon::RenderPipeline,
     sky_pipeline: etalon::RenderPipeline,

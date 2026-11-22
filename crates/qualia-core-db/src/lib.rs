@@ -264,6 +264,7 @@ pub mod modalities;
 // --- identity/ category (reorg) ---
 pub mod did_qi;
 pub mod identity;
+pub use identity::anvil_policy;
 pub use identity::agency;
 pub use identity::identifier;
 #[cfg(not(target_arch = "wasm32"))]
