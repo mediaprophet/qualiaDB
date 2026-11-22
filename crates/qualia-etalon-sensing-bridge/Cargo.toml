@@ -11,12 +11,12 @@ resolver = "2"
 
 [dependencies]
 qualia-core-db = { path = "../qualia-core-db", default-features = false }
-etalon-sense-core = { git = "https://github.com/mediaprophet/$12663d53a14e2105bda36714fc0af87f0304719ab" }
-etalon-sense-nfc = { git = "https://github.com/mediaprophet/$12663d53a14e2105bda36714fc0af87f0304719ab" }
+etalon-sense-core = { git = "https://github.com/mediaprophet/etalon.git", rev = "2663d53a14e2105bda36714fc0af87f0304719ab" }
+etalon-sense-nfc = { git = "https://github.com/mediaprophet/etalon.git", rev = "2663d53a14e2105bda36714fc0af87f0304719ab" }
 ed25519-dalek = { version = "3.0", default-features = false }
 
 [dev-dependencies]
-etalon-sense-sdr = { git = "https://github.com/mediaprophet/$12663d53a14e2105bda36714fc0af87f0304719ab" }
+etalon-sense-sdr = { git = "https://github.com/mediaprophet/etalon.git", rev = "2663d53a14e2105bda36714fc0af87f0304719ab" }
 ed25519-dalek = { version = "3.0", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
