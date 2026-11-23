@@ -1,11 +1,58 @@
 //! One accepted current field and exact immutable source, independent of GPU life.
 use crate::q42::{
     emf_container::{EmfContainerReader, EmfReadLimits},
-    emf_profiles::FramePose,
     field_spectrum::VACUUM_SPEED_OF_LIGHT_M_PER_S,
 };
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
+
+/// Active local-to-parent rigid pose (`rotation_xyzw` unit Hamilton quaternion)
+/// associated with the selected EMF coordinate frame.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EmfFramePose {
+    pub origin_m: [f64; 3],
+    pub rotation_xyzw: [f64; 4],
+}
+
+impl Default for EmfFramePose {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
+impl EmfFramePose {
+    pub const fn identity() -> Self {
+        Self {
+            origin_m: [0.0; 3],
+            rotation_xyzw: [0.0, 0.0, 0.0, 1.0],
+        }
+    }
+
+    pub fn rotation_matrix(self) -> [[f64; 3]; 3] {
+        let [x, y, z, w] = self.rotation_xyzw;
+        let (xx, yy, zz) = (x * x, y * y, z * z);
+        let (xy, xz, yz) = (x * y, x * z, y * z);
+        let (wx, wy, wz) = (w * x, w * y, w * z);
+        [
+            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy)],
+            [2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx)],
+            [2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy)],
+        ]
+    }
+
+    pub fn inverse_transform_point(self, parent: [f64; 3]) -> [f64; 3] {
+        let delta = [
+            parent[0] - self.origin_m[0],
+            parent[1] - self.origin_m[1],
+            parent[2] - self.origin_m[2],
+        ];
+        let r = self.rotation_matrix();
+        [
+            r[0][0] * delta[0] + r[1][0] * delta[1] + r[2][0] * delta[2],
+            r[0][1] * delta[0] + r[1][1] * delta[1] + r[2][1] * delta[2],
+            r[0][2] * delta[0] + r[1][2] * delta[1] + r[2][2] * delta[2],
+        ]
+    }
+}
 
 pub const MAX_DISPLAY_CELLS: usize = 1_048_576;
 /// Vacuum wave impedance Z0 = mu_0 * c in Ohms.
@@ -50,8 +97,7 @@ pub struct LoadedEmf {
     pub(super) nt: u32,
     pub(super) cell_count: u32,
     pub(super) bounds: [f32; 6],
-    pub(super) frame_pose: FramePose,
-    pub(super) source_sha256: [u8; 32],
+    pub(super) frame_pose: EmfFramePose,
     pub(super) cells: Vec<DisplayEmfCell>,
     pub(super) optical_cells: Vec<DisplayOpticalCell>,
     pub(super) display_mode: u16,
@@ -74,12 +120,8 @@ impl LoadedEmf {
     }
     /// Selected frame pose (`origin_m` and `rotation_xyzw`) mapping local cell-footprint
     /// coordinates to the selected frame's physical metre coordinates.
-    pub fn frame_pose(&self) -> FramePose {
+    pub fn frame_pose(&self) -> EmfFramePose {
         self.frame_pose
-    }
-    /// SHA-256 digest of the immutable source bytes.
-    pub fn source_sha256(&self) -> [u8; 32] {
-        self.source_sha256
     }
     pub fn display_cells(&self) -> &[DisplayEmfCell] {
         &self.cells
@@ -264,7 +306,6 @@ pub fn decode_emf64_display(bytes: &[u8]) -> Result<LoadedEmf, String> {
     let mut source = Vec::new();
     source.try_reserve_exact(bytes.len()).map_err(|_| "emf64: source alloc".to_string())?;
     source.extend_from_slice(bytes);
-    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dense.nx,
         ny: dense.ny,
@@ -272,8 +313,7 @@ pub fn decode_emf64_display(bytes: &[u8]) -> Result<LoadedEmf, String> {
         nt: dense.nt,
         cell_count: total as u32,
         bounds,
-        frame_pose: FramePose::identity(),
-        source_sha256,
+        frame_pose: EmfFramePose::identity(),
         cells,
         optical_cells,
         display_mode: version,

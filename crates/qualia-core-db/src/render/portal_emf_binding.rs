@@ -189,7 +189,7 @@ impl<'a> BoundLeafEmfCompanion<'a> {
                 ));
             }
         }
-        let field_sha = field.source_sha256();
+        let field_sha: [u8; 32] = Sha256::digest(field.source_bytes()).into();
         if let Some(expected_field) = registration.field_sha256 {
             if expected_field != field_sha {
                 return Err(format!(
@@ -220,7 +220,8 @@ impl<'a> BoundLeafEmfCompanion<'a> {
         hasher.update([0]);
         hasher.update(self.registration.field_member.as_bytes());
         hasher.update([0]);
-        hasher.update(self.field.source_sha256());
+        let field_sha: [u8; 32] = Sha256::digest(self.field.source_bytes()).into();
+        hasher.update(field_sha);
         let sel: DisplaySelection = self.field.selection();
         for id in [sel.descriptor_id, sel.frame_id, sel.clock_id, sel.stream_id, self.time_slice] {
             hasher.update(id.to_le_bytes());
@@ -1503,11 +1504,11 @@ mod tests {
             "outputs/bladder.emf",
         );
         reg_a.geometry_sha256 = Some(organ_sha);
-        reg_a.field_sha256 = Some(emf_a.source_sha256());
+        reg_a.field_sha256 = Some(Sha256::digest(emf_a.source_bytes()).into());
         reg_a.authored_wavelength_nm = Some(620.0);
 
         let mut reg_b = reg_a.clone();
-        reg_b.field_sha256 = Some(emf_b.source_sha256());
+        reg_b.field_sha256 = Some(Sha256::digest(emf_b.source_bytes()).into());
         reg_b.authored_wavelength_nm = Some(465.0);
 
         let bound_a = BoundLeafEmfCompanion::bind(reg_a, organ_sha, &emf_a, 0).unwrap();

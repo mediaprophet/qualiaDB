@@ -14,7 +14,6 @@ use crate::render::portal_emf_state::{
 };
 use profiles::ProfileChunk;
 use projection_accum::{grid_bounds, selected_frame_pose};
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 fn key(view: &StructuralView<'_>, c: ProfileChunk<'_>) -> Result<DisplaySelection, Error> {
@@ -233,7 +232,6 @@ pub(super) fn project(
     source.extend_from_slice(bytes);
     let source: Arc<[u8]> = Arc::from(source.into_boxed_slice());
     let frame_pose = selected_frame_pose(view, selected.frame_id);
-    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0],
         ny: dims[1],
@@ -242,7 +240,6 @@ pub(super) fn project(
         cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?,
         bounds,
         frame_pose,
-        source_sha256,
         cells,
         optical_cells,
         display_mode: 0,

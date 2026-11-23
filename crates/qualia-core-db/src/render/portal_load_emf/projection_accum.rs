@@ -7,19 +7,23 @@ use crate::q42::field_spectrum::{
     AxisKind, AxisView, SampleSemantics, VACUUM_SPEED_OF_LIGHT_M_PER_S,
 };
 use crate::render::portal_emf_state::{
-    carrier_hz_to_spectral_sigma, e_magnitude_from_poynting, DisplayOpticalCell, MAX_DISPLAY_CELLS,
+    carrier_hz_to_spectral_sigma, e_magnitude_from_poynting, DisplayOpticalCell, EmfFramePose,
+    MAX_DISPLAY_CELLS,
 };
 use crate::render::portal_load_emf::{
     charge, vector, DisplayEmfCell, DisplaySelection, Error, LoadedEmf, PortalEmfLimits,
 };
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
-pub(super) fn selected_frame_pose(view: &StructuralView<'_>, frame_id: u32) -> FramePose {
+pub(super) fn selected_frame_pose(view: &StructuralView<'_>, frame_id: u32) -> EmfFramePose {
     view.blocks()
         .find(|b| b.id() == frame_id && b.schema_type() == 2)
         .and_then(|b| FramePose::from_block(b).ok())
-        .unwrap_or_else(FramePose::identity)
+        .map(|p| EmfFramePose {
+            origin_m: p.origin_m,
+            rotation_xyzw: p.rotation_xyzw,
+        })
+        .unwrap_or_else(EmfFramePose::identity)
 }
 
 pub(super) fn grid_bounds(grid: profiles::GridLayout) -> Result<[f32; 6], Error> {
@@ -406,7 +410,7 @@ pub(super) fn finalize_loaded(
     bytes: &[u8],
     dims: [u32; 3],
     bounds: [f32; 6],
-    frame_pose: FramePose,
+    frame_pose: EmfFramePose,
     ticks: Vec<i64>,
     temporal: bool,
     selected: DisplaySelection,
@@ -427,7 +431,6 @@ pub(super) fn finalize_loaded(
     }
     let mut source = vector(bytes.len(), limits.peak_owned_bytes)?;
     source.extend_from_slice(bytes);
-    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0],
         ny: dims[1],
@@ -436,7 +439,6 @@ pub(super) fn finalize_loaded(
         cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?,
         bounds,
         frame_pose,
-        source_sha256,
         cells,
         optical_cells,
         display_mode,
