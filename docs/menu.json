@@ -281,10 +281,16 @@
       "group": "Benchmarks"
     },
     {
-      "label": "Geometry & Renderer",
+      "label": "Etalon, 10D, EMF & 3D Bench",
+      "href": "geometry-10d-showcase.html",
+      "icon": "fa-cubes-stacked",
+      "highlight": true,
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Geometry & Renderer (Tab)",
       "href": "benchmark.html#geometry",
       "icon": "fa-shapes",
-      "highlight": true,
       "group": "Benchmarks"
     },
     {

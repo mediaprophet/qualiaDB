@@ -412,6 +412,19 @@
             <p class="text-white/60 text-sm mb-4">
                 Render a dense, deterministic scene first, then inspect the corresponding browser geometry model. The canvas draws every selected primitive (up to 3,000); its interactive Delaunay preview deliberately uses a bounded subset so it remains responsive. This is a browser Canvas scene preview, not evidence of native GPU performance.
             </p>
+            <div class="mb-6 rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-500/15 via-emerald-500/10 to-violet-500/15 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                    <div class="font-bold text-cyan-300 flex items-center gap-2 mb-1">
+                        <i class="fas fa-rocket"></i>
+                        <span>Dedicated Etalon GPU, Holographic 10D v2, EMF v4 &amp; 3D Geometry Benchmark Suite</span>
+                    </div>
+                    <span>Clock Rust WASM vs Browser JS geometry kernels (<code class="text-cyan-300">wasm_delaunay_triangulation_2d</code>, <code class="text-cyan-300">wasm_convex_hull_2d</code>, <code class="text-cyan-300">geometry_nearest_site</code>), stream &amp; verify production <code class="text-violet-300">.10d</code> v2 assets, benchmark <code class="text-emerald-300">.emf</code> optical cutaway slices, and test 128-byte <code class="text-amber-300">GpuInstanceRecord</code> assembly throughput.</span>
+                </div>
+                <a href="geometry-10d-showcase.html" class="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-zinc-950 font-bold text-xs transition shadow-lg shadow-cyan-500/20">
+                    <i class="fas fa-up-right-from-square"></i>
+                    <span>Launch Full 10D &amp; Etalon Benchmark Suite →</span>
+                </a>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div>
