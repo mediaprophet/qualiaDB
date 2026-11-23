@@ -41,7 +41,14 @@
       "group": "Core"
     },
     {
-      "label": "Hypermedia Studio (150)",
+      "label": "Asset Repos & Portal Stream (53)",
+      "href": "assets-showcase.html",
+      "icon": "fa-boxes-stacked",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Hypermedia Studio (400)",
       "href": "hypermedia-studio.html",
       "icon": "fa-cubes",
       "group": "Studio"

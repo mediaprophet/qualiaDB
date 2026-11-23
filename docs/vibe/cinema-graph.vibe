@@ -1,6 +1,6 @@
 // Cinema RDF holograph theatre scene.
 // QualiaPortal evaluates this. It is not a synth produce source:
-// synth produce dispatches hypermedia.* (148 morphisms) into HMC / .10d / .emf.
+// synth produce dispatches hypermedia.* (400 morphisms) into HMC / .10d / .emf.
 // This script places holographic nodes through Scene.* and Animation.* already
 // bound on the Qualia host. Changing this file does not require a wasm rebuild
 // when the theatre fetches it as text.
