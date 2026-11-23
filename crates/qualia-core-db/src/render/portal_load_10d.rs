@@ -12,13 +12,17 @@ use crate::container_10d::{MaterialRecord, SubmeshRange};
 #[path = "sdf_brick_surface.rs"]
 mod sdf_brick_surface;
 pub(crate) use sdf_brick_surface::decode_sdfb_mesh;
-pub use sdf_brick_surface::{decode_sdfb_cutaway, SectionPlane, SdfCutawaySurface};
+pub use sdf_brick_surface::{
+    decode_sdfb_cutaway, decode_sdfb_cutaway_with_emf, SdfCutawaySurface, SectionPlane,
+};
 #[path = "portal_assembly_mesh.rs"]
 mod assembly_mesh;
 pub use assembly_mesh::{
-    assembly_residency_digest, decode_hmc_leaf_assembly, decode_hmc_leaf_cutaway,
-    resolve_hmc_section_iris, LoadAssemblyCutaway, LoadAssemblyGpuBuffers, SectionLeafOccurrence,
+    assembly_residency_digest, decode_hmc_leaf_assembly, decode_hmc_leaf_assembly_with_emf,
+    decode_hmc_leaf_cutaway, decode_hmc_leaf_cutaway_with_emf, resolve_hmc_section_iris,
+    LoadAssemblyCutaway, LoadAssemblyGpuBuffers, SectionLeafOccurrence,
 };
+use crate::render::portal_emf_binding::{sample_optical_surface_colors, BoundLeafEmfCompanion};
 
 /// Two-bit geometric region carried with a semantic surface pick.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -234,7 +238,25 @@ pub fn decode_load_10d(bytes: &[u8]) -> Result<Load10dGpuBuffers, String> {
     decode_load_10d_in_frame(bytes, true)
 }
 
+/// Parse a sealed `.10d` with an optional bound optical `.emf` companion evaluated in
+/// the leaf's authored metre frame before viewer normalization.
+pub fn decode_load_10d_with_emf(
+    bytes: &[u8],
+    orbit_fit: bool,
+    companion: Option<&BoundLeafEmfCompanion<'_>>,
+) -> Result<Load10dGpuBuffers, String> {
+    decode_load_10d_in_frame_with_emf(bytes, orbit_fit, companion)
+}
+
 pub(crate) fn decode_load_10d_in_frame(bytes: &[u8], orbit_fit: bool) -> Result<Load10dGpuBuffers, String> {
+    decode_load_10d_in_frame_with_emf(bytes, orbit_fit, None)
+}
+
+pub(crate) fn decode_load_10d_in_frame_with_emf(
+    bytes: &[u8],
+    orbit_fit: bool,
+    companion: Option<&BoundLeafEmfCompanion<'_>>,
+) -> Result<Load10dGpuBuffers, String> {
     let mut bytes_mut = bytes.to_vec();
     let header = Container10dHeader::parse(&bytes_mut).map_err(|e| format!("10d header: {e}"))?;
 
@@ -433,7 +455,7 @@ pub(crate) fn decode_load_10d_in_frame(bytes: &[u8], orbit_fit: bool) -> Result<
                 container_10d::surface_reading::decode_surface_reading(&bytes_mut[off..off + len]);
         }
     }
-    let colors = match surface {
+    let mut colors = match surface {
         Some(reading) if reading.len() == mesh.vertex_count() => reading,
         Some(reading) => {
             return Err(format!(
@@ -470,13 +492,44 @@ pub(crate) fn decode_load_10d_in_frame(bytes: &[u8], orbit_fit: bool) -> Result<
 
     let mesh_index_count = u32::try_from(mesh.triangles.len().saturating_mul(3))
         .map_err(|_| "10d index count exceeds u32".to_string())?;
-    let (materials, ranges) = if let Some(ranges) = sdf_ranges {
+    let (mut materials, mut ranges) = if let Some(ranges) = sdf_ranges {
         (vec![MaterialRecord::legacy_default()], ranges)
     } else if had_explicit_mesh {
         decode_load_10d_materials(&bytes_mut, mesh_index_count)?
     } else {
         (Vec::new(), Vec::new())
     };
+
+    if let Some(bound) = companion {
+        let base_tissue = if has_sdf {
+            [0.69, 0.58, 0.49]
+        } else {
+            materials
+                .first()
+                .map(|m| [m.base_color[0], m.base_color[1], m.base_color[2]])
+                .unwrap_or([0.69, 0.58, 0.49])
+        };
+        // Evaluate optical colour in the authored metre frame BEFORE orbit_fit viewer normalization.
+        colors = sample_optical_surface_colors(&mesh.positions, base_tissue, bound);
+        if materials.is_empty() && mesh_index_count > 0 {
+            let mut mat = MaterialRecord::legacy_default();
+            mat.base_color = [1.0, 1.0, 1.0, 1.0];
+            mat.multiply_vertex_color = true;
+            let mat_id = mat.id;
+            materials.push(mat);
+            ranges.push(SubmeshRange {
+                first_index: 0,
+                index_count: mesh_index_count,
+                material_id: mat_id,
+                semantic_id: 0,
+            });
+        } else {
+            for mat in &mut materials {
+                mat.base_color = [1.0, 1.0, 1.0, mat.base_color[3]];
+                mat.multiply_vertex_color = true;
+            }
+        }
+    }
 
     let governance_refused =
         (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;

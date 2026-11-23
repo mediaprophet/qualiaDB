@@ -1,8 +1,10 @@
 //! One accepted current field and exact immutable source, independent of GPU life.
 use crate::q42::{
     emf_container::{EmfContainerReader, EmfReadLimits},
+    emf_profiles::FramePose,
     field_spectrum::VACUUM_SPEED_OF_LIGHT_M_PER_S,
 };
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 pub const MAX_DISPLAY_CELLS: usize = 1_048_576;
@@ -48,6 +50,8 @@ pub struct LoadedEmf {
     pub(super) nt: u32,
     pub(super) cell_count: u32,
     pub(super) bounds: [f32; 6],
+    pub(super) frame_pose: FramePose,
+    pub(super) source_sha256: [u8; 32],
     pub(super) cells: Vec<DisplayEmfCell>,
     pub(super) optical_cells: Vec<DisplayOpticalCell>,
     pub(super) display_mode: u16,
@@ -67,6 +71,15 @@ impl LoadedEmf {
     /// Interleaved local cell-footprint bounds: xmin,xmax,ymin,ymax,zmin,zmax.
     pub fn local_bounds(&self) -> [f32; 6] {
         self.bounds
+    }
+    /// Selected frame pose (`origin_m` and `rotation_xyzw`) mapping local cell-footprint
+    /// coordinates to the selected frame's physical metre coordinates.
+    pub fn frame_pose(&self) -> FramePose {
+        self.frame_pose
+    }
+    /// SHA-256 digest of the immutable source bytes.
+    pub fn source_sha256(&self) -> [u8; 32] {
+        self.source_sha256
     }
     pub fn display_cells(&self) -> &[DisplayEmfCell] {
         &self.cells
@@ -251,6 +264,7 @@ pub fn decode_emf64_display(bytes: &[u8]) -> Result<LoadedEmf, String> {
     let mut source = Vec::new();
     source.try_reserve_exact(bytes.len()).map_err(|_| "emf64: source alloc".to_string())?;
     source.extend_from_slice(bytes);
+    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dense.nx,
         ny: dense.ny,
@@ -258,6 +272,8 @@ pub fn decode_emf64_display(bytes: &[u8]) -> Result<LoadedEmf, String> {
         nt: dense.nt,
         cell_count: total as u32,
         bounds,
+        frame_pose: FramePose::identity(),
+        source_sha256,
         cells,
         optical_cells,
         display_mode: version,
@@ -400,6 +416,10 @@ impl RetainedEmf {
                 EmfDisplayStatus::Unavailable
             }
         }
+    }
+    pub fn clear(&mut self) {
+        self.field = None;
+        self.status = EmfDisplayStatus::Empty;
     }
     pub fn replay(
         &mut self,

@@ -3,9 +3,11 @@
 use super::super::PortalGpu;
 use crate::render::{
     instance_culling::GpuInstanceRecord,
+    portal_emf_binding::BoundLeafEmfCompanion,
+    portal_emf_state::LoadedEmf,
     portal_load_10d::{
-        decode_hmc_leaf_cutaway, decode_sdfb_cutaway, resolve_hmc_section_iris, PickSurfaceRegion,
-        SectionLeafOccurrence, SectionPlane,
+        decode_hmc_leaf_cutaway_with_emf, decode_sdfb_cutaway_with_emf, resolve_hmc_section_iris,
+        PickSurfaceRegion, SectionLeafOccurrence, SectionPlane,
     },
 };
 
@@ -30,7 +32,19 @@ impl PortalGpu {
         plane: SectionPlane,
         leaf_slots: &[u32],
     ) -> Result<([u32; 4], Vec<SectionLeafOccurrence>), String> {
-        let section = decode_hmc_leaf_cutaway(bundle, assembly_key, plane, leaf_slots)?;
+        self.set_hmc_section_plane_with_emf(bundle, assembly_key, plane, leaf_slots, None)
+    }
+
+    pub fn set_hmc_section_plane_with_emf(
+        &mut self,
+        bundle: &crate::bundle::BundleReader<'_>,
+        assembly_key: &str,
+        plane: SectionPlane,
+        leaf_slots: &[u32],
+        admitted_emf: Option<&LoadedEmf>,
+    ) -> Result<([u32; 4], Vec<SectionLeafOccurrence>), String> {
+        let section =
+            decode_hmc_leaf_cutaway_with_emf(bundle, assembly_key, plane, leaf_slots, admitted_emf)?;
         if section.draw.indices.is_empty() {
             self.upload_mesh_colored_with_frames_and_materials(&[], &[], None, None, &[], &[], &[])?;
             return Ok(([0; 4], section.leaf_occurrences));
@@ -60,7 +74,19 @@ impl PortalGpu {
         sdfb_10d: &[u8],
         plane: SectionPlane,
     ) -> Result<[u32; 4], String> {
-        let cut = decode_sdfb_cutaway(sdfb_10d, plane)?;
+        self.set_section_plane_with_emf(sdfb_10d, plane, None)
+    }
+
+    /// Build and install a section plane over a verified standalone SDFB asset,
+    /// evaluating an optional bound optical `.emf` companion in authored metre coordinates
+    /// on both exterior and cut-tissue surfaces while keeping lumen openings distinct.
+    pub fn set_section_plane_with_emf(
+        &mut self,
+        sdfb_10d: &[u8],
+        plane: SectionPlane,
+        companion: Option<&BoundLeafEmfCompanion<'_>>,
+    ) -> Result<[u32; 4], String> {
+        let cut = decode_sdfb_cutaway_with_emf(sdfb_10d, plane, companion)?;
         if cut.mesh.triangles.is_empty() {
             self.upload_mesh_colored_with_frames_and_materials(&[], &[], None, None, &[], &[], &[])?;
             return Ok([0; 4]);
@@ -97,7 +123,7 @@ impl PortalGpu {
         }
         self.upload_mesh_colored_with_frames_and_materials_and_uv0(
             &positions,
-            &[],
+            &cut.colors,
             None,
             None,
             None,

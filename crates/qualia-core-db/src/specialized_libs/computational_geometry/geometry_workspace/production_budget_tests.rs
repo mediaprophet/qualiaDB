@@ -3,7 +3,9 @@ use super::*;
 #[test]
 fn live_capacities_and_alignment_are_admitted_together() {
     #[repr(align(64))]
-    struct Wide([u8; 64]);
+    struct Wide {
+        _bytes: [u8; 64],
+    }
     let mut plan = CapacityPlan::default();
     plan.add_slice::<f64>(BufferClass::Input, 3).unwrap();
     plan.add_slice::<u32>(BufferClass::Output, 10).unwrap();

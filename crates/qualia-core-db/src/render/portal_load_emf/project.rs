@@ -13,7 +13,8 @@ use crate::render::portal_emf_state::{
     MAX_DISPLAY_CELLS,
 };
 use profiles::ProfileChunk;
-use projection_accum::grid_bounds;
+use projection_accum::{grid_bounds, selected_frame_pose};
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 fn key(view: &StructuralView<'_>, c: ProfileChunk<'_>) -> Result<DisplaySelection, Error> {
@@ -55,7 +56,7 @@ pub(super) fn project(
     let chunks = match admitted {
         AdmittedEmf::Profile(chunks) => chunks.as_slice(),
         AdmittedEmf::Extended(ext) => {
-            return projection_modes::project_extended(bytes, ext, selection, limits, work);
+            return projection_modes::project_extended(bytes, view, ext, selection, limits, work);
         }
     };
     let has_mode0_grid = chunks
@@ -231,6 +232,8 @@ pub(super) fn project(
     let mut source = vector(bytes.len(), limits.peak_owned_bytes)?;
     source.extend_from_slice(bytes);
     let source: Arc<[u8]> = Arc::from(source.into_boxed_slice());
+    let frame_pose = selected_frame_pose(view, selected.frame_id);
+    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0],
         ny: dims[1],
@@ -238,6 +241,8 @@ pub(super) fn project(
         nt: u32::try_from(ticks.len()).map_err(|_| Error::Overflow)?,
         cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?,
         bounds,
+        frame_pose,
+        source_sha256,
         cells,
         optical_cells,
         display_mode: 0,

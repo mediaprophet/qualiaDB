@@ -17,6 +17,7 @@ use crate::render::portal_load_emf::{
     charge, vector, DisplayEmfCell, DisplaySelection, Error, LoadedEmf, PortalEmfLimits,
 };
 use profiles::ProfileChunk;
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 fn ext_key(c: &ExtendedChunk<'_>) -> DisplaySelection {
@@ -162,11 +163,13 @@ pub(super) fn project_profile_non_grid(
             _ => return Err(Error::UnsupportedProjection("unsupported-profile-mode")),
         }
     }
-    finalize_loaded(bytes, dims, bounds, ticks, temporal.unwrap_or(false), selected, mode_out, acc, limits)
+    let frame_pose = selected_frame_pose(view, selected.frame_id);
+    finalize_loaded(bytes, dims, bounds, frame_pose, ticks, temporal.unwrap_or(false), selected, mode_out, acc, limits)
 }
 
 pub(super) fn project_extended(
     bytes: &[u8],
+    view: &StructuralView<'_>,
     chunks: &[ExtendedChunk<'_>],
     selection: Option<DisplaySelection>,
     limits: PortalEmfLimits,
@@ -223,8 +226,9 @@ pub(super) fn project_extended(
     if ticks.len() > limits.time_slices {
         return Err(Error::Limit);
     }
+    let frame_pose = selected_frame_pose(view, selected.frame_id);
     if let Some(gl) = grid {
-        return project_extended_grid(bytes, chunks, selected, canonical_mode, gl, ticks, temporal.unwrap_or(false), limits, work);
+        return project_extended_grid(bytes, chunks, selected, canonical_mode, gl, frame_pose, ticks, temporal.unwrap_or(false), limits, work);
     }
     let max_cells = limits.display_cells.min(MAX_DISPLAY_CELLS);
     let (bounds, dims) = extent.bounds_and_dims(ticks.len(), canonical_mode == 0x0105, max_cells)?;
@@ -242,7 +246,7 @@ pub(super) fn project_extended(
         }
         deposit_ungridded_chunk(c, dims, bounds, &ticks, &mut acc, work)?;
     }
-    finalize_loaded(bytes, dims, bounds, ticks, temporal.unwrap_or(false), selected, canonical_mode, acc, limits)
+    finalize_loaded(bytes, dims, bounds, frame_pose, ticks, temporal.unwrap_or(false), selected, canonical_mode, acc, limits)
 }
 
 fn scan_ungridded_chunk(c: &ExtendedChunk<'_>, extent: &mut Extent, ticks: &mut Vec<i64>, work: &mut u64) -> Result<(), Error> {
@@ -379,6 +383,7 @@ fn project_extended_grid(
     selected: DisplaySelection,
     canonical_mode: u16,
     grid: profiles::GridLayout,
+    frame_pose: profiles::FramePose,
     ticks: Vec<i64>,
     temporal: bool,
     limits: PortalEmfLimits,
@@ -445,9 +450,11 @@ fn project_extended_grid(
     }
     let mut source = vector(bytes.len(), limits.peak_owned_bytes)?;
     source.extend_from_slice(bytes);
+    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0], ny: dims[1], nz: dims[2], nt: u32::try_from(ticks.len()).map_err(|_| Error::Overflow)?,
-        cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?, bounds, cells, optical_cells,
+        cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?, bounds, frame_pose, source_sha256,
+        cells, optical_cells,
         display_mode: canonical_mode, source: Arc::from(source.into_boxed_slice()),
         selection: selected, ticks, temporal,
     })

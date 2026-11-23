@@ -3,12 +3,27 @@
 use super::PortalGpu;
 
 impl PortalGpu {
-    /// Submit the current field slice to the browser surface. This is a draw,
-    /// not a pixel-readback receipt; the host must observe the resulting canvas.
+    /// Submit the current field slice to the browser surface using the retained
+    /// projection mode (`0` volumetric spectral + Stokes when uploaded with optical
+    /// data, `1` electric-magnitude grayscale diagnostic for static grids).
+    /// This is a draw, not a pixel-readback receipt; the host must observe the
+    /// resulting canvas.
     pub fn emf_present_slice(
         &mut self,
         bounds: [f32; 6],
         amplitude_gain: f32,
+    ) -> Result<(u32, u32), String> {
+        let mode = self.emf_projection_mode();
+        self.emf_present_slice_with_mode(bounds, amplitude_gain, mode)
+    }
+
+    /// Submit the current field slice to the browser surface with an explicit
+    /// `projection_mode` (`0` volumetric spectral + Stokes, `1` grayscale diagnostic).
+    pub fn emf_present_slice_with_mode(
+        &mut self,
+        bounds: [f32; 6],
+        amplitude_gain: f32,
+        projection_mode: u32,
     ) -> Result<(u32, u32), String> {
         if self.is_device_lost() || !self.emf_has_field() {
             return Err("EMF preview requires a live WebGPU device and uploaded field".into());
@@ -26,7 +41,16 @@ impl PortalGpu {
         if width == 0 || height == 0 || width > 1024 || height > 1024 {
             return Err("EMF browser preview surface must be 1..=1024 pixels per side".into());
         }
-        self.emf_update_slice_params(0, 0, bounds, amplitude_gain, 0.0, 1.0);
+        let (slice_z, slice_t) = self.emf_slice_indices();
+        self.emf_update_slice_params_with_mode(
+            slice_z,
+            slice_t,
+            bounds,
+            amplitude_gain,
+            0.0,
+            1.0,
+            projection_mode,
+        );
         let view = frame
             .texture
             .create_view(&etalon::TextureViewDescriptor::default());

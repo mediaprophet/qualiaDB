@@ -48,6 +48,10 @@ pub(crate) struct EmfState {
     pub ny: u32,
     pub nz: u32,
     pub nt: u32,
+    /// Active slice/time indices and projection mode (`0` volumetric spectral + Stokes, `1` grayscale |E| diagnostic).
+    pub slice_z: u32,
+    pub slice_t: u32,
+    pub projection_mode: u32,
     /// Field bind group (group 1). Rebuilt when field buffer changes.
     pub field_bind_group: Option<etalon::BindGroup>,
     /// Inner decoupled EMF pipeline from etalon-render.
@@ -93,6 +97,9 @@ impl EmfState {
             ny: 0,
             nz: 0,
             nt: 0,
+            slice_z: 0,
+            slice_t: 0,
+            projection_mode: 1,
             field_bind_group: None,
             inner,
             _param_buffer_reservation: param_buffer_reservation,
@@ -191,9 +198,20 @@ impl super::PortalGpu {
         self.emf.ny = ny;
         self.emf.nz = nz;
         self.emf.nt = nt;
+        let spectral = cells.iter().any(|c| {
+            c.epistemic_weight > 0.0
+                && (c.recurrence_frequency > 0.0
+                    || c.frequency > 0.0
+                    || c.phase != 0.0
+                    || c.scale > 0.0
+                    || c.stokes_q != 0.0
+                    || c.stokes_u != 0.0
+                    || c.stokes_v != 0.0)
+        });
+        let mode = if spectral { 0 } else { 1 };
 
         // Update the slice parameter uniform with default slice (z=0, t=0).
-        self.emf_update_slice_params(0, 0, bounds, 1.0, 0.0, 1.0);
+        self.emf_update_slice_params_with_mode(0, 0, bounds, 1.0, 0.0, 1.0, mode);
 
         Ok(())
     }
@@ -257,13 +275,18 @@ impl super::PortalGpu {
         manifold_gain: f32,
         projection_mode: u32,
     ) {
+        let clamped_z = slice_z.min(self.emf.nz.saturating_sub(1));
+        let clamped_t = slice_t.min(self.emf.nt.saturating_sub(1));
+        self.emf.slice_z = clamped_z;
+        self.emf.slice_t = clamped_t;
+        self.emf.projection_mode = projection_mode;
         let params = EmfSliceUniform {
             nx: self.emf.nx,
             ny: self.emf.ny,
             nz: self.emf.nz,
             nt: self.emf.nt,
-            slice_z: slice_z.min(self.emf.nz.saturating_sub(1)),
-            slice_t: slice_t.min(self.emf.nt.saturating_sub(1)),
+            slice_z: clamped_z,
+            slice_t: clamped_t,
             x_min: bounds[0],
             x_max: bounds[1],
             y_min: bounds[2],
@@ -276,6 +299,16 @@ impl super::PortalGpu {
             projection_mode,
         };
         self.emf.inner_mut().update_params(&self.queue, &params);
+    }
+
+    /// Active EMF projection mode (`0` volumetric spectral + Stokes, `1` grayscale |E| diagnostic).
+    pub fn emf_projection_mode(&self) -> u32 {
+        self.emf.projection_mode
+    }
+
+    /// Active EMF (slice_z, slice_t) indices.
+    pub fn emf_slice_indices(&self) -> (u32, u32) {
+        (self.emf.slice_z, self.emf.slice_t)
     }
 
     /// Render the current EMF slice to the portal's color target.
@@ -417,6 +450,7 @@ mod tests {
     /// End-to-end: create a PortalGpu, upload a small field, render a slice,
     /// and read back pixels. Skips gracefully when no GPU adapter exists.
     #[test]
+    #[serial_test::serial(gpu)]
     fn c_emf_upload_and_render_slice() {
         if crate::gpu_context::try_shared_gpu().is_none() {
             eprintln!("[emf_test] no GPU adapter — skipping");
@@ -470,6 +504,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(gpu)]
     fn c_emf_render_without_field_errors() {
         if crate::gpu_context::try_shared_gpu().is_none() {
             eprintln!("[emf_test] no GPU adapter — skipping");
@@ -478,5 +513,68 @@ mod tests {
         let mut portal = PortalGpu::new_offscreen(16, 16, 64).expect("offscreen");
         let result = portal.emf_render_slice_to_rgba8();
         assert!(result.is_err(), "render without field should error");
+    }
+
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn c_emf_upload_preserves_spectral_projection_mode_and_retains_grayscale_diagnostic_option() {
+        if crate::gpu_context::try_shared_gpu().is_none() {
+            eprintln!("[emf_test] no GPU adapter — skipping");
+            return;
+        }
+        let mut portal = PortalGpu::new_offscreen(16, 16, 64).expect("offscreen");
+        let cells: Vec<EmfFieldCell> = (0..16)
+            .map(|_| EmfFieldCell {
+                amplitude: 0.75,
+                phase: 4.6,
+                frequency: 4.835e14,
+                scale: 1.0,
+                attention_depth: 0.5,
+                epistemic_weight: 1.0,
+                topological_spin: 0.0,
+                temporal_decay: 0.0,
+                entropy_bias: 0.0,
+                spatial_phase: 4.6,
+                recurrence_frequency: 0.733, // 620 nm red-orange in visible band
+                density_threshold: 1.0,
+                manifold_curvature: 0.1,
+                stokes_q: 0.3,
+                stokes_u: 0.0,
+                stokes_v: 0.0,
+            })
+            .collect();
+        let bounds = [-1.0, 1.0, -1.0, 1.0, -1.0, 1.0];
+        portal
+            .emf_upload_field(&cells, 4, 4, 1, 1, bounds)
+            .expect("upload spectral field");
+        assert_eq!(
+            portal.emf_projection_mode(),
+            0,
+            "spectral field must default to projection_mode = 0"
+        );
+        let (_, _, spectral_pixels) = portal
+            .emf_render_slice_to_rgba8()
+            .expect("render spectral slice");
+        let chromatic_count = spectral_pixels
+            .chunks_exact(4)
+            .filter(|px| px[0] != px[1] || px[1] != px[2])
+            .count();
+        assert!(
+            chromatic_count > 0,
+            "spectral mode 0 must render chromatic (non-grayscale) pixels"
+        );
+
+        // Explicit diagnostic grayscale mode 1 remains available on request.
+        portal.emf_update_slice_params_with_mode(0, 0, bounds, 1.0, 0.0, 1.0, 1);
+        assert_eq!(portal.emf_projection_mode(), 1);
+        let (_, _, gray_pixels) = portal
+            .emf_render_slice_to_rgba8()
+            .expect("render grayscale diagnostic slice");
+        assert!(
+            gray_pixels
+                .chunks_exact(4)
+                .all(|px| px[0] == px[1] && px[1] == px[2]),
+            "diagnostic mode 1 must produce grayscale pixels"
+        );
     }
 }

@@ -1,8 +1,8 @@
 //! Cold HMC assembly admission, framed native draw groups, and stable leaf identity.
 
 use super::{
-    admit_leaf_assembly, decode_load_10d_in_frame, decode_sdfb_cutaway, AdmittedAssemblyLeaf,
-    Load10dGpuBuffers, PickSurfaceRegion, SectionPlane,
+    admit_leaf_assembly, decode_load_10d_in_frame_with_emf, decode_sdfb_cutaway_with_emf,
+    AdmittedAssemblyLeaf, Load10dGpuBuffers, PickSurfaceRegion, SectionPlane,
 };
 use crate::{
     bundle::{
@@ -18,6 +18,11 @@ use crate::{
         instance_culling::GpuInstanceRecord,
         mesh_surface_frames::vertex_normals_from_indices_into,
         mesh_tangent_frames::tangents_from_uvs_into,
+        portal_emf_binding::{
+            resolve_bundle_emf_registrations, BoundLeafEmfCompanion, EmfCompanionRegistration,
+        },
+        portal_emf_state::LoadedEmf,
+        portal_load_emf::decode_emf_scientific,
         skeletal::{valid_motor, Motor},
     },
 };
@@ -243,8 +248,8 @@ fn declares_leaf_assembly(bytes: &[u8]) -> Result<bool, String> {
         || (count == 1 && has(FIELD_KIND_INSTANCE_BATCH) && has(FIELD_KIND_INSTANCE_OVERRIDES)))
 }
 
-/// Include the actual semantic model in the resident key. The root entry
-/// already binds each leaf's digest and authored order through AREF.
+/// Include the actual semantic model and any registered companion EMF digests in the resident key.
+/// The root entry already binds each leaf's digest and authored order through AREF.
 pub fn assembly_residency_digest(
     bundle: &BundleReader<'_>,
     assembly: &[u8],
@@ -260,11 +265,95 @@ pub fn assembly_residency_digest(
         (Some(entry), None) | (None, Some(entry)) if entry.kind == "q42" => entry,
         _ => return Err("Native leaf assembly requires one embedded semantic model".into()),
     };
+    let registrations = resolve_bundle_emf_registrations(bundle)?;
     let mut hasher = Sha256::new();
     hasher.update(b"qualia:portal:leaf-assembly:v1");
     hasher.update(root_digest);
     hasher.update(&model.sha256);
+    for (geom_key, reg) in &registrations {
+        hasher.update(geom_key.as_bytes());
+        hasher.update([0]);
+        hasher.update(reg.field_member.as_bytes());
+        hasher.update([0]);
+        if let Some(sha) = reg.field_sha256 {
+            hasher.update(sha);
+        }
+        for col in &reg.field_from_leaf {
+            for val in col {
+                hasher.update(val.to_bits().to_le_bytes());
+            }
+        }
+        hasher.update(reg.authored_wavelength_nm.unwrap_or(0.0).to_bits().to_le_bytes());
+    }
     Ok(Some(hasher.finalize().into()))
+}
+
+fn resolve_bundle_leaf_companions(
+    bundle: &BundleReader<'_>,
+    admitted_emf: Option<&LoadedEmf>,
+) -> Result<(BTreeMap<String, EmfCompanionRegistration>, BTreeMap<String, LoadedEmf>), String> {
+    let mut registrations = resolve_bundle_emf_registrations(bundle)?;
+    let mut decoded_fields: BTreeMap<String, LoadedEmf> = BTreeMap::new();
+    for reg in registrations.values() {
+        if decoded_fields.contains_key(&reg.field_member) {
+            continue;
+        }
+        if let Some(admitted) = admitted_emf {
+            if reg.field_sha256.is_none_or(|sha| sha == admitted.source_sha256()) {
+                continue;
+            }
+        }
+        let emf_bytes = bundle
+            .get(&reg.field_member)
+            .ok_or_else(|| format!("Missing registered EMF companion {:?}", reg.field_member))?;
+        let loaded = decode_emf_scientific(emf_bytes)?;
+        decoded_fields.insert(reg.field_member.clone(), loaded);
+    }
+    // If an admitted_emf was explicitly loaded via load_emf and matches a single-companion bundle
+    // or overrides the active field, allow it to bind when its digest matches or when a leaf
+    // has no bundle-embedded .emf entry.
+    if let Some(admitted) = admitted_emf {
+        for reg in registrations.values_mut() {
+            if !decoded_fields.contains_key(&reg.field_member) {
+                reg.field_sha256 = Some(admitted.source_sha256());
+            }
+        }
+    }
+    Ok((registrations, decoded_fields))
+}
+
+fn bind_leaf_companion<'a>(
+    leaf_key: &str,
+    leaf_bytes: &[u8],
+    registrations: &BTreeMap<String, EmfCompanionRegistration>,
+    decoded_fields: &'a BTreeMap<String, LoadedEmf>,
+    admitted_emf: Option<&'a LoadedEmf>,
+) -> Result<Option<BoundLeafEmfCompanion<'a>>, String> {
+    let Some(reg) = registrations.get(leaf_key) else {
+        return Ok(None);
+    };
+    let field = if let Some(admitted) = admitted_emf {
+        if reg.field_sha256 == Some(admitted.source_sha256())
+            || !decoded_fields.contains_key(&reg.field_member)
+        {
+            admitted
+        } else {
+            decoded_fields
+                .get(&reg.field_member)
+                .ok_or_else(|| format!("Unresolved EMF companion {:?}", reg.field_member))?
+        }
+    } else {
+        decoded_fields
+            .get(&reg.field_member)
+            .ok_or_else(|| format!("Unresolved EMF companion {:?}", reg.field_member))?
+    };
+    let leaf_sha: [u8; 32] = Sha256::digest(leaf_bytes).into();
+    Ok(Some(BoundLeafEmfCompanion::bind(
+        reg.clone(),
+        leaf_sha,
+        field,
+        0,
+    )?))
 }
 
 /// Build one bounded native submission. Adjacent references to the same verified
@@ -273,9 +362,20 @@ pub fn decode_hmc_leaf_assembly(
     bundle: &BundleReader<'_>,
     assembly_key: &str,
 ) -> Result<LoadAssemblyGpuBuffers, String> {
+    decode_hmc_leaf_assembly_with_emf(bundle, assembly_key, None)
+}
+
+/// Build one bounded native submission, binding any registered `.emf` optical companions
+/// in each leaf's authored metre frame before assembly world placement.
+pub fn decode_hmc_leaf_assembly_with_emf(
+    bundle: &BundleReader<'_>,
+    assembly_key: &str,
+    admitted_emf: Option<&LoadedEmf>,
+) -> Result<LoadAssemblyGpuBuffers, String> {
     let leaves = admit_leaf_assembly(bundle, assembly_key)?;
+    let (registrations, decoded_fields) = resolve_bundle_leaf_companions(bundle, admitted_emf)?;
     let mut result = buffers(leaves.len());
-    let mut current = None;
+    let mut current: Option<(&str, Option<[u8; 32]>)> = None;
     let mut wall_semantic_id = None;
     let mut local_bounds = [[0.0; 3]; 2];
     let mut world_bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
@@ -295,7 +395,15 @@ pub fn decode_hmc_leaf_assembly(
             ));
         }
         let transform = leaf_matrix(leaf.overrides.local_pga_motor, leaf.overrides.uniform_scale)?;
-        if current == Some(leaf.key) {
+        let leaf_companion = bind_leaf_companion(
+            leaf.key,
+            leaf.bytes,
+            &registrations,
+            &decoded_fields,
+            admitted_emf,
+        )?;
+        let companion_digest = leaf_companion.as_ref().map(|c| c.binding_digest());
+        if current == Some((leaf.key, companion_digest)) {
             let group = result
                 .descriptors
                 .last_mut()
@@ -305,7 +413,8 @@ pub fn decode_hmc_leaf_assembly(
             if declares_leaf_assembly(leaf.bytes)? {
                 return Err("Nested HMC assemblies require a resolved leaf hierarchy".into());
             }
-            let asset = decode_load_10d_in_frame(leaf.bytes, false)?;
+            let asset =
+                decode_load_10d_in_frame_with_emf(leaf.bytes, false, leaf_companion.as_ref())?;
             if asset.governance_refused {
                 return Err(format!(
                     "HMC assembly leaf {} is governance-refused",
@@ -329,7 +438,7 @@ pub fn decode_hmc_leaf_assembly(
                 1,
             ]);
             append_mesh(&mut result, asset, leaf.semantic_id)?;
-            current = Some(leaf.key);
+            current = Some((leaf.key, companion_digest));
         }
         let index_count = result
             .descriptors
@@ -355,7 +464,20 @@ pub fn decode_hmc_leaf_cutaway(
     plane: SectionPlane,
     leaf_slots: &[u32],
 ) -> Result<LoadAssemblyCutaway, String> {
+    decode_hmc_leaf_cutaway_with_emf(bundle, assembly_key, plane, leaf_slots, None)
+}
+
+/// Slice selected flattened leaf slots in assembly-authored coordinates, applying any registered
+/// `.emf` optical companions to both exterior and cut-tissue surfaces in each leaf's authored metre frame.
+pub fn decode_hmc_leaf_cutaway_with_emf(
+    bundle: &BundleReader<'_>,
+    assembly_key: &str,
+    plane: SectionPlane,
+    leaf_slots: &[u32],
+    admitted_emf: Option<&LoadedEmf>,
+) -> Result<LoadAssemblyCutaway, String> {
     let leaves = flatten_section_leaves(bundle, assembly_key)?;
+    let (registrations, decoded_fields) = resolve_bundle_leaf_companions(bundle, admitted_emf)?;
     let mask: BTreeSet<_> = leaf_slots.iter().copied().collect();
     if mask.len() != leaf_slots.len() || mask.iter().any(|&slot| slot as usize >= leaves.len()) {
         return Err("SDFB section leaf mask contains invalid or repeated authored slots".into());
@@ -369,8 +491,16 @@ pub fn decode_hmc_leaf_cutaway(
     let mut selected = 0;
     for leaf in leaves {
         let slot = leaf.occurrence.instance_slot;
+        let leaf_key = leaf.occurrence.entry_key.clone();
         leaf_occurrences.push(leaf.occurrence);
         let transform = leaf.world_from_local;
+        let leaf_companion = bind_leaf_companion(
+            &leaf_key,
+            leaf.bytes,
+            &registrations,
+            &decoded_fields,
+            admitted_emf,
+        )?;
         let cut_this = if mask.is_empty() {
             crate::container_10d::sdf_brick_section::read_container_sdfb(leaf.bytes)?.is_some()
         } else {
@@ -379,7 +509,11 @@ pub fn decode_hmc_leaf_cutaway(
         let first_index = draw.indices.len() as u32;
         if cut_this {
             selected += 1;
-            let cut = decode_sdfb_cutaway(leaf.bytes, plane.in_local_frame(&transform)?)?;
+            let cut = decode_sdfb_cutaway_with_emf(
+                leaf.bytes,
+                plane.in_local_frame(&transform)?,
+                leaf_companion.as_ref(),
+            )?;
             update_world_bounds(&mut world_bounds, cut.source_bounds_m, &transform);
             if cut.mesh.triangles.is_empty() {
                 continue;
@@ -387,7 +521,7 @@ pub fn decode_hmc_leaf_cutaway(
             let first_group = placement.len();
             let asset = Load10dGpuBuffers {
                 positions: cut.mesh.positions,
-                colors: Vec::new(),
+                colors: cut.colors,
                 uv0: None,
                 normals: None,
                 tangents: None,
@@ -421,7 +555,8 @@ pub fn decode_hmc_leaf_cutaway(
             }
             append_mesh(&mut draw, asset, leaf.semantic_id)?;
         } else {
-            let asset = decode_load_10d_in_frame(leaf.bytes, false)?;
+            let asset =
+                decode_load_10d_in_frame_with_emf(leaf.bytes, false, leaf_companion.as_ref())?;
             if asset.governance_refused {
                 return Err(format!("HMC section leaf {slot} is governance-refused"));
             }

@@ -221,7 +221,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
                 catch (e) { err = String((e && e.message) || e).slice(0, 400); }
                 window.__qualiaGpuInit = { ok, err, attempt, w: canvas.width, h: canvas.height };
                 if (ok) {
-                    armedRenderer = 'webgpu';
+                    armedRenderer = (typeof mod.portal_gpu_backend === 'function' && mod.portal_gpu_backend()) || 'webgpu';
                     debugLog('portal_init_webgpu ok', { attempt });
                     break;
                 }
@@ -284,6 +284,12 @@ export async function loadQualiaPortal(canvas, options = {}) {
             mod.portal_abort_webgpu();
         }
         portal = new mod.QualiaPortal(canvas);
+        const liveBackend = (typeof mod.portal_gpu_backend === 'function' && mod.portal_gpu_backend()) || armedRenderer;
+        if (liveBackend) {
+            armedRenderer = liveBackend;
+            if (window.__qualiaAnatomyInit) window.__qualiaAnatomyInit.renderer = armedRenderer;
+            if (portalRecoveryPolicy) portalRecoveryPolicy.initialRenderer = armedRenderer;
+        }
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier, renderer: armedRenderer });
         t.end({ source: 'qualia-portal', tier, renderer: armedRenderer });
@@ -346,7 +352,7 @@ export function startPortalLoop(canvas, onFrame, onCanvasReplaced) {
         try {
             if (chooseRecoveryBackend(webgpuRetryAllowed) === 'webgpu'
                 && await mod.portal_init_webgpu(currentCanvas)) {
-                backend = 'webgpu';
+                backend = (typeof mod.portal_gpu_backend === 'function' && mod.portal_gpu_backend()) || 'webgpu';
             } else if (backend !== 'webgpu') {
                 if (mod?.portal_webgpu_canvas_claimed?.()) currentCanvas = replaceCanvas();
                 if (chooseRecoveryBackend(false) === 'webgl2') {

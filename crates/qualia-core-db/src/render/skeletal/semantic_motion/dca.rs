@@ -583,7 +583,7 @@ mod tests {
             tolerance: 1e-5,
             damping: 1e-3,
         };
-        for i in 0..2 {
+        for i in 0usize..2 {
             let body = DcaBodyNode {
                 parent: i.checked_sub(1).map(|v| v as u16),
                 parent_to_joint_origin_m: [i as f64, 0.0, 0.0],

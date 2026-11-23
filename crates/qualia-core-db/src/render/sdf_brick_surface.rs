@@ -15,7 +15,9 @@ use std::collections::BTreeMap;
 
 #[path = "sdf_cutaway.rs"]
 mod cutaway;
-pub use cutaway::{decode_sdfb_cutaway, SdfCutawaySurface, SectionPlane};
+pub use cutaway::{
+    decode_sdfb_cutaway, decode_sdfb_cutaway_with_emf, SdfCutawaySurface, SectionPlane,
+};
 
 // 257³ samples × 8 bytes plus bounded indexed-surface scratch fit the 192 MiB
 // cold geometry budget. This is independent of the sealed .10d ring budget.

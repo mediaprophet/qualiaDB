@@ -194,7 +194,7 @@ fn existing_meshlet_and_dag_limits_stay_authoritative() {
 #[test]
 fn admit_forest_and_dependency_identities() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         assert_eq!(hierarchy.roots(), &[0, 5]);
         assert_eq!(hierarchy.coverage(), 8);
@@ -213,7 +213,7 @@ fn admit_forest_and_dependency_identities() {
 #[test]
 fn legal_cuts_are_contiguous_coverage_partitions() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         for cut in [&[0u32, 5][..], &[1, 2, 5][..], &[3, 4, 2, 5][..]] {
             hierarchy.validate_cut(cut, budget).unwrap();
@@ -224,7 +224,7 @@ fn legal_cuts_are_contiguous_coverage_partitions() {
 #[test]
 fn illegal_cuts_holes_duplicates_order_and_sibling_subset() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let illegal: &[&[u32]] = &[
             &[0],
@@ -249,7 +249,7 @@ fn illegal_cuts_holes_duplicates_order_and_sibling_subset() {
 #[test]
 fn random_subsets_match_exactly_the_three_legal_cuts() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut legal = 0u32;
         let mut buf = [0u32; 6];
@@ -361,7 +361,7 @@ fn quantized_cdag_codec_roundtrip_readmits() {
 #[test]
 fn cpu_cut_reference_refines_by_projected_error() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut stack = [0u32; 6];
         let mut cut = [0u32; 6];
@@ -379,7 +379,7 @@ fn cpu_cut_reference_refines_by_projected_error() {
 #[test]
 fn selection_is_tied_to_a_legal_cut_and_records_error_contract() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let contract = cpu_vs_gpu_error_contract();
         assert!(contract.cpu_projects_world_error);
@@ -409,7 +409,7 @@ fn selection_is_tied_to_a_legal_cut_and_records_error_contract() {
 #[test]
 fn frozen_domain_does_not_disappear_under_stale_occlusion() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut hzb = [None; 6];
         hzb[0] = Some([0.95, 0.10]);
@@ -474,7 +474,7 @@ fn frozen_domain_does_not_disappear_under_stale_occlusion() {
 #[test]
 fn near_plane_two_sided_deformation_and_orthographic_are_conservative() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut stack = [0u32; 6];
         let mut cut = [0u32; 6];
@@ -584,7 +584,7 @@ fn near_plane_two_sided_deformation_and_orthographic_are_conservative() {
 #[test]
 fn gpu_abi_pack_binds_independent_masks_to_the_legal_cut() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let view = view_at([0.0, 0.0, 40.0], 1000.0, OcclusionHistory::None);
         let cut = [0u32, 5];
@@ -618,7 +618,7 @@ fn gpu_abi_pack_binds_independent_masks_to_the_legal_cut() {
 #[test]
 fn residency_pins_fallback_and_refuses_incomplete_replacement() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut states = [PageState::Absent; 6];
         let mut bytes = [100u32, 50, 50, 25, 25, 100];
@@ -667,7 +667,7 @@ fn residency_pins_fallback_and_refuses_incomplete_replacement() {
 #[test]
 fn residency_cap_and_random_inflight_completion_keep_a_cut() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let mut states = [PageState::Absent; 6];
         let mut bytes = [100u32, 50, 50, 25, 25, 100];
@@ -708,7 +708,7 @@ fn residency_cap_and_random_inflight_completion_keep_a_cut() {
 #[test]
 fn compaction_zero_all_alternating_exact_and_overflow() {
     with_budget(10_000, |budget| {
-        let mut forest = Forest::new();
+        let forest = Forest::new();
         let hierarchy = forest.admit(budget);
         let cut = [3u32, 4, 2, 5];
         hierarchy.validate_cut(&cut, budget).unwrap();

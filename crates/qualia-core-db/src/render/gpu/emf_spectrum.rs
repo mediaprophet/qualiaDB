@@ -352,6 +352,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(gpu)]
     fn c_emf_upload_emf64_and_render_volumetric_mode0() {
         use crate::q42::emf_container::{
             emf_brick_voxel_linear_index, EmfCellRecord64, EmfContainerWriter, EMF_BRICK_CELLS,

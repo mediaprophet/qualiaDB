@@ -1,7 +1,8 @@
 //! Shared voxel accumulator, full-spectrum quadrature, and bounding helpers
 //! for local-frame EMF display projection.
 
-use crate::q42::emf_profiles as profiles;
+use crate::q42::emf_profiles::{self as profiles, FramePose};
+use crate::q42::field_envelope::StructuralView;
 use crate::q42::field_spectrum::{
     AxisKind, AxisView, SampleSemantics, VACUUM_SPEED_OF_LIGHT_M_PER_S,
 };
@@ -11,7 +12,15 @@ use crate::render::portal_emf_state::{
 use crate::render::portal_load_emf::{
     charge, vector, DisplayEmfCell, DisplaySelection, Error, LoadedEmf, PortalEmfLimits,
 };
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
+
+pub(super) fn selected_frame_pose(view: &StructuralView<'_>, frame_id: u32) -> FramePose {
+    view.blocks()
+        .find(|b| b.id() == frame_id && b.schema_type() == 2)
+        .and_then(|b| FramePose::from_block(b).ok())
+        .unwrap_or_else(FramePose::identity)
+}
 
 pub(super) fn grid_bounds(grid: profiles::GridLayout) -> Result<[f32; 6], Error> {
     let spec = grid.spec();
@@ -135,6 +144,9 @@ pub(super) struct VoxelAccum {
     sigma_w: f64,
     carrier_ln_w: f64,
     carrier_w: f64,
+    carrier_count: u32,
+    single_carrier_hz: f64,
+    single_sigma: f64,
     cos_w: f64,
     sin_w: f64,
     coh_sum: f64,
@@ -165,7 +177,10 @@ impl VoxelAccum {
             self.has_carrier = true;
             self.sigma_w += sigma * w;
             self.carrier_w += w;
+            self.single_sigma = sigma;
             if carrier_hz > 0.0 {
+                self.carrier_count = self.carrier_count.saturating_add(1);
+                self.single_carrier_hz = carrier_hz;
                 self.carrier_ln_w += carrier_hz.ln() * w;
             }
         }
@@ -194,12 +209,20 @@ impl VoxelAccum {
             v = 0.0;
         }
         let sigma = if self.has_carrier && self.carrier_w > 0.0 {
-            (self.sigma_w / self.carrier_w).clamp(0.0, 5.999_999)
+            if self.carrier_count <= 1 {
+                self.single_sigma.clamp(0.0, 5.999_999)
+            } else {
+                (self.sigma_w / self.carrier_w).clamp(0.0, 5.999_999)
+            }
         } else {
             0.0
         };
         let carrier_hz = if self.has_carrier && self.carrier_w > 0.0 {
-            (self.carrier_ln_w / self.carrier_w).exp()
+            if self.carrier_count == 1 {
+                self.single_carrier_hz
+            } else {
+                (self.carrier_ln_w / self.carrier_w).exp()
+            }
         } else {
             0.0
         };
@@ -383,6 +406,7 @@ pub(super) fn finalize_loaded(
     bytes: &[u8],
     dims: [u32; 3],
     bounds: [f32; 6],
+    frame_pose: FramePose,
     ticks: Vec<i64>,
     temporal: bool,
     selected: DisplaySelection,
@@ -403,6 +427,7 @@ pub(super) fn finalize_loaded(
     }
     let mut source = vector(bytes.len(), limits.peak_owned_bytes)?;
     source.extend_from_slice(bytes);
+    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0],
         ny: dims[1],
@@ -410,6 +435,8 @@ pub(super) fn finalize_loaded(
         nt: u32::try_from(ticks.len()).map_err(|_| Error::Overflow)?,
         cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?,
         bounds,
+        frame_pose,
+        source_sha256,
         cells,
         optical_cells,
         display_mode,

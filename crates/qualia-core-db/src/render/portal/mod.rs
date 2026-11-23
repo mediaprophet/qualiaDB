@@ -44,6 +44,10 @@ use crate::render::hmc_playback::{resolve_hmc_mesh_in_bundle, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
 };
+use crate::render::portal_emf_binding::{
+    combine_residency_digest_with_emf, resolve_bundle_emf_registrations, BoundLeafEmfCompanion,
+    EmfCompanionRegistration,
+};
 use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
 use crate::render::spectral::sigma_to_display_rgb;
 use crate::render::standpoint::{resolve_standpoint_hash, spectator_default};
@@ -146,6 +150,39 @@ impl BodyRendererBackend {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub(crate) enum MountedEmfTarget {
+    #[default]
+    None,
+    HmcLeaf {
+        asset_key: String,
+        leaf_bytes: std::sync::Arc<[u8]>,
+        leaf_digest: [u8; 32],
+        registration: Option<EmfCompanionRegistration>,
+    },
+    HmcAssembly {
+        hmc_bytes: std::sync::Arc<[u8]>,
+        assembly_key: String,
+    },
+    Standalone10d {
+        leaf_bytes: std::sync::Arc<[u8]>,
+        leaf_digest: [u8; 32],
+        registration: Option<EmfCompanionRegistration>,
+    },
+    StandaloneCutaway {
+        leaf_bytes: std::sync::Arc<[u8]>,
+        leaf_digest: [u8; 32],
+        plane: crate::render::portal_load_10d::SectionPlane,
+        registration: Option<EmfCompanionRegistration>,
+    },
+    HmcCutaway {
+        hmc_bytes: std::sync::Arc<[u8]>,
+        assembly_key: String,
+        plane: crate::render::portal_load_10d::SectionPlane,
+        leaf_slots: Vec<u32>,
+    },
+}
+
 /// Portal tier: 0 = CPU canvas2d fallback, 1 = tensor projection, 2 = WebGPU ambient.
 #[wasm_bindgen]
 pub struct QualiaPortal {
@@ -155,6 +192,7 @@ pub struct QualiaPortal {
     time: f64,
     last_tensor: Option<Vec<u8>>,
     last_emf: RetainedEmf,
+    mounted_emf_target: MountedEmfTarget,
     last_qac: Option<crate::render::portal_qac::RetainedQac>,
     /// Tensor node data remains pickable when its visual projection is hidden.
     tensor_projection_enabled: bool,
@@ -237,6 +275,7 @@ impl QualiaPortal {
             time: 0.0,
             last_tensor: None,
             last_emf: RetainedEmf::default(),
+            mounted_emf_target: MountedEmfTarget::None,
             last_qac: None,
             tensor_projection_enabled: true,
             telemetry: SystemTelemetry::from_samples(
@@ -1354,9 +1393,26 @@ impl QualiaPortal {
         self.hmc_mesh_residency.clear();
         self.selected_node = None;
         self.selected_semantic_pick = None;
-        self.pending_gpu_pick = None;
-        let decoded = crate::render::portal_load_10d::decode_load_10d(bytes)
-            .map_err(|e| JsValue::from_str(&e))?;
+        self.pending_gpu_pick = false;
+        let leaf_digest: [u8; 32] = {
+            use sha2::{Digest, Sha256};
+            Sha256::digest(bytes).into()
+        };
+        let companion = self.last_emf.accepted().and_then(|field| {
+            let mut reg =
+                EmfCompanionRegistration::identity_metres("standalone.10d", "admitted.emf");
+            reg.geometry_sha256 = Some(leaf_digest);
+            reg.field_sha256 = Some(field.source_sha256());
+            BoundLeafEmfCompanion::bind(reg, leaf_digest, field, 0).ok()
+        });
+        let decoded =
+            crate::render::portal_load_10d::decode_load_10d_with_emf(bytes, true, companion.as_ref())
+                .map_err(|e| JsValue::from_str(&e))?;
+        self.mounted_emf_target = MountedEmfTarget::Standalone10d {
+            leaf_bytes: std::sync::Arc::from(bytes.to_vec().into_boxed_slice()),
+            leaf_digest,
+            registration: None,
+        };
 
         let tri_count = decoded.triangle_count;
         let vert_count = decoded.vertex_count;
@@ -1610,7 +1666,17 @@ impl QualiaPortal {
                 portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
             })
             .map_err(|e| JsValue::from_str(&e))?;
+        self.refresh_mounted_target_with_emf()
+            .map_err(|e| JsValue::from_str(&e))?;
         Ok(result.into())
+    }
+
+    /// Clear the retained `.emf` companion field and restore the uncoloured appearance
+    /// of any currently mounted anatomy surface or cutaway.
+    pub fn clear_emf(&mut self) -> Result<(), JsValue> {
+        self.last_emf.clear();
+        self.refresh_mounted_target_with_emf()
+            .map_err(|e| JsValue::from_str(&e))
     }
 
     /// Layout an RDF document as a holographic semantic graph and upload it to
@@ -1819,7 +1885,9 @@ impl QualiaPortal {
     /// Load a verified `.10d` asset or native leaf assembly from an HMC bundle.
     /// Replaying the resident digest returns its receipt without another upload.
     pub fn load_hmc_mesh(&mut self, hmc_bytes: &[u8], asset_key: &str) -> Result<JsValue, JsValue> {
-        use crate::render::portal_load_10d::{assembly_residency_digest, decode_hmc_leaf_assembly};
+        use crate::render::portal_load_10d::{
+            assembly_residency_digest, decode_hmc_leaf_assembly_with_emf, decode_load_10d_with_emf,
+        };
 
         let bundle = crate::bundle::BundleReader::parse(hmc_bytes)
             .map_err(|error| JsValue::from_str(&format!("HMC bundle: {error}")))?;
@@ -1828,10 +1896,59 @@ impl QualiaPortal {
         if !bundle.verify_entry(asset_key) {
             return Err(JsValue::from_str("HMC mesh entry failed SHA-256 verification"));
         }
+        let registrations = resolve_bundle_emf_registrations(&bundle)
+            .map_err(|error| JsValue::from_str(&error))?;
+        let leaf_reg = registrations.get(asset_key).cloned();
         let assembly_digest = assembly_residency_digest(&bundle, source.bytes, source.digest)
             .map_err(|error| JsValue::from_str(&error))?;
-        let digest = assembly_digest.unwrap_or(source.digest);
+        let base_digest = assembly_digest.unwrap_or(source.digest);
+
+        let bound_companion = match (self.last_emf.accepted(), leaf_reg.as_ref()) {
+            (Some(field), Some(reg))
+                if reg
+                    .field_sha256
+                    .is_none_or(|sha| sha == field.source_sha256()) =>
+            {
+                Some(
+                    BoundLeafEmfCompanion::bind(reg.clone(), source.digest, field, 0)
+                        .map_err(|e| JsValue::from_str(&e))?,
+                )
+            }
+            (Some(field), None) if assembly_digest.is_none() => {
+                let mut reg =
+                    EmfCompanionRegistration::identity_metres(asset_key, "admitted.emf");
+                reg.geometry_sha256 = Some(source.digest);
+                reg.field_sha256 = Some(field.source_sha256());
+                BoundLeafEmfCompanion::bind(reg, source.digest, field, 0).ok()
+            }
+            _ => None,
+        };
+        let digest = if let Some(ref bound) = bound_companion {
+            combine_residency_digest_with_emf(base_digest, &[(0, bound.binding_digest())])
+        } else if assembly_digest.is_some() {
+            if let Some(field) = self.last_emf.accepted() {
+                combine_residency_digest_with_emf(base_digest, &[(0, field.source_sha256())])
+            } else {
+                base_digest
+            }
+        } else {
+            base_digest
+        };
+
         if let Some(receipt) = self.hmc_mesh_residency.resident(digest) {
+            if assembly_digest.is_some() {
+                self.mounted_emf_target = MountedEmfTarget::HmcAssembly {
+                    hmc_bytes: std::sync::Arc::from(hmc_bytes.to_vec().into_boxed_slice()),
+                    assembly_key: asset_key.to_owned(),
+                };
+            } else {
+                self.mounted_emf_target = MountedEmfTarget::HmcLeaf {
+                    asset_key: asset_key.to_owned(),
+                    leaf_bytes: std::sync::Arc::from(source.bytes.to_vec().into_boxed_slice()),
+                    leaf_digest: source.digest,
+                    registration: leaf_reg,
+                };
+            }
             let result = js_sys::Object::new();
             Reflect::set(
                 &result,
@@ -1857,21 +1974,26 @@ impl QualiaPortal {
         }
 
         let loaded = if assembly_digest.is_some() {
-            let assembly = decode_hmc_leaf_assembly(&bundle, asset_key)
-                .map_err(|error| JsValue::from_str(&error))?;
+            let assembly =
+                decode_hmc_leaf_assembly_with_emf(&bundle, asset_key, self.last_emf.accepted())
+                    .map_err(|error| JsValue::from_str(&error))?;
             let gpu = self.gpu.as_mut().ok_or_else(|| {
                 JsValue::from_str("Native HMC leaf assembly requires active WebGPU")
             })?;
             self.hmc_mesh_residency.clear();
             self.selected_node = None;
             self.selected_semantic_pick = None;
-            self.pending_gpu_pick = None;
+            self.pending_gpu_pick = false;
             assembly.upload(gpu).map_err(|error| JsValue::from_str(&error))?;
             self.tier = 2;
             self.description = format!(
                 "{} verified leaves · {} triangles · T2",
                 assembly.instances.len(), assembly.triangle_count,
             );
+            self.mounted_emf_target = MountedEmfTarget::HmcAssembly {
+                hmc_bytes: std::sync::Arc::from(hmc_bytes.to_vec().into_boxed_slice()),
+                assembly_key: asset_key.to_owned(),
+            };
             let result = js_sys::Object::new();
             for (key, value) in [
                 ("vertex_count", f64::from(assembly.vertex_count)),
@@ -1888,7 +2010,80 @@ impl QualiaPortal {
             )?;
             result.into()
         } else {
-            self.load_10d(source.bytes)?
+            self.hmc_mesh_residency.clear();
+            self.selected_node = None;
+            self.selected_semantic_pick = None;
+            self.pending_gpu_pick = false;
+            let decoded =
+                decode_load_10d_with_emf(source.bytes, true, bound_companion.as_ref())
+                    .map_err(|e| JsValue::from_str(&e))?;
+            #[cfg(target_arch = "wasm32")]
+            if let Some(ref mut gpu) = self.gpu {
+                crate::render::portal_load_10d::upload_load_10d_to_gpu(gpu, &decoded)
+                    .map_err(|e| JsValue::from_str(&format!("10d GPU upload: {e}")))?;
+                self.tier = 2;
+            }
+            let tri_count = decoded.triangle_count;
+            let vert_count = decoded.vertex_count;
+            let provenance_mu = decoded.provenance_mu;
+            let governance_refused = decoded.governance_refused;
+            if governance_refused {
+                self.description = format!(
+                    "{tri_count} triangles · governance REFUSED (no attestation) · μ={provenance_mu:.3}"
+                );
+            } else {
+                self.description = format!(
+                    "{tri_count} triangles · {vert_count} vertices · μ={provenance_mu:.3} · T2"
+                );
+            }
+            self.mounted_emf_target = MountedEmfTarget::HmcLeaf {
+                asset_key: asset_key.to_owned(),
+                leaf_bytes: std::sync::Arc::from(source.bytes.to_vec().into_boxed_slice()),
+                leaf_digest: source.digest,
+                registration: leaf_reg,
+            };
+            let result = js_sys::Object::new();
+            Reflect::set(
+                &result,
+                &JsValue::from_str("vertex_count"),
+                &JsValue::from_f64(vert_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("triangle_count"),
+                &JsValue::from_f64(tri_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("provenance_mu"),
+                &JsValue::from_f64(provenance_mu as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("tier"),
+                &JsValue::from_f64(self.tier as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("governance_refused"),
+                &JsValue::from_bool(governance_refused),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("field_representation"),
+                &JsValue::from_str(decoded.field_representation),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("holo_segment_count"),
+                &JsValue::from_f64(decoded.holo_segment_count as f64),
+            )?;
+            Reflect::set(
+                &result,
+                &JsValue::from_str("active_harmonic_order"),
+                &JsValue::from_f64(decoded.active_harmonic_order as f64),
+            )?;
+            result.into()
         };
         let vertex_count = Reflect::get(&loaded, &JsValue::from_str("vertex_count"))?
             .as_f64()

@@ -218,6 +218,8 @@ pub mod portal_load_10d;
 pub mod portal_load_textures;
 /// CPU admission of current EMF and explicit local-grid display projection.
 pub mod portal_load_emf;
+/// Per-leaf `.emf` companion registration, digest-verified optical binding, and physical-metre surface sampler.
+pub mod portal_emf_binding;
 /// Bounded field ownership and GPU adoption/recovery state, testable natively.
 pub mod portal_emf_state;
 /// Admitted current QAC source and bounded exact-sample windows.

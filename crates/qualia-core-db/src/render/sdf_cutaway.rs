@@ -8,6 +8,7 @@ use super::{
 use crate::container_10d::{
     sdf_brick_section::read_container_sdfb_with_iris, MaterialRecord, OpacityMode, SubmeshRange,
 };
+use crate::render::portal_emf_binding::{sample_optical_surface_colors, BoundLeafEmfCompanion};
 use crate::render::portal_load_10d::PickSurfaceRegion;
 use std::collections::BTreeMap;
 
@@ -84,6 +85,7 @@ impl SectionPlane {
 
 pub struct SdfCutawaySurface {
     pub mesh: Mesh,
+    pub colors: Vec<[f32; 4]>,
     pub materials: Vec<MaterialRecord>,
     pub ranges: Vec<SubmeshRange>,
     pub regions: Vec<PickSurfaceRegion>,
@@ -96,6 +98,14 @@ pub struct SdfCutawaySurface {
 }
 
 pub fn decode_sdfb_cutaway(bytes: &[u8], plane: SectionPlane) -> Result<SdfCutawaySurface, String> {
+    decode_sdfb_cutaway_with_emf(bytes, plane, None)
+}
+
+pub fn decode_sdfb_cutaway_with_emf(
+    bytes: &[u8],
+    plane: SectionPlane,
+    companion: Option<&BoundLeafEmfCompanion<'_>>,
+) -> Result<SdfCutawaySurface, String> {
     use crate::container_10d::{
         compute_whole_file_crc32c,
         header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
@@ -120,12 +130,16 @@ pub fn decode_sdfb_cutaway(bytes: &[u8], plane: SectionPlane) -> Result<SdfCutaw
     }
     let (view, iris) =
         read_container_sdfb_with_iris(bytes)?.ok_or("Section source has no verified SDFB field")?;
-    let mut section = cutaway(view, plane)?;
+    let mut section = cutaway(view, plane, companion)?;
     section.semantic_iris = iris;
     Ok(section)
 }
 
-fn cutaway(view: SdfBrickView<'_>, plane: SectionPlane) -> Result<SdfCutawaySurface, String> {
+fn cutaway(
+    view: SdfBrickView<'_>,
+    plane: SectionPlane,
+    companion: Option<&BoundLeafEmfCompanion<'_>>,
+) -> Result<SdfCutawaySurface, String> {
     let grid = sample_lattice(view)?;
     let source = extract_lattice(view, &grid)?;
     let center = source.mesh.centroid();
@@ -153,7 +167,7 @@ fn cutaway(view: SdfBrickView<'_>, plane: SectionPlane) -> Result<SdfCutawaySurf
     for boundary in bounds {
         section(view, &grid, boundary, &mut mesh)?;
     }
-    mesh.finish(center, span, extents)
+    mesh.finish(center, span, extents, companion)
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
@@ -453,6 +467,10 @@ fn section(
                         if a.sdf <= 0.0 && b.sdf <= 0.0 {
                             continue;
                         }
+                        if a.sdf > 0.0 && on_domain_edge(grid, [a.key, a.key]) {
+                            let component = root(&mut positive, patch);
+                            positive[component].exterior = true;
+                        }
                         let mut keys = [a.key, b.key];
                         keys.sort_unstable();
                         if on_domain_edge(grid, keys) {
@@ -493,6 +511,7 @@ fn section(
 struct MeshBuilder {
     vertices: BTreeMap<(u8, [u32; 3]), u32>,
     positions: Vec<[f32; 3]>,
+    vertex_regions: Vec<PickSurfaceRegion>,
     faces: BTreeMap<(u8, u64), Vec<[u32; 3]>>,
     count: usize,
 }
@@ -533,6 +552,7 @@ impl MeshBuilder {
                         return Err("SDFB cutaway exceeds the vertex budget".into());
                     }
                     self.positions.push(position);
+                    self.vertex_regions.push(region);
                 }
                 triangle[index] = *entry;
             }
@@ -550,25 +570,55 @@ impl MeshBuilder {
         source_center_m: [f32; 3],
         source_span_m: f32,
         source_bounds_m: [[f32; 3]; 2],
+        companion: Option<&BoundLeafEmfCompanion<'_>>,
     ) -> Result<SdfCutawaySurface, String> {
         if self.faces.len() > MAX_SEMANTIC_GROUPS {
             return Err("SDFB cutaway exceeds the draw-group budget".into());
         }
+        let wall_base = [0.69, 0.58, 0.49];
+        let cut_wall_base = [0.68, 0.32, 0.18];
         let mut wall = MaterialRecord::legacy_default();
-        wall.multiply_vertex_color = false;
-        wall.base_color = [0.69, 0.58, 0.49, 1.0];
+        wall.multiply_vertex_color = companion.is_some();
+        wall.base_color = if companion.is_some() {
+            [1.0, 1.0, 1.0, 1.0]
+        } else {
+            [wall_base[0], wall_base[1], wall_base[2], 1.0]
+        };
         let mut cut_wall = wall;
         cut_wall.id = crate::q_hash("urn:qualia:material:cut-tissue-wall");
-        cut_wall.base_color = [0.68, 0.32, 0.18, 1.0];
+        cut_wall.multiply_vertex_color = companion.is_some();
+        cut_wall.base_color = if companion.is_some() {
+            [1.0, 1.0, 1.0, 1.0]
+        } else {
+            [cut_wall_base[0], cut_wall_base[1], cut_wall_base[2], 1.0]
+        };
         cut_wall.double_sided = true;
-        let mut lumen = wall;
+        let mut lumen = MaterialRecord::legacy_default();
         lumen.id = crate::q_hash("urn:qualia:material:internal-cavity-lumen");
+        lumen.multiply_vertex_color = false;
         lumen.base_color = [0.14, 0.45, 0.65, 0.24];
         lumen.opacity_mode = OpacityMode::Blend;
         lumen.double_sided = true;
         lumen.casts_shadow = false;
         let mut materials = vec![wall, cut_wall, lumen];
         materials.sort_unstable_by_key(|material| material.id);
+
+        let colors = if let Some(bound) = companion {
+            let wall_colors = sample_optical_surface_colors(&self.positions, wall_base, bound);
+            let cut_colors = sample_optical_surface_colors(&self.positions, cut_wall_base, bound);
+            self.vertex_regions
+                .iter()
+                .enumerate()
+                .map(|(idx, region)| match region {
+                    PickSurfaceRegion::UncutSurface => wall_colors[idx],
+                    PickSurfaceRegion::CutTissueWall => cut_colors[idx],
+                    PickSurfaceRegion::InternalCavityLumen => [1.0, 1.0, 1.0, 1.0],
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+
         let mut triangles = Vec::with_capacity(self.count);
         let mut ranges = Vec::with_capacity(self.faces.len());
         let mut regions = Vec::with_capacity(self.faces.len());
@@ -605,6 +655,7 @@ impl MeshBuilder {
                 min,
                 max,
             },
+            colors,
             materials,
             ranges,
             regions,
@@ -657,7 +708,7 @@ mod tests {
         let mut bytes = vec![0; sdfb_encoded_len(1).unwrap()];
         encode_sdfb_into(grid, &[brick], &mut bytes).unwrap();
         let plane = SectionPlane::new([0.0, 0.0, 1.0, 0.0], 0.0).unwrap();
-        let output = cutaway(SdfBrickView::parse(&bytes).unwrap(), plane).unwrap();
+        let output = cutaway(SdfBrickView::parse(&bytes).unwrap(), plane, None).unwrap();
         assert!(output
             .ranges
             .iter()
@@ -678,7 +729,7 @@ mod tests {
         for triangle in &output.mesh.triangles[start..end] {
             for &vertex in triangle {
                 let [x, y, z] = output.mesh.positions[vertex as usize];
-                assert!(x.hypot(y) <= 1.3);
+                assert!(x.abs() <= 1.1 && y.abs() <= 1.1 && x.hypot(y) <= 1.55);
                 assert!(z.abs() < 1e-6);
             }
         }
