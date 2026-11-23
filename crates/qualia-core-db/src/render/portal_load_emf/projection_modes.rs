@@ -11,13 +11,12 @@ use crate::q42::{
 };
 use crate::render::portal_emf_state::{
     carrier_hz_to_spectral_sigma, e_magnitude_from_poynting, poynting_irradiance_w_per_m2,
-    DisplayOpticalCell, MAX_DISPLAY_CELLS, VACUUM_IMPEDANCE_OHM,
+    DisplayOpticalCell, EmfFramePose, MAX_DISPLAY_CELLS, VACUUM_IMPEDANCE_OHM,
 };
 use crate::render::portal_load_emf::{
     charge, vector, DisplayEmfCell, DisplaySelection, Error, LoadedEmf, PortalEmfLimits,
 };
 use profiles::ProfileChunk;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 fn ext_key(c: &ExtendedChunk<'_>) -> DisplaySelection {
@@ -383,7 +382,7 @@ fn project_extended_grid(
     selected: DisplaySelection,
     canonical_mode: u16,
     grid: profiles::GridLayout,
-    frame_pose: profiles::FramePose,
+    frame_pose: EmfFramePose,
     ticks: Vec<i64>,
     temporal: bool,
     limits: PortalEmfLimits,
@@ -450,10 +449,9 @@ fn project_extended_grid(
     }
     let mut source = vector(bytes.len(), limits.peak_owned_bytes)?;
     source.extend_from_slice(bytes);
-    let source_sha256: [u8; 32] = Sha256::digest(bytes).into();
     Ok(LoadedEmf {
         nx: dims[0], ny: dims[1], nz: dims[2], nt: u32::try_from(ticks.len()).map_err(|_| Error::Overflow)?,
-        cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?, bounds, frame_pose, source_sha256,
+        cell_count: u32::try_from(count).map_err(|_| Error::Overflow)?, bounds, frame_pose,
         cells, optical_cells,
         display_mode: canonical_mode, source: Arc::from(source.into_boxed_slice()),
         selection: selected, ticks, temporal,
