@@ -1,0 +1,697 @@
+# Dacelo novaeguineae (Hermann, 1783) — Laughing Kookaburra Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-13A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:dacelo_novaeguineae:> .
+@prefix stage:     <urn:qualia:stage:dacelo_novaeguineae:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:dacelo-novaeguineae:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers
+# ============================================================================
+
+qualia:dacelo_novaeguineae a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:dacelo_novaeguineae ;
+    dct:identifier <urn:qualia:taxon:dacelo_novaeguineae> ,
+                   <did:q42:taxon:dacelo_novaeguineae> ;
+    rdfs:label "Laughing Kookaburra"@en ;
+    dwc:scientificName "Dacelo novaeguineae (Hermann, 1783)" ;
+    dwc:scientificNameAuthorship "Hermann, 1783" ;
+    dwc:originalNameUsage "Alcedo novae-guineae Hermann, 1783" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Aves" ;
+    dwc:order "Coraciiformes" ;
+    dwc:family "Alcedinidae" ;
+    q42:subfamily "Halcyoninae" ;
+    dwc:genus "Dacelo" ;
+    dwc:specificEpithet "novaeguineae" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Laughing Kookaburra"@en ,
+                       "Laughing Jackass"@en ,
+                       "Gugubarra"@qaa-x-wir ,
+                       "Guuguubarra"@qaa-x-wir ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/1fc76c4d-4830-4129-9b86-1c7e944c3c50> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/1fc76c4d-4830-4129-9b86-1c7e944c3c50> ;
+    dwc:taxonID "GBIF:2475648" ;
+    q42:gbifSpeciesKey "2475648"^^xsd:integer ;
+    q42:gbifGenusKey "2475646"^^xsd:integer ;
+    q42:gbifFamilyKey "2984"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_8939> ;
+    q42:ncbiGenusTaxon <http://purl.obolibrary.org/obo/NCBITaxon_8938> ;
+    q42:birdlifeSpeciesId "22683189"^^xsd:integer ;
+    q42:ebirdSpeciesCode "laukoo1" ;
+    q42:karyotype "2n=76" ;
+    q42:iucnStatus "LC" ;
+    q42:nominateSubspecies "Dacelo novaeguineae novaeguineae (Hermann, 1783)" ;
+    q42:northernSubspecies "Dacelo novaeguineae minor Robinson, 1900" ;
+    q42:historicalSynonyms "Dacelo gigas (Boddaert, 1783); Alcedo gigantea Latham, 1790" ;
+    dcat:landingPage <https://github.com/intenteco/dacelo-novaeguineae> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/1fc76c4d-4830-4129-9b86-1c7e944c3c50> ,
+                 <https://www.gbif.org/species/2475648> ,
+                 <https://birdlife.org.au/bird-profiles/laughing-kookaburra/> ,
+                 <https://datazone.birdlife.org/species/factsheet/laughing-kookaburra-dacelo-novaeguineae> ,
+                 <https://www.nationalparks.nsw.gov.au/plants-and-animals/kookaburra> ,
+                 <https://australian.museum/learn/animals/birds/laughing-kookaburra/> ,
+                 <https://ebird.org/species/laukoo1> ,
+                 <https://vba.biodiversity.vic.gov.au/> ;
+    prov:wasDerivedFrom src:afd-dacelo-novaeguineae ,
+                        src:ala-dacelo-novaeguineae ,
+                        src:gbif-2475648 ,
+                        src:ncbi-8939 ,
+                        src:birdlife-australia-laughing-kookaburra ,
+                        src:birdlife-datazone-22683189 ,
+                        src:nsw-npws-kookaburra ,
+                        src:australian-museum-laughing-kookaburra ,
+                        src:vic-biodiversity-atlas ,
+                        src:ebird-laukoo1 ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:wiradjuri_country ,
+                         country:ngunnawal_country ,
+                         country:dharawal_country ,
+                         country:yuin_country ,
+                         country:bundjalung_country ,
+                         country:wurundjeri_country ,
+                         country:dja_dja_wurrung_country .
+
+q42taxon:dacelo_novaeguineae a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:dacelo_novaeguineae> ;
+    owl:sameAs qualia:dacelo_novaeguineae ;
+    rdfs:label "Dacelo novaeguineae Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Ornithological Sources
+src:afd-dacelo-novaeguineae a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/1fc76c4d-4830-4129-9b86-1c7e944c3c50> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Dacelo novaeguineae (Hermann, 1783)" .
+
+src:ala-dacelo-novaeguineae a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/1fc76c4d-4830-4129-9b86-1c7e944c3c50> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Dacelo novaeguineae species profile" .
+
+src:gbif-2475648 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2475648> ;
+    rdfs:label "GBIF Backbone Taxonomy — Dacelo novaeguineae (Hermann, 1783) [speciesKey 2475648]" .
+
+src:ncbi-8939 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/8939/> ;
+    rdfs:label "NCBI Taxonomy — Dacelo novaeguineae (TaxID 8939)" .
+
+src:birdlife-australia-laughing-kookaburra a dct:BibliographicResource ;
+    dct:identifier <https://birdlife.org.au/bird-profiles/laughing-kookaburra/> ;
+    rdfs:label "BirdLife Australia — Laughing Kookaburra species profile" .
+
+src:birdlife-datazone-22683189 a dct:BibliographicResource ;
+    dct:identifier <https://datazone.birdlife.org/species/factsheet/laughing-kookaburra-dacelo-novaeguineae> ;
+    rdfs:label "BirdLife International DataZone — Dacelo novaeguineae (Species ID 22683189)" .
+
+src:nsw-npws-kookaburra a dct:BibliographicResource ;
+    dct:identifier <https://www.nationalparks.nsw.gov.au/plants-and-animals/kookaburra> ;
+    rdfs:label "NSW NPWS — Laughing Kookaburra species profile" .
+
+src:australian-museum-laughing-kookaburra a dct:BibliographicResource ;
+    dct:identifier <https://australian.museum/learn/animals/birds/laughing-kookaburra/> ;
+    rdfs:label "Australian Museum — Laughing Kookaburra morphology, diet & breeding" .
+
+src:vic-biodiversity-atlas a dct:BibliographicResource ;
+    dct:identifier <https://vba.biodiversity.vic.gov.au/> ;
+    rdfs:label "Victorian Biodiversity Atlas (DEECA) — Dacelo novaeguineae records" .
+
+src:ebird-laukoo1 a dct:BibliographicResource ;
+    dct:identifier <https://ebird.org/species/laukoo1> ;
+    rdfs:label "eBird — Laughing Kookaburra (laukoo1)" .
+
+claim:largest-kingfisher-guild a rdf:Statement ;
+    rdf:subject qualia:dacelo_novaeguineae ;
+    rdf:predicate q42:functionalGuild ;
+    rdf:object "terrestrial_halcyonine_sit_and_wait_woodland_predator" ;
+    rdfs:comment "Dacelo novaeguineae is the world's largest kingfisher species (Alcedinidae: Halcyoninae), a cooperatively breeding, hollow- and termitarium-nesting sit-and-wait predator of Australian open eucalypt woodlands."@en .
+
+claim:nomenclatural-toponym-note a rdf:Statement ;
+    rdf:subject qualia:dacelo_novaeguineae ;
+    rdf:predicate q42:nomenclatureAudit ;
+    rdf:object "Alcedo novae-guineae Hermann, 1783" ;
+    rdfs:comment "Hermann (1783) inadvertently assigned the specific epithet novaeguineae believing a specimen originated from New Guinea; the species is native to eastern mainland Australia (nominate D. n. novaeguineae) and introduced to Tasmania, SW Western Australia, and New Zealand."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Cranium/Bill, Thorax/Wing/Tail, Feet/Syrinx)
+# ============================================================================
+
+# --- Subsystem Group A: Heavy Bicolored Dagger Bill & Crested Head ---
+
+anat:heavy_bicolored_dagger_bill_and_crested_head a uberon:0000975 , uberon:0000168 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000975" ;
+    q42:secondaryUberonCurie "UBERON:0000168" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 qualia:dacelo_novaeguineae ;
+    q42:diagnosticFeature "Large blocky head with erectile crown crest feathers, dark brown median crown stripe, diagnostic dark chocolate-brown trans-ocular eye-stripe (loral_auricular_mask) and malar streak against creamy-white head/throat/nape collar, and massive 6.0-6.5 cm bicolored dagger bill." ;
+    rdfs:label "Heavy Bicolored Dagger Bill and Crested Head (UBERON:0000975 / UBERON:0000168)"@en ;
+    prov:wasDerivedFrom src:australian-museum-laughing-kookaburra , src:birdlife-australia-laughing-kookaburra .
+
+anat:cranium_blocky a uberon:0003129 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003129" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:heavy_bicolored_dagger_bill_and_crested_head ;
+    q42:cranialForm "Broad, heavily ossified halcyonine neurocranium with reinforced craniofacial hinge for prey-bashing impact shock absorption" ;
+    rdfs:label "Blocky Halcyonine Cranium and Reinforced Craniofacial Hinge"@en .
+
+anat:ramphotheca_maxilla a uberon:0000975 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000975" ;
+    q42:anatomyLayer "integument_keratin" ;
+    ro:0002131 anat:heavy_bicolored_dagger_bill_and_crested_head ;
+    q42:culmenLengthMinM "0.0572"^^xsd:decimal ;
+    q42:culmenLengthMaxM "0.0773"^^xsd:decimal ;
+    q42:typicalExposedCulmenM "0.0625"^^xsd:decimal ;
+    q42:pigmentation "Slate-black keratinous culmen and tomial cutting edge with slight terminal decurved hook" ;
+    rdfs:label "Upper Mandible Keratinous Ramphotheca (Slate-Black Maxilla)"@en .
+
+anat:ramphotheca_mandible a uberon:0000975 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000975" ;
+    q42:anatomyLayer "integument_keratin" ;
+    ro:0002131 anat:heavy_bicolored_dagger_bill_and_crested_head ;
+    q42:pigmentation "Pale horn-ivory to warm flesh-colored lower mandible creating diagnostic bicolored bill contrast" ;
+    rdfs:label "Lower Mandible Keratinous Ramphotheca (Pale Horn-Ivory Mandible)"@en .
+
+anat:loral_auricular_mask a uberon:0000168 , uberon:0000019 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000168" ;
+    q42:plumageCurie "UBERON:0000019" ;
+    q42:anatomyLayer "integument_plumage" ;
+    ro:0002131 anat:heavy_bicolored_dagger_bill_and_crested_head ;
+    q42:plumagePattern "Diagnostic broad dark chocolate-brown trans-ocular eye-stripe spanning lores through orbital mask to auricular ear-coverts, paired with dark brown median crown stripe, erectile creamy-buff crown crest, and faint dark malar cheek streak against creamy-white nape collar" ;
+    rdfs:label "Trans-Ocular Dark Chocolate-Brown Eye-Stripe and Erectile Crown Crest"@en .
+
+anat:orbital_eyes a uberon:0000970 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000970" ;
+    q42:anatomyLayer "sensory_integument" ;
+    ro:0002131 anat:heavy_bicolored_dagger_bill_and_crested_head ;
+    q42:irisColor "Large deep dark-brown iris with pale whitish-grey bare orbital ring and binocular forward overlap for ground-pounce strike targeting" ;
+    rdfs:label "Large Dark-Brown Eyes with Pale Orbital Ring"@en .
+
+# --- Subsystem Group B: Avian Thorax, Folded Azure-Spangled Wings & Barred Rectrices ---
+
+anat:avian_thorax_folded_azure_spangled_wings_and_barred_rectrices a uberon:0001130 , uberon:0000982 , uberon:0010364 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:secondaryUberonCurie "UBERON:0000982" ;
+    q42:tertiaryUberonCurie "UBERON:0010364" ;
+    q42:anatomyLayer "osteology_and_plumage" ;
+    ro:0002131 qualia:dacelo_novaeguineae ;
+    q42:diagnosticFeature "Stocky upright perched torso; creamy-white to buff-white underparts with faint wavy brown flank barring; dark chocolate-brown mantle/scapulars; folded wings with iridescent azure/sky-blue lesser & median covert mottling; rufous-brown rump (blue center in adult males); broad 12-rectrix tail barred rufous-chestnut and dark brown with bright white terminal tips." ;
+    rdfs:label "Avian Thorax, Azure-Spangled Folded Wings, and 12-Rectrix Barred Tail"@en ;
+    prov:wasDerivedFrom src:birdlife-australia-laughing-kookaburra , src:australian-museum-laughing-kookaburra .
+
+anat:folded_wings_and_flight_feathers a uberon:0000023 , uberon:0000019 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000023" ;
+    q42:anatomyLayer "integument_plumage" ;
+    ro:0002131 anat:avian_thorax_folded_azure_spangled_wings_and_barred_rectrices ;
+    q42:wingChordMinM "0.205"^^xsd:decimal ;
+    q42:wingChordMaxM "0.232"^^xsd:decimal ;
+    q42:wingspanMinM "0.60"^^xsd:decimal ;
+    q42:wingspanMaxM "0.66"^^xsd:decimal ;
+    q42:primaryWingColor "Dark chocolate-brown remiges with diagnostic concealed white basal speculum patch visible in flight" ;
+    rdfs:label "Folded Avian Wings with Dark Primaries and White Basal Speculum"@en .
+
+anat:wing_covert_azure_patch a uberon:0000019 , uberon:0000023 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000019" ;
+    q42:anatomyLayer "integument_structural_color" ;
+    ro:0002131 anat:folded_wings_and_flight_feathers ;
+    q42:structuralColorMechanism "Spongy medullary keratin nanostructure scattering incoherent sky-blue/azure wavelengths (440-485 nm) over melanin backing on lesser and median upperwing coverts" ;
+    q42:rumpDimorphism "Rufous-brown uppertail coverts and rump; adult males exhibit an iridescent azure-blue central rump patch (absent or reduced in adult females)" ;
+    rdfs:label "Iridescent Sky-Blue / Azure Spangled Wing-Covert Patch and Male Rump Patch"@en .
+
+anat:barred_rectrices_tail a uberon:0010364 , uberon:0003999 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0010364" ;
+    q42:featherCurie "UBERON:0003999" ;
+    q42:anatomyLayer "integument_plumage" ;
+    ro:0002131 anat:avian_thorax_folded_azure_spangled_wings_and_barred_rectrices ;
+    q42:rectrixCount "12"^^xsd:integer ;
+    q42:tailLengthMinM "0.145"^^xsd:decimal ;
+    q42:tailLengthMaxM "0.178"^^xsd:decimal ;
+    q42:tailPattern "Broad rounded fan of 12 rectrices with rich rufous-chestnut ground color, bold dark-brown transverse bars, and crisp white terminal tips; frequently cocked upward during territorial laugh chorus" ;
+    rdfs:label "Broad Rounded 12-Rectrix Rufous-and-Brown Barred Tail with White Tips"@en .
+
+# --- Subsystem Group C: Syndactyl Perching Feet, Avian Osteology, Myology & Syrinx ---
+
+anat:syndactyl_perching_feet_and_avian_osteology_myology a uberon:0002103 , uberon:0001434 , uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002103" ;
+    q42:osteologyCurie "UBERON:0001434" ;
+    q42:myologyCurie "UBERON:0001630" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 qualia:dacelo_novaeguineae ;
+    q42:rigArchetype "alcedinid_avian" ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    rdfs:label "Syndactyl Perching Feet, 24-Joint Avian Osteology, Myology and Syrinx"@en .
+
+anat:skeletal_system a uberon:0001434 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    q42:rigArchetype "alcedinid_avian" ;
+    rdfs:label "Avian Skeletal System (24-Joint alcedinid_avian PGA Rig)"@en .
+
+anat:axial_cervical_synsacrum a uberon:0001130 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:cervicalVertebraeCount "14"^^xsd:integer ;
+    rdfs:label "Mobile Cervical Column, Thoracic Notarium, and Fused Synsacrum"@en .
+
+anat:keeled_sternum_carina a uberon:0002204 , uberon:0002228 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002204" ;
+    q42:ribcageCurie "UBERON:0002228" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Keeled Sternum (Carina) and Uncinate-Braced Avian Ribcage"@en .
+
+anat:furcula_and_coracoid a uberon:0006608 , uberon:0004743 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0006608" ;
+    q42:coracoidCurie "UBERON:0004743" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Furcula (Wishbone) and Strut-Braced Coracoids"@en .
+
+anat:pelvic_girdle_synsacrum a uberon:0001271 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001271" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Avian Pelvic Girdle and Synsacral Arch"@en .
+
+anat:tibiotarsus_tarsometatarsus a uberon:0007330 , uberon:0007331 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0007330" ;
+    q42:tarsometatarsusCurie "UBERON:0007331" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:tarsusLengthMinM "0.023"^^xsd:decimal ;
+    q42:tarsusLengthMaxM "0.028"^^xsd:decimal ;
+    rdfs:label "Short Robust Tibiotarsus and Tarsometatarsus"@en .
+
+anat:pygostyle a uberon:0004775 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0004775" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Pygostyle Supporting 12-Rectrix Tail Fan"@en .
+
+anat:syndactyl_digits_iii_iv a uberon:0002103 , uberon:0002387 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002103" ;
+    q42:pesCurie "UBERON:0002387" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    q42:toeFormula "Coraciiform syndactylous anisodactyl: forward outer toes III and IV fused at proximal phalanges (syndactyly), inner forward toe II, and strong backward hallux I clasping eucalypt perch branch" ;
+    q42:podothecaColor "Dull grey-slate scutellate tarsal scales with dark curved claws" ;
+    rdfs:label "Coraciiform Syndactylous Anisodactyl Perching Feet (Fused Digits III-IV, Toe II, Hallux I)"@en .
+
+anat:pectoralis_supracoracoideus_myology a uberon:0001630 , uberon:0002356 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:pectoralisCurie "UBERON:0002356" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    q42:muscleMassFraction "0.18"^^xsd:decimal ;
+    rdfs:label "Pectoralis and Supracoracoideus Flight and Cervical Prey-Strike Musculature"@en .
+
+anat:cervical_strike_myology a uberon:0003662 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003662" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    rdfs:label "Cervical Strike and Prey-Bashing Musculature"@en ;
+    rdfs:comment "Powers rapid lateral whip-thrashing of captured lizards, snakes, and large insects against eucalypt perch branches."@en .
+
+anat:perching_tendon_flexors a uberon:0001388 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001388" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    rdfs:label "Digital Tendon-Locking Perching Flexors (Hallux I & Syndactyl Digits III-IV)"@en .
+
+anat:caudal_rectrix_myology a uberon:0014796 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0014796" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    rdfs:label "Caudal Levator/Depressor Rectrix Fan Musculature"@en .
+
+anat:dual_voice_syrinx a uberon:0010008 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0010008" ;
+    q42:anatomyLayer "bioacoustic_visceral" ;
+    ro:0002131 anat:syndactyl_perching_feet_and_avian_osteology_myology ;
+    q42:callFrequencyBandHz "600 to 4200" ;
+    q42:callFundamentalMinHz "600.0"^^xsd:decimal ;
+    q42:callPeakHarmonicMaxHz "4200.0"^^xsd:decimal ;
+    q42:acousticMechanism "Tracheobronchial syrinx at tracheal bifurcation with paired labia and sternotrachealis musculature enabling dual-source harmonic/broadband laugh chorus" ;
+    rdfs:label "Dual-Voice Tracheobronchial Syrinx (0.6-4.2 kHz Territorial Chorus)"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Kinematic Parameters
+# ============================================================================
+
+qualia:dacelo_novaeguineae
+    q42:totalBodyLengthMinM "0.42"^^xsd:decimal ;
+    q42:totalBodyLengthMaxM "0.46"^^xsd:decimal ;
+    q42:billLengthMinM "0.0572"^^xsd:decimal ;
+    q42:billLengthMaxM "0.0773"^^xsd:decimal ;
+    q42:wingspanMinM "0.60"^^xsd:decimal ;
+    q42:wingspanMaxM "0.66"^^xsd:decimal ;
+    q42:adultMassMinKg "0.196"^^xsd:decimal ;
+    q42:adultMassMaxKg "0.468"^^xsd:decimal ;
+    q42:adultMeanMassKg "0.333"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "0.245 to 0.468" ;
+    q42:adultMaleMassRangeKg "0.196 to 0.450" ;
+    q42:reverseSexualSizeDimorphism true ;
+    q42:bmrWatts "1.12"^^xsd:decimal ;
+    q42:bmrOxygenMlPerHour "201.0"^^xsd:decimal ;
+    q42:bodyTempActiveC "39.2"^^xsd:decimal ;
+    q42:bodyTempNocturnalHypothermiaMinC "28.6"^^xsd:decimal ;
+    q42:dailyBodyTempSwingMaxC "9.1"^^xsd:decimal ;
+    q42:thermoregulation "heterothermic_endotherm" ;
+    q42:allometricBmrEquation "BMR(M) = 3.49 * M^0.72 [W]; at M=0.333 kg -> ~1.12 W (201 mL O2/h resting phase; Buttemer et al. 2003)" ;
+    q42:allometricSegmentEquation "L_bill = 0.088 * M^0.31 [m]; L_wing_chord = 0.305 * M^0.32 [m]; L_tarsus = 0.036 * M^0.33 [m]" ;
+    q42:perchingPosture "Upright sit-and-wait perch on eucalypt bough (body axis ~58-68 deg above horizontal, head scanning +-1.85 rad yaw)" ;
+    q42:flightGait "Direct heavy flapping woodland flight with shallow undulating glides (8.5-12.5 m/s, wingbeat 4.8-6.2 Hz)" ;
+    q42:foragingStrike "Steep oblique stoop from perch 2-12 m high onto ground prey, grasped in dagger bill and bashed laterally against perch branch" ;
+    q42:activityCycle "diurnal_crepuscular_dawn_dusk_chorus" ;
+    q42:dietGuild "carnivorous_woodland_ambush_predator" ;
+    q42:reproductionStrategy "Monogamous lifelong pair with cooperative family helpers (previous broods); 2-4 white eggs laid in unlined eucalypt hollow or arboreal Nasutitermes termitarium; incubation ~24-26 d; fledging ~33-39 d" ;
+    sosa:callName "Territorial dawn/dusk laughing chorus (oo-oo-oo chuckle buildup -> ha-ha-ha-ha climax -> trailing oo-oo cadence)" ;
+    sosa:callFundamentalHz "720.0"^^xsd:decimal ;
+    sosa:callBandwidthHz "600.0 to 4200.0" ;
+    envo:habitatStratum "arboreal_perch_and_woodland_understory" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1600"^^xsd:integer ;
+    prov:wasDerivedFrom src:birdlife-australia-laughing-kookaburra ,
+                        src:australian-museum-laughing-kookaburra ,
+                        src:nsw-npws-kookaburra .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (Radians)
+# ============================================================================
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:axial_cervical_synsacrum , anat:cranium_blocky , anat:cervical_strike_myology ;
+    q42:primaryAxis "cervical_scan_yaw_and_strike_pitch" ;
+    q42:healthyMinRad "-0.85"^^xsd:decimal ;
+    q42:healthyMaxRad "0.95"^^xsd:decimal ;
+    q42:yawMaxRad "1.85"^^xsd:decimal ;
+    q42:injuryThresholdRad "2.15"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligatePerchShelterImmobility" ;
+    rdfs:label "Cervical Neck Scan & Prey-Strike ROM (Dacelo novaeguineae)"@en .
+
+rom:bill_hinge a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "bill_hinge" ;
+    q42:anatomicalTarget anat:ramphotheca_maxilla , anat:ramphotheca_mandible ;
+    q42:primaryAxis "gape_opening_and_craniofacial_kinesis" ;
+    q42:healthyMinRad "0.00"^^xsd:decimal ;
+    q42:healthyMaxRad "0.78"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.95"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligatePerchShelterImmobility" ;
+    rdfs:label "Mandibular Gape & Prokinetic Maxilla ROM (Dacelo novaeguineae)"@en .
+
+rom:wing_shoulder a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "wing_shoulder" ;
+    q42:anatomicalTarget anat:furcula_and_coracoid , anat:folded_wings_and_flight_feathers , anat:pectoralis_supracoracoideus_myology ;
+    q42:primaryAxis "glenohumeral_flap_elevation_depression" ;
+    q42:healthyMinRad "-1.15"^^xsd:decimal ;
+    q42:healthyMaxRad "1.42"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.62"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateWingDroopFlightAvoidance" ;
+    rdfs:label "Glenohumeral Wing Shoulder ROM (Dacelo novaeguineae)"@en .
+
+rom:wing_elbow a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "wing_elbow" ;
+    q42:anatomicalTarget anat:folded_wings_and_flight_feathers ;
+    q42:primaryAxis "wing_fold_extension_sagittal" ;
+    q42:healthyMinRad "-2.25"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.12"^^xsd:decimal ;
+    q42:injuryThresholdRad "-2.45"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateWingDroopFlightAvoidance" ;
+    rdfs:label "Wing Elbow Fold/Extension ROM (Dacelo novaeguineae)"@en .
+
+rom:wing_wrist a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "wing_wrist" ;
+    q42:anatomicalTarget anat:folded_wings_and_flight_feathers ;
+    q42:primaryAxis "carpal_manus_tuck" ;
+    q42:healthyMinRad "-2.10"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.15"^^xsd:decimal ;
+    q42:injuryThresholdRad "-2.30"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateWingDroopFlightAvoidance" ;
+    rdfs:label "Carpometacarpal Wing Wrist Tuck ROM (Dacelo novaeguineae)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:axial_cervical_synsacrum , anat:keeled_sternum_carina ;
+    q42:primaryAxis "thoracic_pitch_chorus_posture" ;
+    q42:healthyMinRad "-0.32"^^xsd:decimal ;
+    q42:healthyMaxRad "0.45"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.62"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligatePerchShelterImmobility" ;
+    rdfs:label "Thoracic & Synsacral Spine Pitch ROM (Dacelo novaeguineae)"@en .
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:pelvic_girdle_synsacrum , anat:tibiotarsus_tarsometatarsus ;
+    q42:primaryAxis "perch_crouch_flexion_extension" ;
+    q42:healthyMinRad "-0.45"^^xsd:decimal ;
+    q42:healthyMaxRad "1.05"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.25"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateAsymmetricPerchUnload" ;
+    rdfs:label "Avian Hip Joint ROM (Dacelo novaeguineae)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:tibiotarsus_tarsometatarsus ;
+    q42:primaryAxis "tibiotarsal_flexion_extension" ;
+    q42:healthyMinRad "-1.72"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.22"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.92"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateAsymmetricPerchUnload" ;
+    rdfs:label "Tibiotarsal Knee Joint ROM (Dacelo novaeguineae)"@en .
+
+rom:ankle_intertarsal a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "ankle_intertarsal" ;
+    q42:anatomicalTarget anat:tibiotarsus_tarsometatarsus , anat:syndactyl_digits_iii_iv ;
+    q42:primaryAxis "intertarsal_perch_squat_dorsiflexion" ;
+    q42:healthyMinRad "-0.88"^^xsd:decimal ;
+    q42:healthyMaxRad "0.92"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.12"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateAsymmetricPerchUnload" ;
+    rdfs:label "Intertarsal Ankle Joint ROM (Dacelo novaeguineae)"@en .
+
+rom:perching_hallux a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "perching_hallux" ;
+    q42:anatomicalTarget anat:syndactyl_digits_iii_iv , anat:perching_tendon_flexors ;
+    q42:primaryAxis "syndactyl_and_hallux_branch_clasp" ;
+    q42:healthyMinRad "-0.25"^^xsd:decimal ;
+    q42:healthyMaxRad "1.38"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.55"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateAsymmetricPerchUnload" ;
+    rdfs:label "Syndactyl Digits III-IV & Hallux I Perch Clasp ROM (Dacelo novaeguineae)"@en .
+
+rom:tail_pygostyle a q42:JointROM ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:romJoint "tail_pygostyle" ;
+    q42:anatomicalTarget anat:pygostyle , anat:barred_rectrices_tail , anat:caudal_rectrix_myology ;
+    q42:primaryAxis "chorus_tail_cock_pitch_and_fan_spread" ;
+    q42:healthyMinRad "-0.55"^^xsd:decimal ;
+    q42:healthyMaxRad "0.92"^^xsd:decimal ;
+    q42:fanSpreadMaxRad "0.68"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.12"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligatePerchShelterImmobility" ;
+    rdfs:label "Pygostyle Tail Cock & 12-Rectrix Fan Spread ROM (Dacelo novaeguineae)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:dacelo_novaeguineae_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, blue_rump_expression:f32, plumage_wear_01:f32, crest_erection_01:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.22 to 1.12" ;
+    q42:siteVigorRange "0.50 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Dacelo novaeguineae"@en .
+
+stage:hollow_nestling a q42:OntogeneticStage ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:stageId "hollow_nestling" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.18"^^xsd:decimal ;
+    q42:heightScaleMin "0.22"^^xsd:decimal ;
+    q42:heightScaleMax "0.58"^^xsd:decimal ;
+    q42:massRangeKg "0.024 to 0.240" ;
+    q42:independentFlight false ;
+    q42:billDiagnostic "Altricial naked chick developing pin feathers and diagnostic mandibular tip hook (lost after first week); stays inside eucalypt hollow or arboreal termitarium ~33-39 days" ;
+    rdfs:label "Hollow Nestling (0-39 days, hollow/termitarium-bound)"@en .
+
+stage:fledgling_short_bill a q42:OntogeneticStage ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:stageId "fledgling_short_bill" ;
+    q42:ontogeneticAgeNormMin "0.18"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.36"^^xsd:decimal ;
+    q42:heightScaleMin "0.58"^^xsd:decimal ;
+    q42:heightScaleMax "0.84"^^xsd:decimal ;
+    q42:massRangeKg "0.240 to 0.310" ;
+    q42:independentFlight true ;
+    q42:billDiagnostic "Noticeably shorter, darker lower mandible (~3.8-4.8 cm) with stronger buff-brown scalloped breast barring and less distinct azure wing coverts" ;
+    rdfs:label "Fledgling Short-Bill Stage (39-90 days post-hatch, provisioned by parents and helpers)"@en .
+
+stage:helper_subadult a q42:OntogeneticStage ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:stageId "helper_subadult" ;
+    q42:ontogeneticAgeNormMin "0.36"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.58"^^xsd:decimal ;
+    q42:heightScaleMin "0.84"^^xsd:decimal ;
+    q42:heightScaleMax "0.96"^^xsd:decimal ;
+    q42:massRangeKg "0.260 to 0.360" ;
+    q42:independentFlight true ;
+    q42:cooperativeRole "Non-breeding philopatric auxiliary helping defend family territory, join dawn/dusk laugh chorus, incubate clutches, and provision subsequent broods for 1-4 years" ;
+    rdfs:label "Cooperative Helper Subadult (1-3 years, territorial family auxiliary)"@en .
+
+stage:adult_female_buff_rump a q42:OntogeneticStage ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:stageId "adult_female_buff_rump" ;
+    q42:ontogeneticAgeNormMin "0.58"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.94"^^xsd:decimal ;
+    q42:heightScaleMax "1.12"^^xsd:decimal ;
+    q42:massRangeKg "0.245 to 0.468" ;
+    q42:bodyLengthMinM "0.43"^^xsd:decimal ;
+    q42:bodyLengthMaxM "0.46"^^xsd:decimal ;
+    q42:rumpColor "Rufous-buff rump without bright azure-blue central patch; exhibits reverse sexual size dimorphism (larger mean mass and slightly longer bill than males)" ;
+    rdfs:label "Adult Female (Buff-Rufous Rump, Reverse Sexual Size Dimorphism)"@en .
+
+stage:adult_male_blue_rump a q42:OntogeneticStage ;
+    q42:appliesTo qualia:dacelo_novaeguineae ;
+    q42:stageId "adult_male_blue_rump" ;
+    q42:ontogeneticAgeNormMin "0.58"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.90"^^xsd:decimal ;
+    q42:heightScaleMax "1.04"^^xsd:decimal ;
+    q42:massRangeKg "0.196 to 0.450" ;
+    q42:bodyLengthMinM "0.42"^^xsd:decimal ;
+    q42:bodyLengthMaxM "0.45"^^xsd:decimal ;
+    q42:rumpColor "Distinct iridescent azure-blue central rump patch framed by rufous uppertail coverts" ;
+    rdfs:label "Adult Male (Iridescent Blue Rump Center, 2n=76)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Sit-and-Wait Predator & Eucalypt Hollow Nester)
+# ============================================================================
+
+qualia:eucalyptus_camaldulensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus camaldulensis Dehnh." ;
+    rdfs:label "River Red Gum (Riparian Perch & Hollow-Bearing Nest Tree)"@en .
+
+qualia:eucalyptus_melliodora a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus melliodora A.Cunn. ex Schauer" ;
+    rdfs:label "Yellow Box (Box-Gum Woodland Perch & Hollow-Bearing Tree)"@en .
+
+qualia:eucalyptus_dalrympleana a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dalrympleana Maiden subsp. dalrympleana" ;
+    rdfs:label "Mountain White Gum (Montane Woodland Perch & Hollow-Bearing Tree)"@en .
+
+qualia:nasutitermes_termitarium a dwc:Taxon ;
+    dwc:scientificName "Nasutitermes spp." ;
+    rdfs:label "Arboreal Termite Mound (Excavated Nest Chamber Substrate)"@en .
+
+qualia:lampropholis_skinks a dwc:Taxon ;
+    dwc:scientificName "Lampropholis / Egernia spp." ;
+    rdfs:label "Woodland Scincid Lizards (Primary Vertebrate Prey)"@en .
+
+qualia:cyclochila_cicadas a dwc:Taxon ;
+    dwc:scientificName "Cyclochila / Psaltoda spp." ;
+    rdfs:label "Australian Woodland Cicadas & Large Orthoptera (Invertebrate Prey)"@en .
+
+qualia:pseudechis_snakes a dwc:Taxon ;
+    dwc:scientificName "Pseudechis / Austrelaps spp." ;
+    rdfs:label "Juvenile & Small Elapid Snakes (Secondary Vertebrate Prey)"@en .
+
+qualia:dacelo_novaeguineae
+    ro:0002470 qualia:lampropholis_skinks ,
+               qualia:cyclochila_cicadas ,
+               qualia:pseudechis_snakes ;
+    rorel:trophically_interacts_with qualia:lampropholis_skinks ,
+                                     qualia:cyclochila_cicadas ,
+                                     qualia:pseudechis_snakes ;
+    ro:0002503 qualia:eucalyptus_camaldulensis ,
+               qualia:eucalyptus_melliodora ,
+               qualia:eucalyptus_dalrympleana ,
+               qualia:nasutitermes_termitarium ;
+    ro:0002303 envo:01000220 ;
+    q42:ecologicalFunction "Sit-and-wait apex woodland kingfisher regulating terrestrial reptile, large insect, and small snake populations; obligate secondary hollow-nester dependent on mature Eucalyptus camaldulensis, E. melliodora, and E. dalrympleana tree hollows and arboreal Nasutitermes termitaria."@en ;
+    rdfs:comment "BirdLife Australia, NSW NPWS, and Australian Museum document permanent year-round family territories across open eucalypt forests and box-gum woodlands of South-Eastern Australia."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Central & South-Western Slopes and Tablelands, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:vernacularName "Gugubarra"@qaa-x-wir , "Guuguubarra"@qaa-x-wir ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" ;
+    rdfs:comment "Wiradjuri language origin of the English name 'kookaburra' (from onomatopoeic Gugubarra / Guuguubarra)."@en .
+
+country:ngunnawal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngunnawal Country (Canberra Plains, Yass & Southern Tablelands, ACT/NSW)"@en ;
+    tk:language_group "Ngunnawal" ;
+    tk:care_governance "CARE Principles" .
+
+country:dharawal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharawal Country (Southern Sydney, Georges River & Illawarra, NSW)"@en ;
+    tk:language_group "Dharawal" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers & Border Ranges, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges, Dandenongs & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:care_governance "CARE Principles" .
+
+country:dja_dja_wurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dja Dja Wurrung Country (Central Victorian Goldfields & Box-Ironbark Woodlands, VIC)"@en ;
+    tk:language_group "Dja Dja Wurrung" ;
+    tk:care_governance "CARE Principles" .

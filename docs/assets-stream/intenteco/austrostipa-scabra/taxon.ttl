@@ -1,0 +1,54 @@
+# Austrostipa scabra (Lindl.) S.W.L.Jacobs & J.Everett (Rough Speargrass) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:austrostipa_scabra:organ:> .
+
+qualia:austrostipa_scabra a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:austrostipa_scabra> , <did:q42:taxon:austrostipa-scabra> ;
+    rdfs:label "Rough Speargrass"@en , "Austrostipa scabra (Lindl.) S.W.L.Jacobs & J.Everett"@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Austrostipa scabra (Lindl.) S.W.L.Jacobs & J.Everett" ;
+    dwc:family "Poaceae" ;
+    dwc:vernacularName "Rough Speargrass"@en ;
+    dwc:establishmentMeans "native" ;
+    q42:groundcoverGroup "grass" ;
+    q42:ecologicalRole "Dry grassland, grassy woodland and rocky slopes; long twisted awns" ;
+    q42:naturalSwayFreqHz "1.8"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/node/apni/2887715> ;
+    q42:alaMatch "Austrostipa scabra [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/4104891> ;
+    q42:alaOccurrenceRecords "46539"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "31237"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "7558"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "2076"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "585"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "3685"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:33:25.658819+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Wurundjeri & Wadawurrung Country (Victorian Volcanic Plain)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/node/apni/2887715> , <https://www.gbif.org/species/4104891> , <https://bie.ala.org.au/search?q=Austrostipa+scabra> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Austrostipa+scabra> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Austrostipa+scabra> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:austrostipa_scabraShape a sh:NodeShape ;
+    sh:targetNode qualia:austrostipa_scabra ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

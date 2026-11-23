@@ -1,0 +1,128 @@
+# Two-Tone Vintage Ecopunk Touring Campervan & Mobile Knowledge Node (touring-campervan) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-VEH-03 | Organization: github.com/qualia-poiesis/touring-campervan
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:touring-campervan:> .
+@prefix part:   <urn:qualia:design:touring-campervan:part:> .
+@prefix port:   <urn:qualia:design:touring-campervan:port:> .
+
+design:rev1 a made:Artefact , made:RecreationalVehicle , dcat:Dataset ;
+    owl:sameAs <did:q42:design:touring_campervan> ;
+    dct:identifier <urn:qualia:design:touring-campervan:rev1> , <did:q42:design:touring_campervan> ;
+    rdfs:label "Two-Tone Vintage Ecopunk Touring Campervan & Mobile Knowledge Node"@en ;
+    dct:title "Two-Tone Vintage Ecopunk Touring Campervan & Mobile Knowledge Node — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/touring-campervan> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "pop_top_roof_and_awning_deployment" , "camper_cruising_suspension_and_wheel_spin" , "field_coworking_table_setup" , "rooftop_solar_charge_modulation" ;
+    made:lengthM "3.240"^^xsd:decimal ;
+    made:widthM "2.350"^^xsd:decimal ;
+    made:heightM "2.240"^^xsd:decimal ;
+    made:curbMassKg "2680.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "1.35"^^xsd:decimal ;
+    made:totalAuthoredParts "45"^^xsd:integer ;
+    made:hasComponent part:van-chassis , part:van-lower-orange-hull , part:beltline-trim-moulding , part:van-upper-cream-cabin , part:poptop-camper-roof , part:roof-solar-panel-front , part:roof-solar-panel-rear , part:split-windshield-left , part:panoramic-window-left-0 , part:panoramic-window-left-1 , part:panoramic-window-left-2 , part:wing-mirror-left , part:split-windshield-right , part:panoramic-window-right-0 , part:panoramic-window-right-1 , part:panoramic-window-right-2 , part:wing-mirror-right , part:rear-hatch-window ;
+    made:hasPort port:house-battery-dc-48v , port:potable-water-inlet .
+
+part:van-chassis a made:VehicleChassis , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-van-chassis> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Van Chassis"@en .
+part:van-lower-orange-hull a made:BodyShell , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-van-lower-orange-hull> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Van Lower Orange Hull"@en .
+part:beltline-trim-moulding a made:TrimStrip , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-beltline-trim-moulding> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Beltline Trim Moulding"@en .
+part:van-upper-cream-cabin a made:VehicleCabin , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-van-upper-cream-cabin> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Van Upper Cream Cabin"@en .
+part:poptop-camper-roof a made:PopTopRoof , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-poptop-camper-roof> ;
+    made:jointKind "prismatic" ;
+    rdfs:label "Poptop Camper Roof"@en .
+part:roof-solar-panel-front a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-roof-solar-panel-front> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Solar Panel Front"@en .
+part:roof-solar-panel-rear a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-roof-solar-panel-rear> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Solar Panel Rear"@en .
+part:split-windshield-left a made:Windshield , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-split-windshield-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Split Windshield Left"@en .
+part:panoramic-window-left-0 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-left-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Left 0"@en .
+part:panoramic-window-left-1 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-left-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Left 1"@en .
+part:panoramic-window-left-2 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-left-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Left 2"@en .
+part:wing-mirror-left a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-wing-mirror-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wing Mirror Left"@en .
+part:split-windshield-right a made:Windshield , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-split-windshield-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Split Windshield Right"@en .
+part:panoramic-window-right-0 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-right-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Right 0"@en .
+part:panoramic-window-right-1 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-right-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Right 1"@en .
+part:panoramic-window-right-2 a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-panoramic-window-right-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Panoramic Window Right 2"@en .
+part:wing-mirror-right a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-wing-mirror-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wing Mirror Right"@en .
+part:rear-hatch-window a made:RearWindow , made:Component ;
+    dct:identifier <did:q42:design:touring_campervan#part-rear-hatch-window> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Hatch Window"@en .
+
+port:house-battery-dc-48v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:touring_campervan#port-house-battery-dc-48v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "3600.0"^^xsd:decimal .
+port:potable-water-inlet a made:FunctionalPort ;
+    dct:identifier <did:q42:design:touring_campervan#port-potable-water-inlet> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "25.0"^^xsd:decimal .

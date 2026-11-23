@@ -1,0 +1,474 @@
+# Acacia pycnantha Benth. (Golden Wattle — Australia's National Floral Emblem)
+# Taxon concept, Fabaceae / Mimosoideae anatomical subsystems (PO:*),
+# heteroblastic bipinnate-to-phyllode transition, pipe-model & biophysical allometry,
+# InstanceState64 ontogenetic parameter bounds, ecological interactions (RO:*),
+# and South-Eastern Australian Biocultural Country provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds across the South-Eastern Australian dry sclerophyll forest,
+# woodland, and heath range (SA, VIC, NSW, ACT). Exact site and individual
+# occurrence remain pending.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix apyc:   <urn:qualia:taxon:acacia_pycnantha:> .
+@prefix organ:  <urn:qualia:taxon:acacia_pycnantha:organ:> .
+@prefix stage:  <urn:qualia:taxon:acacia_pycnantha:stage:> .
+@prefix trait:  <urn:qualia:taxon:acacia_pycnantha:trait:> .
+@prefix src:    <urn:qualia:source:acacia-pycnantha:> .
+@prefix claim:  <urn:qualia:claim:acacia-pycnantha:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:acacia_pycnantha a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:acacia_pycnantha> ;
+    dct:identifier <urn:qualia:taxon:acacia_pycnantha> ,
+                   <did:q42:taxon:acacia_pycnantha> ;
+    rdfs:label "Golden Wattle"@en ,
+               "Acacia pycnantha Benth."@la ;
+    dwc:scientificName "Acacia pycnantha Benth." ;
+    dwc:scientificNameAuthorship "Benth." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Fabales" ;
+    dwc:family "Fabaceae" ;
+    q42:subfamily "Mimosoideae" ;
+    q42:clade "Mimosoid clade (Caesalpinioideae s.l.)" ;
+    q42:section "Phyllodineae" ;
+    dwc:genus "Acacia" ;
+    dwc:specificEpithet "pycnantha" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Golden Wattle"@en ,
+                       "Broad-leaved Wattle"@en ,
+                       "Australia's National Floral Emblem"@en ;
+    q42:taxonomicSynonyms "Acacia petiolaris Lehm.; Racosperma pycnanthum (Benth.) Pedley; Acacia westonii Maiden; Acacia pycnantha var. diglandulosa Reader" ;
+    dwc:taxonID "GBIF:2978604" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/69415> ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/taxon/apni/51436646> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2908866> ;
+    dcat:landingPage <https://github.com/intenteco/acacia-pycnantha> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:nationalEmblemStatus "Proclaimed National Floral Emblem of Australia (1988-08-19)" ;
+    q42:ecologicalCommunity "Dry Sclerophyll Forests, Grassy Woodlands & Heathlands of South-Eastern Australia" ;
+    q42:workingLocality "South-Eastern Australia (SA Eyre Peninsula & Mount Lofty Ranges, VIC, Southern & Central NSW, ACT; exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/69415> ,
+                 <https://id.biodiversity.org.au/node/apni/2908866> ,
+                 <https://id.biodiversity.org.au/taxon/apni/51436646> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2908866> ,
+                 <https://www.gbif.org/species/2978604> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Acacia~pycnantha&page=nswfl> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/20f70d14-0560-467d-a05e-e23eefc93ac6> ,
+                 <https://profiles.ala.org.au/opus/foa/profile/Acacia%20pycnantha> ,
+                 <https://worldwidewattle.com> .
+
+<did:q42:taxon:acacia_pycnantha> a dwc:Taxon ;
+    owl:sameAs qualia:acacia_pycnantha ;
+    rdfs:label "DID Q42 Locator — Acacia pycnantha Benth."@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:acacia_pedina a dwc:Taxon ;
+    dwc:scientificName "Acacia pedina Kodela & Tame" ;
+    rdfs:label "Coastal Golden Wattle"@en .
+
+qualia:acacia_penninervis a dwc:Taxon ;
+    dwc:scientificName "Acacia penninervis Sieber ex DC." ;
+    rdfs:label "Mountain Hickory"@en .
+
+qualia:acacia_saligna a dwc:Taxon ;
+    dwc:scientificName "Acacia saligna (Labill.) H.L.Wendl." ;
+    rdfs:label "Golden Wreath Wattle"@en .
+
+qualia:acacia_retinodes a dwc:Taxon ;
+    dwc:scientificName "Acacia retinodes Schltdl." ;
+    rdfs:label "Wirilda / Swamp Wattle"@en .
+
+qualia:acacia_pycnantha
+    owl:differentFrom qualia:acacia_pedina ,
+                      qualia:acacia_penninervis ,
+                      qualia:acacia_saligna ,
+                      qualia:acacia_retinodes ;
+    rdfs:comment "Taxonomic boundary: do not substitute A. pedina (shorter, non-falcate adult phyllodes and fewer-flowered heads on shorter racemes), A. penninervis (fewer flowers per head and wider pods 10-20 mm), A. saligna (WA origin, drooping willow-like habit, larger solitary/few-headed racemes and narrower linear phyllodes), or A. retinodes (narrower linear-oblanceolate phyllodes and much smaller pale yellow flower heads)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/69415> ;
+    rdfs:label "APNI Name 69415 — Acacia pycnantha Benth." .
+
+src:apni-node a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/node/apni/2908866> ;
+    rdfs:label "APNI/APC Node 2908866 (Taxon 51436646) — Acacia pycnantha Benth." .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2908866> ;
+    rdfs:label "Atlas of Living Australia — Acacia pycnantha" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2978604> ;
+    rdfs:label "GBIF Backbone Taxonomy — Acacia pycnantha (2978604)" .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:worldwidewattle a dct:BibliographicResource ;
+    dct:identifier <https://worldwidewattle.com> ;
+    rdfs:label "WorldWideWattle — Australian Acacia Information Portal" .
+
+src:plantnet a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Acacia~pycnantha&page=nswfl> ;
+    rdfs:label "PlantNET NSW Flora Online — Acacia pycnantha" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/20f70d14-0560-467d-a05e-e23eefc93ac6> ;
+    rdfs:label "VicFlora — Acacia pycnantha Benth." .
+
+src:foa a dct:BibliographicResource ;
+    dct:identifier <https://profiles.ala.org.au/opus/foa/profile/Acacia%20pycnantha> ;
+    rdfs:label "Flora of Australia (ABRS) — Acacia pycnantha" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & LIVING_WORLD_ANATOMY PINS)
+# ==============================================================================
+
+qualia:acacia_pycnantha
+    ro:0002180 organ:rhizobial_nodulated_root_system ,
+               organ:tannin_rich_trunk_and_pruinose_branches ,
+               organ:juvenile_bipinnate_foliage ,
+               organ:heteroblastic_phyllode_foliage ,
+               organ:axillary_racemes_of_globose_golden_capitula ,
+               organ:dehiscent_legume_pods_and_elaiosome_seeds .
+
+organ:rhizobial_nodulated_root_system a po:0025025 , po:0003023 , po:0000038 , po:0000042 ;
+    rdfs:label "Rhizobial Nodulated Root System (Shallow Lateral Roots, Central Taproot & Bradyrhizobium Nodules)"@en ;
+    q42:pinId "pin_s1_taproot" , "pin_s1_buttress_flare" ;
+    q42:rootArchitecture "central_taproot_with_extensive_shallow_spreading_lateral_roots" ;
+    q42:symbioticStructure "PO:0003023_root_nodule_bradyrhizobium_nitrogen_fixation" ;
+    q42:lateralRootSpreadM "2.0..6.5" ;
+    q42:taprootDepthM "1.2..3.5" ;
+    q42:noduleDiameterMm "2.0..8.0" ;
+    q42:noduleColor "pale_tan_with_pink_leghemoglobin_interior" ;
+    rdfs:comment "Shallow, spreading lateral root network stabilizing sandy/stony soils combined with a central geotropic taproot bearing active nitrogen-fixing root nodules (PO:0003023) colonized by Bradyrhizobium spp. (and Burkholderia) rhizobia."@en ;
+    prov:wasDerivedFrom src:foa , src:vicflora , src:worldwidewattle .
+
+organ:tannin_rich_trunk_and_pruinose_branches a po:0025004 , po:0009006 , po:0020100 , po:0009005 , po:0005513 , po:0005509 , po:0005417 , po:0005511 , po:0005352 , po:0005353 ;
+    rdfs:label "Tannin-Rich Dark Trunk & Flexible Reddish-Brown Pruinose Branches"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s1_crown_space_colonization" , "pin_s2_rhytidome_cork" , "pin_s2_phellogen" , "pin_s2_secondary_phloem_kino" , "pin_s2_vascular_cambium" , "pin_s2_sapwood_xylem" , "pin_s2_heartwood_tyloses" ;
+    q42:barkType "smooth_to_finely_fissured_dark_brown_or_grey_bark" ;
+    q42:barkCondensedTanninPct "30.0..45.0" ;
+    q42:branchletSurface "glabrous_angled_to_terete_reddish_brown_often_pruinose_glaucous_bloom" ;
+    q42:crownHabit "erect_to_spreading_open_rounded_shrub_or_small_tree" ;
+    q42:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42:forkAngleMinDeg "38.0"^^xsd:decimal ;
+    q42:forkAngleMaxDeg "58.0"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    rdfs:comment "Slender trunk clad in smooth to finely fissured dark brown or grey bark exceptionally rich in condensed tannins (up to 30-45% dry bark mass); ascending flexible reddish-brown glabrous branchlets often coated in a pale pruinose/glaucous bloom, governed by Shinozaki/WBE pipe-model area conservation (r_parent^2.49 = sum r_child^2.49)."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa , src:worldwidewattle .
+
+organ:juvenile_bipinnate_foliage a po:0025034 , po:0020043 ;
+    rdfs:label "Juvenile True Bipinnate Foliage (Seedling Stage)"@en ;
+    q42:leafType "true_compound_bipinnate_leaf_with_pinnules" ;
+    q42:pinnaePairsMin 1 ;
+    q42:pinnaePairsMax 4 ;
+    q42:heteroblasticTransition "rapid_transition_from_bipinnate_juvenile_pinnae_to_flattened_petiole_phyllodes" ;
+    q42:transitionsTo organ:heteroblastic_phyllode_foliage ;
+    rdfs:comment "Early seedling stage true bipinnate leaves with delicate opposite pinnules appearing on first nodes before heteroblastic transition into vertically flattened photosynthetic petioles (phyllodes)."@en ;
+    prov:wasDerivedFrom src:foa , src:worldwidewattle .
+
+organ:heteroblastic_phyllode_foliage a po:0025034 , po:0020038 , po:0000014 , po:0000032 , po:0005679 , po:0005020 ;
+    rdfs:label "Broad Falcate Isobilateral Phyllodes with Basal Pulvinus & Marginal Extrafloral Nectary Gland"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" , "pin_s4_isobilateral_palisade" , "pin_s4_sclerenchyma_bundle_sheath" ;
+    q42:organOrigin "flattened_photosynthetic_petiole_phyllode_after_bipinnate_juvenile_phase" ;
+    q42:phyllodeShape "broadly_oblanceolate_to_narrowly_elliptic_pendulous_curved_falcate" ;
+    q42:phyllodeLengthMinCm "9.0"^^xsd:decimal ;
+    q42:phyllodeLengthMaxCm "20.0"^^xsd:decimal ;
+    q42:phyllodeLengthBotanicalRangeCm "8.0..20.0" ;
+    q42:phyllodeWidthMinCm "1.5"^^xsd:decimal ;
+    q42:phyllodeWidthMaxCm "5.0"^^xsd:decimal ;
+    q42:phyllodeWidthBotanicalRangeCm "0.5..5.0" ;
+    q42:venationPattern "prominent_central_midrib_and_penniveined_anastomosing_lateral_veins" ;
+    q42:pulvinusLengthMm "4.0..6.0" ;
+    q42:extrafloralNectaryCount "1..2" ;
+    q42:extrafloralNectaryPosition "conspicuous_marginal_gland_on_upper_edge_near_pulvinus_base" ;
+    q42:surfaceColor "glossy_bright_green_to_olive_green_isobilateral" ;
+    rdfs:comment "Heteroblastic adult foliage consisting of broad, pendulous, curved/falcate isobilateral phyllodes (9-20 cm long, 1.5-5 cm wide; extreme range 8-20 x 0.5-5.0 cm) with a prominent central midrib, penniveined lateral venation, wrinkled basal pulvinus (4-6 mm), and 1-2 conspicuous marginal extrafloral nectary glands along the upper edge attracting ants and pollinating honeyeaters."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa , src:worldwidewattle .
+
+organ:axillary_racemes_of_globose_golden_capitula a po:0009046 , po:0009049 , po:0009066 , po:0009072 , po:0009063 ;
+    rdfs:label "Profuse Axillary Racemes of Large Fragrant Golden-Yellow Globose Capitula"@en ;
+    q42:pinId "pin_s3_umbellaster" , "pin_s3_staminal_ring_anthers" , "pin_s3_style_stigma" , "pin_s3_ovary_locules" ;
+    q42:inflorescenceDisposition "axillary_racemes_and_terminal_panicles" ;
+    q42:racemeAxisLengthCm "2.0..15.0" ;
+    q42:capitulaPerRacemeMin 6 ;
+    q42:capitulaPerRacemeMax 12 ;
+    q42:capitulumDiameterMm "6.0..10.0" ;
+    q42:flowersPerCapitulumMin 40 ;
+    q42:flowersPerCapitulumMax 100 ;
+    q42:peduncleLengthMm "2.0..4.0" ;
+    q42:flowerColor "vibrant_bright_golden_yellow_fragrant_fluffy_stamens" ;
+    q42:anthesisSeason "July_to_November_late_winter_to_spring" ;
+    rdfs:comment "Profuse axillary racemes (2-15 cm long) bearing 6-12 large, fragrant, bright golden-yellow globose flower heads/capitula (6-10 mm diameter, 40-100 dense flowers per head) on glabrous 2-4 mm peduncles, blooming heavily from July to November."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa , src:worldwidewattle .
+
+organ:dehiscent_legume_pods_and_elaiosome_seeds a po:0009001 , po:0009010 , po:0020013 ;
+    rdfs:label "Linear-Flattened Papery-Leathery Dehiscent Legume Pods & Elaiosome-Bearing Hard Black Seeds"@en ;
+    q42:pinId "pin_s3_seed_chaff" ;
+    q42:podShape "linear_flattened_straight_to_curved_slightly_constricted_between_seeds" ;
+    q42:podTexture "firmly_papery_to_thinly_leathery_glabrous_brown" ;
+    q42:podLengthCm "5.0..14.0" ;
+    q42:podWidthMm "5.0..8.0" ;
+    q42:seedOrientation "longitudinal" ;
+    q42:seedAppearance "hard_coated_black_ovoid_seed_4_to_6mm" ;
+    q42:elaiosomeStructure "pale_fleshy_expanded_funicle_aril_for_myrmecochory" ;
+    q42:seedBankPersistenceYears "20..50+" ;
+    rdfs:comment "Linear-flattened, straight to curved, glabrous brown legume pods (5-14 cm x 5-8 mm), firmly papery to thinly leathery and slightly constricted between seeds, splitting longitudinally to release hard black ovoid seeds bearing an expanded lipid-rich funicle/elaiosome for myrmecochorous ant dispersal into soil seedbanks."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS
+# ==============================================================================
+
+qualia:acacia_pycnantha
+    q42:hasTrait trait:pipe_model_exponent ,
+                 trait:fork_angle ,
+                 trait:internode_elongation ,
+                 trait:mature_height ,
+                 trait:dbh ,
+                 trait:specific_leaf_area ,
+                 trait:wood_density ,
+                 trait:youngs_modulus ,
+                 trait:xylem_p50 ,
+                 trait:bark_condensed_tannin_pct ,
+                 trait:elevation_range .
+
+trait:pipe_model_exponent a q42:AllometricRule ;
+    rdfs:label "Shinozaki / WBE Pipe-Model Exponent"@en ;
+    q42:equation "r_parent^n = sum(r_child^n)" ;
+    q42:nominalValue "2.49"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_angiosperm_pipe_allometry" .
+
+trait:fork_angle a q42:AllometricRule ;
+    rdfs:label "Ascending-to-Spreading Branch Fork Angle"@en ;
+    q42:minValue "38.0"^^xsd:decimal ;
+    q42:maxValue "58.0"^^xsd:decimal ;
+    q42:nominalValue "46.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:vicflora , src:worldwidewattle .
+
+trait:internode_elongation a q42:AllometricRule ;
+    rdfs:label "Internode Elongation & Phyllotactic Divergence"@en ;
+    q42:internodeElongationRatio "0.82"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:unit "ratio / rad" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Shrub / Small Tree Height"@en ;
+    q42:minValue "3.0"^^xsd:decimal ;
+    q42:maxValue "10.0"^^xsd:decimal ;
+    q42:nominalValue "6.5"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+trait:dbh a q42:BiophysicalTrait ;
+    rdfs:label "Stem Diameter at Breast Height (DBH)"@en ;
+    q42:minValue "0.08"^^xsd:decimal ;
+    q42:maxValue "0.35"^^xsd:decimal ;
+    q42:nominalValue "0.18"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced_working_range" ;
+    prov:wasDerivedFrom src:worldwidewattle , src:vicflora .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Phyllode Specific Leaf Area (SLA)"@en ;
+    q42:minValue "4.5"^^xsd:decimal ;
+    q42:maxValue "7.5"^^xsd:decimal ;
+    q42:nominalValue "5.6"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_austraits_working_nominal" ;
+    rdfs:comment "Sclerophyllous isobilateral phyllodes exhibit low SLA (high LMA ~133-222+ g/m2) reflecting thick cuticle and sclereid/palisade investment."@en ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:wood_density a q42:BiophysicalTrait ;
+    rdfs:label "Air-Dry / Basic Wood Density"@en ;
+    q42:minValue "550.0"^^xsd:decimal ;
+    q42:maxValue "825.0"^^xsd:decimal ;
+    q42:nominalValue "720.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "sourced_austraits_timber_density" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Longitudinal Young's Modulus (E)"@en ;
+    q42:minValue "10.0"^^xsd:decimal ;
+    q42:maxValue "13.5"^^xsd:decimal ;
+    q42:nominalValue "11.8"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "modeled_temperate_acacia_hardwood" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:xylem_p50 a q42:BiophysicalTrait ;
+    rdfs:label "Xylem Cavitation Vulnerability (P50)"@en ;
+    q42:nominalValue "-4.2"^^xsd:decimal ;
+    q42:unit "MPa" ;
+    q42:evidenceStatus "modeled_dry_sclerophyll_acacia_hydraulic_trait" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:bark_condensed_tannin_pct a q42:BiophysicalTrait ;
+    rdfs:label "Bark Condensed Tannin Content (Dry Mass)"@en ;
+    q42:minValue "30.0"^^xsd:decimal ;
+    q42:maxValue "45.0"^^xsd:decimal ;
+    q42:nominalValue "37.5"^^xsd:decimal ;
+    q42:unit "percent_dry_bark_mass" ;
+    q42:evidenceStatus "sourced_phytochemical_range" ;
+    prov:wasDerivedFrom src:worldwidewattle , src:foa .
+
+trait:elevation_range a q42:EnvironmentalNicheTrait ;
+    rdfs:label "South-Eastern Australian Sclerophyll Elevation Range"@en ;
+    q42:minValue "0"^^xsd:integer ;
+    q42:maxValue "750"^^xsd:integer ;
+    q42:unit "m AHD" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:ala , src:vicflora , src:plantnet .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+apyc:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.46..1.54] site-modulated vertical stature scalar (3.0-10.0 m around 6.5 m nominal)" ;
+    q42:field_site_vigor "f32 [0.40..1.20] edaphic moisture/fertility & rhizobial nodulation crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [wind_bias 0..1, drought_phyllode_angle 0..1, fire_seedbank_scarification_pulse 0..1, post_fire_recruitment_factor 0..1]" ;
+    q42:hasStage stage:bipinnate_seedling ,
+                 stage:phyllode_sapling ,
+                 stage:flowering_adult_shrub_tree ,
+                 stage:senescent_pod_bearing_veteran .
+
+stage:bipinnate_seedling a q42:OntogeneticStage ;
+    rdfs:label "Bipinnate Seedling Stage (0.00 - 0.12)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.12"^^xsd:decimal ;
+    q42:activeOrgans organ:rhizobial_nodulated_root_system ,
+                     organ:juvenile_bipinnate_foliage ;
+    q42:heightNormRangeM "0.05..0.55" ;
+    rdfs:comment "Post-fire or scarified seedling establishing taproot and Bradyrhizobium root nodules while bearing true bipinnate juvenile leaves prior to heteroblastic phyllode transition."@en .
+
+stage:phyllode_sapling a q42:OntogeneticStage ;
+    rdfs:label "Phyllode Sapling Stage (0.12 - 0.35)"@en ;
+    q42:ageNormMin "0.12"^^xsd:decimal ;
+    q42:ageNormMax "0.35"^^xsd:decimal ;
+    q42:activeOrgans organ:rhizobial_nodulated_root_system ,
+                     organ:tannin_rich_trunk_and_pruinose_branches ,
+                     organ:juvenile_bipinnate_foliage ,
+                     organ:heteroblastic_phyllode_foliage ;
+    q42:heightNormRangeM "0.55..3.0" ;
+    rdfs:comment "Fast-growing sapling completing heteroblastic transition to broad falcate isobilateral phyllodes with prominent marginal extrafloral nectary glands on pruinose reddish-brown branchlets."@en .
+
+stage:flowering_adult_shrub_tree a q42:OntogeneticStage ;
+    rdfs:label "Flowering Adult Shrub / Small Tree Stage (0.35 - 0.80)"@en ;
+    q42:ageNormMin "0.35"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:rhizobial_nodulated_root_system ,
+                     organ:tannin_rich_trunk_and_pruinose_branches ,
+                     organ:heteroblastic_phyllode_foliage ,
+                     organ:axillary_racemes_of_globose_golden_capitula ,
+                     organ:dehiscent_legume_pods_and_elaiosome_seeds ;
+    q42:heightNormRangeM "3.0..10.0" ;
+    q42:dbhRangeM "0.08..0.28" ;
+    rdfs:comment "Reproductive adult Golden Wattle (3-10 m) with dark tannin-rich bark, pruinose reddish-brown branchlets, pendulous falcate phyllodes (9-20 x 1.5-5 cm), profuse axillary racemes of 6-12 fragrant golden capitula (40-100 flowers/head), and developing legume pods."@en .
+
+stage:senescent_pod_bearing_veteran a q42:OntogeneticStage ;
+    rdfs:label "Senescent Pod-Bearing Veteran Stage (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:rhizobial_nodulated_root_system ,
+                     organ:tannin_rich_trunk_and_pruinose_branches ,
+                     organ:heteroblastic_phyllode_foliage ,
+                     organ:axillary_racemes_of_globose_golden_capitula ,
+                     organ:dehiscent_legume_pods_and_elaiosome_seeds ;
+    q42:heightNormRangeM "5.0..10.0" ;
+    q42:dbhRangeM "0.18..0.35" ;
+    rdfs:comment "Mature-to-senescent short-lived obligate-seeder Acacia (typically 15-30 year ecological turnover) with deeply fissured tannin-rich trunk bark, sparser open crown, heavy crops of dehiscent papery-leathery legume pods releasing elaiosome-bearing black seeds into the persistent soil seedbank."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:bradyrhizobium_rhizobia a dwc:Taxon ;
+    dwc:scientificName "Bradyrhizobium spp." ;
+    rdfs:label "Nitrogen-Fixing Root-Nodule Rhizobial Symbiont"@en .
+
+qualia:myrmecochorous_ants a dwc:Taxon ;
+    dwc:scientificName "Formicidae (Iridomyrmex / Rhytidoponera / Pheidole spp.)" ;
+    rdfs:label "Myrmecochorous Seed-Dispersing & Extrafloral-Nectary Mutualist Ants"@en .
+
+qualia:meliphagidae_honeyeaters a dwc:Taxon ;
+    dwc:scientificName "Meliphagidae & Zosteropidae (Honeyeaters & Silvereyes)" ;
+    rdfs:label "Nectarivorous & Insectivorous Avian Pollinators"@en .
+
+qualia:eucalyptus_sclerophyll_associates a dwc:Taxon ;
+    rdfs:label "South-Eastern Australian Dry Sclerophyll Eucalyptus & Heath Guild"@en .
+
+# RO:0002444 = symbiont of / mutualist; RO:0002434 = interacts with;
+# RO:0002081 = co-occurs with / overlapping niche
+qualia:acacia_pycnantha
+    ro:0002444 qualia:bradyrhizobium_rhizobia ;
+    ro:0002434 qualia:myrmecochorous_ants ,
+               qualia:meliphagidae_honeyeaters ;
+    ro:0002081 qualia:eucalyptus_sclerophyll_associates ;
+    q42:fireRegenerationStrategy "obligate_seeder_soil_seedbank_heat_scarification" ;
+    q42:biome envo:01000221 , envo:00000446 , envo:01000219 ;
+    rdfs:comment "Keystone nitrogen-fixing understorey tree/shrub of South-Eastern Australian dry sclerophyll forests, woodlands, and heathlands. Bradyrhizobium root-nodule symbiosis fixes atmospheric N2 into nutrient-poor soils; phyllode extrafloral nectary glands attract ants (defending foliage) and honeyeaters/silvereyes (transferring pollen across golden capitula); hard black seeds with fleshy elaiosomes undergo myrmecochorous burial by ants; bushfire heat pulses scarify the dormant soil seedbank to trigger synchronous post-fire recruitment."@en ;
+    prov:wasDerivedFrom src:foa , src:vicflora , src:plantnet , src:ala .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:acacia_pycnantha
+    tk:custodial_country "Wurundjeri Country (Birrarung / Yarra Valley & Melbourne Plains VIC)" ,
+                         "Dja Dja Wurrung Country (Central Victorian Goldfields & Loddon-Avoca Woodlands)" ,
+                         "Wadawurrung Country (Brisbane Ranges, You Yangs & Western Victorian Foothills)" ,
+                         "Wotjobaluk Country (Wimmera & Mallee Fringe VIC)" ,
+                         "Ngarrindjeri Country (Lower Murray, Lakes & Coorong SA)" ,
+                         "Kaurna Country (Adelaide Plains & Mount Lofty Foothills SA)" ,
+                         "Wiradjuri Country (Southern & Central Western Slopes and Riverina NSW)" ,
+                         "Ngunnawal Country (Southern Tablelands & ACT)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    rdfs:comment "Country attribution spans Wurundjeri, Dja Dja Wurrung, Wadawurrung, Wotjobaluk, Ngarrindjeri, Kaurna, Wiradjuri, and Ngunnawal Nations across South Australia, Victoria, southern NSW, and the ACT. Local Contexts TK/BC notices record biocultural provenance (including traditional ecological knowledge of seasonal flowering calendars, edible gum exudates, tannin-rich bark, and fire-linked regeneration) without asserting community-authored TK labels absent direct First Nations co-design."@en .

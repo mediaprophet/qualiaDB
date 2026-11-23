@@ -1,0 +1,128 @@
+# Australian Field Utility & Ecological Survey 4WD Rover (rover-field-utility-4wd) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-VEH-01 | Organization: github.com/qualia-poiesis/rover-field-utility-4wd
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:rover-field-utility-4wd:> .
+@prefix part:   <urn:qualia:design:rover-field-utility-4wd:part:> .
+@prefix port:   <urn:qualia:design:rover-field-utility-4wd:port:> .
+
+design:rev1 a made:Artefact , made:UtilityVehicle , dcat:Dataset ;
+    owl:sameAs <did:q42:design:rover_field_utility_4wd> ;
+    dct:identifier <urn:qualia:design:rover-field-utility-4wd:rev1> , <did:q42:design:rover_field_utility_4wd> ;
+    rdfs:label "Australian Field Utility & Ecological Survey 4WD Rover"@en ;
+    dct:title "Australian Field Utility & Ecological Survey 4WD Rover — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/rover-field-utility-4wd> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "all_terrain_wheel_roll_and_suspension_articulation" , "ackermann_front_steering_sweep" , "hood_and_expedition_case_service_access" , "bullbar_winch_and_headlight_beam" ;
+    made:lengthM "2.860"^^xsd:decimal ;
+    made:widthM "1.880"^^xsd:decimal ;
+    made:heightM "2.180"^^xsd:decimal ;
+    made:curbMassKg "2340.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "1.45"^^xsd:decimal ;
+    made:totalAuthoredParts "47"^^xsd:integer ;
+    made:hasComponent part:chassis-frame , part:lower-body-tub , part:front-engine-hood , part:hood-power-bulge , part:fender-flare-0 , part:fender-flare-1 , part:fender-flare-2 , part:fender-flare-3 , part:cabin-greenhouse , part:front-windshield-glass , part:rear-tailgate-glass , part:side-front-glass-left , part:side-rear-glass-left , part:wing-mirror-left , part:rock-slider-step-left , part:side-front-glass-right , part:side-rear-glass-right , part:wing-mirror-right ;
+    made:hasPort port:aux-dc-bus-24v , port:rear-tow-hitch-50mm .
+
+part:chassis-frame a made:VehicleChassis , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-chassis-frame> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Chassis Frame"@en .
+part:lower-body-tub a made:BodyShell , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-lower-body-tub> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lower Body Tub"@en .
+part:front-engine-hood a made:EngineHood , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-front-engine-hood> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Front Engine Hood"@en .
+part:hood-power-bulge a made:EngineHood , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-hood-power-bulge> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Hood Power Bulge"@en .
+part:fender-flare-0 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-fender-flare-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Fender Flare 0"@en .
+part:fender-flare-1 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-fender-flare-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Fender Flare 1"@en .
+part:fender-flare-2 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-fender-flare-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Fender Flare 2"@en .
+part:fender-flare-3 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-fender-flare-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Fender Flare 3"@en .
+part:cabin-greenhouse a made:VehicleCabin , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-cabin-greenhouse> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cabin Greenhouse"@en .
+part:front-windshield-glass a made:Windshield , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-front-windshield-glass> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Windshield Glass"@en .
+part:rear-tailgate-glass a made:RearWindow , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-rear-tailgate-glass> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Tailgate Glass"@en .
+part:side-front-glass-left a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-side-front-glass-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Front Glass Left"@en .
+part:side-rear-glass-left a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-side-rear-glass-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Rear Glass Left"@en .
+part:wing-mirror-left a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-wing-mirror-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wing Mirror Left"@en .
+part:rock-slider-step-left a made:SideStep , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-rock-slider-step-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rock Slider Step Left"@en .
+part:side-front-glass-right a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-side-front-glass-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Front Glass Right"@en .
+part:side-rear-glass-right a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-side-rear-glass-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Rear Glass Right"@en .
+part:wing-mirror-right a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#part-wing-mirror-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wing Mirror Right"@en .
+
+port:aux-dc-bus-24v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#port-aux-dc-bus-24v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "2400.0"^^xsd:decimal .
+port:rear-tow-hitch-50mm a made:FunctionalPort ;
+    dct:identifier <did:q42:design:rover_field_utility_4wd#port-rear-tow-hitch-50mm> ;
+    made:portMedium "mechanical_coupling" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:Newton ;
+    made:ratedCapacity "35000.0"^^xsd:decimal .

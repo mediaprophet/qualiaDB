@@ -1,0 +1,128 @@
+# Community Nursery, Seed Exchange & Reclaimed Timber Barn (timber-storage-barn) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-BLD-03 | Organization: github.com/qualia-poiesis/timber-storage-barn
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:timber-storage-barn:> .
+@prefix part:   <urn:qualia:design:timber-storage-barn:part:> .
+@prefix port:   <urn:qualia:design:timber-storage-barn:port:> .
+
+design:rev1 a made:Artefact , made:AgriculturalBuilding , dcat:Dataset ;
+    owl:sameAs <did:q42:design:timber_storage_barn> ;
+    dct:identifier <urn:qualia:design:timber-storage-barn:rev1> , <did:q42:design:timber_storage_barn> ;
+    rdfs:label "Community Nursery, Seed Exchange & Reclaimed Timber Barn"@en ;
+    dct:title "Community Nursery, Seed Exchange & Reclaimed Timber Barn — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/timber-storage-barn> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "double_barn_doors_and_loft_hatch_swing" , "hay_loft_hoist_beam_loading" , "nursery_seedling_bed_canopy_sway" , "timber_frame_wind_settling" ;
+    made:lengthM "4.440"^^xsd:decimal ;
+    made:widthM "3.760"^^xsd:decimal ;
+    made:heightM "3.550"^^xsd:decimal ;
+    made:curbMassKg "8600.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "2.9"^^xsd:decimal ;
+    made:totalAuthoredParts "29"^^xsd:integer ;
+    made:hasComponent part:stone-plinth , part:barn-timber-shell , part:timber-post-0 , part:timber-post-1 , part:timber-post-2 , part:timber-post-3 , part:timber-post-4 , part:timber-post-5 , part:front-eave-girt , part:front-barn-door-left , part:door-cross-batten-left , part:door-diag-brace-left , part:side-framed-window-left , part:front-barn-door-right , part:door-cross-batten-right , part:door-diag-brace-right , part:side-framed-window-right , part:corrugated-gable-roof ;
+    made:hasPort port:barn-lighting-bus-24v , port:rainwater-gutter-harvest .
+
+part:stone-plinth a made:FoundationPlinth , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-stone-plinth> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stone Plinth"@en .
+part:barn-timber-shell a made:BarnWalls , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-barn-timber-shell> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Barn Timber Shell"@en .
+part:timber-post-0 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 0"@en .
+part:timber-post-1 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 1"@en .
+part:timber-post-2 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 2"@en .
+part:timber-post-3 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 3"@en .
+part:timber-post-4 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-4> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 4"@en .
+part:timber-post-5 a made:TimberPost , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-timber-post-5> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Timber Post 5"@en .
+part:front-eave-girt a made:HeaderBeam , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-front-eave-girt> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Eave Girt"@en .
+part:front-barn-door-left a made:BarnDoor , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-front-barn-door-left> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Front Barn Door Left"@en .
+part:door-cross-batten-left a made:DoorBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-door-cross-batten-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Cross Batten Left"@en .
+part:door-diag-brace-left a made:DoorBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-door-diag-brace-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Diag Brace Left"@en .
+part:side-framed-window-left a made:Window , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-side-framed-window-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Framed Window Left"@en .
+part:front-barn-door-right a made:BarnDoor , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-front-barn-door-right> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Front Barn Door Right"@en .
+part:door-cross-batten-right a made:DoorBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-door-cross-batten-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Cross Batten Right"@en .
+part:door-diag-brace-right a made:DoorBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-door-diag-brace-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Diag Brace Right"@en .
+part:side-framed-window-right a made:Window , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-side-framed-window-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Framed Window Right"@en .
+part:corrugated-gable-roof a made:GableRoof , made:Component ;
+    dct:identifier <did:q42:design:timber_storage_barn#part-corrugated-gable-roof> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Corrugated Gable Roof"@en .
+
+port:barn-lighting-bus-24v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:timber_storage_barn#port-barn-lighting-bus-24v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "800.0"^^xsd:decimal .
+port:rainwater-gutter-harvest a made:FunctionalPort ;
+    dct:identifier <did:q42:design:timber_storage_barn#port-rainwater-gutter-harvest> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "60.0"^^xsd:decimal .

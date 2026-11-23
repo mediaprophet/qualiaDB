@@ -1,0 +1,86 @@
+# Bursaria spinosa Cav. (Sweet Bursaria)
+# Taxon concept, anatomical subsystems (PO:*), InstanceState64 ontogeny,
+# ecological interactions (RO:*), and SE Australian Biocultural Country provenance (SPC / Local Contexts).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix sp:     <urn:qualia:taxon:bursaria_spinosa:> .
+@prefix organ:  <urn:qualia:taxon:bursaria_spinosa:organ:> .
+@prefix stage:  <urn:qualia:taxon:bursaria_spinosa:stage:> .
+
+qualia:bursaria_spinosa a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:bursaria_spinosa> , <did:q42:taxon:bursaria-spinosa> ;
+    dct:identifier <urn:qualia:taxon:bursaria_spinosa> , <did:q42:taxon:bursaria_spinosa> ;
+    rdfs:label "Sweet Bursaria"@en , "Bursaria spinosa Cav."@la ;
+    dwc:scientificName "Bursaria spinosa Cav." ;
+    dwc:scientificNameAuthorship "Cav." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Apiales" ;
+    dwc:family "Pittosporaceae" ;
+    dwc:genus "Bursaria" ;
+    dwc:specificEpithet "spinosa" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Sweet Bursaria"@en , "Australian Blackthorn"@en , "Kurwan"@en ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/78561> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2909432> ;
+    q42:ecologicalRole "Dry & damp sclerophyll woodland understorey, grassy box-gum plains & rocky slopes (SE Australia)" ;
+    q42:mycorrhizalAssociation "Arbuscular mycorrhizal (AMF)" ;
+    q42:naturalSwayFreqHz "0.72"^^xsd:decimal ;
+    dcat:landingPage <https://github.com/intenteco/bursaria-spinosa> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/78561> , <https://id.biodiversity.org.au/node/apni/2909432> , <https://www.gbif.org/species/3908142> , <https://vicflora.rbg.vic.gov.au/flora/taxon/8326a7f6-19c6-45a2-8876-d714a6db6c98> .
+
+<did:q42:taxon:bursaria_spinosa> a dwc:Taxon ;
+    owl:sameAs qualia:bursaria_spinosa ;
+    rdfs:label "DID Q42 Locator — Bursaria spinosa Cav."@en .
+
+organ:rhizosphere_root_base a po:0025025 , po:0000042 ;
+    rdfs:label "Fibrous Root Crown / Rhizosphere & AMF Hyphal Network (-1.35 m)"@en .
+
+organ:photosynthetic_canopy a po:0025034 , po:0009047 ;
+    rdfs:label "Photosynthetic Foliage & Reproductive Inflorescence Canopy (1.80..2.60 m)"@en .
+
+qualia:bursaria_spinosa
+    ro:0002180 organ:rhizosphere_root_base , organ:photosynthetic_canopy ;
+    tk:custodial_country "Ngunnawal & Ngambri Country (Canberra / Southern Tablelands, ACT/NSW)" ,
+                         "Wurundjeri Country (Yarra Catchment, VIC)" ,
+                         "Wiradjuri Country (Murray-Darling Slopes & Plains, NSW)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" .
+
+sp:InstanceState64 a q42:StateBufferSchema ;
+    q42:byteSize 64 ;
+    q42:hasStage stage:seedling_tussock , stage:establishing_clump , stage:mature_reproductive , stage:senescent_resprouter .
+
+stage:seedling_tussock a q42:OntogeneticStage ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal .
+
+stage:establishing_clump a q42:OntogeneticStage ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal .
+
+stage:mature_reproductive a q42:OntogeneticStage ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal .
+
+stage:senescent_resprouter a q42:OntogeneticStage ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal .

@@ -1,0 +1,134 @@
+# Active Civic Maker Repair Hub & Solar Cooperative Workshop (commons-rig-workshop) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-BLD-01 | Organization: github.com/qualia-poiesis/commons-rig-workshop
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:commons-rig-workshop:> .
+@prefix part:   <urn:qualia:design:commons-rig-workshop:part:> .
+@prefix port:   <urn:qualia:design:commons-rig-workshop:port:> .
+
+design:rev1 a made:Artefact , made:WorkshopFacility , dcat:Dataset ;
+    owl:sameAs <did:q42:design:commons_rig_workshop> ;
+    dct:identifier <urn:qualia:design:commons-rig-workshop:rev1> , <did:q42:design:commons_rig_workshop> ;
+    rdfs:label "Active Civic Maker Repair Hub & Solar Cooperative Workshop"@en ;
+    dct:title "Active Civic Maker Repair Hub & Solar Cooperative Workshop — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/commons-rig-workshop> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "gantry_hoist_trolley_and_hook_travel" , "fabrication_3d_printer_and_ai_terminal_cycle" , "microgrid_battery_cabinet_telemetry_pulse" , "portal_truss_wind_load_harmonic" ;
+    made:lengthM "4.600"^^xsd:decimal ;
+    made:widthM "3.600"^^xsd:decimal ;
+    made:heightM "3.220"^^xsd:decimal ;
+    made:curbMassKg "4850.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "2.8"^^xsd:decimal ;
+    made:totalAuthoredParts "68"^^xsd:integer ;
+    made:hasComponent part:concrete-floor-slab , part:front-column-0 , part:rear-column-0 , part:roof-rafter-front-0 , part:roof-rafter-rear-0 , part:tie-beam-0 , part:front-column-1 , part:rear-column-1 , part:roof-rafter-front-1 , part:roof-rafter-rear-1 , part:tie-beam-1 , part:front-column-2 , part:rear-column-2 , part:roof-rafter-front-2 , part:roof-rafter-rear-2 , part:tie-beam-2 , part:front-column-3 , part:rear-column-3 ;
+    made:hasPort port:microgrid-bus-48v , port:compressed-air-manifold , port:solid-knowledge-bank-fiber .
+
+part:concrete-floor-slab a made:ConcreteSlab , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-concrete-floor-slab> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Concrete Floor Slab"@en .
+part:front-column-0 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-front-column-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Column 0"@en .
+part:rear-column-0 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-rear-column-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Column 0"@en .
+part:roof-rafter-front-0 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-front-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Front 0"@en .
+part:roof-rafter-rear-0 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-rear-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Rear 0"@en .
+part:tie-beam-0 a made:TieBeam , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-tie-beam-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tie Beam 0"@en .
+part:front-column-1 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-front-column-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Column 1"@en .
+part:rear-column-1 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-rear-column-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Column 1"@en .
+part:roof-rafter-front-1 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-front-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Front 1"@en .
+part:roof-rafter-rear-1 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-rear-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Rear 1"@en .
+part:tie-beam-1 a made:TieBeam , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-tie-beam-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tie Beam 1"@en .
+part:front-column-2 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-front-column-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Column 2"@en .
+part:rear-column-2 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-rear-column-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Column 2"@en .
+part:roof-rafter-front-2 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-front-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Front 2"@en .
+part:roof-rafter-rear-2 a made:RoofRafter , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-roof-rafter-rear-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Roof Rafter Rear 2"@en .
+part:tie-beam-2 a made:TieBeam , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-tie-beam-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tie Beam 2"@en .
+part:front-column-3 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-front-column-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Column 3"@en .
+part:rear-column-3 a made:StructuralColumn , made:Component ;
+    dct:identifier <did:q42:design:commons_rig_workshop#part-rear-column-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Column 3"@en .
+
+port:microgrid-bus-48v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:commons_rig_workshop#port-microgrid-bus-48v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "12000.0"^^xsd:decimal .
+port:compressed-air-manifold a made:FunctionalPort ;
+    dct:identifier <did:q42:design:commons_rig_workshop#port-compressed-air-manifold> ;
+    made:portMedium "pneumatic_gas" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:Pascal ;
+    made:ratedCapacity "800000.0"^^xsd:decimal .
+port:solid-knowledge-bank-fiber a made:FunctionalPort ;
+    dct:identifier <did:q42:design:commons_rig_workshop#port-solid-knowledge-bank-fiber> ;
+    made:portMedium "optical_data" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:BitPerSecond ;
+    made:ratedCapacity "10000000000.0"^^xsd:decimal .

@@ -1,0 +1,54 @@
+# Bulbine bulbosa (R.Br.) Haw. (Bulbine Lily) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:bulbine_bulbosa:organ:> .
+
+qualia:bulbine_bulbosa a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:bulbine_bulbosa> , <did:q42:taxon:bulbine-bulbosa> ;
+    rdfs:label "Bulbine Lily"@en , "Bulbine bulbosa (R.Br.) Haw."@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Bulbine bulbosa (R.Br.) Haw." ;
+    dwc:family "Asphodelaceae" ;
+    dwc:vernacularName "Bulbine Lily"@en ;
+    dwc:establishmentMeans "native" ;
+    q42:groundcoverGroup "flower" ;
+    q42:ecologicalRole "Grassland and grassy woodland; corm used as food" ;
+    q42:naturalSwayFreqHz "2.2"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/taxon/apni/51737827> ;
+    q42:alaMatch "Bulbine bulbosa [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/5304957> ;
+    q42:alaOccurrenceRecords "14483"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "4454"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "5438"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "1418"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "204"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "2620"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:34:01.976406+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Wurundjeri & Taungurung Country (VIC)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/taxon/apni/51737827> , <https://www.gbif.org/species/5304957> , <https://bie.ala.org.au/search?q=Bulbine+bulbosa> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Bulbine+bulbosa> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Bulbine+bulbosa> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:bulbine_bulbosaShape a sh:NodeShape ;
+    sh:targetNode qualia:bulbine_bulbosa ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

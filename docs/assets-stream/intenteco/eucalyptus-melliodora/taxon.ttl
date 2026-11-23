@@ -1,0 +1,480 @@
+# Eucalyptus melliodora A.Cunn. ex Schauer (Yellow Box)
+# Taxon concept, anatomical subsystems (PO:*), pipe-model & biophysical allometry,
+# InstanceState64 ontogenetic parameter bounds, ecological interactions (RO:*),
+# and South-Eastern Australian Biocultural Country provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds across the NSW and Victorian tablelands/western slopes grassy
+# woodland range (Critically Endangered White Box-Yellow Box-Blakely's Red Gum
+# Grassy Woodland community). Exact site and individual occurrence remain pending.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix emel:   <urn:qualia:taxon:eucalyptus_melliodora:> .
+@prefix organ:  <urn:qualia:taxon:eucalyptus_melliodora:organ:> .
+@prefix stage:  <urn:qualia:taxon:eucalyptus_melliodora:stage:> .
+@prefix trait:  <urn:qualia:taxon:eucalyptus_melliodora:trait:> .
+@prefix src:    <urn:qualia:source:eucalyptus-melliodora:> .
+@prefix claim:  <urn:qualia:claim:eucalyptus-melliodora:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:eucalyptus_melliodora a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:eucalyptus_melliodora> ;
+    dct:identifier <urn:qualia:taxon:eucalyptus_melliodora> ,
+                   <did:q42:taxon:eucalyptus_melliodora> ;
+    rdfs:label "Yellow Box"@en ,
+               "Eucalyptus melliodora A.Cunn. ex Schauer"@la ;
+    dwc:scientificName "Eucalyptus melliodora A.Cunn. ex Schauer" ;
+    dwc:scientificNameAuthorship "A.Cunn. ex Schauer" ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Myrtales" ;
+    dwc:family "Myrtaceae" ;
+    dwc:genus "Eucalyptus" ;
+    dwc:subgenus "Symphyomyrtus" ;
+    q42:section "Adnataria" ;
+    q42:series "Melliodorae" ;
+    dwc:specificEpithet "melliodora" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Yellow Box"@en ,
+                       "Honey Box"@en ,
+                       "Yellow Ironbox"@en ;
+    dwc:taxonID "GBIF:3176794" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/99652> ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/instance/apni/613405> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/5294597> ;
+    dcat:landingPage <https://github.com/intenteco/eucalyptus-melliodora> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:ecologicalCommunity "White Box-Yellow Box-Blakely's Red Gum Grassy Woodland and Derived Native Grassland (Critically Endangered, EPBC Act)" ;
+    q42:workingLocality "NSW and Victoria Tablelands & Western Slopes Grassy Woodlands (exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_melliodora.htm> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Eucalyptus~melliodora&page=nswfl> ,
+                 <https://id.biodiversity.org.au/name/apni/99652> ,
+                 <https://id.biodiversity.org.au/node/apni/5294597> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/5294597> ,
+                 <https://www.gbif.org/species/3176794> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/88981ca8-2834-4c0a-a06f-5b82401971c5> .
+
+<did:q42:taxon:eucalyptus_melliodora> a dwc:Taxon ;
+    owl:sameAs qualia:eucalyptus_melliodora ;
+    rdfs:label "DID Q42 Locator — Eucalyptus melliodora A.Cunn. ex Schauer"@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:eucalyptus_albens a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus albens Benth." ;
+    rdfs:label "White Box"@en .
+
+qualia:eucalyptus_blakelyi a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus blakelyi Maiden" ;
+    rdfs:label "Blakely's Red Gum"@en .
+
+qualia:eucalyptus_polyanthemos a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus polyanthemos Schauer" ;
+    rdfs:label "Red Box"@en .
+
+qualia:eucalyptus_microcarpa a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus microcarpa (Maiden) Maiden" ;
+    rdfs:label "Inland Grey Box"@en .
+
+qualia:eucalyptus_melliodora
+    owl:differentFrom qualia:eucalyptus_albens ,
+                      qualia:eucalyptus_blakelyi ,
+                      qualia:eucalyptus_polyanthemos ,
+                      qualia:eucalyptus_microcarpa ;
+    rdfs:comment "Taxonomic boundary: do not substitute E. albens (thicker pale grey-white box bark, terminal panicles, larger glaucous barrel/urceolate fruits), E. blakelyi (smooth mottled gum bark and strongly exserted fruit valves), E. polyanthemos (broad orbicular-ovate glaucous leaves, terminal panicles), or E. microcarpa (terminal panicles, narrower subcylindrical fruits)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:euclid a dct:BibliographicResource ;
+    dct:identifier <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_melliodora.htm> ;
+    rdfs:label "EUCLID — Eucalyptus melliodora" .
+
+src:plantnet a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Eucalyptus~melliodora&page=nswfl> ;
+    rdfs:label "PlantNET NSW Flora Online — Eucalyptus melliodora" .
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/99652> ;
+    rdfs:label "APNI Name 99652 — Eucalyptus melliodora A.Cunn. ex Schauer" .
+
+src:apni-node a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/node/apni/5294597> ;
+    rdfs:label "APNI/APC Node 5294597 — Eucalyptus melliodora A.Cunn. ex Schauer" .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/5294597> ;
+    rdfs:label "Atlas of Living Australia — Eucalyptus melliodora" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/3176794> ;
+    rdfs:label "GBIF Backbone Taxonomy — Eucalyptus melliodora (3176794)" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/88981ca8-2834-4c0a-a06f-5b82401971c5> ;
+    rdfs:label "VicFlora — Eucalyptus melliodora" .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & LIVING_WORLD_ANATOMY PINS)
+# ==============================================================================
+
+qualia:eucalyptus_melliodora
+    ro:0002180 organ:root_lignotuber ,
+               organ:bole_bark ,
+               organ:boughs_crown ,
+               organ:foliage_juvenile ,
+               organ:foliage_adult ,
+               organ:umbel_buds ,
+               organ:capsule_fruit .
+
+organ:root_lignotuber a po:0025025 , po:0025531 , po:0000038 , po:0000042 , po:0005707 ;
+    rdfs:label "Deep Taproot, Lateral Roots & Prominent Lignotuber"@en ;
+    q42:pinId "pin_s1_lignotuber" , "pin_s1_taproot" , "pin_s1_buttress_flare" , "pin_s1_mycorrhizal_rhizosphere" ;
+    q42:lignotuberSwellingMinM "0.0"^^xsd:decimal ;
+    q42:lignotuberSwellingMaxM "0.45"^^xsd:decimal ;
+    q42:lateralSinkerRootCountMin 5 ;
+    q42:lateralSinkerRootCountMax 7 ;
+    q42:buttressFluteHarmonicOrder "3..7" ;
+    rdfs:comment "Deep geotropic taproot accessing alluvial/loamy subsoils, 5-7 lateral structural sinker roots with radial buttress flute harmonics, prominent basal lignotuber enabling post-fire/clearing epicormic coppicing, and ectomycorrhizal rhizosphere."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet .
+
+organ:bole_bark a po:0025004 , po:0009005 , po:0005513 , po:0005509 , po:0005417 , po:0005511 , po:0005352 , po:0005353 ;
+    rdfs:label "Yellow-Brown Box Trunk, Bright Yellow Inner Bark & Smooth Upper Limbs"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s2_rhytidome_cork" , "pin_s2_phellogen" , "pin_s2_secondary_phloem_kino" , "pin_s2_vascular_cambium" , "pin_s2_sapwood_xylem" , "pin_s2_heartwood_tyloses" ;
+    q42:basalBarkType "persistent_fibrous_flaky_yellow_brown_to_greyish_yellow_box_bark" ;
+    q42:innerBarkTissue "inner_phloem_cambium" ;
+    q42:innerBarkColor "distinctive_bright_yellow_inner_bark" ;
+    q42:upperBarkType "smooth_white_cream_pale_grey_to_yellowish_shedding_short_ribbons" ;
+    q42:grainStructure "dense_interlocked_grain" ;
+    rdfs:comment "Stout woodland trunk clad on lower/mid trunk (or occasionally entire trunk) in persistent fibrous/flaky yellow-brown to greyish-yellow box bark with a diagnostic bright yellow inner_phloem_cambium layer, shedding above to smooth white, cream, pale grey, or yellowish upper limbs."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:boughs_crown a po:0009006 , po:0020100 ;
+    rdfs:label "Wide Umbrella-Like Woodland Crown Boughs & Pendulous Branchlets"@en ;
+    q42:pinId "pin_s1_crown_space_colonization" ;
+    q42:crownHabit "wide_rounded_umbrella_like_spreading_woodland_crown" ;
+    q42:branchletHabit "slender_pendulous_non_glaucous_branchlets" ;
+    q42:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42:forkAngleMinDeg "42.0"^^xsd:decimal ;
+    q42:forkAngleMaxDeg "64.0"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:skyTransmittanceMin "0.45"^^xsd:decimal ;
+    q42:skyTransmittanceMax "0.65"^^xsd:decimal ;
+    rdfs:comment "Wide-forking (42-64 deg) ascending-to-spreading scaffold boughs forming a broad umbrella-like woodland crown with graceful pendulous terminal branchlets, obeying Shinozaki/WBE pipe-model area conservation (r_parent^2.49 = sum r_child^2.49)."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:foliage_juvenile a po:0025034 ;
+    rdfs:label "Juvenile Foliage — Petiolate Ovate-Elliptic to Lanceolate Grey-Green Leaves"@en ;
+    q42:phyllotaxy "opposite_for_4_to_5_pairs_then_alternate" ;
+    q42:attachment "petiolate" ;
+    q42:laminaShape "ovate_elliptic_to_lanceolate" ;
+    q42:leafLengthMinCm "2.5"^^xsd:decimal ;
+    q42:leafLengthMaxCm "6.5"^^xsd:decimal ;
+    q42:leafWidthMinCm "0.9"^^xsd:decimal ;
+    q42:leafWidthMaxCm "3.5"^^xsd:decimal ;
+    q42:surfaceColor "dull_green_to_grey_green_usually_non_glaucous" ;
+    rdfs:comment "Seedling and coppice juvenile foliage: petiolate, opposite for 4-5 pairs then alternate, ovate-elliptic to lanceolate, dull green to grey-green on rounded-to-quadrangular juvenile stems."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:foliage_adult a po:0025034 , po:0000014 , po:0000032 , po:0005679 , po:0005023 , po:0005018 , po:0005020 ;
+    rdfs:label "Adult Foliage — Dull Grey-Green Narrowly Elliptical-to-Falcate Leaves with Distant Intramarginal Vein"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" , "pin_s4_isobilateral_palisade" , "pin_s4_intramarginal_vein" , "pin_s4_schizogenous_oil_gland" , "pin_s4_sclerenchyma_bundle_sheath" ;
+    q42:phyllotaxy "alternate_disjunct" ;
+    q42:attachment "petiolate_pendulous_petiole_0.8_to_2.0cm" ;
+    q42:laminaShape "narrowly_elliptical_to_lanceolate_slightly_falcate" ;
+    q42:leafLengthMinCm "6.0"^^xsd:decimal ;
+    q42:leafLengthMaxCm "14.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "0.6"^^xsd:decimal ;
+    q42:leafWidthMaxCm "3.0"^^xsd:decimal ;
+    q42:typicalWidthRangeCm "0.8..1.8" ;
+    q42:surfaceColor "dull_grey_green_to_slaty_glaucous_concolorous" ;
+    q42:venationDiagnostic "intramarginal_vein_set_well_in_from_margin_sometimes_doubled" ;
+    rdfs:comment "Diagnostic Adnataria foliage: alternate, petiolate, narrowly elliptical to lanceolate-slightly-falcate dull grey-green/slaty-glaucous concolorous leaves with a prominent intramarginal vein set conspicuously well in from the margin and dense reticulate lateral venation with island and intersectional oil glands."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:umbel_buds a po:0009046 , po:0006322 , po:0009084 , po:0009064 , po:0009066 , po:0009072 , po:0009063 ;
+    rdfs:label "Profuse 7-Flowered Axillary Umbels with Conical-Beaked Opercula & Outer Staminodes"@en ;
+    q42:pinId "pin_s3_umbellaster" , "pin_s3_operculum_cap" , "pin_s3_hypanthium_cup" , "pin_s3_staminal_ring_anthers" , "pin_s3_style_stigma" , "pin_s3_ovary_locules" ;
+    q42:budsPerUmbel 7 ;
+    q42:inflorescenceDisposition "axillary_unbranched_profuse" ;
+    q42:peduncleLengthMinCm "0.3"^^xsd:decimal ;
+    q42:peduncleLengthMaxCm "1.0"^^xsd:decimal ;
+    q42:pedicelLengthMinCm "0.2"^^xsd:decimal ;
+    q42:pedicelLengthMaxCm "1.0"^^xsd:decimal ;
+    q42:budShape "clavate_to_ovoid_or_rhomboidal" ;
+    q42:operculumShape "conical_to_rounded_or_slightly_beaked" ;
+    q42:operculumScar "absent" ;
+    q42:stamenDiagnostic "inflexed_filaments_with_outer_sterile_staminodes_and_fertile_inner_adnate_cuboid_anthers" ;
+    q42:budLengthMinCm "0.4"^^xsd:decimal ;
+    q42:budLengthMaxCm "0.8"^^xsd:decimal ;
+    q42:budWidthMinCm "0.3"^^xsd:decimal ;
+    q42:budWidthMaxCm "0.5"^^xsd:decimal ;
+    q42:flowerColor "white_to_creamy_honey_scented" ;
+    q42:anthesisSeason "August_to_February_variable_spring_summer" ;
+    rdfs:comment "Profuse 7-flowered axillary umbellasters on slender pedicels; buds clavate to ovoid with conical-beaked operculum (outer scar absent), inflexed stamens featuring characteristic sterile outer staminodes, fertile inner adnate cuboid anthers dehiscing by terminal pores, and honey-scented white/cream nectariferous blossoms."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:capsule_fruit a po:0009001 , po:0009010 ;
+    rdfs:label "Hemispherical-Globose Woody Capsules with 4-5 Enclosed Valves"@en ;
+    q42:pinId "pin_s3_gumnut_valves" , "pin_s3_seed_chaff" ;
+    q42:capsuleShape "hemispherical_to_truncate_globose" ;
+    q42:pedicelLengthMinCm "0.1"^^xsd:decimal ;
+    q42:pedicelLengthMaxCm "0.9"^^xsd:decimal ;
+    q42:capsuleLengthMinCm "0.3"^^xsd:decimal ;
+    q42:capsuleLengthMaxCm "0.8"^^xsd:decimal ;
+    q42:capsuleWidthMinCm "0.3"^^xsd:decimal ;
+    q42:capsuleWidthMaxCm "0.7"^^xsd:decimal ;
+    q42:staminophoreType "broad_usually_deciduous" ;
+    q42:discType "descending" ;
+    q42:valveCountMin 4 ;
+    q42:valveCountMax 5 ;
+    q42:valveExsertion "enclosed_or_rim_level" ;
+    q42:seedDimensionsMm "1.5..2.5_flattened_ovoid_reticulate" ;
+    rdfs:comment "Small hemispherical to truncate-globose woody capsules on slender pedicels, broad usually deciduous staminophore, descending disc, and 4-5 enclosed (or rim-level) valves releasing brown/grey flattened-ovoid seeds."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS
+# ==============================================================================
+
+qualia:eucalyptus_melliodora
+    q42:hasTrait trait:pipe_model_exponent ,
+                 trait:fork_angle ,
+                 trait:internode_elongation ,
+                 trait:mature_height ,
+                 trait:dbh ,
+                 trait:specific_leaf_area ,
+                 trait:wood_density ,
+                 trait:youngs_modulus ,
+                 trait:xylem_p50 ,
+                 trait:nectar_sugar_mg_per_flower ,
+                 trait:elevation_range .
+
+trait:pipe_model_exponent a q42:AllometricRule ;
+    rdfs:label "Shinozaki / WBE Pipe-Model Exponent"@en ;
+    q42:equation "r_parent^n = sum(r_child^n)" ;
+    q42:nominalValue "2.49"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_eucalyptus_allometry" .
+
+trait:fork_angle a q42:AllometricRule ;
+    rdfs:label "Spreading Woodland Crown Bough Fork Angle"@en ;
+    q42:minValue "42.0"^^xsd:decimal ;
+    q42:maxValue "64.0"^^xsd:decimal ;
+    q42:nominalValue "52.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:internode_elongation a q42:AllometricRule ;
+    rdfs:label "Internode Elongation & Phyllotactic Divergence"@en ;
+    q42:internodeElongationRatio "0.78"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:unit "ratio / rad" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Woodland Tree Height"@en ;
+    q42:minValue "15.0"^^xsd:decimal ;
+    q42:maxValue "32.0"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+trait:dbh a q42:BiophysicalTrait ;
+    rdfs:label "Diameter at Breast Height (DBH)"@en ;
+    q42:minValue "0.7"^^xsd:decimal ;
+    q42:maxValue "1.8"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Specific Leaf Area (SLA)"@en ;
+    q42:minValue "4.8"^^xsd:decimal ;
+    q42:maxValue "7.2"^^xsd:decimal ;
+    q42:nominalValue "5.9"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_austraits_working_nominal" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:wood_density a q42:BiophysicalTrait ;
+    rdfs:label "Dense Interlocked-Grain Wood Density (Air-Dry Nominal)"@en ;
+    q42:nominalValue "1050.0"^^xsd:decimal ;
+    q42:basicDensityRange "850.0..900.0" ;
+    q42:airDryNominal "1050.0"^^xsd:decimal ;
+    q42:greenDensityNominal "1200.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "sourced_timber_density" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Longitudinal Young's Modulus (E)"@en ;
+    q42:nominalValue "15.4"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "sourced_timber_mechanics" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:xylem_p50 a q42:BiophysicalTrait ;
+    rdfs:label "Xylem Cavitation Vulnerability (P50)"@en ;
+    q42:nominalValue "-4.6"^^xsd:decimal ;
+    q42:unit "MPa" ;
+    q42:evidenceStatus "sourced_hydraulic_trait" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:nectar_sugar_mg_per_flower a q42:BiophysicalTrait ;
+    rdfs:label "High Melliferous Nectar Sugar Yield per Flower"@en ;
+    q42:traitKey "nectar_sugar_mg_per_flower" ;
+    q42:minValue "1.2"^^xsd:decimal ;
+    q42:maxValue "5.5"^^xsd:decimal ;
+    q42:nominalValue "2.8"^^xsd:decimal ;
+    q42:unit "mg_sugar/flower/24h" ;
+    q42:evidenceStatus "modeled_melliferous_forage_yield" ;
+    rdfs:comment "Profuse honey-scented nectariferous output supporting critically endangered nectarivorous woodland birds (Anthochaera phrygia, Lathamus discolor) and native pollinating insects."@en ;
+    prov:wasDerivedFrom src:euclid , src:ala .
+
+trait:elevation_range a q42:EnvironmentalNicheTrait ;
+    rdfs:label "Tablelands, Foothills & Western Slopes Elevation Range"@en ;
+    q42:minValue "100"^^xsd:integer ;
+    q42:maxValue "900"^^xsd:integer ;
+    q42:unit "m AHD" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:ala .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+emel:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.75..1.25] site-modulated vertical stature scalar" ;
+    q42:field_site_vigor "f32 [0.40..1.20] edaphic moisture/fertility crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [wind_prevailing_bias 0..1, drought_leaf_drop 0..1, fire_char_height 0..1, epicormic_sprout_factor 0..1]" ;
+    q42:hasStage stage:sapling , stage:pole , stage:mature , stage:veteran .
+
+stage:sapling a q42:OntogeneticStage ;
+    rdfs:label "Lignotuberous Sapling Stage (0.00 - 0.15)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:foliage_juvenile ;
+    q42:heightNormRangeM "0.6..4.0" ;
+    rdfs:comment "Lignotuberous sapling establishing deep taproot with petiolate ovate-elliptic to lanceolate grey-green juvenile foliage (opposite for 4-5 pairs then alternate)."@en .
+
+stage:pole a q42:OntogeneticStage ;
+    rdfs:label "Pole Stage (0.15 - 0.45)"@en ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:foliage_juvenile , organ:foliage_adult ;
+    q42:heightNormRangeM "4.0..15.0" ;
+    rdfs:comment "Erect pole stage developing basal fibrous yellow-brown box bark and transitioning to alternate narrowly elliptical dull grey-green adult leaves."@en .
+
+stage:mature a q42:OntogeneticStage ;
+    rdfs:label "Spreading Woodland Specimen (0.45 - 0.80)"@en ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "15.0..32.0" ;
+    q42:dbhRangeM "0.7..1.4" ;
+    rdfs:comment "Mature spreading woodland tree with wide umbrella-like crown (42-64 deg bough forks), pendulous branchlets, persistent yellow-brown box bark on lower/mid trunk with bright yellow inner_phloem_cambium, smooth white-cream-yellowish upper limbs, profuse 7-bud umbels, and hemispherical-globose capsules."@en .
+
+stage:veteran a q42:OntogeneticStage ;
+    rdfs:label "Veteran Hollow-Bearing Box Tree (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:foliage_juvenile , organ:umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "20.0..32.0" ;
+    q42:dbhRangeM "1.2..1.8" ;
+    rdfs:comment "Veteran hollow-bearing Yellow Box paddock/woodland patriarch with massive buttressed trunk, deeply fissured box stocking, critical fauna nesting hollows in heavy spreading boughs, high-nectar seasonal mass flowering, and lignotuber/epicormic resilience."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:anthochaera_phrygia a dwc:Taxon ;
+    dwc:scientificName "Anthochaera phrygia (Shaw, 1794)" ;
+    rdfs:label "Regent Honeyeater (Critically Endangered)"@en .
+
+qualia:lathamus_discolor a dwc:Taxon ;
+    dwc:scientificName "Lathamus discolor (White, 1790)" ;
+    rdfs:label "Swift Parrot (Critically Endangered)"@en .
+
+qualia:petaurus_norfolcensis a dwc:Taxon ;
+    dwc:scientificName "Petaurus norfolcensis (Kerr, 1792)" ;
+    rdfs:label "Squirrel Glider"@en .
+
+qualia:phascolarctos_cinereus a dwc:Taxon ;
+    dwc:scientificName "Phascolarctos cinereus (Goldfuss, 1817)" ;
+    rdfs:label "Koala"@en .
+
+qualia:ectomycorrhizal_fungi a dwc:Taxon ;
+    rdfs:label "Woodland Ectomycorrhizal Fungal Guild (Basidiomycota / Ascomycota)"@en .
+
+# RO:0002081 = co-occurs with / overlapping niche; RO:0002434 = interacts with;
+# RO:0002444 = symbiont of / mutualist
+qualia:eucalyptus_melliodora
+    ro:0002081 qualia:eucalyptus_albens ,
+               qualia:eucalyptus_blakelyi ,
+               qualia:eucalyptus_microcarpa ,
+               qualia:eucalyptus_polyanthemos ;
+    ro:0002444 qualia:ectomycorrhizal_fungi ;
+    ro:0002434 qualia:anthochaera_phrygia ,
+               qualia:lathamus_discolor ,
+               qualia:petaurus_norfolcensis ,
+               qualia:phascolarctos_cinereus ;
+    q42:biome envo:01000221 , envo:00000446 ;
+    rdfs:comment "Keystone canopy species of the Critically Endangered White Box-Yellow Box-Blakely's Red Gum Grassy Woodland ecological community across NSW, ACT, and Victoria; high melliferous nectar yield provides critical seasonal foraging for Regent Honeyeater (Anthochaera phrygia) and Swift Parrot (Lathamus discolor), while veteran hollows support Squirrel Gliders and woodland parrots."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:ala .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:eucalyptus_melliodora
+    tk:custodial_country "Wiradjuri Country (Central & South-Western Slopes and Tablelands NSW)" ,
+                         "Ngunnawal Country (Southern Tablelands & ACT Limestone Plains)" ,
+                         "Kamilaroi / Gamilaraay Country (North-Western Slopes & Liverpool Plains NSW)" ,
+                         "Dja Dja Wurrung Country (Central Victorian Goldfields & Box-Ironbark Woodlands)" ,
+                         "Taungurung Country (Goulburn-Broken & Central Victorian Foothills)" ,
+                         "Yorta Yorta Country (Murray-Goulburn Riverine & Woodland Plains)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    rdfs:comment "Country attribution spans Wiradjuri, Ngunnawal, Kamilaroi/Gamilaraay, Dja Dja Wurrung, Taungurung, and Yorta Yorta Nations across NSW and Victoria tablelands, slopes, and grassy woodlands. Local Contexts TK/BC notices record biocultural provenance without asserting community-authored TK labels absent direct First Nations co-design."@en .

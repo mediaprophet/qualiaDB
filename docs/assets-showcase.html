@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-041">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hypermedia Asset Repositories &amp; QualiaPortal WASM Streaming Showcase | QualiaDB</title>
+  <meta name="description" content="Interactive 53-repository Hypermedia Asset Showcase for IntentEco (Biosphere) and Qualia Poiesis (Made-World): stream .10d v2 Holographic manifolds, LODs, .q42 semantic volumes, and 3D RDF ontologies directly into the QualiaPortal WebGPU / WebGL2 WASM runtime.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-showcase.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="js/menu-loader.js"></script>
+  <script>
+  (function () {
+      if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+      window.coi = { quiet: true, shouldDeregister: function () { return false; } };
+      var s = document.createElement('script');
+      s.src = 'coi-serviceworker.js';
+      s.async = false;
+      document.head.appendChild(s);
+  })();
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #06090f; color: #e2e8f0; }
+    .glass-panel { background: rgba(13, 19, 28, 0.82); border: 1px solid rgba(148, 163, 184, 0.14); backdrop-filter: blur(20px); }
+    .glass-strong { background: rgba(17, 24, 36, 0.90); border: 1px solid rgba(148, 163, 184, 0.18); backdrop-filter: blur(24px); }
+    .code-box { font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; background: rgba(4, 7, 12, 0.92); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 0.9rem; overflow-x: auto; }
+    #portal-canvas-wrap { position: relative; width: 100%; height: 500px; border-radius: 16px; overflow: hidden; background: radial-gradient(circle at 50% 35%, #111c28 0%, #060a10 100%); border: 1px solid rgba(255, 255, 255, 0.12); }
+    #portal-showcase-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    #portal-showcase-canvas:active { cursor: grabbing; }
+    .roster-scroll { max-height: 760px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(148, 163, 184, 0.28) transparent; }
+    @media (max-width: 1024px) {
+      #portal-canvas-wrap { height: 390px; }
+      .roster-scroll { max-height: 420px; }
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="q-mesh" aria-hidden="true"></div>
+
+  <!-- Global Navigation -->
+  <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.88);backdrop-filter:blur(32px)">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+      <div class="flex items-center justify-between gap-3 min-h-[4rem] py-2">
+        <a href="index.html" class="flex items-center gap-3 shrink-0">
+          <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 via-cyan-400 to-violet-500 rounded-xl flex items-center justify-center">
+            <span class="text-black font-bold text-xl">Q</span>
+          </div>
+          <div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+        </a>
+        <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+        <div class="flex items-center gap-2.5 shrink-0">
+          <div id="portal-wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-900/90 text-slate-200 border border-white/10">
+            <span id="portal-wasm-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="portal-wasm-text">Arming QualiaPortal WASM…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header & Repository Ecosystem Summary -->
+  <header class="max-w-screen-2xl mx-auto px-4 sm:px-8 pt-8 pb-6">
+    <div class="glass-strong rounded-3xl p-6 sm:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-xs font-semibold">
+          <i class="fa-solid fa-Satellite-dish"></i>
+          <span>One-Repository-Per-Asset Architecture · Holographic 10D v2 (HOLO 0x0306) · Live QualiaPortal WASM Streaming</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <a href="https://github.com/intenteco" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 transition font-medium">
+            <i class="fa-brands fa-github mr-1"></i>github.com/intenteco (Biosphere) ↗
+          </a>
+          <a href="https://github.com/qualia-poiesis" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 transition font-medium">
+            <i class="fa-brands fa-github mr-1"></i>github.com/qualia-poiesis (Made-World) ↗
+          </a>
+          <a href="qbdl-streaming.html" class="px-3 py-1.5 rounded-xl bg-violet-500/10 text-violet-300 border border-violet-500/25 hover:bg-violet-500/20 transition font-medium">
+            <i class="fa-solid fa-layer-group mr-1"></i>QBDL Streaming Contract
+          </a>
+        </div>
+      </div>
+
+      <h1 class="font-display text-3xl sm:text-5xl font-bold tracking-tight mb-3">
+        Hypermedia Asset Repositories &amp; <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">Portal WASM Streaming</span>
+      </h1>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl leading-relaxed mb-6">
+        Every living species in <strong>IntentEco</strong> (<code>eco-intent\&lt;species-slug&gt;</code> → <code>github.com/intenteco/&lt;species-slug&gt;</code>) and every manufactured artefact or civic structure in <strong>Qualia Poiesis</strong> (<code>poiesis\&lt;thing-slug&gt;</code> → <code>github.com/qualia-poiesis/&lt;thing-slug&gt;</code>) lives in its own dedicated repository, compiled via <strong>Webizen AI Synth</strong> into sealed <code>.hmc</code>, <code>.10d</code> v2, <code>.q42</code>, <code>.m64</code>, <code>.emf</code>, and <code>.qac</code> containers. Select any repository below to stream its <code>.10d</code> manifold, LODs, subterranean rhizosphere, or 3D RDF ontology graph directly into the live <strong>QualiaPortal WASM</strong> viewport.
+      </p>
+
+      <!-- Top Summary Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-white/10">
+          <div class="text-[11px] text-white/45">Dedicated Asset Repos</div>
+          <div class="text-2xl font-mono font-bold text-white mt-0.5" id="summary-total-repos">53</div>
+          <div class="text-[11px] text-emerald-300/80">1 repo per species / thing</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-emerald-500/20">
+          <div class="text-[11px] text-emerald-300/70">IntentEco · Biosphere</div>
+          <div class="text-2xl font-mono font-bold text-emerald-400 mt-0.5" id="summary-eco-repos">39</div>
+          <div class="text-[11px] text-white/50">Flora, Fauna &amp; Human CCF</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-cyan-500/20">
+          <div class="text-[11px] text-cyan-300/70">Qualia Poiesis · Made-World</div>
+          <div class="text-2xl font-mono font-bold text-cyan-400 mt-0.5" id="summary-poiesis-repos">14</div>
+          <div class="text-[11px] text-white/50">Vehicles, Civic &amp; Off-Grid</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-white/10">
+          <div class="text-[11px] text-white/45">Authored Surface Triangles</div>
+          <div class="text-2xl font-mono font-bold text-violet-300 mt-0.5" id="summary-total-tris">—</div>
+          <div class="text-[11px] text-white/50">+ HOLO 0x0306 phase fields</div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-white/10 col-span-2 sm:col-span-1">
+          <div class="text-[11px] text-white/45">Sealed .hmc Corpus</div>
+          <div class="text-2xl font-mono font-bold text-amber-300 mt-0.5" id="summary-total-hmc">—</div>
+          <div class="text-[11px] text-white/50">SHA-256 &amp; CRC-32C verified</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Roster Left + QualiaPortal WASM Viewport & Deep Inspector Right -->
+  <main class="max-w-screen-2xl mx-auto px-4 sm:px-8 pb-20">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- Left Column: Filterable 53-Repository Roster (4 cols) -->
+      <aside class="lg:col-span-4 glass-panel rounded-3xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="fa-solid fa-boxes-stacked text-emerald-400"></i>
+            <span>Asset Repositories</span>
+          </h2>
+          <span id="roster-count" class="text-xs font-mono text-white/50">Showing 53 of 53</span>
+        </div>
+
+        <!-- Search & Filters -->
+        <div class="space-y-2.5">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-white/40 text-xs"></i>
+            <input id="filter-search" type="search" placeholder="Search species, vehicle, DID, slug…"
+              class="w-full pl-9 pr-3 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-400">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="filter-org" aria-label="Filter by organization"
+              class="w-full px-2.5 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white focus:outline-none focus:border-emerald-400">
+              <option value="all">All Orgs (53 Repos)</option>
+              <option value="intenteco">intenteco · Biosphere (39)</option>
+              <option value="qualia-poiesis">qualia-poiesis · Made-World (14)</option>
+            </select>
+            <select id="filter-category" aria-label="Filter by category"
+              class="w-full px-2.5 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white focus:outline-none focus:border-emerald-400">
+              <option value="all">All Categories</option>
+              <option value="Flora · Canopy & Shrub">Flora · Canopy &amp; Shrub</option>
+              <option value="Flora · Groundcover & Forb">Flora · Groundcover &amp; Forb</option>
+              <option value="Fauna">Biosphere · Native Fauna</option>
+              <option value="Human / CCF-HRA">Biosphere · Human CCF-HRA</option>
+              <option value="Vehicles & Mobility">Made-World · Vehicles</option>
+              <option value="Infrastructure">Made-World · Infrastructure</option>
+              <option value="Buildings & Civic">Made-World · Buildings &amp; Civic</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Scrollable Repository Cards -->
+        <div id="asset-roster-list" class="roster-scroll space-y-2.5 pr-1">
+          <div class="p-8 text-center text-white/50 text-xs">Loading asset catalog…</div>
+        </div>
+      </aside>
+
+      <!-- Right Column: QualiaPortal WASM Streaming Viewport & Repository Inspector (8 cols) -->
+      <section class="lg:col-span-8 space-y-6">
+
+        <!-- Live QualiaPortal WASM Viewport Card -->
+        <div class="glass-strong rounded-3xl p-5 sm:p-6 space-y-4">
+
+          <!-- Top Viewport Header & Stream Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <span id="detail-domain-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Qualia Poiesis · Made-World</span>
+                <span id="detail-work-packet" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-white/5 text-white/60 border border-white/10">POIESIS-WP</span>
+                <span id="detail-licence" class="px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">PermissiveCommons</span>
+              </div>
+              <h2 id="detail-title" class="text-xl sm:text-2xl font-bold text-white">Loading Asset…</h2>
+              <p id="detail-did" class="text-xs font-mono text-cyan-300/80 mt-0.5">did:q42:…</p>
+            </div>
+
+            <!-- Dedicated Repository Link & Stream Source Selector -->
+            <div class="flex flex-wrap items-center gap-2">
+              <a id="detail-repo-link" href="https://github.com/qualia-poiesis" target="_blank" rel="noopener"
+                class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/15 text-xs font-semibold transition">
+                <i class="fa-brands fa-github text-sm"></i>
+                <span class="repo-label">qualia-poiesis/…</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
+              </a>
+              <select id="stream-source-select" aria-label="Streaming transport policy"
+                class="px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white focus:outline-none focus:border-emerald-400">
+                <option value="auto">Stream: Auto (Mirror → GitHub CDN/Raw)</option>
+                <option value="github">Stream: GitHub Repo First (jsDelivr / Raw)</option>
+                <option value="mirror">Stream: Pages Same-Origin Mirror</option>
+              </select>
+              <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 border border-violet-500/30 text-xs font-semibold transition">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Drop / Open File</span>
+                <input id="local-asset-file" type="file" accept=".10d,.hmc,.q42,.emf,.qac,.ttl,.n3,.obj,.stl,.glb" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Chunked Stream Progress Bar -->
+          <div class="rounded-2xl bg-black/50 border border-white/10 p-3 space-y-1.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span id="stream-progress-label" class="font-mono text-emerald-300">Initializing stream…</span>
+              <span id="stream-progress-meta" class="font-mono text-[11px] text-white/45">sha256:…</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div id="stream-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 transition-all duration-150" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Streamable Variant / LOD / RDF Holograph Switcher Pills -->
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-2">
+              Streamable Embodiment Variants (.10d v2 / LODs / Rhizosphere / 3D RDF Ontology)
+            </div>
+            <div id="variant-pills" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- Live QualiaPortal WASM Canvas -->
+          <div id="portal-canvas-wrap">
+            <canvas id="portal-showcase-canvas"></canvas>
+
+            <!-- Top-Left Overlay HUD -->
+            <div class="absolute top-3 left-3 pointer-events-none rounded-xl bg-black/70 backdrop-blur-md border border-white/10 px-3 py-2 space-y-0.5 max-w-md">
+              <div id="canvas-hud-status" class="text-xs text-emerald-300 font-medium">Arming QualiaPortal WASM…</div>
+              <div class="text-[11px] text-white/55 font-mono">
+                Left-drag: Orbit · Shift/Right-drag: Pan · Wheel: Zoom · Drop .10d/.hmc/.q42
+              </div>
+            </div>
+
+            <!-- Bottom Viewport Controls Overlay -->
+            <div class="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-xl p-1.5">
+                <button type="button" id="btn-reset-camera" class="px-2.5 py-1 rounded-lg text-xs text-white/80 hover:text-white hover:bg-white/10 transition">
+                  <i class="fa-solid fa-crosshairs mr-1"></i>Reset Camera
+                </button>
+                <button type="button" id="btn-turntable" class="px-2.5 py-1 rounded-lg text-xs text-white/80 border border-transparent hover:text-white hover:bg-white/10 transition">
+                  <i class="fa-solid fa-rotate mr-1"></i>Turntable Spin
+                </button>
+                <select id="select-sky-preset" aria-label="Sky lighting preset" class="px-2 py-1 rounded-lg bg-slate-900 text-xs text-white border border-white/10">
+                  <option value="0">Sky: Deep Void</option>
+                  <option value="1" selected>Sky: Daylight</option>
+                  <option value="2">Sky: Golden Hour</option>
+                  <option value="3">Sky: Moonlight</option>
+                </select>
+                <select id="select-display-mode" aria-label="Portal display mode" class="px-2 py-1 rounded-lg bg-slate-900 text-xs text-white border border-white/10">
+                  <option value="hybrid" selected>Mode: Hybrid 10D</option>
+                  <option value="mesh">Mode: Surface Mesh</option>
+                  <option value="tensor">Mode: Tensor Manifold</option>
+                </select>
+              </div>
+
+              <!-- Multi-Asset Scene Composer Toggle -->
+              <div class="flex items-center gap-1.5 bg-black/75 backdrop-blur-md border border-white/15 rounded-xl p-1.5">
+                <button type="button" id="btn-scene-composer" class="px-2.5 py-1 rounded-lg text-xs text-white/85 border border-transparent hover:bg-white/10 transition">
+                  <i class="fa-solid fa-layer-group mr-1"></i>Multi-Asset Scene (<span id="scene-composer-count">0</span>)
+                </button>
+                <button type="button" id="btn-clear-scene" class="px-2 py-1 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition" title="Clear composed scene">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Composed Scene Asset Chips (shown when Multi-Asset Scene Composer is active) -->
+          <div id="scene-composer-tray" class="hidden flex flex-wrap items-center gap-2 pt-1"></div>
+
+          <!-- Live Portal Metrics Strip -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10">
+              <div class="text-[10px] text-white/45 uppercase">Active Stream Mode</div>
+              <div id="metric-mode" class="text-xs font-mono font-semibold text-emerald-300 truncate mt-0.5">—</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10">
+              <div id="metric-verts-label" class="text-[10px] text-white/45 uppercase">Vertices</div>
+              <div id="metric-verts" class="text-xs font-mono font-semibold text-white mt-0.5">—</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10">
+              <div id="metric-tris-label" class="text-[10px] text-white/45 uppercase">Triangles</div>
+              <div id="metric-tris" class="text-xs font-mono font-semibold text-cyan-300 mt-0.5">—</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10">
+              <div class="text-[10px] text-white/45 uppercase">Streamed Payload</div>
+              <div id="metric-size" class="text-xs font-mono font-semibold text-violet-300 mt-0.5">—</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/40 border border-white/10 col-span-2 sm:col-span-1">
+              <div class="text-[10px] text-white/45 uppercase">Portal WASM Tier</div>
+              <div id="metric-tier" class="text-xs font-mono font-semibold text-amber-300 mt-0.5">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deep Asset & Repository Inspector Card -->
+        <div class="glass-panel rounded-3xl p-5 sm:p-6 space-y-6">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-3xl">
+              <h3 class="text-lg font-semibold text-white mb-1">Repository Dossier, 10D Coordinates &amp; Sealed Containers</h3>
+              <p id="detail-brief" class="text-xs sm:text-sm text-white/70 leading-relaxed">—</p>
+            </div>
+            <span id="detail-repo-commit" class="px-3 py-1 rounded-xl bg-black/50 border border-white/10 text-xs font-mono text-white/60">git repo</span>
+          </div>
+
+          <!-- Reference Turnaround & Spectral/Field Previews -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-2xl bg-black/45 border border-white/10 p-3 space-y-2">
+              <div class="text-xs font-semibold text-white/70 flex items-center justify-between">
+                <span><i class="fa-solid fa-images text-emerald-400 mr-1.5"></i>Synth Native Offscreen Turnaround</span>
+                <span class="text-[11px] font-mono text-white/45">VolumetricRenderer / PortalGpu</span>
+              </div>
+              <img id="detail-preview-img" src="" alt="Asset turnaround preview" class="w-full h-44 object-contain rounded-xl bg-black/60">
+            </div>
+            <div class="rounded-2xl bg-black/45 border border-white/10 p-3 space-y-2">
+              <div class="text-xs font-semibold text-white/70 flex items-center justify-between">
+                <span><i class="fa-solid fa-wave-square text-cyan-400 mr-1.5"></i>EMF64 / Bioelectric / Spectral Slice</span>
+                <span class="text-[11px] font-mono text-white/45">Q42EMF64 + HOLO 0x0306</span>
+              </div>
+              <img id="detail-spectral-img" src="" alt="Spectral slice preview" class="w-full h-44 object-contain rounded-xl bg-black/60">
+            </div>
+          </div>
+
+          <!-- 10D Coordinate Vector [q, v, w, x, y, z, t, alpha, mu, sigma] -->
+          <div>
+            <div class="text-xs font-semibold text-white/75 mb-2">
+              10D Spatiotemporal &amp; Epistemic Coordinate Carrier <code class="text-cyan-300 font-mono">[q, v, w, x, y, z, t, α, μ, σ]</code>
+            </div>
+            <div id="detail-10d-coords" class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2"></div>
+          </div>
+
+          <!-- Repository Container Manifest Table -->
+          <div>
+            <div class="text-xs font-semibold text-white/75 mb-2">
+              Sealed Repository Deliverables (<code>dist/</code> &amp; <code>dist/lods/</code>)
+            </div>
+            <div class="overflow-x-auto rounded-2xl border border-white/10 bg-black/35">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-white/10 text-[11px] uppercase text-white/45 font-mono">
+                    <th class="py-2.5 px-2.5">Container Family</th>
+                    <th class="py-2.5 px-2.5">Artifact Filename</th>
+                    <th class="py-2.5 px-2.5 text-right">Size</th>
+                    <th class="py-2.5 px-2.5">SHA-256 Digest</th>
+                    <th class="py-2.5 px-2.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-files-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Live QualiaPortal WASM Receipt / Ontology / Q42 Inspector Output -->
+          <div>
+            <div class="text-xs font-semibold text-white/75 mb-2">
+              Live QualiaPortal WASM Stream Receipt &amp; Semantic Inspector
+            </div>
+            <pre id="inspector-code-box" class="code-box text-cyan-200 max-h-72 overflow-y-auto">Select an asset repository to inspect its QualiaPortal WASM stream receipt.</pre>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/assets-showcase.js"></script>
+</body>
+</html>

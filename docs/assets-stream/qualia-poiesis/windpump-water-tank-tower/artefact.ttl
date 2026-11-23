@@ -1,0 +1,128 @@
+# Galvanized Lattice Windpump Tower & Multi-Stage Water Purification Skid (windpump-water-tank-tower) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-WAT-01 | Organization: github.com/qualia-poiesis/windpump-water-tank-tower
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:windpump-water-tank-tower:> .
+@prefix part:   <urn:qualia:design:windpump-water-tank-tower:part:> .
+@prefix port:   <urn:qualia:design:windpump-water-tank-tower:port:> .
+
+design:rev1 a made:Artefact , made:WaterInfrastructure , dcat:Dataset ;
+    owl:sameAs <did:q42:design:windpump_water_tank_tower> ;
+    dct:identifier <urn:qualia:design:windpump-water-tank-tower:rev1> , <did:q42:design:windpump_water_tank_tower> ;
+    rdfs:label "Galvanized Lattice Windpump Tower & Multi-Stage Water Purification Skid"@en ;
+    dct:title "Galvanized Lattice Windpump Tower & Multi-Stage Water Purification Skid — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/windpump-water-tank-tower> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "wind_wheel_rotor_continuous_spin" , "turntable_yaw_and_tail_vane_furling" , "pump_rod_reciprocating_vertical_stroke" , "purification_vessel_and_trough_flow" ;
+    made:lengthM "3.200"^^xsd:decimal ;
+    made:widthM "2.550"^^xsd:decimal ;
+    made:heightM "4.040"^^xsd:decimal ;
+    made:curbMassKg "1850.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "1.85"^^xsd:decimal ;
+    made:totalAuthoredParts "34"^^xsd:integer ;
+    made:hasComponent part:tower-corner-leg-0 , part:tower-corner-leg-1 , part:tower-corner-leg-2 , part:tower-corner-leg-3 , part:tower-girt-deck-0 , part:tower-girt-deck-1 , part:tower-girt-deck-2 , part:tower-girt-deck-3 , part:yaw-nacelle-head , part:wind-rotor-blade-0 , part:wind-rotor-blade-1 , part:wind-rotor-blade-2 , part:wind-rotor-blade-3 , part:wind-rotor-blade-4 , part:wind-rotor-blade-5 , part:wind-rotor-blade-6 , part:wind-rotor-blade-7 , part:wind-rotor-blade-8 ;
+    made:hasPort port:bore-suction-riser , port:purified-water-manifold .
+
+part:tower-corner-leg-0 a made:TowerLeg , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-corner-leg-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Corner Leg 0"@en .
+part:tower-corner-leg-1 a made:TowerLeg , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-corner-leg-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Corner Leg 1"@en .
+part:tower-corner-leg-2 a made:TowerLeg , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-corner-leg-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Corner Leg 2"@en .
+part:tower-corner-leg-3 a made:TowerLeg , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-corner-leg-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Corner Leg 3"@en .
+part:tower-girt-deck-0 a made:TowerBrace , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-girt-deck-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Girt Deck 0"@en .
+part:tower-girt-deck-1 a made:TowerBrace , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-girt-deck-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Girt Deck 1"@en .
+part:tower-girt-deck-2 a made:TowerBrace , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-girt-deck-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Girt Deck 2"@en .
+part:tower-girt-deck-3 a made:TowerBrace , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-tower-girt-deck-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Tower Girt Deck 3"@en .
+part:yaw-nacelle-head a made:RotorHub , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-yaw-nacelle-head> ;
+    made:jointKind "revolute" ;
+    rdfs:label "Yaw Nacelle Head"@en .
+part:wind-rotor-blade-0 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 0"@en .
+part:wind-rotor-blade-1 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 1"@en .
+part:wind-rotor-blade-2 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 2"@en .
+part:wind-rotor-blade-3 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 3"@en .
+part:wind-rotor-blade-4 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-4> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 4"@en .
+part:wind-rotor-blade-5 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-5> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 5"@en .
+part:wind-rotor-blade-6 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-6> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 6"@en .
+part:wind-rotor-blade-7 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-7> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 7"@en .
+part:wind-rotor-blade-8 a made:WindmillBlade , made:Component ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#part-wind-rotor-blade-8> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wind Rotor Blade 8"@en .
+
+port:bore-suction-riser a made:FunctionalPort ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#port-bore-suction-riser> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "45.0"^^xsd:decimal .
+port:purified-water-manifold a made:FunctionalPort ;
+    dct:identifier <did:q42:design:windpump_water_tank_tower#port-purified-water-manifold> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "80.0"^^xsd:decimal .

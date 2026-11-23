@@ -1,0 +1,134 @@
+# Decentralized Solar Microgrid, LiFePO4 Battery Bank & Charging Station (offgrid-solar-battery-station) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-NRG-01 | Organization: github.com/qualia-poiesis/offgrid-solar-battery-station
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:offgrid-solar-battery-station:> .
+@prefix part:   <urn:qualia:design:offgrid-solar-battery-station:part:> .
+@prefix port:   <urn:qualia:design:offgrid-solar-battery-station:port:> .
+
+design:rev1 a made:Artefact , made:EnergyFacility , dcat:Dataset ;
+    owl:sameAs <did:q42:design:offgrid_solar_battery_station> ;
+    dct:identifier <urn:qualia:design:offgrid-solar-battery-station:rev1> , <did:q42:design:offgrid_solar_battery_station> ;
+    rdfs:label "Decentralized Solar Microgrid, LiFePO4 Battery Bank & Charging Station"@en ;
+    dct:title "Decentralized Solar Microgrid, LiFePO4 Battery Bank & Charging Station — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/offgrid-solar-battery-station> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "single_axis_solar_elevation_tracking" , "lifepo4_battery_soc_and_inverter_pulse" , "safe_haven_charging_bollard_handshake" , "wind_gust_rack_damping" ;
+    made:lengthM "3.600"^^xsd:decimal ;
+    made:widthM "2.500"^^xsd:decimal ;
+    made:heightM "1.850"^^xsd:decimal ;
+    made:curbMassKg "1480.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "4.2"^^xsd:decimal ;
+    made:totalAuthoredParts "29"^^xsd:integer ;
+    made:hasComponent part:concrete-equipment-pad , part:front-rack-leg-0 , part:rear-rack-leg-0 , part:tilt-rafter-beam-0 , part:front-rack-leg-1 , part:rear-rack-leg-1 , part:tilt-rafter-beam-1 , part:front-rack-leg-2 , part:rear-rack-leg-2 , part:tilt-rafter-beam-2 , part:lower-purlin-rail , part:upper-purlin-rail , part:solar-pv-frame-0 , part:solar-pv-cells-0 , part:solar-pv-frame-1 , part:solar-pv-cells-1 , part:solar-pv-frame-2 , part:solar-pv-cells-2 ;
+    made:hasPort port:pv-dc-string-input , port:microgrid-ac-feeder , port:safe-haven-ev-charger .
+
+part:concrete-equipment-pad a made:EquipmentPad , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-concrete-equipment-pad> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Concrete Equipment Pad"@en .
+part:front-rack-leg-0 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-front-rack-leg-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Rack Leg 0"@en .
+part:rear-rack-leg-0 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-rear-rack-leg-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Rack Leg 0"@en .
+part:tilt-rafter-beam-0 a made:TiltRafter , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-tilt-rafter-beam-0> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Tilt Rafter Beam 0"@en .
+part:front-rack-leg-1 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-front-rack-leg-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Rack Leg 1"@en .
+part:rear-rack-leg-1 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-rear-rack-leg-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Rack Leg 1"@en .
+part:tilt-rafter-beam-1 a made:TiltRafter , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-tilt-rafter-beam-1> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Tilt Rafter Beam 1"@en .
+part:front-rack-leg-2 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-front-rack-leg-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Rack Leg 2"@en .
+part:rear-rack-leg-2 a made:SolarRackLeg , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-rear-rack-leg-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Rack Leg 2"@en .
+part:tilt-rafter-beam-2 a made:TiltRafter , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-tilt-rafter-beam-2> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Tilt Rafter Beam 2"@en .
+part:lower-purlin-rail a made:PurlinRail , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-lower-purlin-rail> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lower Purlin Rail"@en .
+part:upper-purlin-rail a made:PurlinRail , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-upper-purlin-rail> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Upper Purlin Rail"@en .
+part:solar-pv-frame-0 a made:SolarPanelFrame , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-frame-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Frame 0"@en .
+part:solar-pv-cells-0 a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-cells-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Cells 0"@en .
+part:solar-pv-frame-1 a made:SolarPanelFrame , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-frame-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Frame 1"@en .
+part:solar-pv-cells-1 a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-cells-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Cells 1"@en .
+part:solar-pv-frame-2 a made:SolarPanelFrame , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-frame-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Frame 2"@en .
+part:solar-pv-cells-2 a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#part-solar-pv-cells-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solar Pv Cells 2"@en .
+
+port:pv-dc-string-input a made:FunctionalPort ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#port-pv-dc-string-input> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "4800.0"^^xsd:decimal .
+port:microgrid-ac-feeder a made:FunctionalPort ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#port-microgrid-ac-feeder> ;
+    made:portMedium "electrical_ac" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "8000.0"^^xsd:decimal .
+port:safe-haven-ev-charger a made:FunctionalPort ;
+    dct:identifier <did:q42:design:offgrid_solar_battery_station#port-safe-haven-ev-charger> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "7200.0"^^xsd:decimal .

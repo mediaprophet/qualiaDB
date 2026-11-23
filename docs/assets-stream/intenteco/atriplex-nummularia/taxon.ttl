@@ -1,0 +1,48 @@
+# Atriplex nummularia (Old Man Saltbush) — Taxon, Biocultural, Kinetics & Multi-Scale Ontology (ECO-WP-FLORA-04)
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c))
+# under the Social Permissive Commons (SPC) inalienable living-world commons model.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+
+qualia:atriplex_nummularia a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:atriplex_nummularia> , <https://www.gbif.org/species/3083703> ;
+    dct:identifier <urn:qualia:taxon:atriplex_nummularia> , <did:q42:taxon:atriplex_nummularia> ;
+    rdfs:label "Old Man Saltbush"@en , "Atriplex nummularia"@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:family "Amaranthaceae" ;
+    dwc:scientificName "Atriplex nummularia" ;
+    dwc:vernacularName "Old Man Saltbush"@en ;
+    dwc:taxonRank "species" ;
+    dwc:taxonID "GBIF:3083703" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/name/apni/58758> ;
+    dcat:landingPage <https://github.com/intenteco/atriplex-nummularia> ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:naturalSwayFreqHz "1.6"^^xsd:decimal ;
+    q42:hasAnimationClip "arid_steppe_gust_shiver" , "halophytic_salt_vesicle_turgor" , "seed_bracteole_panicle_tremor" , "browsing_branch_rebound" ;
+    q42:ecologicalRole "Semi-arid alluvial plains, saline clay pans, and inland shrubland corridors." ;
+    tk:custodial_country "Wiradjuri Country" , "Barkindji Country" , "Ngiyampaa Country" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" .
+
+qualia:atriplex_nummulariaShape a sh:NodeShape ;
+    sh:targetNode qualia:atriplex_nummularia ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path dwc:taxonID ; sh:minCount 1 ] .

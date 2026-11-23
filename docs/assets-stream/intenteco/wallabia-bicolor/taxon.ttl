@@ -1,0 +1,578 @@
+# Wallabia bicolor (Desmarest, 1804) — Swamp Wallaby Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-03A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:wallabia_bicolor:> .
+@prefix stage:     <urn:qualia:stage:wallabia_bicolor:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:wallabia-bicolor:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers (with Explicit Conflict Trace)
+# ============================================================================
+
+qualia:wallabia_bicolor a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:wallabia_bicolor ;
+    dct:identifier <urn:qualia:taxon:wallabia_bicolor> ,
+                   <did:q42:taxon:wallabia_bicolor> ;
+    rdfs:label "Swamp Wallaby"@en ;
+    dwc:scientificName "Wallabia bicolor (Desmarest, 1804)" ;
+    dwc:scientificNameAuthorship "Desmarest, 1804" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Diprotodontia" ;
+    dwc:family "Macropodidae" ;
+    dwc:genus "Wallabia" ;
+    dwc:specificEpithet "bicolor" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Swamp Wallaby"@en , "Black-tailed Wallaby"@en , "Black Wallaby"@en , "Fern Wallaby"@en ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/c28d755d-229c-47d7-a6ea-7920f636f531> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/c28d755d-229c-47d7-a6ea-7920f636f531> ;
+    dwc:taxonID "GBIF:2440149" ;
+    q42:gbifSpeciesKey "2440149"^^xsd:integer ;
+    q42:gbifGenusKey "2440148"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9330> ;
+    q42:ncbiGenusTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9329> ;
+    q42:monotypicGenus true ;
+    q42:karyotypeFemale "2n=10 (XX)" ;
+    q42:karyotypeMale "2n=11 (XY1Y2)" ;
+    q42:iucnStatus "LC" ;
+    dcat:landingPage <https://github.com/intenteco/wallabia-bicolor> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/c28d755d-229c-47d7-a6ea-7920f636f531> ,
+                 <https://www.gbif.org/species/2440149> ,
+                 <https://www.nationalparks.nsw.gov.au/plants-and-animals/swamp-wallaby> ;
+    prov:wasDerivedFrom src:afd-wallabia-bicolor , src:ala-wallabia-bicolor , src:gbif-2440149 , src:ncbi-9330 ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:bundjalung_country ,
+                         country:gumbaynggirr_country ,
+                         country:gadigal_country ,
+                         country:yuin_country ,
+                         country:ngarigo_country ,
+                         country:walgalu_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country .
+
+q42taxon:wallabia_bicolor a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:wallabia_bicolor> ;
+    owl:sameAs qualia:wallabia_bicolor ;
+    rdfs:label "Wallabia bicolor Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Biodiversity Sources
+src:afd-wallabia-bicolor a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/c28d755d-229c-47d7-a6ea-7920f636f531> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Wallabia bicolor (Desmarest, 1804)" .
+
+src:ala-wallabia-bicolor a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/c28d755d-229c-47d7-a6ea-7920f636f531> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Wallabia bicolor species profile" .
+
+src:gbif-2440149 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2440149> ;
+    rdfs:label "GBIF Backbone Taxonomy — Wallabia bicolor (Desmarest, 1804) [speciesKey 2440149]" .
+
+src:gbif-2440154-audit a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2440154> ;
+    rdfs:label "GBIF 2440154 — Resolves to Lagorchestes Gould, 1841 (retained only as conflict audit)" .
+
+src:ncbi-9330 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9330/> ;
+    rdfs:label "NCBI Taxonomy — Wallabia bicolor (TaxID 9330)" .
+
+src:nsw-npws-swamp-wallaby a dct:BibliographicResource ;
+    dct:identifier <https://www.nationalparks.nsw.gov.au/plants-and-animals/swamp-wallaby> ;
+    rdfs:label "NSW NPWS — Swamp Wallaby species profile" .
+
+src:kosciuszko-pom-2006 a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/sites/default/files/kosciuszko-national-park-plan-of-management-210174.pdf> ;
+    rdfs:label "Kosciuszko National Park Plan of Management (p. 71: subalpine year-round occurrence)" .
+
+# Qualified Identifier Conflict & Mapping Records (WALLABY-01 / KN-02)
+claim:gbif-2440154-discrepancy a rdf:Statement ;
+    rdf:subject qualia:wallabia_bicolor ;
+    rdf:predicate q42:disputedIdentifierRef ;
+    rdf:object <https://www.gbif.org/species/2440154> ;
+    q42:mappingStatus "disputed" ;
+    prov:wasDerivedFrom src:gbif-2440149 , src:gbif-2440154-audit ;
+    rdfs:comment "ECO-WP-03A prompt cited GBIF 2440154, which resolves to Lagorchestes Gould, 1841 in GBIF Backbone API; verified Wallabia bicolor (Desmarest, 1804) GBIF speciesKey is 2440149. Legacy east_coast_fauna_64.ttl reference GBIF:2440182 returns HTTP 404."@en .
+
+claim:karyotype-derived-macropod a rdf:Statement ;
+    rdf:subject qualia:wallabia_bicolor ;
+    rdf:predicate q42:karyotypeFemale ;
+    rdf:object "2n=10 (XX)" ;
+    rdfs:comment "Most derived/lowest diploid chromosome count in Macropodidae (2n=10 female XX; 2n=11 male XY1Y2 compound sex chromosome system), supporting monotypic genus Wallabia."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Osteology, Myology, Countershaded Pelage)
+# ============================================================================
+
+anat:muscular_system a uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 qualia:wallabia_bicolor ;
+    rdfs:label "Muscular System (Macropod Saltatorial & Browsing Myology)"@en .
+
+anat:masticatory_cervical_myology a uberon:0003662 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003662" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Masticatory and Cervical Browsing Musculature"@en ;
+    rdfs:comment "Supports low head-down browsing shear on tough sclerophyll shrubs, ferns, and subterranean fungi."@en .
+
+anat:epaxial_erector_spinae a uberon:0002255 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002255" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Epaxial Erector Spinae Musculature"@en .
+
+anat:pectoral_intercostal_myology a uberon:0002356 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002356" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Pectoral and Intercostal Musculature"@en .
+
+anat:forelimb_flexors a uberon:0003663 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003663" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Forelimb Flexor and Grasping Musculature"@en .
+
+anat:gluteal_biceps_femoris a uberon:0001377 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001377" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Gluteal and Biceps Femoris Haunch Propulsors"@en .
+
+anat:gastrocnemius_achilles_spring a uberon:0001388 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001388" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:elasticStiffnessNm "42000.0"^^xsd:decimal ;
+    q42:maxElasticStrainPct "7.4"^^xsd:decimal ;
+    q42:elasticEnergyFormula "U = 0.5 * k_achilles * delta_L^2" ;
+    rdfs:label "Gastrocnemius-Soleus and Elastic Achilles Tendon Energy Storage Spring"@en .
+
+anat:caudal_musculature a uberon:0014796 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0014796" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Caudal Counterbalance and Pentapedal Prop Musculature"@en .
+
+anat:skeletal_system a uberon:0001434 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 qualia:wallabia_bicolor ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    rdfs:label "Skeletal System (24-Joint Macropod Osteology)"@en .
+
+anat:cranium_mandible a uberon:0003129 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003129" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Cranium and Mandible"@en .
+
+anat:diprotodont_dentition a uberon:0001759 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001759" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:cranium_mandible ;
+    rdfs:label "Diprotodont Procumbent Lower Incisors and Bilophodont Browsing Molars"@en ;
+    rdfs:comment "Retains diagnostic permanent third premolar (P3) and sectorial browsing ridge unlike predominantly grazing Macropus."@en .
+
+anat:axial_spine a uberon:0001130 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Cervical, Thoracic and Lumbar Vertebral Column"@en .
+
+anat:ribcage_sternum a uberon:0002228 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002228" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Thoracic Ribcage and Sternum"@en .
+
+anat:pectoral_forelimb a uberon:0002102 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002102" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:digitCount "5"^^xsd:integer ;
+    rdfs:label "Pectoral Girdle and 5-Digit Forelimb Manus"@en .
+
+anat:pelvic_girdle a uberon:0001271 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001271" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Pelvic Girdle (Ilium, Ischium, Pubis)"@en .
+
+anat:epipubic_bones a uberon:0003661 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003661" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:pelvic_girdle ;
+    rdfs:label "Marsupial Epipubic Bones (Os Epipubicum) Supporting Pouch"@en .
+
+anat:femur_tibia_fibula a uberon:0000981 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Hindlimb Z-Fold Femur, Elongated Tibia and Fibula"@en .
+
+anat:syndactylous_hind_pes a uberon:0002387 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:syndactylGroomingDigits "II-III (UBERON:0001452)" ;
+    q42:hypertrophiedWeightBearingDigit "IV (elongated 4th metatarsal)" ;
+    q42:lateralDigit "V" ;
+    rdfs:label "Syndactylous Hind Pes with Elongated 4th Metatarsal and Achilles Tendon Insertion"@en ;
+    prov:wasDerivedFrom src:nsw-npws-swamp-wallaby .
+
+anat:caudal_tail a uberon:0002415 , uberon:0001095 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002415" ;
+    q42:osteologyCurie "UBERON:0001095" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 qualia:wallabia_bicolor ;
+    q42:lengthMinM "0.64"^^xsd:decimal ;
+    q42:lengthMaxM "0.86"^^xsd:decimal ;
+    rdfs:label "Tapered Muscular Tail with Ventral Chevron Bones"@en ;
+    rdfs:comment "Long, thick, heavily furred dark/blackish tail providing dynamic angular-momentum counterbalance during hopping and pentapedal support while slow browsing."@en .
+
+anat:countershaded_pelage a uberon:0002416 , uberon:0002099 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002416" ;
+    q42:integumentCurie "UBERON:0002099" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:wallabia_bicolor ;
+    q42:dorsalCoat "Dark charcoal-brown to sooty grey-black coarse pelage" ;
+    q42:ventralCoat "Warm rufous-orange to ochre chest, belly, and inner pouch margin" ;
+    q42:diagnosticCheekStripe "Light buff-to-ochre (pale cream) stripe from mouth corner toward ear base" ;
+    q42:extremitiesColor "Dark sooty-black muzzle/rhinarium, forepaws, hind pes, and tail (occasional pale tip variation recorded regionally)" ;
+    rdfs:label "Countershaded Bicolor Pelage Integument"@en ;
+    prov:wasDerivedFrom src:nsw-npws-swamp-wallaby .
+
+anat:external_pinnae a uberon:0001757 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001757" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:wallabia_bicolor ;
+    q42:pinnaForm "Cupped mobile external pinnae with deep inner concha bowl, dark charcoal outer fur and pale/pinkish inner ear margin" ;
+    rdfs:label "Cupped External Pinnae"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Kinematic Parameters
+# ============================================================================
+
+qualia:wallabia_bicolor
+    q42:headBodyLengthMinM "0.66"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "0.85"^^xsd:decimal ;
+    q42:tailLengthMinM "0.64"^^xsd:decimal ;
+    q42:tailLengthMaxM "0.86"^^xsd:decimal ;
+    q42:standingCrouchedHeightMinM "0.58"^^xsd:decimal ;
+    q42:standingCrouchedHeightMaxM "0.72"^^xsd:decimal ;
+    q42:adultMassMinKg "13.0"^^xsd:decimal ;
+    q42:adultMassMaxKg "20.5"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "13.0 to 15.5" ;
+    q42:adultMaleMassRangeKg "16.0 to 20.5" ;
+    q42:bmrWatts "24.5"^^xsd:decimal ;
+    q42:bodyTempC "36.3"^^xsd:decimal ;
+    q42:thermoregulation "endotherm" ;
+    q42:allometricBmrEquation "BMR(M) = 2.86 * M^0.75 [W]; at M=17.6 kg -> 24.5 W (marsupial scaling)" ;
+    q42:allometricSegmentEquation "L_pes = 0.105 * M^0.34 [m]; L_tibia = 0.145 * M^0.34 [m]; L_femur = 0.088 * M^0.33 [m]" ;
+    q42:browsingGait "Low head-down pentapedal/quadrupedal browse gait (0.6-1.4 m/s, cervical pitch -0.45 to -0.20 rad, tail trailing prop)" ;
+    q42:saltatorialGait "High-speed bipedal elastic-recoil hop (4.5-13.2 m/s, Achilles tendon energy recovery, tail counter-torque)" ;
+    q42:evasionStrategy "Cryptic freeze in dense understory followed by low-profile zig-zag bounding flight" ;
+    q42:activityCycle "cathemeral_crepuscular_nocturnal" ;
+    q42:dietGuild "obligate_selective_browser" ;
+    q42:reproductionStrategy "Continuous embryonic diapause with overlapping gestation (~33-38 d) and pouch lactation (~8-9 mo)" ;
+    sosa:callName "Low nasal grunt, soft hiss, and heavy single hind-foot ground thump" ;
+    sosa:callFundamentalHz "195.0"^^xsd:decimal ;
+    envo:habitatStratum "terrestrial_dense_understory" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1750"^^xsd:integer ;
+    prov:wasDerivedFrom src:nsw-npws-swamp-wallaby , src:kosciuszko-pom-2006 .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (Radians)
+# ============================================================================
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:pelvic_girdle , anat:femur_tibia_fibula ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-0.55"^^xsd:decimal ;
+    q42:healthyMaxRad "1.45"^^xsd:decimal ;
+    q42:abductionMinRad "-0.22"^^xsd:decimal ;
+    q42:abductionMaxRad "0.42"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.65"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Hip Joint ROM (Wallabia bicolor)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:femur_tibia_fibula ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.75"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.12"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.95"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Knee Stifle Joint ROM (Wallabia bicolor)"@en .
+
+rom:ankle a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "ankle" ;
+    q42:anatomicalTarget anat:syndactylous_hind_pes , anat:gastrocnemius_achilles_spring ;
+    q42:primaryAxis "dorsiflexion_plantarflexion" ;
+    q42:healthyMinRad "-0.95"^^xsd:decimal ;
+    q42:healthyMaxRad "1.15"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.32"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Ankle Tarsocrural & Achilles Spring ROM (Wallabia bicolor)"@en .
+
+rom:shoulder a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "shoulder" ;
+    q42:anatomicalTarget anat:pectoral_forelimb ;
+    q42:primaryAxis "flexion_extension_reach" ;
+    q42:healthyMinRad "-0.65"^^xsd:decimal ;
+    q42:healthyMaxRad "1.15"^^xsd:decimal ;
+    q42:abductionMinRad "-0.30"^^xsd:decimal ;
+    q42:abductionMaxRad "0.60"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.35"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Glenohumeral Shoulder Joint ROM (Wallabia bicolor)"@en .
+
+rom:elbow a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "elbow" ;
+    q42:anatomicalTarget anat:pectoral_forelimb , anat:forelimb_flexors ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.65"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.10"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.85"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Elbow Joint ROM (Wallabia bicolor)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:axial_spine , anat:epaxial_erector_spinae ;
+    q42:primaryAxis "thoracolumbar_pitch_flexion" ;
+    q42:healthyMinRad "-0.48"^^xsd:decimal ;
+    q42:healthyMaxRad "0.62"^^xsd:decimal ;
+    q42:lateralBendMaxRad "0.38"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.78"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveEarPinBack" ;
+    rdfs:label "Thoracolumbar Spine Joint ROM (Wallabia bicolor)"@en .
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:axial_spine , anat:cranium_mandible ;
+    q42:primaryAxis "cervical_pitch_low_browse" ;
+    q42:healthyMinRad "-0.75"^^xsd:decimal ;
+    q42:healthyMaxRad "0.65"^^xsd:decimal ;
+    q42:yawMaxRad "0.72"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.92"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveEarPinBack" ;
+    rdfs:label "Cervical Neck Joint ROM (Wallabia bicolor)"@en .
+
+rom:tail a q42:JointROM ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:romJoint "tail" ;
+    q42:anatomicalTarget anat:caudal_tail , anat:caudal_musculature ;
+    q42:primaryAxis "caudal_base_mid_tip_pitch" ;
+    q42:healthyMinRad "-0.65"^^xsd:decimal ;
+    q42:healthyMaxRad "0.75"^^xsd:decimal ;
+    q42:lateralSweepMaxRad "0.45"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.95"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Caudal Tail Articulated Chain ROM (Wallabia bicolor)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:wallabia_bicolor_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, pouch_occupancy_flag:u8, coat_melanin_shift:f32, tail_tip_albinism_01:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.18 to 1.15" ;
+    q42:siteVigorRange "0.45 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Wallabia bicolor"@en .
+
+stage:pouch_young a q42:OntogeneticStage ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:stageId "pouch_young" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.18"^^xsd:decimal ;
+    q42:heightScaleMin "0.12"^^xsd:decimal ;
+    q42:heightScaleMax "0.35"^^xsd:decimal ;
+    q42:massRangeKg "0.0004 to 2.2" ;
+    q42:independentLocomotion false ;
+    rdfs:label "Pouch Young (0-8.5 months, pouch-dependent)"@en .
+
+stage:juvenile_at_foot a q42:OntogeneticStage ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:stageId "juvenile_at_foot" ;
+    q42:ontogeneticAgeNormMin "0.18"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.38"^^xsd:decimal ;
+    q42:heightScaleMin "0.35"^^xsd:decimal ;
+    q42:heightScaleMax "0.62"^^xsd:decimal ;
+    q42:massRangeKg "2.2 to 6.5" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Juvenile-at-Foot (8.5-15 months, weaning)"@en .
+
+stage:subadult a q42:OntogeneticStage ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:stageId "subadult" ;
+    q42:ontogeneticAgeNormMin "0.38"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.60"^^xsd:decimal ;
+    q42:heightScaleMin "0.62"^^xsd:decimal ;
+    q42:heightScaleMax "0.86"^^xsd:decimal ;
+    q42:massRangeKg "6.5 to 12.8" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Subadult Dispersal Stage"@en .
+
+stage:adult_female a q42:OntogeneticStage ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:stageId "adult_female" ;
+    q42:ontogeneticAgeNormMin "0.60"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.86"^^xsd:decimal ;
+    q42:heightScaleMax "1.00"^^xsd:decimal ;
+    q42:massRangeKg "13.0 to 15.5" ;
+    q42:standingHeightMinM "0.58"^^xsd:decimal ;
+    q42:standingHeightMaxM "0.66"^^xsd:decimal ;
+    q42:karyotype "2n=10 (XX)" ;
+    q42:supportsPouchOccupancy true ;
+    rdfs:label "Adult Female (2n=10, continuous embryonic diapause capable)"@en .
+
+stage:adult_male a q42:OntogeneticStage ;
+    q42:appliesTo qualia:wallabia_bicolor ;
+    q42:stageId "adult_male" ;
+    q42:ontogeneticAgeNormMin "0.60"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.94"^^xsd:decimal ;
+    q42:heightScaleMax "1.15"^^xsd:decimal ;
+    q42:massRangeKg "16.0 to 20.5" ;
+    q42:standingHeightMinM "0.64"^^xsd:decimal ;
+    q42:standingHeightMaxM "0.72"^^xsd:decimal ;
+    q42:karyotype "2n=11 (XY1Y2)" ;
+    q42:supportsPouchOccupancy false ;
+    rdfs:label "Adult Male (2n=11, sexually dimorphic larger forelimb & thorax)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Browser Diet, Fungi Dispersal & Habitat)
+# ============================================================================
+
+qualia:pteridium_esculentum a dwc:Taxon ;
+    dwc:scientificName "Pteridium esculentum (G.Forst.) Cockayne" ;
+    rdfs:label "Austral Bracken Fern"@en .
+
+qualia:dicksonia_antarctica a dwc:Taxon ;
+    dwc:scientificName "Dicksonia antarctica Labill." ;
+    rdfs:label "Soft Tree Fern"@en .
+
+qualia:acacia_dealbata a dwc:Taxon ;
+    dwc:scientificName "Acacia dealbata Link" ;
+    rdfs:label "Silver Wattle"@en .
+
+qualia:eucalyptus_dalrympleana a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dalrympleana Maiden subsp. dalrympleana" ;
+    rdfs:label "Mountain White Gum"@en .
+
+qualia:hypogeous_fungi_truffles a dwc:Taxon ;
+    dwc:scientificName "Mesophellia / Hysterangium spp." ;
+    rdfs:label "Subterranean Hypogeous Fungi (Ectomycorrhizal Truffles)"@en .
+
+qualia:wallabia_bicolor
+    ro:0002470 qualia:pteridium_esculentum ,
+               qualia:dicksonia_antarctica ,
+               qualia:acacia_dealbata ,
+               qualia:eucalyptus_dalrympleana ,
+               qualia:hypogeous_fungi_truffles ;
+    rorel:trophically_interacts_with qualia:pteridium_esculentum ,
+                                     qualia:dicksonia_antarctica ,
+                                     qualia:acacia_dealbata ,
+                                     qualia:eucalyptus_dalrympleana ,
+                                     qualia:hypogeous_fungi_truffles ;
+    ro:0002303 envo:01000220 ;
+    q42:ecologicalFunction "Selective woody/fern browser and mycophagous vector dispersing ectomycorrhizal truffle spores across SE Australian forest floors."@en ;
+    rdfs:comment "Kosciuszko National Park Plan of Management (p. 71) notes Swamp Wallaby presence in the subalpine zone year-round; NPWS profile documents dense forest/woodland/heath understory use and night/crepuscular foraging."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers & Border Ranges, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" .
+
+country:gumbaynggirr_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gumbaynggirr Country (Mid-North Coast & Dorrigo Escarpment, NSW)"@en ;
+    tk:language_group "Gumbaynggirr" ;
+    tk:care_governance "CARE Principles" .
+
+country:gadigal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gadigal Country (Sydney Harbour Sandstone Basin, Eora Nation, NSW)"@en ;
+    tk:language_group "Gadigal / Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Monaro Tablelands & Snowy High Plains, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:walgalu_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Walgalu Country (Tumut, Talbingo & Northern Kosciuszko, NSW)"@en ;
+    tk:language_group "Walgalu / Wolgalu" ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Gippsland Plains, Strzelecki & East Gippsland, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges, Dandenongs & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Port Phillip, Mornington Peninsula & Western Port, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .

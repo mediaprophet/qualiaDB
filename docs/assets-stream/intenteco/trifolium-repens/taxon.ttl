@@ -1,0 +1,54 @@
+# Trifolium repens L. (White Clover) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:trifolium_repens:organ:> .
+
+qualia:trifolium_repens a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:trifolium_repens> , <did:q42:taxon:trifolium-repens> ;
+    rdfs:label "White Clover"@en , "Trifolium repens L."@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Trifolium repens L." ;
+    dwc:family "Fabaceae" ;
+    dwc:vernacularName "White Clover"@en ;
+    dwc:establishmentMeans "naturalised" ;
+    q42:groundcoverGroup "herb" ;
+    q42:ecologicalRole "Lawns, pasture and moist grassland; nitrogen-fixing legume" ;
+    q42:naturalSwayFreqHz "3.0"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/node/apni/2909697> ;
+    q42:alaMatch "Trifolium repens [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/5358748> ;
+    q42:alaOccurrenceRecords "22016"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "10867"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "8457"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "485"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "747"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "351"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:33:54.325120+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Dharawal Country (NSW)" ;
+    q42:recordedOnCountry "Dharawal Country (NSW)" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/node/apni/2909697> , <https://www.gbif.org/species/5358748> , <https://bie.ala.org.au/search?q=Trifolium+repens> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Trifolium+repens> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Trifolium+repens> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:trifolium_repensShape a sh:NodeShape ;
+    sh:targetNode qualia:trifolium_repens ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

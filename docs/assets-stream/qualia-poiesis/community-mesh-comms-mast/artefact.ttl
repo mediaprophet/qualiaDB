@@ -1,0 +1,128 @@
+# Community W3C-Solid Mesh Telecom Mast, Backhaul Dish & Solar Street Luminaire (community-mesh-comms-mast) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-COM-01 | Organization: github.com/qualia-poiesis/community-mesh-comms-mast
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:community-mesh-comms-mast:> .
+@prefix part:   <urn:qualia:design:community-mesh-comms-mast:part:> .
+@prefix port:   <urn:qualia:design:community-mesh-comms-mast:port:> .
+
+design:rev1 a made:Artefact , made:TelecomInfrastructure , dcat:Dataset ;
+    owl:sameAs <did:q42:design:community_mesh_comms_mast> ;
+    dct:identifier <urn:qualia:design:community-mesh-comms-mast:rev1> , <did:q42:design:community_mesh_comms_mast> ;
+    rdfs:label "Community W3C-Solid Mesh Telecom Mast, Backhaul Dish & Solar Street Luminaire"@en ;
+    dct:title "Community W3C-Solid Mesh Telecom Mast, Backhaul Dish & Solar Street Luminaire — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/community-mesh-comms-mast> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "mast_cantilever_vortex_shedding_sway" , "parabolic_backhaul_azimuth_fine_track" , "summit_mesh_beacon_and_router_pulse" , "cobra_head_luminaire_dusk_activation" ;
+    made:lengthM "2.200"^^xsd:decimal ;
+    made:widthM "1.400"^^xsd:decimal ;
+    made:heightM "3.800"^^xsd:decimal ;
+    made:curbMassKg "520.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "2.65"^^xsd:decimal ;
+    made:totalAuthoredParts "19"^^xsd:integer ;
+    made:hasComponent part:mast-concrete-footing , part:primary-telecom-mast , part:mast-base-strut-0 , part:mast-base-strut-1 , part:mast-base-strut-2 , part:solid-mesh-router-cabinet , part:lower-cross-arm , part:upper-cross-arm , part:sector-panel-antenna-west , part:sector-panel-antenna-center , part:sector-panel-antenna-east , part:collinear-whip-dipole-west , part:collinear-whip-dipole-east , part:parabolic-backhaul-dish , part:dish-feed-horn , part:summit-mesh-beacon , part:companion-street-light-post , part:cobra-head-led-luminaire ;
+    made:hasPort port:poe-dc-feed-48v , port:wifi-mesh-backhaul-6ghz .
+
+part:mast-concrete-footing a made:ConcreteFooting , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-mast-concrete-footing> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Mast Concrete Footing"@en .
+part:primary-telecom-mast a made:TelecomMast , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-primary-telecom-mast> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Primary Telecom Mast"@en .
+part:mast-base-strut-0 a made:StructuralBrace , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-mast-base-strut-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Mast Base Strut 0"@en .
+part:mast-base-strut-1 a made:StructuralBrace , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-mast-base-strut-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Mast Base Strut 1"@en .
+part:mast-base-strut-2 a made:StructuralBrace , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-mast-base-strut-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Mast Base Strut 2"@en .
+part:solid-mesh-router-cabinet a made:TelemetryEnclosure , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-solid-mesh-router-cabinet> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Solid Mesh Router Cabinet"@en .
+part:lower-cross-arm a made:AntennaCrossArm , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-lower-cross-arm> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lower Cross Arm"@en .
+part:upper-cross-arm a made:AntennaCrossArm , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-upper-cross-arm> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Upper Cross Arm"@en .
+part:sector-panel-antenna-west a made:SectorAntenna , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-sector-panel-antenna-west> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Sector Panel Antenna West"@en .
+part:sector-panel-antenna-center a made:SectorAntenna , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-sector-panel-antenna-center> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Sector Panel Antenna Center"@en .
+part:sector-panel-antenna-east a made:SectorAntenna , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-sector-panel-antenna-east> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Sector Panel Antenna East"@en .
+part:collinear-whip-dipole-west a made:DipoleAntenna , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-collinear-whip-dipole-west> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Collinear Whip Dipole West"@en .
+part:collinear-whip-dipole-east a made:DipoleAntenna , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-collinear-whip-dipole-east> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Collinear Whip Dipole East"@en .
+part:parabolic-backhaul-dish a made:ParabolicDish , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-parabolic-backhaul-dish> ;
+    made:jointKind "revolute" ;
+    rdfs:label "Parabolic Backhaul Dish"@en .
+part:dish-feed-horn a made:FeedHorn , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-dish-feed-horn> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Dish Feed Horn"@en .
+part:summit-mesh-beacon a made:SignalRadome , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-summit-mesh-beacon> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Summit Mesh Beacon"@en .
+part:companion-street-light-post a made:StreetLampPost , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-companion-street-light-post> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Companion Street Light Post"@en .
+part:cobra-head-led-luminaire a made:LuminaireGlobe , made:Component ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#part-cobra-head-led-luminaire> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cobra Head Led Luminaire"@en .
+
+port:poe-dc-feed-48v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#port-poe-dc-feed-48v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "180.0"^^xsd:decimal .
+port:wifi-mesh-backhaul-6ghz a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_mesh_comms_mast#port-wifi-mesh-backhaul-6ghz> ;
+    made:portMedium "electromagnetic_rf" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:BitPerSecond ;
+    made:ratedCapacity "2400000000.0"^^xsd:decimal .

@@ -1,0 +1,981 @@
+# Homo sapiens Linnaeus, 1758 — Canonical Anatomical, Biomechanical & Biocultural Ontology
+# Work-Packet: WEB-WP-16 (Webizen EWM Human Anatomy & IntentEco Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), FMA, UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix fma:       <http://purl.obolibrary.org/obo/FMA_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix layer:     <urn:qualia:anatomy:homo_sapiens:layer:> .
+@prefix anat:      <urn:qualia:anatomy:homo_sapiens:> .
+@prefix skl2:      <urn:qualia:skl2:homo_sapiens:> .
+@prefix ik:        <urn:qualia:ik:homo_sapiens:> .
+@prefix rom:       <urn:qualia:q42:rom:homo_sapiens:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix stage:     <urn:qualia:stage:homo_sapiens:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers
+# ============================================================================
+
+qualia:homo_sapiens a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:homo-sapiens , q42taxon:homo_sapiens ;
+    dct:identifier <urn:qualia:taxon:homo_sapiens> ,
+                   <did:q42:taxon:homo-sapiens> ,
+                   <did:q42:taxon:homo_sapiens> ;
+    rdfs:label "Human (Homo sapiens)"@en ;
+    dwc:scientificName "Homo sapiens Linnaeus, 1758" ;
+    dwc:scientificNameAuthorship "Linnaeus, 1758" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Primates" ;
+    dwc:family "Hominidae" ;
+    dwc:genus "Homo" ;
+    dwc:specificEpithet "sapiens" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Human"@en ;
+    dwc:taxonID "GBIF:2436436" ;
+    q42:gbifSpeciesKey "2436436"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9606> ;
+    q42:karyotype "2n=46 (XX/XY)" ;
+    q42:iucnStatus "LC" ;
+    dcat:landingPage <https://github.com/intenteco/homo-sapiens> ;
+    rdfs:seeAlso <https://www.gbif.org/species/2436436> ,
+                 <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9606/> ,
+                 <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/07c5957e-f538-4c56-983a-029aa96d76f8> ,
+                 <https://www.iso.org/standard/65246.html> ;
+    prov:wasDerivedFrom src:fma-ontology ,
+                        src:uberon-ontology ,
+                        src:gbif-2436436 ,
+                        src:ncbi-9606 ,
+                        src:ala-homo-sapiens ,
+                        src:iso-7250-1 ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    q42:skl2JointCount "28"^^xsd:integer ;
+    q42:skl2Archetype "human_bipedal_skl2_28" ;
+    tk:custodial_country country:bundjalung_country ,
+                         country:gumbaynggirr_country ,
+                         country:gadigal_country ,
+                         country:dharug_country ,
+                         country:yuin_country ,
+                         country:ngarigo_country ,
+                         country:walgalu_country ,
+                         country:wiradjuri_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country ,
+                         country:wadawurrung_country .
+
+q42taxon:homo-sapiens a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:homo-sapiens> ;
+    owl:sameAs qualia:homo_sapiens ;
+    rdfs:label "Homo sapiens Q42 DID Taxon Locator"@en .
+
+# Authoritative Sources
+src:fma-ontology a dct:BibliographicResource ;
+    dct:identifier <http://purl.org/sig/ont/fma> ;
+    rdfs:label "Foundational Model of Anatomy (FMA) — Canonical Homo sapiens Structural Ontology" .
+
+src:uberon-ontology a dct:BibliographicResource ;
+    dct:identifier <http://purl.obolibrary.org/obo/uberon.owl> ;
+    rdfs:label "UBERON Multi-Species Anatomy Ontology (FMA-aligned)" .
+
+src:gbif-2436436 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2436436> ;
+    rdfs:label "GBIF Backbone Taxonomy — Homo sapiens Linnaeus, 1758 [speciesKey 2436436]" .
+
+src:ncbi-9606 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9606/> ;
+    rdfs:label "NCBI Taxonomy — Homo sapiens (TaxID 9606)" .
+
+src:ala-homo-sapiens a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/07c5957e-f538-4c56-983a-029aa96d76f8> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Homo sapiens profile" .
+
+src:iso-7250-1 a dct:BibliographicResource ;
+    dct:identifier <https://www.iso.org/standard/65246.html> ;
+    rdfs:label "ISO 7250-1 Basic Human Body Measurements for Technological Design" .
+
+# ============================================================================
+# 2. Three Anatomical Layers (FMA & UBERON Aligned)
+# ============================================================================
+
+layer:osteology a q42:AnatomicalLayer , fma:23881 , uberon:0001434 ;
+    q42:layerIndex "1"^^xsd:integer ;
+    q42:layerId "osteology" ;
+    q42:fmaCurie "FMA:23881" ;
+    q42:uberonCurie "UBERON:0001434" ;
+    ro:0002131 qualia:homo_sapiens ;
+    q42:corticalBoneYoungsModulusGPa "17.5"^^xsd:decimal ;
+    q42:corticalBoneBmdMgCm3 "1150.0"^^xsd:decimal ;
+    q42:trabecularBvTv "0.24"^^xsd:decimal ;
+    q42:boneDensityKgM3 "1850.0"^^xsd:decimal ;
+    rdfs:label "Layer 1 — Osteology (Human Skeletal System)"@en .
+
+layer:myology_viscera a q42:AnatomicalLayer , fma:72954 , uberon:0001630 , uberon:0002075 ;
+    q42:layerIndex "2"^^xsd:integer ;
+    q42:layerId "myology_and_viscera" ;
+    q42:fmaCurie "FMA:72954" ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:visceraCurie "UBERON:0002075" ;
+    ro:0002131 qualia:homo_sapiens ;
+    q42:muscleDensityKgM3 "1060.0"^^xsd:decimal ;
+    rdfs:label "Layer 2 — Myology & Major Viscera"@en .
+
+layer:integument_anthropometry a q42:AnatomicalLayer , fma:72979 , uberon:0002199 ;
+    q42:layerIndex "3"^^xsd:integer ;
+    q42:layerId "integument_and_anthropometry" ;
+    q42:fmaCurie "FMA:72979" ;
+    q42:uberonCurie "UBERON:0002199" ;
+    ro:0002131 qualia:homo_sapiens ;
+    q42:statureM "1.74"^^xsd:decimal ;
+    q42:headHeightM "0.22"^^xsd:decimal ;
+    q42:shoulderWidthM "0.44"^^xsd:decimal ;
+    q42:hipHeightM "0.92"^^xsd:decimal ;
+    q42:kneeHeightM "0.49"^^xsd:decimal ;
+    q42:ankleHeightM "0.08"^^xsd:decimal ;
+    q42:armSpanM "1.74"^^xsd:decimal ;
+    q42:comStandingM "0.96"^^xsd:decimal ;
+    q42:comSeatedM "0.78"^^xsd:decimal ;
+    q42:standardAdultMassKg "72.0"^^xsd:decimal ;
+    rdfs:label "Layer 3 — Integument & Standard 1.74 m Adult Anthropometry"@en .
+
+# --- Layer 1: Osteology Subsystems ---
+
+anat:cranium a fma:50185 , uberon:0003128 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:50185" ;
+    q42:uberonCurie "UBERON:0003128" ;
+    ro:0002131 layer:osteology ;
+    rdfs:label "Cranium (Neurocranium & Viscerocranium)"@en .
+
+anat:mandible a fma:52748 , uberon:0001684 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:52748" ;
+    q42:uberonCurie "UBERON:0001684" ;
+    ro:0002131 layer:osteology ;
+    q42:dentalFormula "I 2/2, C 1/1, PM 2/2, M 3/3" ;
+    rdfs:label "Mandible & Dentition"@en .
+
+anat:cervical_spine a fma:24138 , uberon:0002412 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:24138" ;
+    q42:uberonCurie "UBERON:0002412" ;
+    ro:0002131 layer:osteology ;
+    q42:vertebraeCount "7"^^xsd:integer ;
+    rdfs:label "Cervical Spine (C1-C7)"@en .
+
+anat:thoracic_spine a fma:24139 , uberon:0002347 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:24139" ;
+    q42:uberonCurie "UBERON:0002347" ;
+    ro:0002131 layer:osteology ;
+    q42:vertebraeCount "12"^^xsd:integer ;
+    rdfs:label "Thoracic Spine (T1-T12)"@en .
+
+anat:lumbar_spine a fma:24140 , uberon:0002414 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:24140" ;
+    q42:uberonCurie "UBERON:0002414" ;
+    ro:0002131 layer:osteology ;
+    q42:vertebraeCount "5"^^xsd:integer ;
+    rdfs:label "Lumbar Spine (L1-L5)"@en .
+
+anat:sacral_spine a fma:16202 , uberon:0003690 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:16202" ;
+    q42:uberonCurie "UBERON:0003690" ;
+    ro:0002131 layer:osteology ;
+    q42:vertebraeCount "5"^^xsd:integer ;
+    rdfs:label "Sacral Spine & Coccyx (S1-S5 + Co1-4)"@en .
+
+anat:ribcage_and_sternum a fma:7480 , fma:7485 , uberon:0001443 , uberon:0000975 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:7480" ;
+    q42:sternumFmaCurie "FMA:7485" ;
+    q42:uberonCurie "UBERON:0001443" ;
+    q42:sternumUberonCurie "UBERON:0000975" ;
+    ro:0002131 layer:osteology ;
+    q42:ribPairCount "12"^^xsd:integer ;
+    rdfs:label "Thoracic Ribcage (12 Pairs) & Sternum"@en .
+
+anat:clavicles_and_scapulae a fma:13321 , fma:13394 , uberon:0001105 , uberon:0006849 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:13321" ;
+    q42:scapulaFmaCurie "FMA:13394" ;
+    q42:uberonCurie "UBERON:0001105" ;
+    q42:scapulaUberonCurie "UBERON:0006849" ;
+    ro:0002131 layer:osteology ;
+    rdfs:label "Pectoral Girdle: Clavicles & Scapulae"@en .
+
+anat:pelvis a fma:9578 , uberon:0002355 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:9578" ;
+    q42:uberonCurie "UBERON:0002355" ;
+    ro:0002131 layer:osteology ;
+    rdfs:label "Pelvic Girdle (Os Coxae & Acetabula)"@en .
+
+anat:humeri a fma:13303 , uberon:0000976 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:13303" ;
+    q42:uberonCurie "UBERON:0000976" ;
+    ro:0002131 layer:osteology ;
+    q42:segmentLengthM "0.265"^^xsd:decimal ;
+    rdfs:label "Humeri (Upper Arm Bones)"@en .
+
+anat:radii_and_ulnae a fma:23463 , fma:23466 , uberon:0001423 , uberon:0001424 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:23463" ;
+    q42:ulnaFmaCurie "FMA:23466" ;
+    q42:uberonCurie "UBERON:0001423" ;
+    q42:ulnaUberonCurie "UBERON:0001424" ;
+    ro:0002131 layer:osteology ;
+    q42:segmentLengthM "0.225"^^xsd:decimal ;
+    rdfs:label "Radii & Ulnae (Forearm Bones)"@en .
+
+anat:hands_osteology a fma:9712 , uberon:0002398 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:9712" ;
+    q42:uberonCurie "UBERON:0002398" ;
+    ro:0002131 layer:osteology ;
+    q42:segmentLengthM "0.160"^^xsd:decimal ;
+    rdfs:label "Hands (Carpals, Metacarpals & Phalanges)"@en .
+
+anat:femora_and_patellae a fma:24474 , fma:24485 , uberon:0000981 , uberon:0002446 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:24474" ;
+    q42:patellaFmaCurie "FMA:24485" ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:patellaUberonCurie "UBERON:0002446" ;
+    ro:0002131 layer:osteology ;
+    q42:segmentLengthM "0.430"^^xsd:decimal ;
+    rdfs:label "Femora & Patellae (Thigh & Kneecap Bones)"@en .
+
+anat:tibiae_and_fibulae a fma:24476 , fma:24479 , uberon:0000979 , uberon:0001446 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:24476" ;
+    q42:fibulaFmaCurie "FMA:24479" ;
+    q42:uberonCurie "UBERON:0000979" ;
+    q42:fibulaUberonCurie "UBERON:0001446" ;
+    ro:0002131 layer:osteology ;
+    q42:segmentLengthM "0.410"^^xsd:decimal ;
+    rdfs:label "Tibiae & Fibulae (Lower Leg Bones)"@en .
+
+anat:feet_osteology a fma:9664 , uberon:0002387 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:osteology ;
+    q42:fmaCurie "FMA:9664" ;
+    q42:uberonCurie "UBERON:0002387" ;
+    ro:0002131 layer:osteology ;
+    q42:footLengthM "0.260"^^xsd:decimal ;
+    rdfs:label "Feet (Tarsals, Metatarsals & Pedal Phalanges)"@en .
+
+# --- Layer 2: Viscera, Bioelectric Fields & Major Skeletal Muscle Groups ---
+
+anat:heart a fma:7088 , uberon:0000948 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:7088" ;
+    q42:uberonCurie "UBERON:0000948" ;
+    ro:0002131 layer:myology_viscera ;
+    q42:chamberCount "4"^^xsd:integer ;
+    q42:restingHeartRateMinBpm "60.0"^^xsd:decimal ;
+    q42:restingHeartRateMaxBpm "75.0"^^xsd:decimal ;
+    q42:restingHeartRateNominalBpm "68.0"^^xsd:decimal ;
+    q42:cardiacFundamentalHz "1.1333"^^xsd:decimal ;
+    q42:qrsPeakMv "1.20"^^xsd:decimal ;
+    q42:cardiacDipoleAxisDeg "[0.0, -58.0, 18.0]" ;
+    q42:strokeVolumeMl "70.0"^^xsd:decimal ;
+    q42:emfBandHz "0.8 to 45.0" ;
+    rdfs:label "4-Chambered Heart (60-75 bpm Resting Bio-Electric Dipole)"@en .
+
+anat:lungs a fma:7195 , uberon:0002048 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:7195" ;
+    q42:uberonCurie "UBERON:0002048" ;
+    ro:0002131 layer:myology_viscera ;
+    q42:restingRespRateMinBpm "12.0"^^xsd:decimal ;
+    q42:restingRespRateMaxBpm "16.0"^^xsd:decimal ;
+    q42:tidalVolumeL "0.50"^^xsd:decimal ;
+    rdfs:label "Lungs (Right 3-Lobed, Left 2-Lobed)"@en .
+
+anat:diaphragm a fma:13296 , uberon:0001103 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:13296" ;
+    q42:uberonCurie "UBERON:0001103" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Thoracic Diaphragm (Inspiratory Dome Piston)"@en .
+
+anat:brain_cns_emf a fma:50801 , uberon:0000955 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:50801" ;
+    q42:uberonCurie "UBERON:0000955" ;
+    ro:0002131 layer:myology_viscera ;
+    q42:neuralAlphaHz "10.0"^^xsd:decimal ;
+    q42:neuralBetaHz "13.0 to 30.0" ;
+    q42:neuralThetaHz "4.0 to 8.0" ;
+    q42:neuralDeltaHz "0.5 to 4.0" ;
+    q42:scalpPotentialUv "50.0"^^xsd:decimal ;
+    q42:corticalDipoleNAm "10.0"^^xsd:decimal ;
+    rdfs:label "Brain & Neural Bio-Electric Field (.emf Alpha/Beta/Theta/Delta)"@en .
+
+anat:trapezius a fma:9604 , uberon:0001121 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:9604" ;
+    q42:uberonCurie "UBERON:0001121" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Trapezius Muscle"@en .
+
+anat:deltoids a fma:9603 , uberon:0001476 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:9603" ;
+    q42:uberonCurie "UBERON:0001476" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Deltoid Muscles"@en .
+
+anat:pectoralis_major a fma:13427 , uberon:0001129 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:13427" ;
+    q42:uberonCurie "UBERON:0001129" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Pectoralis Major Muscles"@en .
+
+anat:latissimus_dorsi a fma:13345 , uberon:0001122 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:13345" ;
+    q42:uberonCurie "UBERON:0001122" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Latissimus Dorsi Muscles"@en .
+
+anat:rectus_abdominis a fma:9629 , uberon:0001357 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:9629" ;
+    q42:uberonCurie "UBERON:0001357" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Rectus Abdominis Muscle"@en .
+
+anat:gluteals a fma:22312 , uberon:0001378 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:22312" ;
+    q42:uberonCurie "UBERON:0001378" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Gluteal Muscle Group (Gluteus Maximus/Medius/Minimus)"@en .
+
+anat:quadriceps a fma:22432 , uberon:0001385 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:22432" ;
+    q42:uberonCurie "UBERON:0001385" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Quadriceps Femoris Muscle Group"@en .
+
+anat:hamstrings a fma:75148 , uberon:0008535 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:75148" ;
+    q42:uberonCurie "UBERON:0008535" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Hamstring Muscle Group (Biceps Femoris, Semitendinosus, Semimembranosus)"@en .
+
+anat:gastrocnemius_soleus a fma:22541 , fma:22542 , uberon:0001388 , uberon:0001389 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:22541" ;
+    q42:soleusFmaCurie "FMA:22542" ;
+    q42:uberonCurie "UBERON:0001388" ;
+    q42:soleusUberonCurie "UBERON:0001389" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Triceps Surae: Gastrocnemius, Soleus & Achilles Tendon"@en .
+
+anat:biceps_triceps a fma:37402 , fma:37441 , uberon:0001352 , uberon:0001353 , q42:AnatomicalSubsystem ;
+    q42:belongsToLayer layer:myology_viscera ;
+    q42:fmaCurie "FMA:37402" ;
+    q42:tricepsFmaCurie "FMA:37441" ;
+    q42:uberonCurie "UBERON:0001352" ;
+    q42:tricepsUberonCurie "UBERON:0001353" ;
+    ro:0002131 layer:myology_viscera ;
+    rdfs:label "Brachial Flexors & Extensors: Biceps Brachii & Triceps Brachii"@en .
+
+# ============================================================================
+# 3. SKL2 28-Joint Kinematic Hierarchy, IK Chains & Seated Driver Posture
+# ============================================================================
+
+skl2:pelvis_root a q42:Skl2Joint ;
+    q42:jointIndex "0"^^xsd:integer ;
+    q42:jointName "pelvis_root" ;
+    q42:parentIndex "-1"^^xsd:integer ;
+    q42:restLocalM "[0.000, 0.920, 0.000]" ;
+    q42:dof "6"^^xsd:integer ;
+    q42:romPitchDeg "[-30.0, 45.0]" ;
+    q42:romYawDeg "[-45.0, 45.0]" ;
+    q42:romRollDeg "[-25.0, 25.0]" ;
+    q42:fmaCurie "FMA:9578" ;
+    q42:uberonCurie "UBERON:0002355" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:spine_lumbar a q42:Skl2Joint ;
+    q42:jointIndex "1"^^xsd:integer ;
+    q42:jointName "spine_lumbar" ;
+    q42:parentIndex "0"^^xsd:integer ;
+    q42:parentJoint skl2:pelvis_root ;
+    q42:restLocalM "[0.000, 0.130, -0.010]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-25.0, 50.0]" ;
+    q42:romYawDeg "[-20.0, 20.0]" ;
+    q42:romRollDeg "[-25.0, 25.0]" ;
+    q42:fmaCurie "FMA:24140" ;
+    q42:uberonCurie "UBERON:0002414" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:spine_thoracic a q42:Skl2Joint ;
+    q42:jointIndex "2"^^xsd:integer ;
+    q42:jointName "spine_thoracic" ;
+    q42:parentIndex "1"^^xsd:integer ;
+    q42:parentJoint skl2:spine_lumbar ;
+    q42:restLocalM "[0.000, 0.220, -0.010]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-15.0, 30.0]" ;
+    q42:romYawDeg "[-35.0, 35.0]" ;
+    q42:romRollDeg "[-20.0, 20.0]" ;
+    q42:fmaCurie "FMA:24139" ;
+    q42:uberonCurie "UBERON:0002347" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:spine_cervical a q42:Skl2Joint ;
+    q42:jointIndex "3"^^xsd:integer ;
+    q42:jointName "spine_cervical" ;
+    q42:parentIndex "2"^^xsd:integer ;
+    q42:parentJoint skl2:spine_thoracic ;
+    q42:restLocalM "[0.000, 0.170, 0.005]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-30.0, 30.0]" ;
+    q42:romYawDeg "[-35.0, 35.0]" ;
+    q42:romRollDeg "[-22.0, 22.0]" ;
+    q42:fmaCurie "FMA:24138" ;
+    q42:uberonCurie "UBERON:0002412" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:neck a q42:Skl2Joint ;
+    q42:jointIndex "4"^^xsd:integer ;
+    q42:jointName "neck" ;
+    q42:parentIndex "3"^^xsd:integer ;
+    q42:parentJoint skl2:spine_cervical ;
+    q42:restLocalM "[0.000, 0.075, 0.010]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-35.0, 30.0]" ;
+    q42:romYawDeg "[-45.0, 45.0]" ;
+    q42:romRollDeg "[-23.0, 23.0]" ;
+    q42:fmaCurie "FMA:7155" ;
+    q42:uberonCurie "UBERON:0000974" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:head a q42:Skl2Joint ;
+    q42:jointIndex "5"^^xsd:integer ;
+    q42:jointName "head" ;
+    q42:parentIndex "4"^^xsd:integer ;
+    q42:parentJoint skl2:neck ;
+    q42:restLocalM "[0.000, 0.075, 0.010]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-25.0, 20.0]" ;
+    q42:romYawDeg "[-30.0, 30.0]" ;
+    q42:romRollDeg "[-15.0, 15.0]" ;
+    q42:fmaCurie "FMA:50185" ;
+    q42:uberonCurie "UBERON:0003128" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:jaw a q42:Skl2Joint ;
+    q42:jointIndex "6"^^xsd:integer ;
+    q42:jointName "jaw" ;
+    q42:parentIndex "5"^^xsd:integer ;
+    q42:parentJoint skl2:head ;
+    q42:restLocalM "[0.000, -0.025, 0.030]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[0.0, 38.0]" ;
+    q42:romYawDeg "[-8.0, 8.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:52748" ;
+    q42:uberonCurie "UBERON:0001684" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:ribcage_sternum a q42:Skl2Joint ;
+    q42:jointIndex "7"^^xsd:integer ;
+    q42:jointName "ribcage_sternum" ;
+    q42:parentIndex "2"^^xsd:integer ;
+    q42:parentJoint skl2:spine_thoracic ;
+    q42:restLocalM "[0.000, 0.050, 0.105]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[-6.0, 8.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:7480" ;
+    q42:uberonCurie "UBERON:0001443" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:clavicle_l a q42:Skl2Joint ;
+    q42:jointIndex "8"^^xsd:integer ;
+    q42:jointName "clavicle_l" ;
+    q42:parentIndex "2"^^xsd:integer ;
+    q42:parentJoint skl2:spine_thoracic ;
+    q42:restLocalM "[0.045, 0.160, 0.040]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-10.0, 15.0]" ;
+    q42:romYawDeg "[-25.0, 20.0]" ;
+    q42:romRollDeg "[-15.0, 35.0]" ;
+    q42:fmaCurie "FMA:13321" ;
+    q42:uberonCurie "UBERON:0001105" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:shoulder_l a q42:Skl2Joint ;
+    q42:jointIndex "9"^^xsd:integer ;
+    q42:jointName "shoulder_l" ;
+    q42:parentIndex "8"^^xsd:integer ;
+    q42:parentJoint skl2:clavicle_l ;
+    q42:restLocalM "[0.175, 0.000, -0.020]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-60.0, 180.0]" ;
+    q42:romYawDeg "[-90.0, 135.0]" ;
+    q42:romRollDeg "[-90.0, 90.0]" ;
+    q42:fmaCurie "FMA:13303" ;
+    q42:uberonCurie "UBERON:0000976" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:elbow_l a q42:Skl2Joint ;
+    q42:jointIndex "10"^^xsd:integer ;
+    q42:jointName "elbow_l" ;
+    q42:parentIndex "9"^^xsd:integer ;
+    q42:parentJoint skl2:shoulder_l ;
+    q42:restLocalM "[0.265, 0.000, 0.000]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[0.0, 145.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[-85.0, 85.0]" ;
+    q42:fmaCurie "FMA:23463" ;
+    q42:uberonCurie "UBERON:0001423" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:wrist_l a q42:Skl2Joint ;
+    q42:jointIndex "11"^^xsd:integer ;
+    q42:jointName "wrist_l" ;
+    q42:parentIndex "10"^^xsd:integer ;
+    q42:parentJoint skl2:elbow_l ;
+    q42:restLocalM "[0.225, 0.000, 0.000]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-70.0, 80.0]" ;
+    q42:romYawDeg "[-20.0, 35.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24922" ;
+    q42:uberonCurie "UBERON:0004452" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:hand_l a q42:Skl2Joint ;
+    q42:jointIndex "12"^^xsd:integer ;
+    q42:jointName "hand_l" ;
+    q42:parentIndex "11"^^xsd:integer ;
+    q42:parentJoint skl2:wrist_l ;
+    q42:restLocalM "[0.075, 0.000, 0.000]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[-15.0, 90.0]" ;
+    q42:romYawDeg "[-10.0, 10.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:9712" ;
+    q42:uberonCurie "UBERON:0002398" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:thumb_l a q42:Skl2Joint ;
+    q42:jointIndex "13"^^xsd:integer ;
+    q42:jointName "thumb_l" ;
+    q42:parentIndex "12"^^xsd:integer ;
+    q42:parentJoint skl2:hand_l ;
+    q42:restLocalM "[-0.030, -0.020, 0.035]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-15.0, 65.0]" ;
+    q42:romYawDeg "[-25.0, 50.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24938" ;
+    q42:uberonCurie "UBERON:0001463" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:clavicle_r a q42:Skl2Joint ;
+    q42:jointIndex "14"^^xsd:integer ;
+    q42:jointName "clavicle_r" ;
+    q42:parentIndex "2"^^xsd:integer ;
+    q42:parentJoint skl2:spine_thoracic ;
+    q42:restLocalM "[-0.045, 0.160, 0.040]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-10.0, 15.0]" ;
+    q42:romYawDeg "[-20.0, 25.0]" ;
+    q42:romRollDeg "[-35.0, 15.0]" ;
+    q42:fmaCurie "FMA:13321" ;
+    q42:uberonCurie "UBERON:0001105" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:shoulder_r a q42:Skl2Joint ;
+    q42:jointIndex "15"^^xsd:integer ;
+    q42:jointName "shoulder_r" ;
+    q42:parentIndex "14"^^xsd:integer ;
+    q42:parentJoint skl2:clavicle_r ;
+    q42:restLocalM "[-0.175, 0.000, -0.020]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-60.0, 180.0]" ;
+    q42:romYawDeg "[-135.0, 90.0]" ;
+    q42:romRollDeg "[-90.0, 90.0]" ;
+    q42:fmaCurie "FMA:13303" ;
+    q42:uberonCurie "UBERON:0000976" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:elbow_r a q42:Skl2Joint ;
+    q42:jointIndex "16"^^xsd:integer ;
+    q42:jointName "elbow_r" ;
+    q42:parentIndex "15"^^xsd:integer ;
+    q42:parentJoint skl2:shoulder_r ;
+    q42:restLocalM "[-0.265, 0.000, 0.000]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[0.0, 145.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[-85.0, 85.0]" ;
+    q42:fmaCurie "FMA:23463" ;
+    q42:uberonCurie "UBERON:0001423" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:wrist_r a q42:Skl2Joint ;
+    q42:jointIndex "17"^^xsd:integer ;
+    q42:jointName "wrist_r" ;
+    q42:parentIndex "16"^^xsd:integer ;
+    q42:parentJoint skl2:elbow_r ;
+    q42:restLocalM "[-0.225, 0.000, 0.000]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-70.0, 80.0]" ;
+    q42:romYawDeg "[-35.0, 20.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24922" ;
+    q42:uberonCurie "UBERON:0004452" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:hand_r a q42:Skl2Joint ;
+    q42:jointIndex "18"^^xsd:integer ;
+    q42:jointName "hand_r" ;
+    q42:parentIndex "17"^^xsd:integer ;
+    q42:parentJoint skl2:wrist_r ;
+    q42:restLocalM "[-0.075, 0.000, 0.000]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[-15.0, 90.0]" ;
+    q42:romYawDeg "[-10.0, 10.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:9712" ;
+    q42:uberonCurie "UBERON:0002398" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:thumb_r a q42:Skl2Joint ;
+    q42:jointIndex "19"^^xsd:integer ;
+    q42:jointName "thumb_r" ;
+    q42:parentIndex "18"^^xsd:integer ;
+    q42:parentJoint skl2:hand_r ;
+    q42:restLocalM "[0.030, -0.020, 0.035]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-15.0, 65.0]" ;
+    q42:romYawDeg "[-50.0, 25.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24938" ;
+    q42:uberonCurie "UBERON:0001463" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:hip_l a q42:Skl2Joint ;
+    q42:jointIndex "20"^^xsd:integer ;
+    q42:jointName "hip_l" ;
+    q42:parentIndex "0"^^xsd:integer ;
+    q42:parentJoint skl2:pelvis_root ;
+    q42:restLocalM "[0.100, 0.000, 0.000]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-30.0, 125.0]" ;
+    q42:romYawDeg "[-45.0, 45.0]" ;
+    q42:romRollDeg "[-30.0, 45.0]" ;
+    q42:fmaCurie "FMA:24474" ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:knee_l a q42:Skl2Joint ;
+    q42:jointIndex "21"^^xsd:integer ;
+    q42:jointName "knee_l" ;
+    q42:parentIndex "20"^^xsd:integer ;
+    q42:parentJoint skl2:hip_l ;
+    q42:restLocalM "[0.000, -0.430, 0.010]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[0.0, 140.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24476" ;
+    q42:uberonCurie "UBERON:0000979" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:ankle_l a q42:Skl2Joint ;
+    q42:jointIndex "22"^^xsd:integer ;
+    q42:jointName "ankle_l" ;
+    q42:parentIndex "21"^^xsd:integer ;
+    q42:parentJoint skl2:knee_l ;
+    q42:restLocalM "[0.000, -0.410, -0.020]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-50.0, 20.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[-30.0, 20.0]" ;
+    q42:fmaCurie "FMA:9664" ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:toe_l a q42:Skl2Joint ;
+    q42:jointIndex "23"^^xsd:integer ;
+    q42:jointName "toe_l" ;
+    q42:parentIndex "22"^^xsd:integer ;
+    q42:parentJoint skl2:ankle_l ;
+    q42:restLocalM "[0.000, -0.055, 0.140]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[-40.0, 70.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:25046" ;
+    q42:uberonCurie "UBERON:0001466" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:hip_r a q42:Skl2Joint ;
+    q42:jointIndex "24"^^xsd:integer ;
+    q42:jointName "hip_r" ;
+    q42:parentIndex "0"^^xsd:integer ;
+    q42:parentJoint skl2:pelvis_root ;
+    q42:restLocalM "[-0.100, 0.000, 0.000]" ;
+    q42:dof "3"^^xsd:integer ;
+    q42:romPitchDeg "[-30.0, 125.0]" ;
+    q42:romYawDeg "[-45.0, 45.0]" ;
+    q42:romRollDeg "[-45.0, 30.0]" ;
+    q42:fmaCurie "FMA:24474" ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:knee_r a q42:Skl2Joint ;
+    q42:jointIndex "25"^^xsd:integer ;
+    q42:jointName "knee_r" ;
+    q42:parentIndex "24"^^xsd:integer ;
+    q42:parentJoint skl2:hip_r ;
+    q42:restLocalM "[0.000, -0.430, 0.010]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[0.0, 140.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:24476" ;
+    q42:uberonCurie "UBERON:0000979" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:ankle_r a q42:Skl2Joint ;
+    q42:jointIndex "26"^^xsd:integer ;
+    q42:jointName "ankle_r" ;
+    q42:parentIndex "25"^^xsd:integer ;
+    q42:parentJoint skl2:knee_r ;
+    q42:restLocalM "[0.000, -0.410, -0.020]" ;
+    q42:dof "2"^^xsd:integer ;
+    q42:romPitchDeg "[-50.0, 20.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[-20.0, 30.0]" ;
+    q42:fmaCurie "FMA:9664" ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+skl2:toe_r a q42:Skl2Joint ;
+    q42:jointIndex "27"^^xsd:integer ;
+    q42:jointName "toe_r" ;
+    q42:parentIndex "26"^^xsd:integer ;
+    q42:parentJoint skl2:ankle_r ;
+    q42:restLocalM "[0.000, -0.055, 0.140]" ;
+    q42:dof "1"^^xsd:integer ;
+    q42:romPitchDeg "[-40.0, 70.0]" ;
+    q42:romYawDeg "[0.0, 0.0]" ;
+    q42:romRollDeg "[0.0, 0.0]" ;
+    q42:fmaCurie "FMA:25046" ;
+    q42:uberonCurie "UBERON:0001466" ;
+    q42:appliesTo qualia:homo_sapiens .
+
+# --- IK Chains & Seated Driver Posture ---
+
+ik:leg_l a q42:IkChain ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:solver "two_bone_ik" ;
+    q42:rootJoint skl2:hip_l ;
+    q42:midJoint skl2:knee_l ;
+    q42:endJoint skl2:ankle_l ;
+    q42:upperLengthM "0.4301"^^xsd:decimal ;
+    q42:lowerLengthM "0.4105"^^xsd:decimal .
+
+ik:leg_r a q42:IkChain ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:solver "two_bone_ik" ;
+    q42:rootJoint skl2:hip_r ;
+    q42:midJoint skl2:knee_r ;
+    q42:endJoint skl2:ankle_r ;
+    q42:upperLengthM "0.4301"^^xsd:decimal ;
+    q42:lowerLengthM "0.4105"^^xsd:decimal .
+
+ik:arm_l a q42:IkChain ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:solver "two_bone_ik" ;
+    q42:rootJoint skl2:shoulder_l ;
+    q42:midJoint skl2:elbow_l ;
+    q42:endJoint skl2:wrist_l ;
+    q42:upperLengthM "0.2650"^^xsd:decimal ;
+    q42:lowerLengthM "0.2250"^^xsd:decimal .
+
+ik:arm_r a q42:IkChain ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:solver "two_bone_ik" ;
+    q42:rootJoint skl2:shoulder_r ;
+    q42:midJoint skl2:elbow_r ;
+    q42:endJoint skl2:wrist_r ;
+    q42:upperLengthM "0.2650"^^xsd:decimal ;
+    q42:lowerLengthM "0.2250"^^xsd:decimal .
+
+rom:seated_driver a q42:PostureSpecification ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:hipFlexionDeg "95.0"^^xsd:decimal ;
+    q42:kneeFlexionDeg "65.0"^^xsd:decimal ;
+    q42:comSeatedM "0.78"^^xsd:decimal ;
+    q42:steeringWheelGrip "10_and_2_oclock_rim_power_grasp" ;
+    rdfs:label "Seated Driver Posture (Hip ~95 deg, Knee ~65 deg, Hands on Steering Wheel Rim)"@en .
+
+# ============================================================================
+# 4. Allometric Scaling, InstanceState64 & Ontogenetic Stages
+# ============================================================================
+
+qualia:homo_sapiens
+    q42:bmrWatts "75.6"^^xsd:decimal ;
+    q42:bodyTempC "37.0"^^xsd:decimal ;
+    q42:allometricBmrEquation "BMR(M) = 3.05 * M^0.75 [W]; at M=72.0 kg -> 75.6 W" ;
+    q42:allometricSegmentEquation "H_stature = 1.74 m; L_femur = 0.247 * H; L_tibia = 0.236 * H; L_humerus = 0.152 * H; L_forearm = 0.129 * H; ArmSpan = 1.00 * H" ;
+    q42:locomotorModes "bipedal_walk (1.35 m/s), run (3.5-8.0 m/s), seated_driver, specimen_inspect" .
+
+inst64:homo_sapiens_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, posture_mode_flag:u8, reserved_flags:u16, heart_rate_bpm:f32, respiration_hz:f32, muscle_tone_01:f32, melanin_eumelanin_01:f32, adiposity_scale:f32, neural_arousal_01:f32" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.30 to 1.18" ;
+    q42:siteVigorRange "0.60 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00" .
+
+stage:infant a q42:OntogeneticStage ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:stageId "infant" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.04"^^xsd:decimal ;
+    q42:heightScaleMin "0.30"^^xsd:decimal ;
+    q42:heightScaleMax "0.52"^^xsd:decimal .
+
+stage:child a q42:OntogeneticStage ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:stageId "child" ;
+    q42:ontogeneticAgeNormMin "0.04"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.16"^^xsd:decimal ;
+    q42:heightScaleMin "0.52"^^xsd:decimal ;
+    q42:heightScaleMax "0.85"^^xsd:decimal .
+
+stage:adolescent a q42:OntogeneticStage ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:stageId "adolescent" ;
+    q42:ontogeneticAgeNormMin "0.16"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.26"^^xsd:decimal ;
+    q42:heightScaleMin "0.85"^^xsd:decimal ;
+    q42:heightScaleMax "0.99"^^xsd:decimal .
+
+stage:adult a q42:OntogeneticStage ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:stageId "adult" ;
+    q42:ontogeneticAgeNormMin "0.26"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.80"^^xsd:decimal ;
+    q42:heightScaleMin "0.90"^^xsd:decimal ;
+    q42:heightScaleMax "1.18"^^xsd:decimal ;
+    q42:standardStatureM "1.74"^^xsd:decimal .
+
+stage:elder a q42:OntogeneticStage ;
+    q42:appliesTo qualia:homo_sapiens ;
+    q42:stageId "elder" ;
+    q42:ontogeneticAgeNormMin "0.80"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.88"^^xsd:decimal ;
+    q42:heightScaleMax "1.12"^^xsd:decimal .
+
+# ============================================================================
+# 5. Ecological & Biocultural Custodianship (SE Australia Corridor)
+# ============================================================================
+
+qualia:homo_sapiens
+    ro:0002303 envo:01000220 , envo:01000219 ;
+    q42:ecologicalRole "Custodian, ecological observer, and participant within South-Eastern Australian Country under CARE and TK/BC principles."@en .
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers & Border Ranges, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:care_governance "CARE Principles" .
+
+country:gumbaynggirr_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gumbaynggirr Country (Mid-North Coast & Dorrigo Escarpment, NSW)"@en ;
+    tk:language_group "Gumbaynggirr" ;
+    tk:care_governance "CARE Principles" .
+
+country:gadigal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gadigal Country (Sydney Harbour Sandstone Basin, Eora Nation, NSW)"@en ;
+    tk:language_group "Gadigal / Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:dharug_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharug Country (Hawkesbury-Nepean & Cumberland Plain, NSW)"@en ;
+    tk:language_group "Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Monaro Tablelands & Snowy High Plains, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:walgalu_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Walgalu Country (Tumut, Talbingo & Northern Kosciuszko, NSW)"@en ;
+    tk:language_group "Walgalu / Wolgalu" ;
+    tk:care_governance "CARE Principles" .
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Central & South-Western Slopes, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Gippsland Plains & East Gippsland, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Port Phillip & Western Port, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .
+
+country:wadawurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wadawurrung Country (You Yangs & Moorabool, VIC)"@en ;
+    tk:language_group "Wadawurrung" ;
+    tk:care_governance "CARE Principles" .

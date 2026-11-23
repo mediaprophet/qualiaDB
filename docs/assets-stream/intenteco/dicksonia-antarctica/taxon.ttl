@@ -1,0 +1,482 @@
+# Dicksonia antarctica Labill. (Soft Tree Fern)
+# Taxon concept, pteridophyte / Dicksoniaceae anatomical subsystems (PO:*),
+# caudex-rosette & rachis-pinna allometry, post-fire apical crozier survival,
+# InstanceState64 ontogenetic parameter bounds, ecological interactions (RO:*),
+# and South-Eastern Australian Biocultural Country provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds across cool-temperate rainforests and wet-sclerophyll mountain
+# gullies in South-Eastern Australia (VIC, TAS, NSW, ACT, SE QLD; working focus:
+# Victorian Central Highlands / Yarra Ranges & Otway Ranges, and Tasmanian gullies).
+# Exact site and individual occurrence identification remain pending field resolution.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix dant:   <urn:qualia:taxon:dicksonia_antarctica:> .
+@prefix organ:  <urn:qualia:taxon:dicksonia_antarctica:organ:> .
+@prefix stage:  <urn:qualia:taxon:dicksonia_antarctica:stage:> .
+@prefix trait:  <urn:qualia:taxon:dicksonia_antarctica:trait:> .
+@prefix src:    <urn:qualia:source:dicksonia-antarctica:> .
+@prefix claim:  <urn:qualia:claim:dicksonia-antarctica:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:dicksonia_antarctica a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:dicksonia_antarctica> ;
+    dct:identifier <urn:qualia:taxon:dicksonia_antarctica> ,
+                   <did:q42:taxon:dicksonia_antarctica> ;
+    rdfs:label "Soft Tree Fern"@en ,
+               "Dicksonia antarctica Labill."@la ;
+    dwc:scientificName "Dicksonia antarctica Labill." ;
+    dwc:scientificNameAuthorship "Labill." ;
+    q42:protologue "Labillardiere, J.J. Houtou de (1807), Novae Hollandiae Plantarum Specimen 2: 100, t. 249" ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Polypodiopsida" ;
+    dwc:order "Cyatheales" ;
+    dwc:family "Dicksoniaceae" ;
+    dwc:genus "Dicksonia" ;
+    dwc:specificEpithet "antarctica" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Soft Tree Fern"@en ,
+                       "Soft Tree-fern"@en ,
+                       "Brown Tree-fern"@en ,
+                       "Man Fern"@en ,
+                       "Tasmanian Tree Fern"@en ,
+                       "Woolly Tree Fern"@en ,
+                       "Komba'derk"@aus ,
+                       "Combadik"@aus ,
+                       "Garag"@aus ;
+    dwc:taxonID "GBIF:2652676" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/102139> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2914933> ;
+    q42:ecologicalRole "Cool-temperate rainforest and wet-sclerophyll gully microclimate keystone tree fern and vascular epiphyte host" ;
+    dcat:landingPage <https://github.com/intenteco/dicksonia-antarctica> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:workingLocality "South-Eastern Australia: Victorian Central Highlands / Yarra Ranges & Otway Ranges, Gippsland, TAS gullies & Bass Strait islands, NSW tablelands/escarpment gullies, ACT, SE QLD (exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/102139> ,
+                 <https://id.biodiversity.org.au/node/apni/2914933> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2914933> ,
+                 <https://www.gbif.org/species/2652676> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Dicksonia~antarctica&page=nswfl> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/9c9ecf70-9027-490a-b26e-add18d163bf7> ,
+                 <https://profiles.ala.org.au/opus/foa/profile/Dicksonia%20antarctica> .
+
+<did:q42:taxon:dicksonia_antarctica> a dwc:Taxon ;
+    owl:sameAs qualia:dicksonia_antarctica ;
+    rdfs:label "DID Q42 Locator — Dicksonia antarctica Labill."@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:cyathea_australis a dwc:Taxon ;
+    dwc:scientificName "Cyathea australis (R.Br.) Domin" ;
+    rdfs:label "Rough Tree Fern"@en .
+
+qualia:dicksonia_youngiae a dwc:Taxon ;
+    dwc:scientificName "Dicksonia youngiae C.Moore ex Baker" ;
+    rdfs:label "Bristly Tree Fern"@en .
+
+qualia:todea_barbara a dwc:Taxon ;
+    dwc:scientificName "Todea barbara (L.) T.Moore" ;
+    rdfs:label "King Fern"@en .
+
+qualia:dicksonia_antarctica
+    owl:differentFrom qualia:cyathea_australis ,
+                      qualia:dicksonia_youngiae ,
+                      qualia:todea_barbara ;
+    rdfs:comment "Taxonomic boundary: do not substitute Cyathea australis (Cyatheaceae: hard tubercled/spiny trunk, shiny scales rather than hairs on stipe bases, dorsal round sori on veins rather than marginal bivalved sori), Dicksonia youngiae (slender trunk with dark rigid bristles, northern NSW / SE QLD), or Todea barbara (Osmundaceae: broad mounding caudex, bipinnate fronds, naked sporangia covering basal pinnules)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/102139> ;
+    rdfs:label "APNI Name 102139 — Dicksonia antarctica Labill." .
+
+src:apni-apc a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/node/apni/2914933> ;
+    rdfs:label "APNI/APC Node 2914933 — Dicksonia antarctica Labill." .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2914933> ;
+    rdfs:label "Atlas of Living Australia — Dicksonia antarctica" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2652676> ;
+    rdfs:label "GBIF Backbone Taxonomy — Dicksonia antarctica (2652676)" .
+
+src:plantnet a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Dicksonia~antarctica&page=nswfl> ;
+    rdfs:label "PlantNET NSW Flora Online — Dicksonia antarctica" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/9c9ecf70-9027-490a-b26e-add18d163bf7> ;
+    rdfs:label "VicFlora — Dicksonia antarctica" .
+
+src:flora-of-australia a dct:BibliographicResource ;
+    dct:identifier <https://profiles.ala.org.au/opus/foa/profile/Dicksonia%20antarctica> ;
+    rdfs:label "Flora of Australia (ABRS / ALA) — Dicksonia antarctica" .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+src:bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & PTERIDOPHYTE ARCHITECTURE)
+# ==============================================================================
+
+qualia:dicksonia_antarctica
+    ro:0002180 organ:adventitious_fibrous_root_mantle_caudex ,
+               organ:rufous_hairy_crozier_fiddleheads_and_apical_crown ,
+               organ:tripinnate_arching_frond_rosette ,
+               organ:marginal_bivalved_sori_and_persistent_skirt .
+
+organ:adventitious_fibrous_root_mantle_caudex a po:0025025 , po:0025004 , po:0000042 , po:0005707 ;
+    rdfs:label "Adventitious Fibrous Root-Mantle Columnar Caudex & Basal Root Buttress"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s1_buttress_flare" , "pin_s1_mycorrhizal_rhizosphere" ;
+    q42:trueWoodPresent false ;
+    q42:vascularArchitecture "central_dictyostelic_vascular_core_with_sclerenchyma_sheath_in_parenchyma" ;
+    q42:mantleComposition "dense_interlocking_dark_reddish_brown_adventitious_aerial_rootlets_and_persistent_stipe_bases" ;
+    q42:caudexHeightMinM "1.5"^^xsd:decimal ;
+    q42:caudexHeightMaxM "12.0"^^xsd:decimal ;
+    q42:caudexHeightExtremeMaxM "15.0"^^xsd:decimal ;
+    q42:caudexDiameterMinM "0.35"^^xsd:decimal ;
+    q42:caudexDiameterMaxM "0.80"^^xsd:decimal ;
+    q42:thermalInsulationMantle true ;
+    q42:epiphyticHostSubstrate true ;
+    rdfs:comment "Massive columnar erect rhizome caudex (1.5-12.0 m tall, extreme 15 m; 0.35-0.80 m basal diameter) lacking true secondary xylem/wood: a central dictyostelic vascular core embedded in starchy parenchyma and sclerenchyma, sheathed in a thick, spongy, moisture-retaining mantle of interlocking dark reddish-brown adventitious aerial rootlets and persistent crumbly stipe bases that buttress the base, absorb funnel-directed stemflow, insulate against fire, and host epiphytic bryophytes, filmy ferns, fork ferns, and fungi."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:flora-of-australia .
+
+organ:rufous_hairy_crozier_fiddleheads_and_apical_crown a po:0000035 , po:0025034 , po:0020148 ;
+    rdfs:label "Rufous-Hairy Circinate Crozier Fiddleheads & Protected Apical Crown Meristem"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" ;
+    q42:vernationType "circinate_vernation_logarithmic_spiral_coiled_crozier" ;
+    q42:dermalAppendages "soft_silky_rufous_golden_chestnut_multicellular_hairs_scales_absent" ;
+    q42:hairLengthMinCm "2.0"^^xsd:decimal ;
+    q42:hairLengthMaxCm "4.5"^^xsd:decimal ;
+    q42:diagnosticDistinction "Densely hairy croziers and stipe bases strictly lacking scales distinguish Dicksonia antarctica from Cyathea australis (scaly)." ;
+    q42:postFireResilience "deeply_recessed_insulated_apical_meristem_survives_moderate_to_high_intensity_wildfire" ;
+    rdfs:comment "Central apical rosette of tightly coiled circinate vernation crozier fiddleheads nestled around the recessed shoot apical meristem (PO:0000035), densely clothed in soft silky rufous to golden-chestnut multicellular hairs 2.0-4.5 cm long (scales strictly absent). Protected by the fibrous caudex collar and old stipe bases for rapid post-fire frond regeneration."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:flora-of-australia .
+
+organ:tripinnate_arching_frond_rosette a po:0025034 , po:0009006 , po:0020100 , po:0000014 , po:0000032 ;
+    rdfs:label "Spreading Umbrella Rosette of 20-36 Tripinnate Arching Fronds"@en ;
+    q42:pinId "pin_s1_crown_space_colonization" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" ;
+    q42:frondDivision "2_to_3_pinnate_tripinnate_oblong_lanceolate" ;
+    q42:matureFrondCountMin 20 ;
+    q42:matureFrondCountMax 36 ;
+    q42:frondLengthMinM "2.0"^^xsd:decimal ;
+    q42:frondLengthMaxM "4.0"^^xsd:decimal ;
+    q42:crownSpreadMinM "3.0"^^xsd:decimal ;
+    q42:crownSpreadMaxM "6.0"^^xsd:decimal ;
+    q42:stipeLengthMinCm "10.0"^^xsd:decimal ;
+    q42:stipeLengthMaxCm "30.0"^^xsd:decimal ;
+    q42:centralPinnaLengthMinCm "30.0"^^xsd:decimal ;
+    q42:centralPinnaLengthMaxCm "40.0"^^xsd:decimal ;
+    q42:laminaTexture "coriaceous_glossy_dark_green_adaxial_paler_abaxial" ;
+    q42:stemflowFunnelHydrology true ;
+    rdfs:comment "Spreading fountain-like umbrella/funnel rosette of 20-36 large arching tripinnate fronds (2.0-4.0 m long, crown spread 3.0-6.0 m): stout rufous-hairy basal stipe (10-30 cm, smooth to slightly verrucose), grooved central rachis, ascending primary pinnae (longest central pinnae 30-40 cm), secondary pinnules, and finely lobed coriaceous tertiary pinnule segments; glossy dark green adaxially, paler abaxially; funnel geometry intercepts rainfall and channels stemflow directly onto the caudex aerial root mantle."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:flora-of-australia .
+
+organ:marginal_bivalved_sori_and_persistent_skirt a po:0025300 , po:0025034 ;
+    rdfs:label "Abaxial Marginal Bivalved Sori & Persistent Golden-Brown Marcescent Frond Skirt"@en ;
+    q42:pinId "pin_s3_umbellaster" , "pin_s3_seed_chaff" ;
+    q42:sorusPosition "marginal_at_vein_endings_on_fertile_pinnule_lobes" ;
+    q42:indusiumType "globose_bivalved_two_lipped_outer_reflexed_lamina_and_inner_membranous_valve" ;
+    q42:sorusDiameterMinMm "1.0"^^xsd:decimal ;
+    q42:sorusDiameterMaxMm "2.0"^^xsd:decimal ;
+    q42:sporeMorphology "trilete_tetrahedral_spores" ;
+    q42:marcescentSkirtPresence true ;
+    rdfs:comment "Numerous globose marginal bivalved (two-lipped) sori 1.0-2.0 mm in diameter borne on abaxial edges of fertile tertiary pinnule lobes (outer valve formed by reflexed lamina margin, inner valve membranous true indusium), distinguishing Dicksoniaceae from dorsal round sori of Cyatheaceae. Upper caudex also retains a lower hanging skirt of golden-brown marcescent dead fronds insulating the upper trunk."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:flora-of-australia .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS (PTERIDOPHYTE GRAMMAR)
+# ==============================================================================
+
+qualia:dicksonia_antarctica
+    q42:hasTrait trait:rachis_pinna_pipe_exponent ,
+                 trait:caudex_mantle_taper ,
+                 trait:rosette_phyllotaxis_golden_angle ,
+                 trait:pinna_divergence_angle ,
+                 trait:crozier_logarithmic_spiral ,
+                 trait:mature_caudex_height ,
+                 trait:caudex_diameter ,
+                 trait:frond_length ,
+                 trait:specific_leaf_area ,
+                 trait:caudex_hydrated_bulk_density ,
+                 trait:rachis_youngs_modulus ,
+                 trait:non_linear_height_growth ,
+                 trait:stomatal_vpd_capacitance ,
+                 trait:fire_ecology_apical_crozier_survival .
+
+trait:rachis_pinna_pipe_exponent a q42:AllometricRule ;
+    rdfs:label "Pteridophyte Rachis-to-Pinna Vascular Area Conservation"@en ;
+    q42:equation "r_parent^n = sum(r_child^n), n = 2.0 (Murray/Shinozaki vascular bundle area conservation)" ;
+    q42:nominalValue "2.00"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_pteridophyte_allometry" .
+
+trait:caudex_mantle_taper a q42:AllometricRule ;
+    rdfs:label "Adventitious Root-Mantle Caudex Basal Flare & Taper Law"@en ;
+    q42:equation "d_caudex(z) = d_apex + k_mantle * (H_caudex - z)^0.50 (non-cambial root-mantle accretion)" ;
+    q42:nominalExponent "0.50"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "modeled_pteridophyte_allometry" .
+
+trait:rosette_phyllotaxis_golden_angle a q42:AllometricRule ;
+    rdfs:label "Fibonacci Frond Rosette Phyllotactic Divergence"@en ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:internodeElongationRatio "0.08"^^xsd:decimal ;
+    q42:unit "rad / ratio" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:pinna_divergence_angle a q42:AllometricRule ;
+    rdfs:label "Primary Pinna & Pinnule Rachis Divergence Angle"@en ;
+    q42:minValue "55.0"^^xsd:decimal ;
+    q42:maxValue "78.0"^^xsd:decimal ;
+    q42:nominalValue "66.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:vicflora , src:flora-of-australia .
+
+trait:crozier_logarithmic_spiral a q42:AllometricRule ;
+    rdfs:label "Circinate Vernation Crozier Fiddlehead Spiral"@en ;
+    q42:equation "r(theta) = a * exp(b * theta), coiled apical uncurling parameter" ;
+    q42:nominalGrowthRateB "0.18"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_caudex_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Columnar Caudex Height"@en ;
+    q42:minValue "1.5"^^xsd:decimal ;
+    q42:maxValue "12.0"^^xsd:decimal ;
+    q42:extremeMaxValue "15.0"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:vicflora , src:flora-of-australia .
+
+trait:caudex_diameter a q42:BiophysicalTrait ;
+    rdfs:label "Root-Mantle Caudex Basal Diameter"@en ;
+    q42:minValue "0.35"^^xsd:decimal ;
+    q42:maxValue "0.80"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet .
+
+trait:frond_length a q42:BiophysicalTrait ;
+    rdfs:label "Tripinnate Frond Length"@en ;
+    q42:minValue "2.0"^^xsd:decimal ;
+    q42:maxValue "4.0"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:vicflora , src:flora-of-australia .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Frond Specific Leaf Area (SLA)"@en ;
+    q42:nominalValue "8.6"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_austraits_ecophysiology" ;
+    rdfs:comment "Mean SLA ~8.6 m2/kg reflecting durable coriaceous shade-adapted fronds (more conservative than Cyathea australis ~10.4 m2/kg)."@en ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:caudex_hydrated_bulk_density a q42:BiophysicalTrait ;
+    rdfs:label "Hydrated Fibrous Caudex Bulk Density (Non-Woody)"@en ;
+    q42:trueWoodDensityApplicable false ;
+    q42:minValue "450.0"^^xsd:decimal ;
+    q42:maxValue "750.0"^^xsd:decimal ;
+    q42:nominalValue "580.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "modeled_pteridophyte_mechanics" ;
+    rdfs:comment "Dicksonia antarctica lacks secondary xylem ('wood'); bulk density reflects hydrated adventitious root mantle and parenchymatous core capacitance."@en .
+
+trait:rachis_youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Frond Rachis Longitudinal Young's Modulus (E)"@en ;
+    q42:minValue "3.5"^^xsd:decimal ;
+    q42:maxValue "6.0"^^xsd:decimal ;
+    q42:nominalValue "4.5"^^xsd:decimal ;
+    q42:caudexMantleModulusGPa "1.4"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "modeled_pteridophyte_mechanics" ;
+    rdfs:comment "Effective longitudinal stiffness of sclerenchyma-sheathed frond rachis (3.5-6.0 GPa) vs spongy fibrous root-mantle caudex (~1.4 GPa)."@en .
+
+trait:non_linear_height_growth a q42:BiophysicalTrait ;
+    rdfs:label "Non-Linear Slow Caudex Height Increment"@en ;
+    q42:minValue "0.015"^^xsd:decimal ;
+    q42:maxValue "0.050"^^xsd:decimal ;
+    q42:unit "m/yr" ;
+    q42:evidenceStatus "sourced_radiocarbon_growth_ecology" ;
+    rdfs:comment "Radiocarbon (14C) and long-term monitoring in Victorian Central Highlands show slow, non-linear height growth governed by canopy gap dynamics, moisture, and disturbance rather than constant linear rates."@en .
+
+trait:stomatal_vpd_capacitance a q42:BiophysicalTrait ;
+    rdfs:label "Stomatal VPD Sensitivity & Caudex Hydraulic Capacitance"@en ;
+    q42:stomatalControl "isohydric_rapid_closure_under_elevated_VPD" ;
+    q42:hydraulicStrategy "high_internal_caudex_water_storage_and_funnel_stemflow_recharge" ;
+    q42:evidenceStatus "sourced_ecophysiology" .
+
+trait:fire_ecology_apical_crozier_survival a q42:EcologicalTrait ;
+    rdfs:label "Post-Fire Apical Crozier Survival & Root-Mantle Thermal Insulation"@en ;
+    q42:thermalBarrier "thick_moist_adventitious_root_mantle_and_persistent_stipe_bases" ;
+    q42:regenerationMode "post_fire_apical_meristem_crozier_reflush_within_months" ;
+    q42:mortalityThreshold "prolonged_dry_internal_caudex_smoldering_during_extreme_drought_wildfire" ;
+    q42:evidenceStatus "sourced_fire_ecology" .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+dant:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.75..1.35] site-modulated caudex stature scalar spanning 1.5-12.0 m range" ;
+    q42:field_site_vigor "f32 [0.35..1.25] gully humidity, shade & soil moisture crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [gully_wind_sway 0..1, vapour_pressure_deficit_droop 0..1, fire_caudex_char_survival 0..1, crozier_flush_factor 0..1]" ;
+    q42:hasStage stage:gametophyte_juvenile_rosette ,
+                 stage:short_caudex_fern ,
+                 stage:mature_gully_tree_fern ,
+                 stage:ancient_epiphyte_cloaked_veteran .
+
+stage:gametophyte_juvenile_rosette a q42:OntogeneticStage ;
+    rdfs:label "Gametophyte & Juvenile Acaulescent Rosette (0.00 - 0.15)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal ;
+    q42:activeOrgans organ:rufous_hairy_crozier_fiddleheads_and_apical_crown ,
+                     organ:tripinnate_arching_frond_rosette ;
+    q42:heightNormRangeM "0.15..1.20" ;
+    rdfs:comment "Spore-derived prothallus gametophyte transitioning to acaulescent young sporophyte rosette (6-12 fronds, 0.2-1.2 m long) anchored directly in moist gully soil or rotting nurse logs prior to erect caudex emergence."@en .
+
+stage:short_caudex_fern a q42:OntogeneticStage ;
+    rdfs:label "Short Emergent Caudex Fern (0.15 - 0.45)"@en ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal ;
+    q42:activeOrgans organ:adventitious_fibrous_root_mantle_caudex ,
+                     organ:rufous_hairy_crozier_fiddleheads_and_apical_crown ,
+                     organ:tripinnate_arching_frond_rosette ;
+    q42:heightNormRangeM "0.50..2.50" ;
+    q42:caudexDiameterRangeM "0.25..0.45" ;
+    rdfs:comment "Young emergent fibrous caudex (0.5-2.5 m) establishing basal root flare and 12-22 arching fronds (1.2-2.5 m) with seasonal rufous crozier flushes."@en .
+
+stage:mature_gully_tree_fern a q42:OntogeneticStage ;
+    rdfs:label "Mature Gully Tree Fern (0.45 - 0.80)"@en ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:adventitious_fibrous_root_mantle_caudex ,
+                     organ:rufous_hairy_crozier_fiddleheads_and_apical_crown ,
+                     organ:tripinnate_arching_frond_rosette ,
+                     organ:marginal_bivalved_sori_and_persistent_skirt ;
+    q42:heightNormRangeM "2.50..7.50" ;
+    q42:caudexDiameterRangeM "0.35..0.65" ;
+    rdfs:comment "Reproductive mature gully tree fern (2.5-7.5 m tall, 0.35-0.65 m caudex diameter) with 20-36 spreading tripinnate fronds (2.0-4.0 m), marginal bivalved sori, and persistent golden-brown marcescent frond skirt."@en .
+
+stage:ancient_epiphyte_cloaked_veteran a q42:OntogeneticStage ;
+    rdfs:label "Ancient Epiphyte-Cloaked Veteran (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:adventitious_fibrous_root_mantle_caudex ,
+                     organ:rufous_hairy_crozier_fiddleheads_and_apical_crown ,
+                     organ:tripinnate_arching_frond_rosette ,
+                     organ:marginal_bivalved_sori_and_persistent_skirt ;
+    q42:heightNormRangeM "6.00..12.00" ;
+    q42:caudexDiameterRangeM "0.50..0.80" ;
+    rdfs:comment "Monumental multi-century gully veteran (6.0-12.0+ m tall, flared 0.50-0.80 m fibrous caudex) deeply cloaked in epiphytic bryophytes, filmy ferns (Hymenophyllum), fork ferns (Tmesipteris), and fungi, frequently recording historical wildfire char scars surmounted by living apical reflush."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:eucalyptus_regnans a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus regnans F.Muell." ;
+    rdfs:label "Mountain Ash"@en .
+
+qualia:nothofagus_cunninghamii a dwc:Taxon ;
+    dwc:scientificName "Nothofagus cunninghamii (Hook.) Oerst." ;
+    rdfs:label "Myrtle Beech"@en .
+
+qualia:acacia_dealbata a dwc:Taxon ;
+    dwc:scientificName "Acacia dealbata Link" ;
+    rdfs:label "Silver Wattle"@en .
+
+qualia:tmesipteris_elongata a dwc:Taxon ;
+    dwc:scientificName "Tmesipteris elongata P.A.Dang." ;
+    rdfs:label "Slender Fork-fern"@en .
+
+qualia:hymenophyllum_flabellatum a dwc:Taxon ;
+    dwc:scientificName "Hymenophyllum flabellatum Labill." ;
+    rdfs:label "Shiny Filmy-fern"@en .
+
+qualia:bryophyta_epiphyte_guild a dwc:Taxon ;
+    rdfs:label "Gully Epiphytic Bryophyte & Saprotrophic Fungal Guild"@en .
+
+qualia:platycercus_elegans a dwc:Taxon ;
+    dwc:scientificName "Platycercus elegans (Gmelin, 1788)" ;
+    rdfs:label "Crimson Rosella"@en .
+
+qualia:menura_novaehollandiae a dwc:Taxon ;
+    dwc:scientificName "Menura novaehollandiae Latham, 1801" ;
+    rdfs:label "Superb Lyrebird"@en .
+
+# RO:0002081 = co-occurs with / overlapping niche;
+# RO:0002454 = has host / serves as habitat host for (epiphyte host);
+# RO:0002434 = interacts with
+qualia:dicksonia_antarctica
+    ro:0002081 qualia:eucalyptus_regnans ,
+               qualia:nothofagus_cunninghamii ,
+               qualia:acacia_dealbata ,
+               qualia:cyathea_australis ;
+    ro:0002454 qualia:tmesipteris_elongata ,
+               qualia:hymenophyllum_flabellatum ,
+               qualia:bryophyta_epiphyte_guild ;
+    ro:0002434 qualia:platycercus_elegans ,
+               qualia:menura_novaehollandiae ;
+    q42:biome envo:01000221 , envo:00000446 ;
+    rdfs:comment "Mid-storey cool-temperate rainforest and wet-sclerophyll gully microclimate keystone underneath emergent Eucalyptus regnans and Nothofagus cunninghamii; fibrous moist caudex serves as critical vascular epiphyte substrate for Tmesipteris elongata, Hymenophyllum flabellatum, and bryophyte/fungal mats; spores consumed by Platycercus elegans; fern-gully floor grazed/foraged by Menura novaehollandiae."@en ;
+    prov:wasDerivedFrom src:vicflora , src:ala , src:flora-of-australia .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:dicksonia_antarctica
+    tk:custodial_country "Wurundjeri Country (Yarra Ranges, Upper Yarra & Dandenong Ranges, VIC)" ,
+                         "Taungurung Country (North-Central Highlands & Goulburn Catchment, VIC)" ,
+                         "Gunai/Kurnai Country (Strzelecki Ranges, Tarra-Bulga & Gippsland, VIC)" ,
+                         "Gadubanud Country (Otway Ranges, VIC)" ,
+                         "Palawa / Lutruwita Country (Tasmania — Tarkine, Huon, Derwent & Bass Strait Islands)" ,
+                         "Yuin Country (South Coast & Escarpment Gullies, NSW)" ,
+                         "Dharawal Country (Illawarra Escarpment & Southern Sydney Basin, NSW)" ,
+                         "Bundjalung Country (Border Ranges & Northern Rivers Cool Uplands, NSW/QLD)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    q42:bioculturalUsageNote "Public ethnobotanical records document traditional food use of the soft starchy apical pith (Woiwurrung/Wurundjeri vernacular Komba'derk / Combadik / Garag) eaten raw or roasted; recorded with attribution and without asserting community-authored TK labels absent direct First Nations co-design." ;
+    rdfs:comment "Country attribution spans Wurundjeri, Taungurung, Gunai/Kurnai, Gadubanud, Palawa / Lutruwita, Yuin, Dharawal, and Bundjalung Country across South-Eastern Australia under Social Permissive Commons (SPC) and Local Contexts TK/BC provenance notices."@en .

@@ -1,0 +1,122 @@
+# Riparian Creek Crossing Warren-Truss Timber Footbridge (timber-truss-footbridge) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-CIV-01 | Organization: github.com/qualia-poiesis/timber-truss-footbridge
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:timber-truss-footbridge:> .
+@prefix part:   <urn:qualia:design:timber-truss-footbridge:part:> .
+@prefix port:   <urn:qualia:design:timber-truss-footbridge:port:> .
+
+design:rev1 a made:Artefact , made:CivilBridge , dcat:Dataset ;
+    owl:sameAs <did:q42:design:timber_truss_footbridge> ;
+    dct:identifier <urn:qualia:design:timber-truss-footbridge:rev1> , <did:q42:design:timber_truss_footbridge> ;
+    rdfs:label "Riparian Creek Crossing Warren-Truss Timber Footbridge"@en ;
+    dct:title "Riparian Creek Crossing Warren-Truss Timber Footbridge — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/timber-truss-footbridge> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "pedestrian_live_load_camber_flex" , "warren_truss_handrail_harmonic" , "elastomeric_bearing_thermal_slip" , "solar_bollard_lantern_dusk_glow" ;
+    made:lengthM "4.900"^^xsd:decimal ;
+    made:widthM "2.360"^^xsd:decimal ;
+    made:heightM "1.920"^^xsd:decimal ;
+    made:curbMassKg "3400.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "3.8"^^xsd:decimal ;
+    made:totalAuthoredParts "59"^^xsd:integer ;
+    made:hasComponent part:stone-abutment-west , part:bearing-pad-west-0 , part:bearing-pad-west-1 , part:bearing-pad-west-2 , part:stone-abutment-east , part:bearing-pad-east-0 , part:bearing-pad-east-1 , part:bearing-pad-east-2 , part:cambered-stringer-0 , part:cambered-stringer-1 , part:cambered-stringer-2 , part:under-knee-brace-0 , part:under-knee-brace-1 , part:under-knee-brace-2 , part:under-knee-brace-3 , part:deck-plank-0 , part:deck-plank-1 , part:deck-plank-2 ;
+    made:hasPort port:pedestrian-corridor-span .
+
+part:stone-abutment-west a made:BridgeAbutment , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-stone-abutment-west> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stone Abutment West"@en .
+part:bearing-pad-west-0 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-west-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad West 0"@en .
+part:bearing-pad-west-1 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-west-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad West 1"@en .
+part:bearing-pad-west-2 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-west-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad West 2"@en .
+part:stone-abutment-east a made:BridgeAbutment , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-stone-abutment-east> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stone Abutment East"@en .
+part:bearing-pad-east-0 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-east-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad East 0"@en .
+part:bearing-pad-east-1 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-east-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad East 1"@en .
+part:bearing-pad-east-2 a made:BridgeBearing , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-bearing-pad-east-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bearing Pad East 2"@en .
+part:cambered-stringer-0 a made:BridgeGirder , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-cambered-stringer-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cambered Stringer 0"@en .
+part:cambered-stringer-1 a made:BridgeGirder , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-cambered-stringer-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cambered Stringer 1"@en .
+part:cambered-stringer-2 a made:BridgeGirder , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-cambered-stringer-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cambered Stringer 2"@en .
+part:under-knee-brace-0 a made:KneeBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-under-knee-brace-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Under Knee Brace 0"@en .
+part:under-knee-brace-1 a made:KneeBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-under-knee-brace-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Under Knee Brace 1"@en .
+part:under-knee-brace-2 a made:KneeBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-under-knee-brace-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Under Knee Brace 2"@en .
+part:under-knee-brace-3 a made:KneeBrace , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-under-knee-brace-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Under Knee Brace 3"@en .
+part:deck-plank-0 a made:DeckPlank , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-deck-plank-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Deck Plank 0"@en .
+part:deck-plank-1 a made:DeckPlank , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-deck-plank-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Deck Plank 1"@en .
+part:deck-plank-2 a made:DeckPlank , made:Component ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#part-deck-plank-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Deck Plank 2"@en .
+
+port:pedestrian-corridor-span a made:FunctionalPort ;
+    dct:identifier <did:q42:design:timber_truss_footbridge#port-pedestrian-corridor-span> ;
+    made:portMedium "mechanical_structural" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Newton ;
+    made:ratedCapacity "45000.0"^^xsd:decimal .

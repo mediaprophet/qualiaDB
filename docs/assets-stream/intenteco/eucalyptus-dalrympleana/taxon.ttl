@@ -1,0 +1,471 @@
+# Eucalyptus dalrympleana Maiden subsp. dalrympleana (Mountain White Gum)
+# Taxon concept, anatomical subsystems (PO:*), pipe-model & biophysical allometry,
+# InstanceState64 ontogenetic parameter bounds, ecological relations (RO:*),
+# and South-Eastern Australian Biocultural Country provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds for the subspecies across its SE Australian montane range
+# (working focus: Kosciuszko National Park / Snowy Mountains, NSW). Exact site
+# and individual occurrence identification remain pending field resolution.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix edal:   <urn:qualia:taxon:eucalyptus_dalrympleana:> .
+@prefix organ:  <urn:qualia:taxon:eucalyptus_dalrympleana:organ:> .
+@prefix stage:  <urn:qualia:taxon:eucalyptus_dalrympleana:stage:> .
+@prefix trait:  <urn:qualia:taxon:eucalyptus_dalrympleana:trait:> .
+@prefix src:    <urn:qualia:source:eucalyptus-dalrympleana:> .
+@prefix claim:  <urn:qualia:claim:eucalyptus-dalrympleana:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:eucalyptus_dalrympleana a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:eucalyptus_dalrympleana> ;
+    dct:identifier <urn:qualia:taxon:eucalyptus_dalrympleana> ,
+                   <did:q42:taxon:eucalyptus_dalrympleana> ;
+    rdfs:label "Mountain White Gum"@en ,
+               "Eucalyptus dalrympleana Maiden subsp. dalrympleana"@la ;
+    dwc:scientificName "Eucalyptus dalrympleana Maiden subsp. dalrympleana" ;
+    dwc:scientificNameAuthorship "Maiden" ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Myrtales" ;
+    dwc:family "Myrtaceae" ;
+    dwc:genus "Eucalyptus" ;
+    dwc:subgenus "Symphyomyrtus" ;
+    dwc:specificEpithet "dalrympleana" ;
+    dwc:infraspecificEpithet "dalrympleana" ;
+    dwc:taxonRank "subspecies" ;
+    dwc:vernacularName "Mountain White Gum"@en ,
+                       "Mountain Gum"@en ,
+                       "White Gum"@en ,
+                       "Broad-leaved Ribbon Gum"@en ,
+                       "Candlebark"@en ;
+    dwc:taxonID "GBIF:3175376" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/76342> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2907621> ;
+    dcat:landingPage <https://github.com/intenteco/eucalyptus-dalrympleana> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:workingLocality "Kosciuszko National Park / Snowy Mountains, NSW (exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_dalrympleana_subsp._dalrympleana.htm> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Eucalyptus~dalrympleana&page=nswfl> ,
+                 <https://id.biodiversity.org.au/name/apni/76342> ,
+                 <https://id.biodiversity.org.au/node/apni/2907621> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2907621> ,
+                 <https://www.gbif.org/species/3175376> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/7f3a0937-234b-449e-b924-41d4c2b9a1ef> .
+
+<did:q42:taxon:eucalyptus_dalrympleana> a dwc:Taxon ;
+    owl:sameAs qualia:eucalyptus_dalrympleana ;
+    rdfs:label "DID Q42 Locator — Eucalyptus dalrympleana subsp. dalrympleana"@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:eucalyptus_viminalis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus viminalis Labill." ;
+    rdfs:label "Manna Gum"@en .
+
+qualia:eucalyptus_pauciflora_niphophila a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus pauciflora subsp. niphophila (Maiden & Blakely) L.A.S.Johnson & Blaxell" ;
+    rdfs:label "Alpine Snow Gum"@en .
+
+qualia:eucalyptus_dalrympleana_heptantha a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dalrympleana subsp. heptantha L.A.S.Johnson" ;
+    rdfs:label "Northern Mountain Gum (7-budded umbel)"@en .
+
+qualia:eucalyptus_dalrympleana_poliophylla a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dalrympleana subsp. poliophylla L.A.S.Johnson" ;
+    rdfs:label "Victorian Glaucous Mountain Gum"@en .
+
+qualia:eucalyptus_dalrympleana
+    owl:differentFrom qualia:eucalyptus_viminalis ,
+                      qualia:eucalyptus_pauciflora_niphophila ,
+                      qualia:eucalyptus_dalrympleana_heptantha ,
+                      qualia:eucalyptus_dalrympleana_poliophylla ;
+    rdfs:comment "Taxonomic boundary: do not substitute E. viminalis (narrower juvenile leaves), E. pauciflora subsp. niphophila (alpine snowgum), E. dalrympleana subsp. heptantha (7-budded northern umbels), or subsp. poliophylla (dull grey-green/glaucous adult leaves)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:euclid a dct:BibliographicResource ;
+    dct:identifier <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_dalrympleana_subsp._dalrympleana.htm> ;
+    rdfs:label "EUCLID — Eucalyptus dalrympleana subsp. dalrympleana" .
+
+src:plantnet a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Eucalyptus~dalrympleana&page=nswfl> ;
+    rdfs:label "PlantNET NSW Flora Online — Eucalyptus dalrympleana" .
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/76342> ;
+    rdfs:label "APNI Name 76342 — Eucalyptus dalrympleana Maiden" .
+
+src:apni-node a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/node/apni/2907621> ;
+    rdfs:label "APNI/APC Node 2907621 — Eucalyptus dalrympleana subsp. dalrympleana" .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/node/apni/2907621> ;
+    rdfs:label "Atlas of Living Australia — Eucalyptus dalrympleana subsp. dalrympleana" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/3175376> ;
+    rdfs:label "GBIF Backbone Taxonomy — Eucalyptus dalrympleana (3175376)" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/7f3a0937-234b-449e-b924-41d4c2b9a1ef> ;
+    rdfs:label "VicFlora — Eucalyptus dalrympleana" .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & LIVING_WORLD_ANATOMY PINS)
+# ==============================================================================
+
+qualia:eucalyptus_dalrympleana
+    ro:0002180 organ:root_lignotuber ,
+               organ:bole_bark ,
+               organ:boughs_crown ,
+               organ:foliage_juvenile ,
+               organ:foliage_adult ,
+               organ:umbel_buds ,
+               organ:capsule_fruit .
+
+organ:root_lignotuber a po:0025025 , po:0025531 , po:0000038 , po:0000042 , po:0005707 ;
+    rdfs:label "Root System, Lignotuber & Fluted Buttress Plate"@en ;
+    q42:pinId "pin_s1_lignotuber" , "pin_s1_taproot" , "pin_s1_buttress_flare" , "pin_s1_mycorrhizal_rhizosphere" ;
+    q42:lignotuberSwellingMinM "0.0"^^xsd:decimal ;
+    q42:lignotuberSwellingMaxM "0.40"^^xsd:decimal ;
+    q42:lateralSinkerRootCountMin 5 ;
+    q42:lateralSinkerRootCountMax 7 ;
+    q42:buttressFluteHarmonicOrder "3..7" ;
+    rdfs:comment "Anchoring geotropic taproot, 5-7 lateral structural sinker roots with radial buttress flute harmonics, basal lignotuber meristematic swelling enabling post-fire resprouting, and ectomycorrhizal rhizosphere."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet .
+
+organ:bole_bark a po:0025004 , po:0009005 , po:0005513 , po:0005509 , po:0005417 , po:0005511 , po:0005352 , po:0005353 ;
+    rdfs:label "Tall Montane Bole, Basal Rough Stocking & Decorticating White-Salmon Bark"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s2_rhytidome_cork" , "pin_s2_phellogen" , "pin_s2_secondary_phloem_kino" , "pin_s2_vascular_cambium" , "pin_s2_sapwood_xylem" , "pin_s2_heartwood_tyloses" ;
+    q42:basalStockingType "short_rough_grey_fibrous_flaky_persistent" ;
+    q42:upperBarkType "smooth_white_cream_yellow_grey_to_salmon_pink_decorticating_ribbons" ;
+    q42:barkAlbedo "0.68"^^xsd:decimal ;
+    rdfs:comment "Tall straight montane bole with short rough grey fibrous-flaky stocking at base; smooth white, cream, pale yellow, sage-grey, to salmon-pink/coppery mottled upper bark shedding in long hanging ribbons."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:boughs_crown a po:0009006 , po:0020100 ;
+    rdfs:label "Ascending Pipe-Model Boughs & Air-Gapped Montane Crown"@en ;
+    q42:pinId "pin_s1_crown_space_colonization" ;
+    q42:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42:forkAngleMinDeg "35.0"^^xsd:decimal ;
+    q42:forkAngleMaxDeg "55.0"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:skyTransmittanceMin "0.45"^^xsd:decimal ;
+    q42:skyTransmittanceMax "0.65"^^xsd:decimal ;
+    rdfs:comment "Ascending scaffold boughs obeying Shinozaki/WBE pipe-model area conservation (r_parent^2.49 = sum r_child^2.49), collar flare unions, dormant epicormic bud nodes, and open air-gapped sub-crown foliage clusters."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:foliage_juvenile a po:0025034 ;
+    rdfs:label "Juvenile Foliage — Opposite Sessile Ovate-Orbicular Glaucous Leaves"@en ;
+    q42:phyllotaxy "opposite_for_many_pairs" ;
+    q42:attachment "sessile_to_subsessile_amplexicaul" ;
+    q42:laminaShape "ovate_orbicular_to_cordate" ;
+    q42:leafLengthMinCm "2.5"^^xsd:decimal ;
+    q42:leafLengthMaxCm "7.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "2.5"^^xsd:decimal ;
+    q42:leafWidthMaxCm "7.0"^^xsd:decimal ;
+    q42:surfaceColor "dull_blue_green_to_glaucous" ;
+    rdfs:comment "Distinctive juvenile phase: opposite, sessile, rounded-ovate to cordate, glaucous blue-grey leaves borne on sapling and epicormic coppice shoots."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:foliage_adult a po:0025034 , po:0000014 , po:0000032 , po:0005679 , po:0005023 , po:0005018 , po:0005020 ;
+    rdfs:label "Adult Foliage — Alternate Petiolate Lanceolate-Falcate Glossy Green Leaves"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" , "pin_s4_isobilateral_palisade" , "pin_s4_intramarginal_vein" , "pin_s4_schizogenous_oil_gland" , "pin_s4_sclerenchyma_bundle_sheath" ;
+    q42:phyllotaxy "alternate" ;
+    q42:attachment "petiolate_pendulous" ;
+    q42:laminaShape "lanceolate_to_falcate_undulate" ;
+    q42:leafLengthMinCm "8.0"^^xsd:decimal ;
+    q42:leafLengthMaxCm "22.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "1.0"^^xsd:decimal ;
+    q42:leafWidthMaxCm "3.5"^^xsd:decimal ;
+    q42:surfaceColor "glossy_green_concolorous_non_pruinose" ;
+    rdfs:comment "Adult crown foliage distinguishing subsp. dalrympleana from subsp. poliophylla: alternate, petiolate, pendulous lanceolate-falcate glossy green concolorous leaves with undulate margins and 1,8-cineole oil cavities."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:umbel_buds a po:0009046 , po:0006322 , po:0009084 , po:0009064 , po:0009066 , po:0009072 , po:0009063 ;
+    rdfs:label "Diagnostic 3-Bud Axillary Umbels with Conical Opercula"@en ;
+    q42:pinId "pin_s3_umbellaster" , "pin_s3_operculum_cap" , "pin_s3_hypanthium_cup" , "pin_s3_staminal_ring_anthers" , "pin_s3_style_stigma" , "pin_s3_ovary_locules" ;
+    q42:budsPerUmbel 3 ;
+    q42:budShape "ovoid" ;
+    q42:operculumShape "conical_to_rounded" ;
+    q42:budLengthMinCm "0.6"^^xsd:decimal ;
+    q42:budLengthMaxCm "1.0"^^xsd:decimal ;
+    q42:budWidthMinCm "0.3"^^xsd:decimal ;
+    q42:budWidthMaxCm "0.6"^^xsd:decimal ;
+    q42:anthesisSeason "March_to_May_austral_autumn" ;
+    rdfs:comment "Subspecies diagnostic: unbranched axillary umbellasters strictly 3-flowered (separating subsp. dalrympleana from 7-flowered subsp. heptantha), buds ovoid sessile or very shortly pedicellate with conical-to-rounded operculum and white stamens."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+organ:capsule_fruit a po:0009001 , po:0009010 ;
+    rdfs:label "Ovoid-Campanulate Woody Capsules (Gumnuts) & Seed"@en ;
+    q42:pinId "pin_s3_gumnut_valves" , "pin_s3_seed_chaff" ;
+    q42:capsuleShape "ovoid_campanulate_to_cupular_obconical" ;
+    q42:capsuleLengthMinCm "0.3"^^xsd:decimal ;
+    q42:capsuleLengthMaxCm "0.8"^^xsd:decimal ;
+    q42:capsuleWidthMinCm "0.5"^^xsd:decimal ;
+    q42:capsuleWidthMaxCm "0.9"^^xsd:decimal ;
+    q42:valveCountMin 3 ;
+    q42:valveCountMax 4 ;
+    q42:valveExsertion "slightly_exserted_or_rim_level" ;
+    rdfs:comment "Woody gumnut capsules, 3 per umbel, ovoid-campanulate to cupular-obconical, disc raised-level, 3-4 slightly exserted dehiscent valves."@en ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS
+# ==============================================================================
+
+qualia:eucalyptus_dalrympleana
+    q42:hasTrait trait:pipe_model_exponent ,
+                 trait:fork_angle ,
+                 trait:internode_elongation ,
+                 trait:mature_height ,
+                 trait:dbh ,
+                 trait:specific_leaf_area ,
+                 trait:wood_density ,
+                 trait:youngs_modulus ,
+                 trait:xylem_p50 ,
+                 trait:elevation_range ,
+                 trait:cold_tolerance ,
+                 trait:bark_albedo .
+
+trait:pipe_model_exponent a q42:AllometricRule ;
+    rdfs:label "Shinozaki / WBE Pipe-Model Exponent"@en ;
+    q42:equation "r_parent^n = sum(r_child^n)" ;
+    q42:nominalValue "2.49"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_eucalyptus_allometry" .
+
+trait:fork_angle a q42:AllometricRule ;
+    rdfs:label "Primary & Secondary Bough Fork Angle"@en ;
+    q42:minValue "35.0"^^xsd:decimal ;
+    q42:maxValue "55.0"^^xsd:decimal ;
+    q42:nominalValue "44.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:internode_elongation a q42:AllometricRule ;
+    rdfs:label "Internode Elongation & Phyllotactic Divergence"@en ;
+    q42:internodeElongationRatio "0.82"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:unit "ratio / rad" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Montane Tree Height"@en ;
+    q42:minValue "25.0"^^xsd:decimal ;
+    q42:maxValue "45.0"^^xsd:decimal ;
+    q42:extremeMaxValue "60.0"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:plantnet , src:vicflora .
+
+trait:dbh a q42:BiophysicalTrait ;
+    rdfs:label "Diameter at Breast Height (DBH)"@en ;
+    q42:minValue "0.8"^^xsd:decimal ;
+    q42:maxValue "1.8"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Specific Leaf Area (SLA)"@en ;
+    q42:minValue "5.5"^^xsd:decimal ;
+    q42:maxValue "8.5"^^xsd:decimal ;
+    q42:nominalValue "6.8"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_austraits_working_nominal" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:wood_density a q42:BiophysicalTrait ;
+    rdfs:label "Wood Density (Nominal Air-Dry Specification Target)"@en ;
+    q42:nominalValue "780.0"^^xsd:decimal ;
+    q42:basicDensityRange "590.0..610.0" ;
+    q42:seasonedDensityRange "690.0..780.0" ;
+    q42:greenDensityNominal "1150.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "sourced_with_moisture_basis_variance" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Longitudinal Young's Modulus (E)"@en ;
+    q42:nominalValue "13.5"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "sourced_timber_mechanics" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:xylem_p50 a q42:BiophysicalTrait ;
+    rdfs:label "Xylem Cavitation Vulnerability (P50)"@en ;
+    q42:nominalValue "-3.8"^^xsd:decimal ;
+    q42:unit "MPa" ;
+    q42:evidenceStatus "sourced_hydraulic_trait" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:elevation_range a q42:EnvironmentalNicheTrait ;
+    rdfs:label "Montane & Subalpine Elevation Range"@en ;
+    q42:minValue "600"^^xsd:integer ;
+    q42:maxValue "1400"^^xsd:integer ;
+    q42:unit "m AHD" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:ala .
+
+trait:cold_tolerance a q42:BiophysicalTrait ;
+    rdfs:label "Frost & Subalpine Cold Tolerance"@en ;
+    q42:minValue "-14.0"^^xsd:decimal ;
+    q42:unit "degC" ;
+    q42:evidenceStatus "sourced_frost_hardiness" ;
+    prov:wasDerivedFrom src:euclid , src:ala .
+
+trait:bark_albedo a q42:BiophysicalTrait ;
+    rdfs:label "Smooth White Bark Solar Albedo"@en ;
+    q42:nominalValue "0.68"^^xsd:decimal ;
+    q42:unit "dimensionless_reflectance" ;
+    q42:evidenceStatus "modeled_radiative_property" ;
+    rdfs:comment "High solar reflectance of white/cream decorticating upper bole reduces winter stem sunscald and cambial freeze-thaw injury at 600-1400 m AHD."@en .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+edal:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.75..1.25] site-modulated vertical stature scalar" ;
+    q42:field_site_vigor "f32 [0.40..1.20] edaphic moisture/fertility crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [wind_prevailing_bias 0..1, drought_leaf_drop 0..1, fire_char_height 0..1, epicormic_sprout_factor 0..1]" ;
+    q42:hasStage stage:sapling , stage:pole , stage:mature , stage:veteran .
+
+stage:sapling a q42:OntogeneticStage ;
+    rdfs:label "Sapling Stage (0.00 - 0.15)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:foliage_juvenile ;
+    q42:heightNormRangeM "0.8..4.5" ;
+    rdfs:comment "Lignotuber establishment with opposite, sessile, ovate-orbicular glaucous juvenile foliage."@en .
+
+stage:pole a q42:OntogeneticStage ;
+    rdfs:label "Pole Stage (0.15 - 0.45)"@en ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:foliage_juvenile , organ:foliage_adult ;
+    q42:heightNormRangeM "4.5..22.0" ;
+    rdfs:comment "Rapid apical bole extension and transitional crown shifting from opposite glaucous juvenile to alternate falcate glossy green adult leaves."@en .
+
+stage:mature a q42:OntogeneticStage ;
+    rdfs:label "Mature Montane Forest Tree (0.45 - 0.80)"@en ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "25.0..45.0" ;
+    q42:dbhRangeM "0.8..1.8" ;
+    rdfs:comment "Full montane canopy tree: short rough basal stocking, smooth white-to-salmon-pink upper bark with seasonal ribbons, ascending pipe-model boughs, adult falcate canopy, 3-bud umbels and woody capsules."@en .
+
+stage:veteran a q42:OntogeneticStage ;
+    rdfs:label "Veteran Hollow-Bearing Specimen (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:root_lignotuber , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:foliage_juvenile , organ:umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "30.0..50.0" ;
+    q42:dbhRangeM "1.2..2.2" ;
+    rdfs:comment "Veteran hollow-bearing montane giant with fluted buttressed base, long persistent decorticating bark ribbons, broken upper bough hollows, and epicormic resprout clusters bearing reversionary juvenile/adult shoots."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:eucalyptus_pauciflora a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus pauciflora Sieber ex Spreng." ;
+    rdfs:label "Snow Gum"@en .
+
+qualia:eucalyptus_delegatensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus delegatensis R.T.Baker" ;
+    rdfs:label "Alpine Ash"@en .
+
+qualia:eucalyptus_dives a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dives Schauer" ;
+    rdfs:label "Broad-leaved Peppermint"@en .
+
+qualia:phascolarctos_cinereus a dwc:Taxon ;
+    dwc:scientificName "Phascolarctos cinereus (Goldfuss, 1817)" ;
+    rdfs:label "Koala"@en .
+
+qualia:petauroides_volans a dwc:Taxon ;
+    dwc:scientificName "Petauroides volans (Kerr, 1792)" ;
+    rdfs:label "Southern Greater Glider"@en .
+
+qualia:wallabia_bicolor a dwc:Taxon ;
+    dwc:scientificName "Wallabia bicolor (Desmarest, 1804)" ;
+    rdfs:label "Swamp Wallaby"@en .
+
+qualia:ectomycorrhizal_fungi a dwc:Taxon ;
+    rdfs:label "Subalpine Ectomycorrhizal Fungal Guild (Basidiomycota / Ascomycota)"@en .
+
+# RO:0002081 = co-occurs with / overlapping niche; RO:0002434 = interacts with;
+# RO:0002444 = symbiont of / mutualist; RO:0002470 = eaten by / host for
+qualia:eucalyptus_dalrympleana
+    ro:0002081 qualia:eucalyptus_pauciflora ,
+               qualia:eucalyptus_delegatensis ,
+               qualia:eucalyptus_dives ;
+    ro:0002444 qualia:ectomycorrhizal_fungi ;
+    ro:0002434 qualia:phascolarctos_cinereus ,
+               qualia:petauroides_volans ,
+               qualia:wallabia_bicolor ;
+    q42:biome envo:01000221 , envo:00000446 ;
+    rdfs:comment "Forms tall montane and subalpine wet/grassy sclerophyll forests (600-1400 m AHD) alongside E. delegatensis, E. pauciflora, and E. dives; provides arboreal folivory forage and veteran tree hollows for Petauroides volans and Phascolarctos cinereus, and sapling browse for Wallabia bicolor."@en ;
+    prov:wasDerivedFrom src:vicflora , src:plantnet , src:ala .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:eucalyptus_dalrympleana
+    tk:custodial_country "Ngarigo Country (Monaro & Snowy Mountains / Kosciuszko)" ,
+                         "Walgalu Country (Tumut, Talbingo & Northern Kosciuszko)" ,
+                         "Ngunnawal Country (ACT Brindabella Ranges & Southern Tablelands)" ,
+                         "Wiradjuri Country (Western Slopes & Central Tablelands NSW)" ,
+                         "Taungurung Country (Victorian Central Highlands & Alps)" ,
+                         "GunaiKurnai Country (East Gippsland & Alpine Foothills)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    rdfs:comment "Country attribution spans Ngarigo, Walgalu, Ngunnawal, Wiradjuri, Taungurung, and GunaiKurnai Nations across South-Eastern Australia. Local Contexts TK/BC notices record biocultural provenance without asserting community-authored TK labels absent direct First Nations co-design."@en .

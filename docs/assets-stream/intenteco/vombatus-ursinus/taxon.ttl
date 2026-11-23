@@ -1,0 +1,647 @@
+# Vombatus ursinus (Shaw, 1800) — Bare-Nosed / Common Wombat Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-07A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:vombatus_ursinus:> .
+@prefix stage:     <urn:qualia:stage:vombatus_ursinus:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:vombatus-ursinus:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers
+# ============================================================================
+
+qualia:vombatus_ursinus a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:vombatus_ursinus ;
+    dct:identifier <urn:qualia:taxon:vombatus_ursinus> ,
+                   <did:q42:taxon:vombatus_ursinus> ;
+    rdfs:label "Bare-Nosed Wombat"@en ;
+    dwc:scientificName "Vombatus ursinus (Shaw, 1800)" ;
+    dwc:scientificNameAuthorship "Shaw, 1800" ;
+    dwc:originalNameUsage "Didelphis ursina Shaw, 1800" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Diprotodontia" ;
+    dwc:family "Vombatidae" ;
+    dwc:genus "Vombatus" ;
+    dwc:specificEpithet "ursinus" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Bare-Nosed Wombat"@en ,
+                       "Common Wombat"@en ,
+                       "Wombat"@qaa-x-dharug ,
+                       "Wambad"@qaa-x-dharug ,
+                       "Waring"@qaa-x-woi ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/66d42847-c556-4fa3-902c-a91d9f517286> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/66d42847-c556-4fa3-902c-a91d9f517286> ;
+    dwc:taxonID "GBIF:2440301" ;
+    q42:gbifSpeciesKey "2440301"^^xsd:integer ;
+    q42:gbifGenusKey "2440300"^^xsd:integer ;
+    q42:gbifFamilyKey "9376"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_29139> ;
+    q42:ncbiGenusTaxon <http://purl.obolibrary.org/obo/NCBITaxon_29138> ;
+    q42:monotypicGenus true ;
+    q42:karyotype "2n=14" ;
+    q42:iucnStatus "LC" ;
+    q42:mainlandSubspecies "Vombatus ursinus hirsutus (Perry, 1810)" ;
+    q42:bassStraitSubspecies "Vombatus ursinus ursinus (Shaw, 1800)" ;
+    q42:tasmanianSubspecies "Vombatus ursinus tasmaniensis (Spencer & Kershaw, 1910)" ;
+    dcat:landingPage <https://github.com/intenteco/vombatus-ursinus> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/66d42847-c556-4fa3-902c-a91d9f517286> ,
+                 <https://www.gbif.org/species/2440301> ,
+                 <https://www.nationalparks.nsw.gov.au/plants-and-animals/bare-nosed-wombat> ,
+                 <https://vba.biodiversity.vic.gov.au/> ;
+    prov:wasDerivedFrom src:afd-vombatus-ursinus ,
+                        src:ala-vombatus-ursinus ,
+                        src:gbif-2440301 ,
+                        src:ncbi-29139 ,
+                        src:nsw-npws-bare-nosed-wombat ,
+                        src:vic-biodiversity-atlas ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:dharug_country ,
+                         country:gundungurra_country ,
+                         country:ngarigo_country ,
+                         country:walgalu_country ,
+                         country:yuin_country ,
+                         country:wiradjuri_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country ,
+                         country:taungurung_country .
+
+q42taxon:vombatus_ursinus a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:vombatus_ursinus> ;
+    owl:sameAs qualia:vombatus_ursinus ;
+    rdfs:label "Vombatus ursinus Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Biodiversity Sources
+src:afd-vombatus-ursinus a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/66d42847-c556-4fa3-902c-a91d9f517286> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Vombatus ursinus (Shaw, 1800)" .
+
+src:ala-vombatus-ursinus a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/66d42847-c556-4fa3-902c-a91d9f517286> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Vombatus ursinus species profile" .
+
+src:gbif-2440301 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2440301> ;
+    rdfs:label "GBIF Backbone Taxonomy — Vombatus ursinus (Shaw, 1800) [speciesKey 2440301]" .
+
+src:ncbi-29139 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/29139/> ;
+    rdfs:label "NCBI Taxonomy — Vombatus ursinus (TaxID 29139)" .
+
+src:nsw-npws-bare-nosed-wombat a dct:BibliographicResource ;
+    dct:identifier <https://www.nationalparks.nsw.gov.au/plants-and-animals/bare-nosed-wombat> ;
+    rdfs:label "NSW NPWS — Bare-nosed Wombat species profile" .
+
+src:nsw-dpe-wombats a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/native-animals/native-animal-facts/land-mammals/wombats> ;
+    rdfs:label "NSW Environment — Native Animal Facts: Wombats" .
+
+src:vic-biodiversity-atlas a dct:BibliographicResource ;
+    dct:identifier <https://vba.biodiversity.vic.gov.au/> ;
+    rdfs:label "Victorian Biodiversity Atlas (DEECA) — Vombatus ursinus occurrence & conservation dataset" .
+
+src:vic-wildlife-common-wombat a dct:BibliographicResource ;
+    dct:identifier <https://www.wildlife.vic.gov.au/our-wildlife/mammals/common-wombat> ;
+    rdfs:label "DEECA Wildlife Victoria — Common Wombat profile" .
+
+claim:obligate-fossorial-herbivore a rdf:Statement ;
+    rdf:subject qualia:vombatus_ursinus ;
+    rdf:predicate q42:functionalGuild ;
+    rdf:object "obligate_fossorial_herbivorous_marsupial" ;
+    rdfs:comment "Vombatus ursinus is an obligate fossorial herbivorous marsupial (family Vombatidae), distinguished from hairy-nosed Lasiorhinus spp. by its bare granular rhinarium, coarser pelage, and rounded ears."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Osteology, Myology, Integument & Visceral)
+# ============================================================================
+
+# --- Layer 0: Osteology (UBERON:0001434) ---
+
+anat:skeletal_system a uberon:0001434 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    q42:boneDensityScale "1.35"^^xsd:decimal ;
+    rdfs:label "Robust Fossorial Skeletal System (24-Joint Quadruped Rig)"@en ;
+    rdfs:comment "Heavy, low-slung, compact fossorial skeleton engineered to resist high burrowing reaction forces and overhead burrow-defense compression."@en .
+
+anat:cranium_zygomatic a uberon:0003129 , uberon:0001682 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003129" ;
+    q42:secondaryUberonCurie "UBERON:0001682" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:cranialProfile "Dorsoventrally flattened broad cranium with massively flared zygomatic arches" ;
+    rdfs:label "Flattened Broad Cranium and Flared Zygomatic Arches"@en ;
+    rdfs:comment "Broad skull roof acts as a passive wedge while flared zygomatic arches create wide temporal fossae for hypertrophied masseter and temporalis jaw adductors."@en .
+
+anat:hypselodont_dentition a uberon:0001759 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001759" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:cranium_zygomatic ;
+    q42:dentalFormula "I 1/1, C 0/0, P 1/1, M 4/4 (24 rootless teeth)" ;
+    q42:toothGrowthMode "hypselodont_continuously_growing_rootless" ;
+    rdfs:label "Hypselodont Rootless Continuously Growing Incisors and Molars"@en ;
+    rdfs:comment "Unique among living marsupials: all 24 teeth (chisel-like incisors and bilophodont cheek teeth) lack roots and erupt continuously to compensate for extreme silica wear from native tussock grasses and roots."@en .
+
+anat:axial_spine_sacrum a uberon:0001130 , uberon:0001094 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:secondaryUberonCurie "UBERON:0001094" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Short Braced Cervical-Thoracic-Lumbar Spine and Fused Sacrum"@en .
+
+anat:ribcage_clavicle_sternum a uberon:0002228 , uberon:0001105 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002228" ;
+    q42:secondaryUberonCurie "UBERON:0001105" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Barrel-Shaped Thoracic Ribcage, Sternum and Robust Clavicles"@en ;
+    rdfs:comment "Sturdy clavicles brace the scapulohumeral girdle against lateral soil shear during alternating forelimb digging strokes."@en .
+
+anat:humerus_deltopectoral_crest a uberon:0000976 , uberon:0002102 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000976" ;
+    q42:secondaryUberonCurie "UBERON:0002102" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:fossorialAdaptation "Broadly flared deltopectoral crest on humerus, widened medial epicondyle, and elongated ulnar olecranon lever arm" ;
+    q42:olecranonIndex "0.34"^^xsd:decimal ;
+    rdfs:label "Forelimb Skeleton with Flared Deltopectoral Humerus Crest"@en .
+
+anat:plantigrade_forepaws a uberon:0002398 , uberon:0001465 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002398" ;
+    q42:clawUberonCurie "UBERON:0001465" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:digitCount "5"^^xsd:integer ;
+    q42:clawMorphology "Broad dorsoventrally flattened spade-like keratinous digging claws across digits I-V" ;
+    rdfs:label "Plantigrade 5-Digit Forepaws with Broad Flattened Spade-Like Digging Claws"@en .
+
+anat:pelvic_girdle a uberon:0001271 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001271" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Heavy Pelvic Girdle (Broad Iliac Blades, Ischium, Pubis)"@en .
+
+anat:epipubic_bones a uberon:0003661 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003661" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:pelvic_girdle ;
+    rdfs:label "Marsupial Epipubic Bones Supporting Backward-Opening Pouch"@en .
+
+anat:hindlimb_femur_tibia_fibula a uberon:0000981 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Stocky Hindlimb Femur, Tibia and Fibula"@en .
+
+anat:plantigrade_hind_pes a uberon:0002387 , uberon:0001452 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:syndactylUberonCurie "UBERON:0001452" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:syndactylGroomingDigits "II-III (partially fused syndactylous grooming digits)" ;
+    q42:halluxState "vestigial_clawless_digit_I" ;
+    q42:weightBearingDigits "IV-V and broad plantar heel pad" ;
+    rdfs:label "Plantigrade Hind Feet with Syndactylous Digits II-III"@en .
+
+anat:vestigial_tail a uberon:0001095 , uberon:0002415 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001095" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:lengthMinM "0.02"^^xsd:decimal ;
+    q42:lengthMaxM "0.035"^^xsd:decimal ;
+    rdfs:label "Short Vestigial Caudal Tail Tucked Beneath Pelvic Rump Shield"@en .
+
+# --- Layer 1: Myology (UBERON:0001630) ---
+
+anat:muscular_system a uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    rdfs:label "Massive Fossorial Digging & Grazing Muscular System"@en .
+
+anat:triceps_brachii_complex a uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:muscleGroup "triceps_brachii" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:biomechanicalRole "High-torque elbow extension driving spade-like forepaws downward and backward through compacted clay and sandstone subsoils" ;
+    rdfs:label "Hypertrophied Triceps Brachii Digging Extensor Complex"@en .
+
+anat:pectoralis_complex a uberon:0002356 , uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002356" ;
+    q42:muscleGroup "pectoralis_major_minor" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:biomechanicalRole "Ventral humeral adduction and medial soil-shearing stabilization anchored to sternum and flared deltopectoral crest" ;
+    rdfs:label "Massive Pectoralis Humeral Adductor Complex"@en .
+
+anat:latissimus_dorsi_complex a uberon:0001498 , uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001498" ;
+    q42:muscleGroup "latissimus_dorsi" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:biomechanicalRole "Primary humeral retraction pulling excavated soil and roots backward beneath the chest" ;
+    rdfs:label "Broad Latissimus Dorsi Humeral Retractor Complex"@en .
+
+anat:masticatory_musculature a uberon:0003662 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003662" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Hypertrophied Masseter and Temporalis Grazing Musculature"@en .
+
+anat:epaxial_lumbar_gluteal_myology a uberon:0002255 , uberon:0001377 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002255" ;
+    q42:secondaryUberonCurie "UBERON:0001377" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:biomechanicalRole "Braces hindlimbs against burrow floor and drives upward pelvic thrust for burrow-ceiling predator crushing" ;
+    rdfs:label "Epaxial Lumbar and Gluteal Hindquarter Bracing Musculature"@en .
+
+# --- Layer 2: Integument, Pouch, Rump Shield & Specialized Colon ---
+
+anat:coarse_pelage a uberon:0002416 , uberon:0002099 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002416" ;
+    q42:integumentCurie "UBERON:0002099" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:coatColorRange "Grizzled sandy-brown, buff-grey, dark brown, to charcoal-grey and black" ;
+    q42:pelageTexture "Coarse, thick, bristle-like guard hairs lacking dense soft underfur; sheds compacted burrow soil easily" ;
+    rdfs:label "Coarse Thick Grizzled Sandy-Brown to Charcoal-Grey Pelage"@en ;
+    prov:wasDerivedFrom src:nsw-npws-bare-nosed-wombat , src:vic-wildlife-common-wombat .
+
+anat:bare_granular_rhinarium a uberon:0001756 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001756" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:rhinariumForm "Large, bare (hairless), dark, granular, leathery nasal pad with acute olfactory sensitivity" ;
+    rdfs:label "Bare Dark Granular Leathery Rhinarium"@en .
+
+anat:small_rounded_ears a uberon:0001757 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001757" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:pinnaForm "Small, rounded, furry external pinnae with short triangular-rounded profile minimizing tunnel abrasion" ;
+    rdfs:label "Small Rounded Furry Ears"@en .
+
+anat:backward_opening_marsupium a uberon:0001831 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001831" ;
+    q42:anatomyLayer "integument_reproductive" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:pouchOrientation "Posteriorly opening (backward-facing) with muscular sphincter seal" ;
+    q42:fossorialProtection "Prevents excavated soil, gravel, and roots from entering the pouch while digging" ;
+    q42:teatCount "2"^^xsd:integer ;
+    rdfs:label "Backward-Opening Marsupium (Soil-Excluding Burrowing Pouch)"@en ;
+    prov:wasDerivedFrom src:vic-wildlife-common-wombat .
+
+anat:pelvic_dermal_shield a uberon:0002097 , uberon:0001319 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002097" ;
+    q42:secondaryUberonCurie "UBERON:0001319" ;
+    q42:subsystemId "pelvic_dermal_shield" ;
+    q42:anatomyLayer "integument_fibrocartilage_armor" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:shieldThicknessMmMin "10.0"^^xsd:decimal ;
+    q42:shieldThicknessMmMax "15.0"^^xsd:decimal ;
+    q42:tissueComposition "Thickened dense fibrocartilaginous and collagenous dermal plate tightly anchored over sacrum, iliac crests, and lumbar fascia" ;
+    q42:defenseBehavior "Burrow plug defense: wombat retreats headfirst into tunnel and wedges the armored rump shield upward against the burrow ceiling to crush intruding predators" ;
+    rdfs:label "Thickened Fibrocartilaginous Pelvic Dermal Rump Shield (pelvic_dermal_shield)"@en .
+
+anat:distal_colon_cubic_scat a uberon:0001155 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001155" ;
+    q42:anatomyLayer "visceral_biomechanics" ;
+    ro:0002131 qualia:vombatus_ursinus ;
+    q42:colonDifferentialStiffness "Alternating circumferential stiffened grooves and compliant regions across distal ~17-25% of colon" ;
+    q42:digestaTransitDaysMin "8.0"^^xsd:decimal ;
+    q42:digestaTransitDaysMax "14.0"^^xsd:decimal ;
+    q42:scatGeometry "Characteristic dry fibrous cubic pellets (~20-30 mm) resisting rolling on elevated territorial scent-marking rocks and logs" ;
+    rdfs:label "Specialized Distal Colon Biomechanics Producing Cubic Scat"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Burrow Kinematic Parameters
+# ============================================================================
+
+qualia:vombatus_ursinus
+    q42:headBodyLengthMinM "0.85"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "1.15"^^xsd:decimal ;
+    q42:shoulderHeightMinM "0.35"^^xsd:decimal ;
+    q42:shoulderHeightMaxM "0.45"^^xsd:decimal ;
+    q42:tailLengthMinM "0.02"^^xsd:decimal ;
+    q42:tailLengthMaxM "0.035"^^xsd:decimal ;
+    q42:adultMassMinKg "22.0"^^xsd:decimal ;
+    q42:adultMassMaxKg "38.0"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "22.0 to 34.0" ;
+    q42:adultMaleMassRangeKg "25.0 to 38.0" ;
+    q42:bmrWatts "32.0"^^xsd:decimal ;
+    q42:bodyTempC "34.8"^^xsd:decimal ;
+    q42:thermoregulation "endotherm_fossorial_hypometabolic" ;
+    q42:allometricBmrEquation "BMR(M) = 2.40 * M^0.75 [W]; at M=31.7 kg -> 32.0 W (depressed fossorial marsupial BMR reducing burrow heat load & hypoxia)" ;
+    q42:allometricLimbEquation "L_humerus = 0.048 * M^0.33 [m]; L_radius = 0.052 * M^0.33 [m]; L_femur = 0.062 * M^0.33 [m]" ;
+    q42:burrowTunnelLengthMinM "15.0"^^xsd:decimal ;
+    q42:burrowTunnelLengthMaxM "30.0"^^xsd:decimal ;
+    q42:burrowDepthMaxM "3.5"^^xsd:decimal ;
+    q42:burrowExcavationMechanics "Alternating fossorial forelimb scrape powered by triceps/pectoralis/latissimus over flared deltopectoral crest, hindlimbs bracing floor, periodic soil bulldozing with hind feet and chest" ;
+    q42:locomotorWalkSpeedMs "0.8 to 1.5" ;
+    q42:locomotorSprintSpeedMaxMs "11.1"^^xsd:decimal ;
+    q42:activityCycle "crepuscular_nocturnal_cool_day_basking" ;
+    q42:dietGuild "obligate_fossorial_grazing_herbivore" ;
+    q42:reproductionStrategy "Single pouch young per ~20-22 d gestation; 6-9 mo backward-pouch lactation followed by 6-12 mo juvenile-at-heel" ;
+    sosa:callName "Low guttural growl, rasping hiss, and territorial tooth-chatter" ;
+    sosa:callFundamentalHz "110.0"^^xsd:decimal ;
+    envo:habitatStratum "terrestrial_subterranean_burrow_and_forest_grassland_ecotone" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1850"^^xsd:integer ;
+    prov:wasDerivedFrom src:nsw-npws-bare-nosed-wombat , src:nsw-dpe-wombats , src:vic-wildlife-common-wombat .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (Radians)
+# ============================================================================
+
+rom:shoulder a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "shoulder" ;
+    q42:anatomicalTarget anat:humerus_deltopectoral_crest , anat:pectoralis_complex , anat:latissimus_dorsi_complex ;
+    q42:primaryAxis "flexion_extension_fossorial_sweep" ;
+    q42:healthyMinRad "-0.85"^^xsd:decimal ;
+    q42:healthyMaxRad "1.05"^^xsd:decimal ;
+    q42:abductionMinRad "-0.35"^^xsd:decimal ;
+    q42:abductionMaxRad "0.68"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.25"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbDiggingUnload" ;
+    rdfs:label "Glenohumeral Shoulder Joint ROM (Vombatus ursinus)"@en .
+
+rom:elbow a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "elbow" ;
+    q42:anatomicalTarget anat:humerus_deltopectoral_crest , anat:triceps_brachii_complex ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.82"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.18"^^xsd:decimal ;
+    q42:injuryThresholdRad "-2.02"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbDiggingUnload" ;
+    rdfs:label "Elbow Joint ROM (Vombatus ursinus)"@en .
+
+rom:wrist a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "wrist" ;
+    q42:anatomicalTarget anat:plantigrade_forepaws ;
+    q42:primaryAxis "palmar_dorsal_digging_flexion" ;
+    q42:healthyMinRad "-0.78"^^xsd:decimal ;
+    q42:healthyMaxRad "0.62"^^xsd:decimal ;
+    q42:pronationSupinationMaxRad "0.48"^^xsd:decimal ;
+    q42:injuryThresholdRad "-0.98"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbDiggingUnload" ;
+    rdfs:label "Carpal Wrist Joint ROM (Vombatus ursinus)"@en .
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:pelvic_girdle , anat:hindlimb_femur_tibia_fibula ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-0.52"^^xsd:decimal ;
+    q42:healthyMaxRad "1.18"^^xsd:decimal ;
+    q42:abductionMinRad "-0.28"^^xsd:decimal ;
+    q42:abductionMaxRad "0.52"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.38"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricAmbleGait" ;
+    rdfs:label "Hip Joint ROM (Vombatus ursinus)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:hindlimb_femur_tibia_fibula ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.68"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.15"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.88"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricAmbleGait" ;
+    rdfs:label "Knee Stifle Joint ROM (Vombatus ursinus)"@en .
+
+rom:ankle a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "ankle" ;
+    q42:anatomicalTarget anat:plantigrade_hind_pes ;
+    q42:primaryAxis "dorsiflexion_plantarflexion" ;
+    q42:healthyMinRad "-0.68"^^xsd:decimal ;
+    q42:healthyMaxRad "0.84"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.02"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricAmbleGait" ;
+    rdfs:label "Ankle Tarsocrural Plantigrade Joint ROM (Vombatus ursinus)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:axial_spine_sacrum , anat:epaxial_lumbar_gluteal_myology , anat:pelvic_dermal_shield ;
+    q42:primaryAxis "thoracolumbar_pitch_and_rump_wedge" ;
+    q42:healthyMinRad "-0.36"^^xsd:decimal ;
+    q42:healthyMaxRad "0.48"^^xsd:decimal ;
+    q42:lateralBendMaxRad "0.42"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.64"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateBurrowShelterRetreat" ;
+    rdfs:label "Thoracolumbar Spine Joint ROM (Vombatus ursinus)"@en .
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:axial_spine_sacrum , anat:cranium_zygomatic ;
+    q42:primaryAxis "cervical_pitch_graze_and_tunnel_turn" ;
+    q42:healthyMinRad "-0.58"^^xsd:decimal ;
+    q42:healthyMaxRad "0.46"^^xsd:decimal ;
+    q42:yawMaxRad "0.55"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.75"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateBurrowShelterRetreat" ;
+    rdfs:label "Short Cervical Neck Joint ROM (Vombatus ursinus)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:vombatus_ursinus_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, pouch_occupancy_flag:u8, pelage_grizzle_melanin:f32, mange_stress_01:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.14 to 1.15" ;
+    q42:siteVigorRange "0.45 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Vombatus ursinus"@en .
+
+stage:pouch_young a q42:OntogeneticStage ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:stageId "pouch_young" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.16"^^xsd:decimal ;
+    q42:heightScaleMin "0.14"^^xsd:decimal ;
+    q42:heightScaleMax "0.34"^^xsd:decimal ;
+    q42:massRangeKg "0.0005 to 2.5" ;
+    q42:independentLocomotion false ;
+    rdfs:label "Pouch Young (0-8 months, inside backward-opening marsupium)"@en .
+
+stage:juvenile_at_heel a q42:OntogeneticStage ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:stageId "juvenile_at_heel" ;
+    q42:ontogeneticAgeNormMin "0.16"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.36"^^xsd:decimal ;
+    q42:heightScaleMin "0.34"^^xsd:decimal ;
+    q42:heightScaleMax "0.62"^^xsd:decimal ;
+    q42:massRangeKg "2.5 to 10.5" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Juvenile-at-Heel (8-18 months, following mother & learning grazing/burrowing)"@en .
+
+stage:subadult a q42:OntogeneticStage ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:stageId "subadult" ;
+    q42:ontogeneticAgeNormMin "0.36"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.58"^^xsd:decimal ;
+    q42:heightScaleMin "0.62"^^xsd:decimal ;
+    q42:heightScaleMax "0.86"^^xsd:decimal ;
+    q42:massRangeKg "10.5 to 21.5" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Subadult Dispersal Stage (18-24 months, establishing independent burrow network)"@en .
+
+stage:adult_female a q42:OntogeneticStage ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:stageId "adult_female" ;
+    q42:ontogeneticAgeNormMin "0.58"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.86"^^xsd:decimal ;
+    q42:heightScaleMax "1.05"^^xsd:decimal ;
+    q42:massRangeKg "22.0 to 34.0" ;
+    q42:shoulderHeightMinM "0.35"^^xsd:decimal ;
+    q42:shoulderHeightMaxM "0.42"^^xsd:decimal ;
+    q42:karyotype "2n=14 (XX)" ;
+    q42:supportsPouchOccupancy true ;
+    rdfs:label "Adult Female (2n=14 XX, backward-opening marsupium)"@en .
+
+stage:adult_male a q42:OntogeneticStage ;
+    q42:appliesTo qualia:vombatus_ursinus ;
+    q42:stageId "adult_male" ;
+    q42:ontogeneticAgeNormMin "0.58"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.92"^^xsd:decimal ;
+    q42:heightScaleMax "1.15"^^xsd:decimal ;
+    q42:massRangeKg "25.0 to 38.0" ;
+    q42:shoulderHeightMinM "0.37"^^xsd:decimal ;
+    q42:shoulderHeightMaxM "0.45"^^xsd:decimal ;
+    q42:karyotype "2n=14 (XY)" ;
+    q42:supportsPouchOccupancy false ;
+    rdfs:label "Adult Male (2n=14 XY, broad cranium & pelvic dermal shield)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Grazing Ecology, Burrow Ecosystem Engineering)
+# ============================================================================
+
+qualia:poa_sieberiana a dwc:Taxon ;
+    dwc:scientificName "Poa sieberiana Spreng." ;
+    rdfs:label "Snow Tussock Grass"@en .
+
+qualia:themeda_triandra a dwc:Taxon ;
+    dwc:scientificName "Themeda triandra Forssk." ;
+    rdfs:label "Kangaroo Grass"@en .
+
+qualia:carex_appressa a dwc:Taxon ;
+    dwc:scientificName "Carex appressa R.Br." ;
+    rdfs:label "Tall Sedge"@en .
+
+qualia:lomandra_longifolia a dwc:Taxon ;
+    dwc:scientificName "Lomandra longifolia Labill." ;
+    rdfs:label "Spiny-Headed Mat-Rush"@en .
+
+qualia:vombatus_ursinus
+    ro:0002470 qualia:poa_sieberiana ,
+               qualia:themeda_triandra ,
+               qualia:carex_appressa ,
+               qualia:lomandra_longifolia ;
+    rorel:trophically_interacts_with qualia:poa_sieberiana ,
+                                     qualia:themeda_triandra ,
+                                     qualia:carex_appressa ,
+                                     qualia:lomandra_longifolia ;
+    ro:0002303 envo:01000220 ;
+    q42:ecologicalFunction "Allogenic ecosystem engineer excavating 15-30 m thermal-refuge burrow networks utilized by native mammals, reptiles, and birds during bushfires and temperature extremes; coarse tussock grazer shaping grass-lawn swards."@en ;
+    rdfs:comment "NSW NPWS and Victorian Biodiversity Atlas document Vombatus ursinus across coastal forests, mountain ranges, subalpine snow-grass plains, and western slopes, feeding on Poa sieberiana, Themeda triandra, sedges, rushes, and subterranean roots."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:dharug_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharug Country (Hawkesbury-Nepean, Cumberland Plain & Blue Mountains Foothills, NSW)"@en ;
+    tk:language_group "Dharug" ;
+    tk:vernacularName "Wombat"@qaa-x-dharug , "Wambad"@qaa-x-dharug ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" .
+
+country:gundungurra_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gundungurra Country (Southern Blue Mountains, Burragorang & Southern Highlands, NSW)"@en ;
+    tk:language_group "Gundungurra" ;
+    tk:vernacularName "Wombat"@qaa-x-gund , "Wambad"@qaa-x-gund ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Monaro Tablelands & Snowy High Plains, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:walgalu_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Walgalu Country (Tumut, Talbingo & Northern Kosciuszko, NSW)"@en ;
+    tk:language_group "Walgalu / Wolgalu" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Central & South-Western Slopes and Tablelands, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Gippsland Plains, Strzelecki & East Gippsland, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges, Dandenongs & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:vernacularName "Waring"@qaa-x-woi ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Port Phillip, Mornington Peninsula & Western Port, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .
+
+country:taungurung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Taungurung Country (Upper Goulburn, Rubicon & Victorian High Country, VIC)"@en ;
+    tk:language_group "Taungurung" ;
+    tk:care_governance "CARE Principles" .

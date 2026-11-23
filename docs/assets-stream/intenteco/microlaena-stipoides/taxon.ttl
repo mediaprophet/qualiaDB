@@ -1,0 +1,54 @@
+# Microlaena stipoides (Labill.) R.Br. (Weeping Grass) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:microlaena_stipoides:organ:> .
+
+qualia:microlaena_stipoides a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:microlaena_stipoides> , <did:q42:taxon:microlaena-stipoides> ;
+    rdfs:label "Weeping Grass"@en , "Microlaena stipoides (Labill.) R.Br."@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Microlaena stipoides (Labill.) R.Br." ;
+    dwc:family "Poaceae" ;
+    dwc:vernacularName "Weeping Grass"@en ;
+    dwc:establishmentMeans "native" ;
+    q42:groundcoverGroup "grass" ;
+    q42:ecologicalRole "Shaded forest and woodland floors, lawns and moist grassland; year-round green C3 grass" ;
+    q42:naturalSwayFreqHz "2.1"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/node/apni/2916956> ;
+    q42:alaMatch "Microlaena stipoides [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/2702867> ;
+    q42:alaOccurrenceRecords "83723"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "48736"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "25702"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "1693"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "3413"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "2511"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:33:17.420841+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Darug Country (Cumberland Plain, NSW)" , "Gundungurra Country (NSW)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/node/apni/2916956> , <https://www.gbif.org/species/2702867> , <https://bie.ala.org.au/search?q=Microlaena+stipoides> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Microlaena+stipoides> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Microlaena+stipoides> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:microlaena_stipoidesShape a sh:NodeShape ;
+    sh:targetNode qualia:microlaena_stipoides ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

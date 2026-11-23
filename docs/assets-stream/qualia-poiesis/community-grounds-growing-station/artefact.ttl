@@ -1,0 +1,134 @@
+# Community Grounds Stepped NFT Hydroponic & Reed-Bed Biofilter Station (community-grounds-growing-station) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: ECO-WP-MADE-01 | Organization: github.com/qualia-poiesis/community-grounds-growing-station
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:community-grounds-growing-station:> .
+@prefix part:   <urn:qualia:design:community-grounds-growing-station:part:> .
+@prefix port:   <urn:qualia:design:community-grounds-growing-station:port:> .
+
+design:rev1 a made:Artefact , made:AgriculturalDevice , dcat:Dataset ;
+    owl:sameAs <did:q42:design:community_grounds_growing_station> ;
+    dct:identifier <urn:qualia:design:community-grounds-growing-station:rev1> , <did:q42:design:community_grounds_growing_station> ;
+    rdfs:label "Community Grounds Stepped NFT Hydroponic & Reed-Bed Biofilter Station"@en ;
+    dct:title "Community Grounds Stepped NFT Hydroponic & Reed-Bed Biofilter Station — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/community-grounds-growing-station> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "nutrient_film_and_reedbed_recirculation" , "crop_rosette_phototropic_growth" , "wetland_reed_breeze_ripple" , "filter_manifold_backwash_cycle" ;
+    made:lengthM "2.600"^^xsd:decimal ;
+    made:widthM "1.850"^^xsd:decimal ;
+    made:heightM "1.720"^^xsd:decimal ;
+    made:curbMassKg "245.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "2.4"^^xsd:decimal ;
+    made:totalAuthoredParts "42"^^xsd:integer ;
+    made:hasComponent part:post-front-L , part:post-rear-L , part:rail-low-L , part:rail-mid-L , part:rail-high-L , part:brace-fwd-L , part:brace-bwd-L , part:post-front-R , part:post-rear-R , part:rail-low-R , part:rail-mid-R , part:rail-high-R , part:brace-fwd-R , part:brace-bwd-R , part:leveling-foot-0 , part:leveling-foot-1 , part:leveling-foot-2 , part:leveling-foot-3 ;
+    made:hasPort port:dc-pump-24v , port:nutrient-supply-manifold , port:reed-bed-biofilter-loop .
+
+part:post-front-L a made:StructuralPost , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-post-front-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Post Front L"@en .
+part:post-rear-L a made:StructuralPost , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-post-rear-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Post Rear L"@en .
+part:rail-low-L a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-low-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail Low L"@en .
+part:rail-mid-L a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-mid-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail Mid L"@en .
+part:rail-high-L a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-high-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail High L"@en .
+part:brace-fwd-L a made:CrossBrace , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-brace-fwd-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Brace Fwd L"@en .
+part:brace-bwd-L a made:CrossBrace , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-brace-bwd-L> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Brace Bwd L"@en .
+part:post-front-R a made:StructuralPost , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-post-front-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Post Front R"@en .
+part:post-rear-R a made:StructuralPost , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-post-rear-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Post Rear R"@en .
+part:rail-low-R a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-low-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail Low R"@en .
+part:rail-mid-R a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-mid-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail Mid R"@en .
+part:rail-high-R a made:SupportBeam , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-rail-high-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rail High R"@en .
+part:brace-fwd-R a made:CrossBrace , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-brace-fwd-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Brace Fwd R"@en .
+part:brace-bwd-R a made:CrossBrace , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-brace-bwd-R> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Brace Bwd R"@en .
+part:leveling-foot-0 a made:LevelingFoot , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-leveling-foot-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Leveling Foot 0"@en .
+part:leveling-foot-1 a made:LevelingFoot , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-leveling-foot-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Leveling Foot 1"@en .
+part:leveling-foot-2 a made:LevelingFoot , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-leveling-foot-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Leveling Foot 2"@en .
+part:leveling-foot-3 a made:LevelingFoot , made:Component ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#part-leveling-foot-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Leveling Foot 3"@en .
+
+port:dc-pump-24v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#port-dc-pump-24v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "120.0"^^xsd:decimal .
+port:nutrient-supply-manifold a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#port-nutrient-supply-manifold> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "18.0"^^xsd:decimal .
+port:reed-bed-biofilter-loop a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_grounds_growing_station#port-reed-bed-biofilter-loop> ;
+    made:portMedium "hydraulic_liquid" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:LiterPerMinute ;
+    made:ratedCapacity "12.0"^^xsd:decimal .

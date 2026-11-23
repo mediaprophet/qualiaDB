@@ -1,0 +1,452 @@
+# Banksia integrifolia L.f. (Coast Banksia, Proteaceae)
+# Taxon concept, anatomical subsystems (PO:*), pipe-model & biophysical allometry,
+# InstanceState64 ontogenetic parameter bounds, ecological interactions (RO:*),
+# and South-Eastern Australian Biocultural Country provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds across the South-Eastern Australian coastal dune, headland, and
+# near-coastal range (primarily subsp. integrifolia, acknowledging montane subsp.
+# monticola and northern subsp. compar). Exact site and individual occurrence remain pending.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix bint:   <urn:qualia:taxon:banksia_integrifolia:> .
+@prefix organ:  <urn:qualia:taxon:banksia_integrifolia:organ:> .
+@prefix stage:  <urn:qualia:taxon:banksia_integrifolia:stage:> .
+@prefix trait:  <urn:qualia:taxon:banksia_integrifolia:trait:> .
+@prefix src:    <urn:qualia:source:banksia-integrifolia:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:banksia_integrifolia a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:banksia_integrifolia> ;
+    dct:identifier <urn:qualia:taxon:banksia_integrifolia> ,
+                   <did:q42:taxon:banksia_integrifolia> ;
+    rdfs:label "Coast Banksia"@en ,
+               "Banksia integrifolia L.f."@la ;
+    dwc:scientificName "Banksia integrifolia L.f." ;
+    dwc:scientificNameAuthorship "L.f." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Proteales" ;
+    dwc:family "Proteaceae" ;
+    dwc:genus "Banksia" ;
+    dwc:subgenus "Banksia" ;
+    q42:section "Banksia" ;
+    q42:series "Salicinae" ;
+    dwc:specificEpithet "integrifolia" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Coast Banksia"@en ,
+                       "Coastal Banksia"@en ,
+                       "White Honeysuckle"@en ,
+                       "Honeysuckle Oak"@en ,
+                       "White Banksia"@en ;
+    dwc:taxonID "GBIF:7682229" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/107602> ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/taxon/apni/51732899> ;
+    aunsl:lsid <https://id.biodiversity.org.au/taxon/apni/51732899> ;
+    dcat:landingPage <https://github.com/intenteco/banksia-integrifolia> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:ecologicalCommunity "Eastern Australian Coastal Foredune, Headland Scrub & Near-Coastal Littoral Woodland" ;
+    q42:workingLocality "South-Eastern Australian Coastal Dunes, Headlands & Near-Coastal Sands (QLD-NSW-VIC; exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/107602> ,
+                 <https://id.biodiversity.org.au/taxon/apni/51732899> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/taxon/apni/51732899> ,
+                 <https://www.gbif.org/species/7682229> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Banksia~integrifolia&page=nswfl> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/36a63a70-f6bb-44aa-9b00-fc71b4264b5e> ,
+                 <https://profiles.ala.org.au/opus/foa/profile/Banksia%20integrifolia> .
+
+<did:q42:taxon:banksia_integrifolia> a dwc:Taxon ;
+    owl:sameAs qualia:banksia_integrifolia ;
+    rdfs:label "DID Q42 Locator — Banksia integrifolia L.f."@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:banksia_serrata a dwc:Taxon ;
+    dwc:scientificName "Banksia serrata L.f." ;
+    rdfs:label "Saw Banksia / Old Man Banksia"@en .
+
+qualia:banksia_marginata a dwc:Taxon ;
+    dwc:scientificName "Banksia marginata Cav." ;
+    rdfs:label "Silver Banksia"@en .
+
+qualia:banksia_ericifolia a dwc:Taxon ;
+    dwc:scientificName "Banksia ericifolia L.f." ;
+    rdfs:label "Heath-leaved Banksia"@en .
+
+qualia:banksia_spinulosa a dwc:Taxon ;
+    dwc:scientificName "Banksia spinulosa Sm." ;
+    rdfs:label "Hairpin Banksia"@en .
+
+qualia:banksia_paludosa a dwc:Taxon ;
+    dwc:scientificName "Banksia paludosa R.Br." ;
+    rdfs:label "Swamp Banksia"@en .
+
+qualia:banksia_integrifolia
+    owl:differentFrom qualia:banksia_serrata ,
+                      qualia:banksia_marginata ,
+                      qualia:banksia_ericifolia ,
+                      qualia:banksia_spinulosa ,
+                      qualia:banksia_paludosa ;
+    rdfs:comment "Taxonomic boundary: do not substitute Banksia serrata (alternate coarsely serrate leaves, deeply furrowed corky orange-brown bark, grey-cream spikes, massive serotinous cones), B. marginata (smaller shrub/tree, scattered narrow leaves with blunt truncated/notched apices), B. ericifolia (fine ericoid needle leaves, orange-red spikes), B. spinulosa (linear leaves, dark hooked styles), or B. paludosa (low coastal/heath shrub)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/107602> ;
+    rdfs:label "APNI Name 107602 — Banksia integrifolia L.f." .
+
+src:apni-taxon a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/taxon/apni/51732899> ;
+    rdfs:label "APNI/APC Taxon 51732899 — Banksia integrifolia L.f." .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/taxon/apni/51732899> ;
+    rdfs:label "Atlas of Living Australia — Banksia integrifolia" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/7682229> ;
+    rdfs:label "GBIF Backbone Taxonomy — Banksia integrifolia (7682229)" .
+
+src:plantnet a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Banksia~integrifolia&page=nswfl> ;
+    rdfs:label "PlantNET NSW Flora Online — Banksia integrifolia" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/36a63a70-f6bb-44aa-9b00-fc71b4264b5e> ;
+    rdfs:label "VicFlora — Banksia integrifolia" .
+
+src:foa a dct:BibliographicResource ;
+    dct:identifier <https://profiles.ala.org.au/opus/foa/profile/Banksia%20integrifolia> ;
+    rdfs:label "Flora of Australia (ABRS / ALA) — Banksia integrifolia L.f." .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & PROTEACEAE SPECIALIZATIONS)
+# ==============================================================================
+
+qualia:banksia_integrifolia
+    ro:0002180 organ:proteoid_cluster_root_system ,
+               organ:gnarled_tessellated_trunk_bole ,
+               organ:pseudowhorled_branch_architecture ,
+               organ:whorled_discolorous_foliage ,
+               organ:cylindrical_flower_spike_and_follicular_cone .
+
+organ:proteoid_cluster_root_system a po:0025025 , po:0025524 , po:0025531 , po:0000038 , po:0000042 ;
+    rdfs:label "Proteoid Cluster Root Mats, Dune-Anchoring Taproot & Basal Lignotuber"@en ;
+    q42:pinId "pin_s1_taproot" , "pin_s1_buttress_flare" , "pin_s1_lignotuber" , "pin_s1_mycorrhizal_rhizosphere" ;
+    q42:proteoidAdaptation "dense_bottlebrush_cluster_rootlet_mats_exuding_carboxylates_for_phosphorus_solubilization" ;
+    q42:lateralRootCountMin 4 ;
+    q42:lateralRootCountMax 8 ;
+    q42:resproutingMode "basal_lignotuber_PO_0025524_and_epicormic_stem_buds_under_thick_bark" ;
+    rdfs:comment "Specialized Proteaceae root system combining dense seasonal mats of proteoid cluster rootlets (PO:0025025) in upper leached coastal dune/headland sands for phosphorus acquisition without mycorrhizal dependence, deep anchoring taproot (PO:0000038) and lateral dune-stabilizing roots (PO:0000042), plus basal lignotuber (PO:0025524) and epicormic resprouting capacity."@en ;
+    prov:wasDerivedFrom src:foa , src:plantnet , src:vicflora .
+
+organ:gnarled_tessellated_trunk_bole a po:0025004 , po:0004518 , po:0005849 , po:0005848 , po:0005597 , po:0009005 , po:0005513 ;
+    rdfs:label "Gnarled Tessellated Trunk Bole & Medullary-Rayed Proteaceous Wood"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s2_rhytidome_cork" , "pin_s2_vascular_cambium" , "pin_s2_sapwood_xylem" , "pin_s2_heartwood_tyloses" ;
+    q42:barkType "persistent_rough_grey_brown_finely_tessellated_to_furrowed_corky_bark" ;
+    q42:barkCurie "PO:0004518" ;
+    q42:heartwoodCurie "PO:0005849" ;
+    q42:sapwoodCurie "PO:0005848" ;
+    q42:cambiumCurie "PO:0005597" ;
+    q42:heartwoodCharacter "dense_pinkish_red_wood_with_conspicuous_broad_medullary_rays" ;
+    q42:windHabit "upright_in_sheltered_woodlands_to_twisted_leaning_wind_sheared_on_coastal_headlands" ;
+    rdfs:comment "Coastal wind-sheared or upright woodland trunk clad in rough grey-brown, deeply tessellated/furrowed corky bark (PO:0004518) insulating dormant epicormic buds, overlying vascular cambium (PO:0005597), pale sapwood (PO:0005848), and pinkish-red proteaceous heartwood with prominent broad medullary rays (PO:0005849)."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+organ:pseudowhorled_branch_architecture a po:0009006 , po:0020100 ;
+    rdfs:label "Sympodial Pseudowhorled Branch Architecture & Pipe-Model Crown"@en ;
+    q42:pinId "pin_s1_crown_space_colonization" ;
+    q42:branchingPattern "sympodial_pseudowhorled_nodes_subtending_terminal_inflorescences" ;
+    q42:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42:forkAngleMinDeg "38.0"^^xsd:decimal ;
+    q42:forkAngleMaxDeg "68.0"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:windPruningMorphology "asymmetric_salt_wind_sheared_headland_canopy_or_open_rounded_woodland_crown" ;
+    rdfs:comment "Pseudowhorled sympodial branching nodes (PO:0009006) arising in clusters below terminal conflorescences, governed by Shinozaki/WBE pipe-model cross-sectional area conservation (r_parent^2.49 = sum r_child^2.49) and sculpted by onshore salt-laden coastal winds."@en ;
+    prov:wasDerivedFrom src:foa , src:plantnet .
+
+organ:whorled_discolorous_foliage a po:0025034 , po:0000014 , po:0000032 , po:0005679 , po:0005020 ;
+    rdfs:label "Whorled Strongly Discolorous Oblanceolate Leaves (Silvery-White Underside)"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" , "pin_s4_isobilateral_palisade" , "pin_s4_sclerenchyma_bundle_sheath" ;
+    q42:phyllotaxy "whorls_of_3_to_5_leaves_per_node" ;
+    q42:leavesPerWhorlMin 3 ;
+    q42:leavesPerWhorlMax 5 ;
+    q42:laminaShape "oblanceolate_to_narrow_obovate_or_narrow_elliptic" ;
+    q42:adultLeafMargin "entire_smooth_occasionally_shortly_toothed" ;
+    q42:juvenileLeafMargin "coarsely_serrate_to_dentate" ;
+    q42:leafLengthMinCm "4.0"^^xsd:decimal ;
+    q42:leafLengthMaxCm "20.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "1.0"^^xsd:decimal ;
+    q42:leafWidthMaxCm "3.6"^^xsd:decimal ;
+    q42:typicalSubspIntegrifoliaCm "4.0..10.0_by_1.7..2.5" ;
+    q42:discolorationDiagnostic "strongly_discolorous_dark_dull_green_glabrous_adaxial_cuticle_vs_bright_silvery_white_felted_tomentose_abaxial_underside" ;
+    q42:stomatalCrypsis "hypostomatic_sunken_stomatal_crypts_beneath_dense_silvery_trichome_tomentum" ;
+    rdfs:comment "Diagnostic whorls of 3-5 oblanceolate sclerophyll leaves (PO:0025034): juvenile/coppice leaves serrate-dentate, adult leaves predominantly entire; strongly discolorous with dark dull-green waxy adaxial cuticle contrasting against bright silvery-white felted tomentose abaxial undersides that flash dramatically in coastal wind."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+organ:cylindrical_flower_spike_and_follicular_cone a po:0009046 , po:0009001 , po:0009010 ;
+    rdfs:label "Cylindrical Golden-Yellow Flower Spikes & Persistent Bivalved Follicular Cones"@en ;
+    q42:pinId "pin_s3_umbellaster" , "pin_s3_style_stigma" , "pin_s3_gumnut_valves" , "pin_s3_seed_chaff" ;
+    q42:inflorescenceHabit "erect_cylindrical_conflorescence_spike_with_orthogonal_spiral_parastichies" ;
+    q42:spikeHeightMinCm "7.0"^^xsd:decimal ;
+    q42:spikeHeightMaxCm "14.0"^^xsd:decimal ;
+    q42:spikeDiameterMinCm "5.0"^^xsd:decimal ;
+    q42:spikeDiameterMaxCm "7.0"^^xsd:decimal ;
+    q42:flowerColor "pale_lemon_to_golden_yellow" ;
+    q42:anthesisSeason "January_to_July_autumn_winter_peak" ;
+    q42:infructescenceHabit "persistent_woody_cylindrical_cone_with_protruding_bivalved_woody_follicles" ;
+    q42:follicleLengthMmMin "8.0"^^xsd:decimal ;
+    q42:follicleLengthMmMax "15.0"^^xsd:decimal ;
+    q42:follicleDehiscence "weakly_serotinous_follicles_mostly_opening_spontaneously_8_to_10_months_post_anthesis" ;
+    q42:seedType "two_winged_dark_seeds_separated_by_a_woody_separator" ;
+    rdfs:comment "Erect cylindrical golden-yellow to pale-lemon flower spikes (PO:0009046, 7-14 cm tall) packed with paired flowers and hooked styles in spiral parastichies, maturing 8-10 months later into persistent woody cones (PO:0009001) embedded with protruding bivalved follicles (8-15 mm) that open spontaneously at maturity to release winged seeds (PO:0009010)."@en ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS
+# ==============================================================================
+
+qualia:banksia_integrifolia
+    q42:hasTrait trait:pipe_model_exponent ,
+                 trait:fork_angle ,
+                 trait:internode_elongation ,
+                 trait:mature_height ,
+                 trait:dbh ,
+                 trait:specific_leaf_area ,
+                 trait:wood_density ,
+                 trait:youngs_modulus ,
+                 trait:xylem_p50 ,
+                 trait:nectar_sugar_yield ,
+                 trait:elevation_range .
+
+trait:pipe_model_exponent a q42:AllometricRule ;
+    rdfs:label "Shinozaki / WBE Pipe-Model Exponent"@en ;
+    q42:equation "r_parent^n = sum(r_child^n)" ;
+    q42:nominalValue "2.49"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_proteaceae_allometry" .
+
+trait:fork_angle a q42:AllometricRule ;
+    rdfs:label "Pseudowhorled Branch Fork Angle"@en ;
+    q42:minValue "38.0"^^xsd:decimal ;
+    q42:maxValue "68.0"^^xsd:decimal ;
+    q42:nominalValue "50.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:foa , src:plantnet .
+
+trait:internode_elongation a q42:AllometricRule ;
+    rdfs:label "Internode Elongation & Phyllotactic Divergence"@en ;
+    q42:internodeElongationRatio "0.74"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:unit "ratio / rad" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Coastal Tree / Wind-Sheared Headland Stature"@en ;
+    q42:minValue "4.0"^^xsd:decimal ;
+    q42:maxValue "25.0"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:foa .
+
+trait:dbh a q42:BiophysicalTrait ;
+    rdfs:label "Diameter at Breast Height (DBH)"@en ;
+    q42:minValue "0.25"^^xsd:decimal ;
+    q42:maxValue "0.90"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:foa , src:vicflora .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Specific Leaf Area (SLA)"@en ;
+    q42:minValue "3.8"^^xsd:decimal ;
+    q42:maxValue "15.2"^^xsd:decimal ;
+    q42:nominalValue "4.35"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_sclerophyll_lma_literature" ;
+    rdfs:comment "Adult sclerophyll foliage ~4.35 m2/kg (LMA ~229.8 g/m2); juvenile/coastal seedling foliage up to ~15.2 m2/kg (LMA ~65.7 g/m2)."@en ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:wood_density a q42:BiophysicalTrait ;
+    rdfs:label "Proteaceous Medullary-Rayed Wood Density"@en ;
+    q42:minValue "480.0"^^xsd:decimal ;
+    q42:maxValue "660.0"^^xsd:decimal ;
+    q42:nominalValue "530.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "sourced_wood_density" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Longitudinal Young's Modulus (E)"@en ;
+    q42:nominalValue "9.8"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "modeled_biomechanical_estimate" ;
+    rdfs:comment "Modeled longitudinal elastic modulus scaled to 530 kg/m3 proteaceous wood density; direct timber test series unassessed."@en .
+
+trait:xylem_p50 a q42:BiophysicalTrait ;
+    rdfs:label "Xylem Cavitation Vulnerability (P50)"@en ;
+    q42:nominalValue "-3.4"^^xsd:decimal ;
+    q42:unit "MPa" ;
+    q42:evidenceStatus "modeled_hydraulic_estimate" ;
+    rdfs:comment "Modeled coastal sclerophyll xylem cavitation vulnerability threshold; empirical stem P50 curve pending AusTraits reconciliation."@en .
+
+trait:nectar_sugar_yield a q42:BiophysicalTrait ;
+    rdfs:label "Autumn-Winter Conflorescence Nectar Output"@en ;
+    q42:minValue "0.8"^^xsd:decimal ;
+    q42:maxValue "4.5"^^xsd:decimal ;
+    q42:nominalValue "2.2"^^xsd:decimal ;
+    q42:unit "mL_nectar/spike/24h" ;
+    q42:evidenceStatus "modeled_floral_nectar_yield" ;
+    rdfs:comment "Abundant autumn-winter nectar supporting honeyeaters, lorikeets, and nocturnal marsupials."@en ;
+    prov:wasDerivedFrom src:foa , src:ala .
+
+trait:elevation_range a q42:EnvironmentalNicheTrait ;
+    rdfs:label "Coastal Dune, Headland & Montane Elevation Range"@en ;
+    q42:minValue "0"^^xsd:integer ;
+    q42:maxValue "1500"^^xsd:integer ;
+    q42:coastalSubspTypicalMaxM "100"^^xsd:integer ;
+    q42:unit "m AHD" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:plantnet , src:vicflora , src:ala .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+bint:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.35..1.25] site-modulated vertical stature scalar (4-25 m)" ;
+    q42:field_site_vigor "f32 [0.40..1.20] edaphic moisture/phosphorus crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [salt_wind_shear_bias 0..1, drought_stress 0..1, fire_char_height 0..1, epicormic_sprout_factor 0..1]" ;
+    q42:hasStage stage:coastal_seedling , stage:serrate_sapling , stage:mature_headland_tree , stage:senescent_gnarled_veteran .
+
+stage:coastal_seedling a q42:OntogeneticStage ;
+    rdfs:label "Coastal Seedling Stage (0.00 - 0.15)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal ;
+    q42:activeOrgans organ:proteoid_cluster_root_system , organ:whorled_discolorous_foliage ;
+    q42:heightNormRangeM "0.2..1.5" ;
+    rdfs:comment "Coastal sand-dune seedling establishing proteoid cluster root mats (PO:0025025), taproot, and initial whorls of serrate-dentate discolorous juvenile leaves."@en .
+
+stage:serrate_sapling a q42:OntogeneticStage ;
+    rdfs:label "Serrate Sapling Stage (0.15 - 0.40)"@en ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.40"^^xsd:decimal ;
+    q42:activeOrgans organ:proteoid_cluster_root_system , organ:gnarled_tessellated_trunk_bole , organ:pseudowhorled_branch_architecture , organ:whorled_discolorous_foliage ;
+    q42:heightNormRangeM "1.5..5.0" ;
+    rdfs:comment "Developing sapling forming rough tessellated bark, basal lignotuber swelling, pseudowhorled tiers, and transitioning from serrate juvenile leaves to entire oblanceolate adult whorls."@en .
+
+stage:mature_headland_tree a q42:OntogeneticStage ;
+    rdfs:label "Mature Headland & Dune Woodland Tree (0.40 - 0.80)"@en ;
+    q42:ageNormMin "0.40"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:proteoid_cluster_root_system , organ:gnarled_tessellated_trunk_bole , organ:pseudowhorled_branch_architecture , organ:whorled_discolorous_foliage , organ:cylindrical_flower_spike_and_follicular_cone ;
+    q42:heightNormRangeM "4.0..25.0" ;
+    q42:dbhRangeM "0.25..0.65" ;
+    rdfs:comment "Reproductive Coast Banksia spanning wind-sheared 4-8 m headland specimens to 15-25 m sheltered coastal woodland trees, displaying silvery-flashing discolorous whorls, cylindrical golden-yellow flower spikes (7-14 cm), and bivalved follicular cones."@en .
+
+stage:senescent_gnarled_veteran a q42:OntogeneticStage ;
+    rdfs:label "Senescent Gnarled Veteran Coast Banksia (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:proteoid_cluster_root_system , organ:gnarled_tessellated_trunk_bole , organ:pseudowhorled_branch_architecture , organ:whorled_discolorous_foliage , organ:cylindrical_flower_spike_and_follicular_cone ;
+    q42:heightNormRangeM "6.0..25.0" ;
+    q42:dbhRangeM "0.55..0.90" ;
+    rdfs:comment "Gnarled, deeply leaning veteran tree with heavily furrowed tessellated bark, post-fire epicormic crown recovery, persistent clusters of open woody follicular cones, and weathered limb crevices."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:phylidonyris_novaehollandiae a dwc:Taxon ;
+    dwc:scientificName "Phylidonyris novaehollandiae (Latham, 1790)" ;
+    rdfs:label "New Holland Honeyeater"@en .
+
+qualia:trichoglossus_moluccanus a dwc:Taxon ;
+    dwc:scientificName "Trichoglossus moluccanus (Gmelin, 1788)" ;
+    rdfs:label "Rainbow Lorikeet"@en .
+
+qualia:acanthorhynchus_tenuirostris a dwc:Taxon ;
+    dwc:scientificName "Acanthorhynchus tenuirostris (Latham, 1801)" ;
+    rdfs:label "Eastern Spinebill"@en .
+
+qualia:petaurus_breviceps a dwc:Taxon ;
+    dwc:scientificName "Petaurus breviceps Waterhouse, 1838" ;
+    rdfs:label "Sugar Glider"@en .
+
+qualia:proteoid_rhizosphere_microbiome a dwc:Taxon ;
+    rdfs:label "Coastal Dune Proteoid Rhizosphere Guild"@en .
+
+# RO:0002081 = co-occurs with / overlapping niche; RO:0002434 = interacts with;
+# RO:0002444 = symbiont of / mutualist
+qualia:banksia_integrifolia
+    ro:0002081 qualia:banksia_serrata ,
+               qualia:banksia_marginata ;
+    ro:0002444 qualia:proteoid_rhizosphere_microbiome ;
+    ro:0002434 qualia:phylidonyris_novaehollandiae ,
+               qualia:trichoglossus_moluccanus ,
+               qualia:acanthorhynchus_tenuirostris ,
+               qualia:petaurus_breviceps ;
+    q42:biome envo:01000221 , envo:00000171 ;
+    q42:ecologicalFunction "coastal_foredune_and_headland_stabilization" ;
+    rdfs:comment "Keystone winter-nectar flora of South-Eastern Australian coastal dunes, headlands, and littoral woodlands; stabilizes windblown coastal sands via deep taproots and dense proteoid root mats while sustaining New Holland Honeyeaters, Rainbow Lorikeets, Eastern Spinebills, and nocturnal Sugar Gliders through autumn-winter."@en ;
+    prov:wasDerivedFrom src:foa , src:plantnet , src:vicflora , src:ala .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:banksia_integrifolia
+    tk:custodial_country "Bundjalung Country (Northern Rivers & Coastal Headlands NSW)" ,
+                         "Gumbaynggirr Country (Mid-North Coast Headlands & Dunes NSW)" ,
+                         "Worimi Country (Port Stephens & Stockton Bight Coastal Sands NSW)" ,
+                         "Awabakal Country (Newcastle & Lake Macquarie Coast NSW)" ,
+                         "Dharawal Country (Illawarra & Southern Sydney Coast NSW)" ,
+                         "Yuin Country (South Coast Headlands, Estuaries & Dunes NSW)" ,
+                         "Gunai / Kurnai Country (East Gippsland & Ninety Mile Beach VIC)" ,
+                         "Bunurong Country (Western Port & Mornington Peninsula Coast VIC)" ,
+                         "Wadawurrung Country (Bellarine & Surf Coast Littoral VIC)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    rdfs:comment "Country attribution spans Bundjalung, Gumbaynggirr, Worimi, Awabakal, Dharawal, Yuin, Gunai/Kurnai, Bunurong, and Wadawurrung Nations along South-Eastern Australian coastal dunes and headlands. Ethnographic records note soaking nectar-rich Banksia spikes in water for sweet seasonal drinks and using smouldering cones for carrying embers. Local Contexts TK/BC notices record biocultural provenance without asserting community-authored TK labels absent direct First Nations co-design."@en .

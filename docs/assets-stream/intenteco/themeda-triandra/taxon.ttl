@@ -1,0 +1,86 @@
+# Themeda triandra Forssk. (Kangaroo Grass)
+# Taxon concept, anatomical subsystems (PO:*), InstanceState64 ontogeny,
+# ecological interactions (RO:*), and SE Australian Biocultural Country provenance (SPC / Local Contexts).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix sp:     <urn:qualia:taxon:themeda_triandra:> .
+@prefix organ:  <urn:qualia:taxon:themeda_triandra:organ:> .
+@prefix stage:  <urn:qualia:taxon:themeda_triandra:stage:> .
+
+qualia:themeda_triandra a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:themeda_triandra> , <did:q42:taxon:themeda-triandra> ;
+    dct:identifier <urn:qualia:taxon:themeda_triandra> , <did:q42:taxon:themeda_triandra> ;
+    rdfs:label "Kangaroo Grass"@en , "Themeda triandra Forssk."@la ;
+    dwc:scientificName "Themeda triandra Forssk." ;
+    dwc:scientificNameAuthorship "Forssk." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Liliopsida" ;
+    dwc:order "Poales" ;
+    dwc:family "Poaceae" ;
+    dwc:genus "Themeda" ;
+    dwc:specificEpithet "triandra" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Kangaroo Grass"@en , "Themeda australis"@en ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/98412> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2901847> ;
+    q42:ecologicalRole "Grassy box-gum woodlands, basalt plains & open sclerophyll understorey (SE Australia)" ;
+    q42:mycorrhizalAssociation "Arbuscular mycorrhizal (AMF)" ;
+    q42:naturalSwayFreqHz "1.55"^^xsd:decimal ;
+    dcat:landingPage <https://github.com/intenteco/themeda-triandra> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/98412> , <https://id.biodiversity.org.au/node/apni/2901847> , <https://www.gbif.org/species/2704923> , <https://vicflora.rbg.vic.gov.au/flora/taxon/9eb061e1-f39e-48ab-8a8d-5591337e8495> .
+
+<did:q42:taxon:themeda_triandra> a dwc:Taxon ;
+    owl:sameAs qualia:themeda_triandra ;
+    rdfs:label "DID Q42 Locator — Themeda triandra Forssk."@en .
+
+organ:rhizosphere_root_base a po:0025025 , po:0000042 ;
+    rdfs:label "Fibrous Root Crown / Rhizosphere & AMF Hyphal Network (-0.58 m)"@en .
+
+organ:photosynthetic_canopy a po:0025034 , po:0009047 ;
+    rdfs:label "Photosynthetic Foliage & Reproductive Inflorescence Canopy (0.55..0.95 m)"@en .
+
+qualia:themeda_triandra
+    ro:0002180 organ:rhizosphere_root_base , organ:photosynthetic_canopy ;
+    tk:custodial_country "Ngunnawal & Ngambri Country (Canberra / Southern Tablelands, ACT/NSW)" ,
+                         "Wurundjeri Country (Yarra Catchment, VIC)" ,
+                         "Wiradjuri Country (Murray-Darling Slopes & Plains, NSW)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" .
+
+sp:InstanceState64 a q42:StateBufferSchema ;
+    q42:byteSize 64 ;
+    q42:hasStage stage:seedling_tussock , stage:establishing_clump , stage:mature_reproductive , stage:senescent_resprouter .
+
+stage:seedling_tussock a q42:OntogeneticStage ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal .
+
+stage:establishing_clump a q42:OntogeneticStage ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal .
+
+stage:mature_reproductive a q42:OntogeneticStage ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal .
+
+stage:senescent_resprouter a q42:OntogeneticStage ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal .

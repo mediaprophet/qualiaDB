@@ -1,0 +1,54 @@
+# Chrysocephalum apiculatum (Labill.) Steetz (Common Everlasting) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:chrysocephalum_apiculatum:organ:> .
+
+qualia:chrysocephalum_apiculatum a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:chrysocephalum_apiculatum> , <did:q42:taxon:chrysocephalum-apiculatum> ;
+    rdfs:label "Common Everlasting"@en , "Chrysocephalum apiculatum (Labill.) Steetz"@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Chrysocephalum apiculatum (Labill.) Steetz" ;
+    dwc:family "Asteraceae" ;
+    dwc:vernacularName "Common Everlasting"@en ;
+    dwc:establishmentMeans "native" ;
+    q42:groundcoverGroup "flower" ;
+    q42:ecologicalRole "Grassland, grassy woodland and roadsides; silvery perennial with golden button heads" ;
+    q42:naturalSwayFreqHz "2.5"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/taxon/apni/51742837> ;
+    q42:alaMatch "Chrysocephalum apiculatum [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/3150895> ;
+    q42:alaOccurrenceRecords "35882"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "16186"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "6805"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "2294"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "999"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "4683"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:34:08.288302+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Wiradjuri Country (Murray slopes, NSW)" , "Dhudhuroa Country (VIC)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/taxon/apni/51742837> , <https://www.gbif.org/species/3150895> , <https://bie.ala.org.au/search?q=Chrysocephalum+apiculatum> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Chrysocephalum+apiculatum> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Chrysocephalum+apiculatum> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:chrysocephalum_apiculatumShape a sh:NodeShape ;
+    sh:targetNode qualia:chrysocephalum_apiculatum ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

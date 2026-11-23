@@ -1,0 +1,54 @@
+# Taraxacum officinale Weber ex F.H.Wigg. (Dandelion) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:taraxacum_officinale:organ:> .
+
+qualia:taraxacum_officinale a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:taraxacum_officinale> , <did:q42:taxon:taraxacum-officinale> ;
+    rdfs:label "Dandelion"@en , "Taraxacum officinale Weber ex F.H.Wigg."@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Taraxacum officinale Weber ex F.H.Wigg." ;
+    dwc:family "Asteraceae" ;
+    dwc:vernacularName "Dandelion"@en ;
+    dwc:establishmentMeans "naturalised" ;
+    q42:groundcoverGroup "flower" ;
+    q42:ecologicalRole "Lawns, pasture, roadsides and disturbed ground; ubiquitous in urban and rural SE Australia" ;
+    q42:naturalSwayFreqHz "2.6"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/taxon/apni/51748197> ;
+    q42:alaMatch "Taraxacum [genus/exactMatch/PRO_PARTE_SYNONYM]" ;
+    owl:sameAs <https://www.gbif.org/species/5394163> ;
+    q42:alaOccurrenceRecords "19734"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "10361"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "5774"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "556"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "911"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "1045"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:33:34.097100+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Wurundjeri Country (Yarra catchment, VIC)" ;
+    q42:recordedOnCountry "Wurundjeri Country (Yarra catchment, VIC)" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/taxon/apni/51748197> , <https://www.gbif.org/species/5394163> , <https://bie.ala.org.au/search?q=Taraxacum+officinale> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Taraxacum+officinale> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Taraxacum+officinale> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:taraxacum_officinaleShape a sh:NodeShape ;
+    sh:targetNode qualia:taraxacum_officinale ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

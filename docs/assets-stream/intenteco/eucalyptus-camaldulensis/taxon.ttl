@@ -1,0 +1,444 @@
+# =============================================================================
+# Eucalyptus camaldulensis Dehnh. (River Red Gum) — Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-01A | Program: IntentEco SE Australia Flora & Fauna
+# =============================================================================
+# Unallocated mathematical locators: did:q42:taxon:eucalyptus_camaldulensis
+#                                    urn:qualia:taxon:eucalyptus_camaldulensis
+# Licence: Social Permissive Commons (SPC) — Living World Inalienable Commons
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix po:        <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:        <http://purl.obolibrary.org/obo/TO_> .
+@prefix flopo:     <http://purl.obolibrary.org/obo/FLOPO_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix tern:      <https://w3id.org/tern/ontologies/tern/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42bio:    <urn:qualia:bio:> .
+@prefix q42state:  <urn:qualia:state:> .
+@prefix src:       <urn:qualia:source:eucalyptus-camaldulensis:> .
+@prefix claim:     <urn:qualia:claim:eucalyptus-camaldulensis:> .
+@prefix organ:     <urn:qualia:organ:eucalyptus-camaldulensis:> .
+@prefix stage:     <urn:qualia:stage:eucalyptus-camaldulensis:> .
+@prefix country:   <urn:qualia:country:se-australia:> .
+
+# -----------------------------------------------------------------------------
+# 1. Authoritative Taxon Concept & Mathematical Identity Locators
+# -----------------------------------------------------------------------------
+
+qualia:eucalyptus_camaldulensis a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis> ;
+    dct:identifier <urn:qualia:taxon:eucalyptus_camaldulensis> ,
+                   <did:q42:taxon:eucalyptus_camaldulensis> ;
+    rdfs:label "River Red Gum"@en , "Eucalyptus camaldulensis Dehnh."@la ;
+    dwc:scientificName "Eucalyptus camaldulensis Dehnh." ;
+    dwc:scientificNameAuthorship "Dehnh." ;
+    dwc:namePublishedIn "Cat. Pl. Hort. Camald. ed. 2: 20 (1832)" ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Myrtales" ;
+    dwc:family "Myrtaceae" ;
+    dwc:genus "Eucalyptus" ;
+    dwc:specificEpithet "camaldulensis" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "River Red Gum"@en ,
+                       "Murray Red Gum"@en ,
+                       "Bial (Yorta Yorta)"@mis ,
+                       "Biyal (Wiradjuri)"@mis ,
+                       "Yarra (Wiradjuri)"@mis ,
+                       "Murungal (Wiradjuri)"@mis ,
+                       "Be-al (Wurundjeri / Woi Wurrung)"@mis ;
+    aunsl:lsid <https://id.biodiversity.org.au/name/apni/101425> ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/101425> ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/node/apni/2921040> ;
+    dwc:taxonID "GBIF:3176787" ;
+    rdfs:seeAlso ncbitaxon:34316 ,
+                 <https://id.biodiversity.org.au/name/apni/101425> ,
+                 <https://id.biodiversity.org.au/node/apni/2921040> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/name/apni/101425> ,
+                 <https://www.gbif.org/species/3176787> ,
+                 <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_camaldulensis_subsp._camaldulensis.htm> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/2e90c675-58e1-4c17-9104-dff7ff101a1c> ,
+                 <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Eucalyptus~camaldulensis> ;
+    dcat:landingPage <https://github.com/intenteco/eucalyptus-camaldulensis> ;
+    q42bio:subspeciesRange "SE Australian corridor predominantly Eucalyptus camaldulensis subsp. camaldulensis Dehnh. along Murray-Darling, Victorian Riverina, Gippsland plains, Hunter, and Northern Rivers floodplains."@en ;
+    q42bio:hasSubsystem organ:root-system-lignotuber ,
+                        organ:mycorrhizal-rhizosphere-network ,
+                        organ:trunk-bark-cambium ,
+                        organ:pipe-model-boughs ,
+                        organ:pendulous-falcate-leaves ,
+                        organ:rostrate-operculate-buds ,
+                        organ:exserted-valve-gumnuts ;
+    q42bio:hasGrowthGrammar q42bio:ecam_pipe_model_grammar ;
+    q42state:hasInstanceStateSchema q42state:ecam_instance_state_64 ;
+    q42bio:hasDevelopmentalStage stage:sapling ,
+                                 stage:pole ,
+                                 stage:mature ,
+                                 stage:veteran ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42bio:commonsLicenceClass "SPC" ;
+    q42bio:perpetualRoyaltiesProhibited "true"^^xsd:boolean ;
+    q42bio:inalienableLivingWorld "true"^^xsd:boolean ;
+    tk:bioculturalNotice "Local Contexts Biocultural (BC) & Traditional Knowledge (TK) provenance acknowledged across SE Australian riverine Country; non-cadastral custodial attribution."@en ;
+    tk:custodial_country "Yorta Yorta Country (Barmah-Millewa / Murray River)" ,
+                         "Wiradjuri Country (Murrumbidgee & Lachlan Riverina)" ,
+                         "Barkindji Country (Baaka / Darling River floodplains)" ,
+                         "Ngarigo Country (Upper Snowy & Monaro valley margins)" ,
+                         "Wurundjeri Country (Birrarung / Yarra & Merri Creek)" ,
+                         "Bundjalung Country (Northern Rivers NSW alluvial floodplains)" ;
+    q42bio:hasCustodialCountry country:yorta_yorta ,
+                               country:wiradjuri ,
+                               country:barkindji ,
+                               country:ngarigo ,
+                               country:wurundjeri ,
+                               country:bundjalung .
+
+<did:q42:taxon:eucalyptus_camaldulensis> a dwc:Taxon , rdfs:Class ;
+    owl:sameAs qualia:eucalyptus_camaldulensis ;
+    rdfs:label "River Red Gum (did:q42 locator)"@en .
+
+# -----------------------------------------------------------------------------
+# 2. Authoritative Bibliographic Sources & Identifier Reconciliation Claims
+# -----------------------------------------------------------------------------
+
+src:apni-101425 a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/101425> ;
+    rdfs:label "APNI Name Record (101425, ECO-WP-01A pinned URI)"@en .
+
+src:apc-2921040 a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/node/apni/2921040> ;
+    rdfs:label "APC Accepted Taxon Concept Node (2921040)"@en .
+
+src:ala-bie a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/name/apni/101425> ;
+    rdfs:label "Atlas of Living Australia (ALA) BIE Taxon Page"@en .
+
+src:gbif-backbone a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/3176787> ;
+    rdfs:label "GBIF Species Page (3176787, work-packet pinned)"@en .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    dct:license <https://creativecommons.org/licenses/by/4.0/> ;
+    rdfs:label "AusTraits — Plant Trait Database for Australian Flora"@en .
+
+src:euclid a dct:BibliographicResource ;
+    dct:identifier <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_camaldulensis_subsp._camaldulensis.htm> ;
+    rdfs:label "EUCLID Eucalypts of Australia — Eucalyptus camaldulensis subsp. camaldulensis"@en .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/2e90c675-58e1-4c17-9104-dff7ff101a1c> ;
+    rdfs:label "VicFlora — Royal Botanic Gardens Victoria"@en .
+
+src:plantnet-nsw a dct:BibliographicResource ;
+    dct:identifier <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Eucalyptus~camaldulensis> ;
+    rdfs:label "PlantNET NSW Flora Online — Eucalyptus camaldulensis"@en .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ontology & GraphDB"@en .
+
+claim:apni-reconciliation a rdf:Statement ;
+    rdf:subject qualia:eucalyptus_camaldulensis ;
+    rdf:predicate aunsl:lsid ;
+    rdf:object <https://id.biodiversity.org.au/name/apni/101425> ;
+    prov:wasDerivedFrom src:apni-101425 , src:apc-2921040 ;
+    rdfs:comment "Work-packet ECO-WP-01A pins APNI name URI 101425; live APNI/APC taxonomic concept node also indexed at apni/2921040 and apni/94050. Preserved without silent collapse."@en .
+
+claim:gbif-reconciliation a rdf:Statement ;
+    rdf:subject qualia:eucalyptus_camaldulensis ;
+    rdf:predicate dwc:taxonID ;
+    rdf:object "GBIF:3176787" ;
+    prov:wasDerivedFrom src:gbif-backbone ;
+    rdfs:comment "Work-packet ECO-WP-01A pins GBIF:3176787; live GBIF web check associates 3176787 with Eucalyptus globulus. Flagged for live GBIF API backbone reconciliation in KN-02 / ID-02."@en .
+
+# -----------------------------------------------------------------------------
+# 3. Anatomical Subsystems (PO:* Ontology & did:q42 Part Locators)
+# -----------------------------------------------------------------------------
+
+organ:root-system-lignotuber a po:0025025 , po:0009005 , po:0020125 , po:0000045 , po:0003005 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-root-system-lignotuber> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-root-system-lignotuber> ;
+    rdfs:label "5-order subterranean root-base graph, lignotuber & fluted river-bank buttresses"@en ;
+    q42bio:poTerm "PO:0025025" ;
+    q42bio:secondaryPoTerm "PO:0020125 (taproot), PO:0000045 (lateral root), PO:0003005 (sinker root), PO:0009005 (lignotuber)" ;
+    q42bio:componentId "root-system-lignotuber" ;
+    q42bio:taprootAndSinkers "1 deep phreatophytic taproot (-5.4 m) + 7 wide primary laterals (7.0-9.4 m) + 21 secondary laterals + 14 vertical sinkers (-2.8 to -4.6 m) + 28 tertiary/quaternary feeder root fans"@en ;
+    q42bio:lignotuberHeightRangeM "-0.8 to +0.4 m subterranean-to-basal woody swelling"@en ;
+    q42bio:rootDepthTypicalM "5.4"^^xsd:decimal ;
+    q42bio:rootDepthRangeM "2.8 to 12.0 m" ;
+    q42bio:rootSpreadRadiusM "9.4"^^xsd:decimal ;
+    q42bio:buttressFluteEquation "R(theta, h) = R0(h) * [1 + sum_{k=3}^{7} A_k * exp(-lambda * h) * cos(k * theta + phi_k)]" ;
+    q42bio:xpbdRole "fixed_anchor_inv_mass_0_and_overturning_moment" ;
+    prov:wasDerivedFrom src:euclid , src:austraits .
+
+organ:mycorrhizal-rhizosphere-network a po:0025025 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-mycorrhizal-rhizosphere-network> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-mycorrhizal-rhizosphere-network> ;
+    rdfs:label "Ectomycorrhizal (ECM) mycelial hyphal network, Hartig sheaths & rhizosphere EMF/chemo-waveguide"@en ;
+    q42bio:poTerm "PO:0025025" ;
+    q42bio:componentId "mycorrhizal-rhizosphere-network" ;
+    q42bio:mycorrhizalType "ECM (Common Mycorrhizal Network / Hartig net sheaths)" ;
+    q42bio:rhizosphereDepthRangeM "-0.20 to -2.20 m" ;
+    q42bio:hyphalEmfCarrierHzRange "0.1 to 50.0 Hz (bio-electric action-potential / ionic-conduction waveguide)" ;
+    q42bio:rhizospherePermittivity "14.5"^^xsd:decimal ;
+    q42bio:hydraulicRedistribution "Deep taproot & sinker groundwater lift sustaining shallow ECM mycelium during drought"@en ;
+    q42bio:chemoExudateSignaling "Phenolic allelochemicals, glomalin, organic carbon exudates, and P/N exchange flux"@en ;
+    prov:wasDerivedFrom src:austraits , src:tern .
+
+organ:trunk-bark-cambium a po:0025004 , po:0004518 , po:0005849 , po:0005848 , po:0005597 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-trunk-bark-cambium> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-trunk-bark-cambium> ;
+    rdfs:label "Concentric trunk: heartwood, sapwood, vascular cambium & mottled decorticating bark"@en ;
+    q42bio:poTerm "PO:0025004" ;
+    q42bio:internalSubsystems "PO:0005849 (heartwood core), PO:0005848 (sapwood annulus), PO:0005597 (vascular cambium), PO:0004518 (basal stocking, smooth upper bole & 10 exfoliating bark ribbons)" ;
+    q42bio:componentId "trunk-bark-cambium" ;
+    q42bio:barkAppearance "Smooth mottled white, cream, slate-grey, and reddish-brown decorticating plates/ribbons above a persistent rough dark-grey scaly basal stocking (0.5 to 2.0 m)."@en ;
+    q42bio:trunkTaper "0.028"^^xsd:decimal ;
+    q42bio:trunkContortion "0.46"^^xsd:decimal ;
+    q42bio:barkVisibleAlbedo "0.42"^^xsd:decimal ;
+    q42bio:barkAlbedoRange "0.38 to 0.46" ;
+    prov:wasDerivedFrom src:plantnet-nsw , src:vicflora , src:euclid .
+
+organ:pipe-model-boughs a po:0009006 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-pipe-model-boughs> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-pipe-model-boughs> ;
+    rdfs:label "Primary, secondary & tertiary pipe-model spreading boughs"@en ;
+    q42bio:poTerm "PO:0009006" ;
+    q42bio:epicormicBudTerm "PO:0000055" ;
+    q42bio:componentId "pipe-model-boughs" ;
+    q42bio:branchOrders "4"^^xsd:integer ;
+    q42bio:collarFlareUnion "true"^^xsd:boolean ;
+    q42bio:dormantEpicormicNodes "true"^^xsd:boolean ;
+    rdfs:comment "Massive spreading gnarled scaffold boughs characteristic of open floodplain specimens, governed by WBE/Shinozaki pipe-model cross-sectional scaling."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:pendulous-falcate-leaves a po:0025034 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-pendulous-falcate-leaves> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-pendulous-falcate-leaves> ;
+    rdfs:label "Pendulous isobilateral falcate-lanceolate leaves"@en ;
+    q42bio:poTerm "PO:0025034" ;
+    q42bio:componentId "pendulous-falcate-leaves" ;
+    q42bio:leafArrangement "alternate_spiral_137.5_deg" ;
+    q42bio:leafOrientation "pendulous_isobilateral" ;
+    q42bio:leafLengthMm "80.0 to 220.0" ;
+    q42bio:leafWidthMm "10.0 to 25.0" ;
+    q42bio:petioleLengthMm "12.0 to 30.0" ;
+    q42bio:subCrownSkyTransmittance "0.45 to 0.65" ;
+    q42bio:juvenileLeafMorphology "Ovate to broad-lanceolate, petiolate, alternate, slightly glaucous dull green."@en ;
+    prov:wasDerivedFrom src:plantnet-nsw , src:vicflora , src:euclid .
+
+organ:rostrate-operculate-buds a po:0009046 , po:0009049 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-rostrate-operculate-buds> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-rostrate-operculate-buds> ;
+    rdfs:label "Rostrate operculate flower buds in 7-11 flowered axillary umbels"@en ;
+    q42bio:poTerm "PO:0009046" ;
+    q42bio:inflorescencePoTerm "PO:0009049" ;
+    q42bio:componentId "rostrate-operculate-buds" ;
+    q42bio:umbelBudCountMin "7"^^xsd:integer ;
+    q42bio:umbelBudCountMax "11"^^xsd:integer ;
+    q42bio:operculumShape "strongly_rostrate_or_horned_conical" ;
+    q42bio:budLengthMm "6.0 to 10.0" ;
+    q42bio:anthesisMonths "11, 12, 1 (austral late spring to mid-summer)" ;
+    q42bio:stamenColor "cream-white" ;
+    prov:wasDerivedFrom src:plantnet-nsw , src:euclid .
+
+organ:exserted-valve-gumnuts a po:0009001 , po:0009010 ;
+    owl:sameAs <did:q42:taxon:eucalyptus_camaldulensis#organ-exserted-valve-gumnuts> ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#organ-exserted-valve-gumnuts> ;
+    rdfs:label "Hemispherical gumnut capsules with strongly exserted valves"@en ;
+    q42bio:poTerm "PO:0009001" ;
+    q42bio:seedPoTerm "PO:0009010" ;
+    q42bio:componentId "exserted-valve-gumnuts" ;
+    q42bio:capsuleShape "hemispherical_to_ovoid" ;
+    q42bio:capsuleDiameterMm "5.0 to 8.0" ;
+    q42bio:valveCount "3 to 5" ;
+    q42bio:valveExsertion "strongly_exserted_deltoid" ;
+    q42bio:seedCoatColor "yellow-brown (subsp. camaldulensis)" ;
+    prov:wasDerivedFrom src:plantnet-nsw , src:vicflora , src:euclid .
+
+# -----------------------------------------------------------------------------
+# 4. Topological Growth Grammar & Biophysical / Allometric Traits
+# -----------------------------------------------------------------------------
+
+q42bio:ecam_pipe_model_grammar a q42bio:AllometricGrowthGrammar ;
+    rdfs:label "Eucalyptus camaldulensis Shinozaki/WBE Pipe-Model Grammar"@en ;
+    q42bio:pipeModelFormula "r_parent^n = sum(r_child^n)" ;
+    q42bio:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42bio:forkAngleMinDeg "38.0"^^xsd:decimal ;
+    q42bio:forkAngleMaxDeg "62.0"^^xsd:decimal ;
+    q42bio:forkAngleTypicalDeg "50.0"^^xsd:decimal ;
+    flopo:phyllotaxis_angle_deg "137.5"^^xsd:decimal ;
+    q42bio:internodeElongationRatio "0.76"^^xsd:decimal ;
+    q42bio:crownOpenSkyTransmittanceMin "0.45"^^xsd:decimal ;
+    q42bio:crownOpenSkyTransmittanceMax "0.65"^^xsd:decimal .
+
+qualia:eucalyptus_camaldulensis
+    to:plant_height_min "20.0"^^xsd:decimal ;
+    to:plant_height_max "45.0"^^xsd:decimal ;
+    to:plant_height_typical "30.0"^^xsd:decimal ;
+    q42bio:dbhMinM "1.0"^^xsd:decimal ;
+    q42bio:dbhMaxM "3.5"^^xsd:decimal ;
+    to:stem_dbh_m "1.6"^^xsd:decimal ;
+    to:crown_radius_m "11.0"^^xsd:decimal ;
+    to:wood_density "900.0"^^xsd:decimal ;
+    q42bio:woodDensityRangeKgM3 "850.0 to 930.0 (air-dry/green engineering nominal 900.0 kg/m3)" ;
+    to:stem_elasticity_gpa "14.2"^^xsd:decimal ;
+    q42bio:modulusOfRuptureMpa "105.0"^^xsd:decimal ;
+    to:xylem_p50 "-4.2"^^xsd:decimal ;
+    to:specific_leaf_area "6.8"^^xsd:decimal ;
+    to:leaf_mass_per_area "147.1"^^xsd:decimal ;
+    to:stomatal_conductance "0.31"^^xsd:decimal ;
+    to:root_depth_m "8.5"^^xsd:decimal ;
+    q42bio:barkVisibleAlbedo "0.42"^^xsd:decimal ;
+    q42bio:leafParReflectance "0.11"^^xsd:decimal ;
+    q42bio:leafNirReflectance "0.46"^^xsd:decimal ;
+    to:natural_sway_freq_hz "0.66"^^xsd:decimal ;
+    to:wind_hiss_freq_hz "1150.0"^^xsd:decimal ;
+    to:fire_response "epicormic_and_lignotuberous_resprouter" ;
+    to:mycorrhizal_type "ECM" ;
+    flopo:growth_form "spreading_riparian_eucalypt" ;
+    flopo:bark_type "smooth_mottled_decorticating_with_basal_stocking" ;
+    envo:biome_preference "Riverine floodplains, alluvial levees, billabong margins & riparian corridors" ;
+    envo:elevation_min "10"^^xsd:integer ;
+    envo:elevation_max "750"^^xsd:integer ;
+    prov:wasDerivedFrom src:austraits , src:euclid , src:vicflora .
+
+# -----------------------------------------------------------------------------
+# 5. InstanceState64 Phenotype Parameter Bounds & Ontogenetic Stages
+# -----------------------------------------------------------------------------
+
+q42state:ecam_instance_state_64 a q42state:InstanceState64Schema ;
+    rdfs:label "InstanceState64 64-byte Per-Instance Phenotype Parameter Bounds"@en ;
+    q42state:structSizeBytes "64"^^xsd:integer ;
+    q42state:seedRange "uint64 [0, 18446744073709551615]" ;
+    q42state:ontogeneticAgeNormMin "0.0"^^xsd:decimal ;
+    q42state:ontogeneticAgeNormMax "1.0"^^xsd:decimal ;
+    q42state:heightScaleMin "0.65"^^xsd:decimal ;
+    q42state:heightScaleMax "1.35"^^xsd:decimal ;
+    q42state:siteVigorMin "0.20"^^xsd:decimal ;
+    q42state:siteVigorMax "1.00"^^xsd:decimal ;
+    q42state:environmentalStressAxes "vec4<f32>: [wind_prevailing_bias (0..1), drought_leaf_drop (0..1), fire_char_height (0..1), epicormic_sprout_factor (0..1)]" ;
+    q42state:windPrevailingBiasRange "0.0 to 1.0" ;
+    q42state:droughtLeafDropRange "0.0 to 1.0" ;
+    q42state:fireCharHeightRange "0.0 to 1.0" ;
+    q42state:epicormicSproutFactorRange "0.0 to 1.0" .
+
+stage:sapling a q42bio:OntogeneticStage ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#stage-sapling> ;
+    rdfs:label "Sapling (0.00 - 0.15)"@en ;
+    q42state:ageNormMin "0.00"^^xsd:decimal ;
+    q42state:ageNormMax "0.15"^^xsd:decimal ;
+    q42bio:relativeHeightRange "0.05 to 0.25" ;
+    q42bio:hollowBearing "false"^^xsd:boolean ;
+    rdfs:comment "Slender establishing riparian sapling with basal lignotuber and juvenile-to-intermediate foliage."@en .
+
+stage:pole a q42bio:OntogeneticStage ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#stage-pole> ;
+    rdfs:label "Pole Stage (0.15 - 0.45)"@en ;
+    q42state:ageNormMin "0.15"^^xsd:decimal ;
+    q42state:ageNormMax "0.45"^^xsd:decimal ;
+    q42bio:relativeHeightRange "0.25 to 0.65" ;
+    q42bio:hollowBearing "false"^^xsd:boolean ;
+    rdfs:comment "Actively elongating pole tree with ascending scaffold limbs and self-pruning lower branches."@en .
+
+stage:mature a q42bio:OntogeneticStage ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#stage-mature> ;
+    rdfs:label "Mature Floodplain Specimen (0.45 - 0.80)"@en ;
+    q42state:ageNormMin "0.45"^^xsd:decimal ;
+    q42state:ageNormMax "0.80"^^xsd:decimal ;
+    q42bio:relativeHeightRange "0.65 to 1.00" ;
+    q42bio:hollowBearing "false"^^xsd:boolean ;
+    rdfs:comment "Full-canopy riverine tree (20-45 m, DBH 1.0-2.2 m) with wide spreading pipe-model boughs and active reproductive umbels/capsules."@en .
+
+stage:veteran a q42bio:OntogeneticStage ;
+    dct:identifier <did:q42:taxon:eucalyptus_camaldulensis#stage-veteran> ;
+    rdfs:label "Veteran Hollow-Bearing Tree (0.80 - 1.00)"@en ;
+    q42state:ageNormMin "0.80"^^xsd:decimal ;
+    q42state:ageNormMax "1.00"^^xsd:decimal ;
+    q42bio:relativeHeightRange "0.85 to 1.00" ;
+    q42bio:hollowBearing "true"^^xsd:boolean ;
+    rdfs:comment "Ancient floodplain patriarch (DBH 2.0-3.5 m) with pronounced buttress flutes, storm-pruned bough stubs, and cavity hollows critical for avian and arboreal fauna."@en .
+
+# -----------------------------------------------------------------------------
+# 6. Ecological Interactions (RO:*) & Riverine Habitat
+# -----------------------------------------------------------------------------
+
+qualia:eucalyptus_camaldulensis
+    ro:0002434 qualia:phascolarctos_cinereus ,
+               qualia:polytelis_swainsonii ,
+               qualia:cacatua_galerita ,
+               qualia:ornithorhynchus_anatinus ,
+               qualia:petaurus_norfolcensis ;
+    ro:0002303 envo:01000253 .
+
+envo:01000253 a envo:Biome ;
+    rdfs:label "Riverine floodplain & freshwater billabong margin"@en .
+
+qualia:phascolarctos_cinereus a dwc:Taxon ;
+    dwc:scientificName "Phascolarctos cinereus (Goldfuss, 1817)" ;
+    rdfs:label "Koala"@en ;
+    rdfs:comment "Primary riparian foliage browse interaction in Murray-Darling and Victorian riverine corridors."@en .
+
+qualia:polytelis_swainsonii a dwc:Taxon ;
+    dwc:scientificName "Polytelis swainsonii (Desmarest, 1826)" ;
+    rdfs:label "Superb Parrot"@en ;
+    rdfs:comment "Obligate hollow-nester in veteran River Red Gums along the Murray, Edward, and Murrumbidgee rivers."@en .
+
+qualia:cacatua_galerita a dwc:Taxon ;
+    dwc:scientificName "Cacatua galerita (Latham, 1790)" ;
+    rdfs:label "Sulphur-crested Cockatoo"@en ;
+    rdfs:comment "Veteran branch-hollow nesting and woody capsule foraging."@en .
+
+qualia:ornithorhynchus_anatinus a dwc:Taxon ;
+    dwc:scientificName "Ornithorhynchus anatinus (Shaw, 1799)" ;
+    rdfs:label "Platypus"@en ;
+    rdfs:comment "Riverbank root-stabilized undercut burrow habitat beneath riparian root plates."@en .
+
+qualia:petaurus_norfolcensis a dwc:Taxon ;
+    dwc:scientificName "Petaurus norfolcensis (Kerr, 1792)" ;
+    rdfs:label "Squirrel Glider"@en ;
+    rdfs:comment "Nectar, pollen, sap, and hollow-roost interactions."@en .
+
+# -----------------------------------------------------------------------------
+# 7. Biocultural Custodianship & Country Provenance (SE Australia)
+# -----------------------------------------------------------------------------
+
+country:yorta_yorta a tk:Country ;
+    rdfs:label "Yorta Yorta Country"@en ;
+    tk:indigenous_name "Bial"@mis ;
+    rdfs:comment "Barmah-Millewa River Red Gum forests along the Dhungala (Murray River)."@en .
+
+country:wiradjuri a tk:Country ;
+    rdfs:label "Wiradjuri Country"@en ;
+    tk:indigenous_name "Biyal / Yarra / Murungal"@mis ;
+    rdfs:comment "Murrumbidgee (Kalare) and Lachlan riverine corridors; scarred canoe and coolamon trees."@en .
+
+country:barkindji a tk:Country ;
+    rdfs:label "Barkindji Country"@en ;
+    rdfs:comment "Baaka (Darling River) alluvial floodplains and Menindee Lakes riverine woodlands."@en .
+
+country:ngarigo a tk:Country ;
+    rdfs:label "Ngarigo Country"@en ;
+    rdfs:comment "Upper Snowy and Monaro valley riverine margins."@en .
+
+country:wurundjeri a tk:Country ;
+    rdfs:label "Wurundjeri Country"@en ;
+    tk:indigenous_name "Be-al"@mis ;
+    rdfs:comment "Birrarung (Yarra River) and Merri Creek billabongs; scarred trees and kino medicine."@en .
+
+country:bundjalung a tk:Country ;
+    rdfs:label "Bundjalung Country"@en ;
+    rdfs:comment "Northern Rivers NSW floodplain margins (Richmond & Clarence basins)."@en .

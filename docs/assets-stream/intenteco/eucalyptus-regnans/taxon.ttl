@@ -1,0 +1,470 @@
+# Eucalyptus regnans F.Muell. (Mountain Ash)
+# Taxon concept, anatomical subsystems (PO:*), pipe-model & biophysical allometry,
+# obligate-seeder fire ecology, InstanceState64 ontogenetic parameter bounds,
+# ecological relations (RO:*), and South-Eastern Australian Biocultural Country
+# provenance (SPC / Local Contexts).
+#
+# Evidence boundary (per tree-cases.md):
+# Taxonomic, morphological, and biophysical traits below represent sourced working
+# reference bounds for the species across its wet-sclerophyll range in Victoria and
+# Tasmania (working focus: Victorian Central Highlands / Yarra Ranges). Exact site
+# and individual occurrence identification remain pending field resolution.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix to:     <http://purl.obolibrary.org/obo/TO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix ereg:   <urn:qualia:taxon:eucalyptus_regnans:> .
+@prefix organ:  <urn:qualia:taxon:eucalyptus_regnans:organ:> .
+@prefix stage:  <urn:qualia:taxon:eucalyptus_regnans:stage:> .
+@prefix trait:  <urn:qualia:taxon:eucalyptus_regnans:trait:> .
+@prefix src:    <urn:qualia:source:eucalyptus-regnans:> .
+@prefix claim:  <urn:qualia:claim:eucalyptus-regnans:> .
+
+# ==============================================================================
+# 1. TAXON CONCEPT & AUTHORITATIVE IDENTIFIERS
+# ==============================================================================
+
+qualia:eucalyptus_regnans a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:eucalyptus_regnans> ;
+    dct:identifier <urn:qualia:taxon:eucalyptus_regnans> ,
+                   <did:q42:taxon:eucalyptus_regnans> ;
+    rdfs:label "Mountain Ash"@en ,
+               "Eucalyptus regnans F.Muell."@la ;
+    dwc:scientificName "Eucalyptus regnans F.Muell." ;
+    dwc:scientificNameAuthorship "F.Muell." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Magnoliopsida" ;
+    dwc:order "Myrtales" ;
+    dwc:family "Myrtaceae" ;
+    dwc:genus "Eucalyptus" ;
+    dwc:subgenus "Eucalyptus" ;
+    q42:infragenericSection "Pseudophloius (Pryor & Johnson) / Eucalyptus (Brooker)" ;
+    q42:infragenericSeries "Regnantes" ;
+    dwc:specificEpithet "regnans" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "Mountain Ash"@en ,
+                       "Giant Ash"@en ,
+                       "Swamp Gum"@en ,
+                       "Victorian Ash"@en ,
+                       "Stringy Gum"@en ,
+                       "White Mountain Ash"@en ;
+    dwc:taxonID "GBIF:3176566" ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/101747> ;
+    aunsl:lsid <https://id.biodiversity.org.au/taxon/apni/51290024> ;
+    q42:biologicalSuperlative "World's tallest flowering plant (angiosperm) and hardwood tree" ;
+    dcat:landingPage <https://github.com/intenteco/eucalyptus-regnans> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    q42:epistemicScope "sourced_working_taxon_reference" ;
+    q42:workingLocality "Victorian Central Highlands / Yarra Ranges & Otway Ranges, VIC; Huon & Derwent Valleys, TAS (exact site and individual occurrence pending)" ;
+    rdfs:seeAlso <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_regnans.htm> ,
+                 <https://id.biodiversity.org.au/name/apni/101747> ,
+                 <https://id.biodiversity.org.au/taxon/apni/51290024> ,
+                 <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/taxon/apni/51290024> ,
+                 <https://www.gbif.org/species/3176566> ,
+                 <https://vicflora.rbg.vic.gov.au/flora/taxon/e580e052-ec06-444f-a9db-8f83060fc057> .
+
+<did:q42:taxon:eucalyptus_regnans> a dwc:Taxon ;
+    owl:sameAs qualia:eucalyptus_regnans ;
+    rdfs:label "DID Q42 Locator — Eucalyptus regnans F.Muell."@en .
+
+# Non-substitution boundaries (per tree-cases.md TREE-01)
+qualia:eucalyptus_fastigata a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus fastigata H.Deane & Maiden" ;
+    rdfs:label "Brown Barrel / Cut-tail"@en .
+
+qualia:eucalyptus_obliqua a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus obliqua L'Her." ;
+    rdfs:label "Messmate Stringybark"@en .
+
+qualia:eucalyptus_delegatensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus delegatensis R.T.Baker" ;
+    rdfs:label "Alpine Ash"@en .
+
+qualia:eucalyptus_regnans
+    owl:differentFrom qualia:eucalyptus_fastigata ,
+                      qualia:eucalyptus_obliqua ,
+                      qualia:eucalyptus_delegatensis ;
+    rdfs:comment "Taxonomic boundary: do not substitute E. fastigata (rough bark over entire trunk and branches, slightly domed capsule disc), E. obliqua (rough bark to branchlets, single axillary umbels, barrel-shaped fruit), or E. delegatensis (glaucous juvenile leaves, single axillary umbels)."@en .
+
+# ==============================================================================
+# 2. AUTHORITATIVE SOURCES
+# ==============================================================================
+
+src:euclid a dct:BibliographicResource ;
+    dct:identifier <https://apps.lucidcentral.org/euclid/text/entities/eucalyptus_regnans.htm> ;
+    rdfs:label "EUCLID — Eucalyptus regnans" .
+
+src:apni-name a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/name/apni/101747> ;
+    rdfs:label "APNI Name 101747 — Eucalyptus regnans F.Muell." .
+
+src:apni-taxon a dct:BibliographicResource ;
+    dct:identifier <https://id.biodiversity.org.au/taxon/apni/51290024> ;
+    rdfs:label "APNI/APC Taxon 51290024 — Eucalyptus regnans F.Muell." .
+
+src:ala a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https%3A/id.biodiversity.org.au/taxon/apni/51290024> ;
+    rdfs:label "Atlas of Living Australia — Eucalyptus regnans" .
+
+src:gbif a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/3176566> ;
+    rdfs:label "GBIF Backbone Taxonomy — Eucalyptus regnans (3176566)" .
+
+src:vicflora a dct:BibliographicResource ;
+    dct:identifier <https://vicflora.rbg.vic.gov.au/flora/taxon/e580e052-ec06-444f-a9db-8f83060fc057> ;
+    rdfs:label "VicFlora — Eucalyptus regnans" .
+
+src:austraits a dct:BibliographicResource ;
+    dct:identifier <https://austraits.org> ;
+    rdfs:label "AusTraits — Australian Plant Trait Database" .
+
+src:tern a dct:BibliographicResource ;
+    dct:identifier <https://w3id.org/tern> ;
+    rdfs:label "TERN Ecological Ontology" .
+
+src:bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+# ==============================================================================
+# 3. ANATOMICAL SUBSYSTEMS (PO:* & LIVING_WORLD_ANATOMY PINS)
+# ==============================================================================
+
+qualia:eucalyptus_regnans
+    ro:0002180 organ:buttress_root_system ,
+               organ:bole_bark ,
+               organ:boughs_crown ,
+               organ:foliage_juvenile ,
+               organ:foliage_adult ,
+               organ:paired_umbel_buds ,
+               organ:capsule_fruit .
+
+organ:buttress_root_system a po:0025025 , po:0000038 , po:0000042 , po:0005707 ;
+    rdfs:label "Massive Fluted Buttress Root System & Sinker Roots (Lignotuber Absent)"@en ;
+    q42:pinId "pin_s1_buttress_flare" , "pin_s1_taproot" , "pin_s1_sinker_roots" , "pin_s1_mycorrhizal_rhizosphere" ;
+    q42:lignotuberPresent false ;
+    q42:fireRegenerationStrategy "obligate_seeder_ash_bed_germination" ;
+    q42:lateralSinkerRootCountMin 5 ;
+    q42:lateralSinkerRootCountMax 9 ;
+    q42:buttressFluteHarmonicOrder "3..7" ;
+    rdfs:comment "Massive fluted buttress base with wide-spreading lateral and deep sinker roots anchoring 65-95+ m boles in deep fertile loams; strictly lacks a fire-resistant lignotuber (obligate seeder killed by stand-replacing crown fire)."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:bole_bark a po:0025004 , po:0009005 , po:0005513 , po:0005509 , po:0005417 , po:0005511 , po:0005352 , po:0005353 ;
+    rdfs:label "Straight Columnar Giant Bole, Basal Stringybark Stocking & Decorticating Ribbon Bark"@en ;
+    q42:pinId "pin_s1_da_vinci_pipe_bole" , "pin_s2_rhytidome_cork" , "pin_s2_phellogen" , "pin_s2_secondary_phloem_kino" , "pin_s2_vascular_cambium" , "pin_s2_sapwood_xylem" , "pin_s2_heartwood_tyloses" ;
+    q42:trunkHeightMinM "65.0"^^xsd:decimal ;
+    q42:trunkHeightMaxM "95.0"^^xsd:decimal ;
+    q42:basalStockingType "rough_fibrous_brown_grey_black_stringybark_stocking" ;
+    q42:basalStockingHeightMinM "5.0"^^xsd:decimal ;
+    q42:basalStockingHeightMaxM "15.0"^^xsd:decimal ;
+    q42:upperBarkType "smooth_cream_grey_white_yellow_brown_decorticating_ribbons" ;
+    q42:decorticatingRibbonLengthMinM "5.0"^^xsd:decimal ;
+    q42:decorticatingRibbonLengthMaxM "12.0"^^xsd:decimal ;
+    rdfs:comment "Straight columnar trunk (65.0-95.0 m, unbranched for 50-70% of height in dense stands) with rough fibrous brown/grey-black stringybark stocking on the lower 5.0-15.0 m and smooth cream, grey, or white upper bark shedding in long decorticating ribbons 5.0-12.0 m long."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:boughs_crown a po:0009006 , po:0020100 ;
+    rdfs:label "High-Forking Ascending Pipe-Model Crown Boughs & Open Wet-Sclerophyll Canopy"@en ;
+    q42:pinId "pin_s1_crown_space_colonization" ;
+    q42:pipeModelExponent "2.49"^^xsd:decimal ;
+    q42:forkAngleMinDeg "32.0"^^xsd:decimal ;
+    q42:forkAngleMaxDeg "48.0"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:skyTransmittanceMin "0.45"^^xsd:decimal ;
+    q42:skyTransmittanceMax "0.65"^^xsd:decimal ;
+    rdfs:comment "High-forking ascending scaffold boughs obeying Shinozaki/WBE pipe-model area conservation (r_parent^2.49 = sum r_child^2.49), fork angles 32.0-48.0 deg, collar flare unions, and air-gapped sub-crown foliage clusters (45-65% sky transmittance)."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:foliage_juvenile a po:0025034 ;
+    rdfs:label "Juvenile Foliage — Glossy Green Ovate Oblique Leaves (Never Glaucous)"@en ;
+    q42:phyllotaxy "opposite_2_to_3_pairs_then_alternate" ;
+    q42:attachment "shortly_petiolate_to_petiolate" ;
+    q42:laminaShape "ovate_oblique" ;
+    q42:leafLengthMinCm "5.5"^^xsd:decimal ;
+    q42:leafLengthMaxCm "12.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "2.2"^^xsd:decimal ;
+    q42:leafWidthMaxCm "5.0"^^xsd:decimal ;
+    q42:surfaceColor "glossy_green_non_glaucous" ;
+    rdfs:comment "Green-leaved ash juvenile phase: opposite and shortly petiolate for 2-3 pairs then alternate, petiolate, ovate with oblique base, glossy green (never glaucous)."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:foliage_adult a po:0025034 , po:0000014 , po:0000032 , po:0005679 , po:0005023 , po:0005018 , po:0005020 ;
+    rdfs:label "Adult Foliage — Glossy Green Falcate-Lanceolate Pendulous Leaves"@en ;
+    q42:pinId "pin_s2_pendulous_falcate_leaf" , "pin_s4_cuticle_wax" , "pin_s4_amphistomatic_stomata" , "pin_s4_isobilateral_palisade" , "pin_s4_intramarginal_vein" , "pin_s4_schizogenous_oil_gland" , "pin_s4_sclerenchyma_bundle_sheath" ;
+    q42:phyllotaxy "alternate" ;
+    q42:attachment "petiolate_pendulous" ;
+    q42:laminaShape "falcate_lanceolate_oblique_base" ;
+    q42:petioleLengthMinCm "0.8"^^xsd:decimal ;
+    q42:petioleLengthMaxCm "2.5"^^xsd:decimal ;
+    q42:leafLengthMinCm "9.0"^^xsd:decimal ;
+    q42:leafLengthMaxCm "23.0"^^xsd:decimal ;
+    q42:leafWidthMinCm "1.5"^^xsd:decimal ;
+    q42:leafWidthMaxCm "5.0"^^xsd:decimal ;
+    q42:surfaceColor "glossy_green_concolorous" ;
+    rdfs:comment "Alternate, petiolate, pendulous glossy green concolorous falcate-lanceolate adult leaves (9-23 x 1.5-5.0 cm) with oblique base, acute lateral veins, remote intramarginal vein, and schizogenous oil glands, subtending diagnostic paired axillary umbels."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:paired_umbel_buds a po:0009046 , po:0006322 , po:0009084 , po:0009064 , po:0009066 , po:0009072 , po:0009063 ;
+    rdfs:label "Diagnostic Paired 9-15 Flowered Clavate Bud Umbels with Conical Opercula"@en ;
+    q42:pinId "pin_s3_paired_umbellaster" , "pin_s3_operculum_cap" , "pin_s3_hypanthium_cup" , "pin_s3_staminal_ring_anthers" , "pin_s3_style_stigma" , "pin_s3_ovary_locules" ;
+    q42:umbelArrangement "paired_axillary_umbels" ;
+    q42:budsPerUmbelMin 9 ;
+    q42:budsPerUmbelMax 15 ;
+    q42:peduncleLengthMinCm "0.4"^^xsd:decimal ;
+    q42:peduncleLengthMaxCm "1.4"^^xsd:decimal ;
+    q42:pedicelLengthMinCm "0.3"^^xsd:decimal ;
+    q42:pedicelLengthMaxCm "0.7"^^xsd:decimal ;
+    q42:budShape "clavate_to_obovoid" ;
+    q42:operculumShape "conical_to_rounded_apiculate" ;
+    q42:budLengthMinCm "0.4"^^xsd:decimal ;
+    q42:budLengthMaxCm "0.7"^^xsd:decimal ;
+    q42:budWidthMinCm "0.2"^^xsd:decimal ;
+    q42:budWidthMaxCm "0.4"^^xsd:decimal ;
+    q42:anthesisSeason "March_to_May_austral_autumn" ;
+    rdfs:comment "Diagnostic paired axillary umbels (very rare character shared only with E. fastigata), 9-15 pedicellate clavate-obovoid buds per umbel, single conical-to-rounded apiculate operculum (outer scar absent), white stamens, reniform anthers; flowering March-May."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+organ:capsule_fruit a po:0009001 , po:0009010 ;
+    rdfs:label "Cupular-Obconical Woody Gumnut Capsules & Pyramidal Seeds"@en ;
+    q42:pinId "pin_s3_gumnut_valves" , "pin_s3_seed_chaff" ;
+    q42:capsuleShape "cupular_obconical" ;
+    q42:capsuleLengthMinCm "0.5"^^xsd:decimal ;
+    q42:capsuleLengthMaxCm "0.8"^^xsd:decimal ;
+    q42:capsuleWidthMinCm "0.4"^^xsd:decimal ;
+    q42:capsuleWidthMaxCm "0.7"^^xsd:decimal ;
+    q42:discForm "slightly_descending" ;
+    q42:valveCount 3 ;
+    q42:valveExsertion "near_rim_level_or_enclosed" ;
+    q42:seedLengthMinMm "1.5"^^xsd:decimal ;
+    q42:seedLengthMaxMm "3.0"^^xsd:decimal ;
+    rdfs:comment "Pedicellate cupular-obconical woody gumnut capsules (0.5-0.8 x 0.4-0.7 cm), slightly descending disc (separating from E. fastigata), 3 rim-level or enclosed valves, canopy-stored bradysporous seed bank released en masse onto wildfire ash beds."@en ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+# ==============================================================================
+# 4. ALLOMETRIC & BIOPHYSICAL TRAITS
+# ==============================================================================
+
+qualia:eucalyptus_regnans
+    q42:hasTrait trait:pipe_model_exponent ,
+                 trait:fork_angle ,
+                 trait:internode_elongation ,
+                 trait:mature_height ,
+                 trait:dbh ,
+                 trait:specific_leaf_area ,
+                 trait:wood_density ,
+                 trait:youngs_modulus ,
+                 trait:xylem_p50 ,
+                 trait:fire_ecology_obligate_seeder ,
+                 trait:veteran_hollow_age .
+
+trait:pipe_model_exponent a q42:AllometricRule ;
+    rdfs:label "Shinozaki / WBE Pipe-Model Exponent"@en ;
+    q42:equation "r_parent^n = sum(r_child^n)" ;
+    q42:nominalValue "2.49"^^xsd:decimal ;
+    q42:unit "dimensionless" ;
+    q42:evidenceStatus "modeled_eucalyptus_allometry" .
+
+trait:fork_angle a q42:AllometricRule ;
+    rdfs:label "High-Forking Crown Bough Angle"@en ;
+    q42:minValue "32.0"^^xsd:decimal ;
+    q42:maxValue "48.0"^^xsd:decimal ;
+    q42:nominalValue "40.0"^^xsd:decimal ;
+    q42:unit "deg" ;
+    q42:evidenceStatus "sourced_morphological_range" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:internode_elongation a q42:AllometricRule ;
+    rdfs:label "Internode Elongation & Phyllotactic Divergence"@en ;
+    q42:internodeElongationRatio "0.85"^^xsd:decimal ;
+    q42:goldenAngleRad "2.399963"^^xsd:decimal ;
+    q42:unit "ratio / rad" ;
+    q42:evidenceStatus "modeled_fspm_parameter" .
+
+trait:mature_height a q42:BiophysicalTrait , to:0000207 ;
+    rdfs:label "Mature Giant Wet-Sclerophyll Tree Height"@en ;
+    q42:minValue "55.0"^^xsd:decimal ;
+    q42:maxValue "95.0"^^xsd:decimal ;
+    q42:extremeMaxValue "100.5"^^xsd:decimal ;
+    q42:historicalRecordNote "Historical 19th-century records >100.0 m; living verified Centurion (TAS) ~100 m." ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:dbh a q42:BiophysicalTrait ;
+    rdfs:label "Diameter at Breast Height (DBH)"@en ;
+    q42:minValue "2.0"^^xsd:decimal ;
+    q42:maxValue "6.5"^^xsd:decimal ;
+    q42:unit "m" ;
+    q42:evidenceStatus "sourced" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:specific_leaf_area a q42:BiophysicalTrait ;
+    rdfs:label "Specific Leaf Area (SLA)"@en ;
+    q42:nominalValue "8.4"^^xsd:decimal ;
+    q42:unit "m2/kg" ;
+    q42:evidenceStatus "sourced_austraits_working_nominal" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:wood_density a q42:BiophysicalTrait ;
+    rdfs:label "Air-Dry Wood Density"@en ;
+    q42:nominalValue "650.0"^^xsd:decimal ;
+    q42:unit "kg/m3" ;
+    q42:evidenceStatus "sourced_timber_mechanics" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:youngs_modulus a q42:BiophysicalTrait ;
+    rdfs:label "Longitudinal Young's Modulus (E)"@en ;
+    q42:nominalValue "16.0"^^xsd:decimal ;
+    q42:unit "GPa" ;
+    q42:evidenceStatus "sourced_timber_mechanics" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:xylem_p50 a q42:BiophysicalTrait ;
+    rdfs:label "Xylem Cavitation Vulnerability (P50)"@en ;
+    q42:nominalValue "-2.9"^^xsd:decimal ;
+    q42:unit "MPa" ;
+    q42:evidenceStatus "sourced_hydraulic_trait" ;
+    prov:wasDerivedFrom src:austraits .
+
+trait:fire_ecology_obligate_seeder a q42:EcologicalTrait ;
+    rdfs:label "Obligate-Seeder Stand-Replacing Ash-Bed Fire Ecology"@en ;
+    q42:lignotuberPresent false ;
+    q42:regenerationMode "bradysporous_canopy_seed_release_to_mineral_ash_bed" ;
+    q42:standStructure "even_aged_cohort_following_high_intensity_wildfire" ;
+    q42:evidenceStatus "sourced_fire_ecology" ;
+    prov:wasDerivedFrom src:euclid , src:vicflora .
+
+trait:veteran_hollow_age a q42:EcologicalTrait ;
+    rdfs:label "Veteran Hollow Formation Chronosequence Window"@en ;
+    q42:minValue 120 ;
+    q42:maxValue 400 ;
+    q42:unit "yr" ;
+    q42:evidenceStatus "sourced_hollow_ecology" ;
+    rdfs:comment "Tree hollows forming in 120-400 yr veteran E. regnans provide critical nesting habitat for Gymnobelideus leadbeateri (Leadbeater's Possum)."@en ;
+    prov:wasDerivedFrom src:vicflora , src:ala .
+
+# ==============================================================================
+# 5. INSTANCESTATE64 PHENOTYPE BOUNDS & ONTOGENETIC STAGES
+# ==============================================================================
+
+ereg:InstanceState64 a q42:StateBufferSchema ;
+    rdfs:label "InstanceState64 (64-byte aligned per-instance phenotype descriptor)"@en ;
+    q42:byteSize 64 ;
+    q42:field_seed "u32 [0..4294967295] deterministic phenotype PRNG seed" ;
+    q42:field_ontogenetic_age_norm "f32 [0.00..1.00] procedural ontogenetic stage index (not chronological age)" ;
+    q42:field_height_scale "f32 [0.75..1.25] site-modulated vertical stature scalar" ;
+    q42:field_site_vigor "f32 [0.40..1.20] edaphic moisture/fertility crown fullness scalar" ;
+    q42:field_environmental_stress "vec4<f32>: [wind_prevailing_bias 0..1, drought_leaf_drop 0..1, fire_char_height 0..1, epicormic_sprout_factor 0..1]" ;
+    q42:hasStage stage:ashbed_sapling , stage:pole_spar , stage:canopy_giant , stage:veteran .
+
+stage:ashbed_sapling a q42:OntogeneticStage ;
+    rdfs:label "Ash-Bed Sapling Stage (0.00 - 0.15)"@en ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal ;
+    q42:activeOrgans organ:buttress_root_system , organ:foliage_juvenile ;
+    q42:heightNormRangeM "1.0..12.0" ;
+    rdfs:comment "Dense post-fire ash-bed cohort regeneration without lignotuber; glossy green ovate oblique juvenile foliage driving rapid vertical competition."@en .
+
+stage:pole_spar a q42:OntogeneticStage ;
+    rdfs:label "Rapid Pole-Stage Spar (0.15 - 0.45)"@en ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal ;
+    q42:activeOrgans organ:buttress_root_system , organ:bole_bark , organ:foliage_juvenile , organ:foliage_adult ;
+    q42:heightNormRangeM "12.0..55.0" ;
+    rdfs:comment "Self-pruning straight pole-stage spar with rapid height increment (>1 m/yr in young cohorts), developing basal rough bark stocking and transitional glossy falcate adult crown."@en .
+
+stage:canopy_giant a q42:OntogeneticStage ;
+    rdfs:label "Tall Wet-Sclerophyll Canopy Giant (0.45 - 0.80)"@en ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal ;
+    q42:activeOrgans organ:buttress_root_system , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:paired_umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "55.0..95.0" ;
+    q42:dbhRangeM "2.0..4.5" ;
+    rdfs:comment "Dominant wet-sclerophyll canopy giant: 5-15 m fibrous basal stringybark stocking, smooth cream-white upper bole shedding 5-12 m ribbons, high-forking pipe-model boughs, paired 9-15 bud umbels and cupular-obconical capsules."@en .
+
+stage:veteran a q42:OntogeneticStage ;
+    rdfs:label "Ancient Multi-Century Buttressed Hollow-Bearing Veteran (0.80 - 1.00)"@en ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal ;
+    q42:activeOrgans organ:buttress_root_system , organ:bole_bark , organ:boughs_crown , organ:foliage_adult , organ:paired_umbel_buds , organ:capsule_fruit ;
+    q42:heightNormRangeM "65.0..100.5" ;
+    q42:dbhRangeM "3.5..6.5" ;
+    rdfs:comment "Ancient 120-400+ yr multi-century veteran with massive fluted buttress plate, 2.0-6.5 m DBH, weathered broken crown limbs forming critical nesting hollows for Leadbeater's Possum (Gymnobelideus leadbeateri), and Cool Temperate Rainforest understorey."@en .
+
+# ==============================================================================
+# 6. ECOLOGICAL INTERACTIONS (RO:*)
+# ==============================================================================
+
+qualia:gymnobelideus_leadbeateri a dwc:Taxon ;
+    dwc:scientificName "Gymnobelideus leadbeateri McCoy, 1867" ;
+    rdfs:label "Leadbeater's Possum"@en .
+
+qualia:nothofagus_cunninghamii a dwc:Taxon ;
+    dwc:scientificName "Nothofagus cunninghamii (Hook.) Oerst." ;
+    rdfs:label "Myrtle Beech"@en .
+
+qualia:dicksonia_antarctica a dwc:Taxon ;
+    dwc:scientificName "Dicksonia antarctica Labill." ;
+    rdfs:label "Soft Tree Fern"@en .
+
+qualia:acacia_dealbata a dwc:Taxon ;
+    dwc:scientificName "Acacia dealbata Link" ;
+    rdfs:label "Silver Wattle"@en .
+
+qualia:petauroides_volans a dwc:Taxon ;
+    dwc:scientificName "Petauroides volans (Kerr, 1792)" ;
+    rdfs:label "Southern Greater Glider"@en .
+
+qualia:menura_novaehollandiae a dwc:Taxon ;
+    dwc:scientificName "Menura novaehollandiae Latham, 1801" ;
+    rdfs:label "Superb Lyrebird"@en .
+
+qualia:ectomycorrhizal_fungi a dwc:Taxon ;
+    rdfs:label "Wet-Sclerophyll Ectomycorrhizal Fungal Guild (Basidiomycota / Ascomycota)"@en .
+
+# RO:0002081 = co-occurs with / overlapping niche; RO:0002434 = interacts with;
+# RO:0002444 = symbiont of / mutualist
+qualia:eucalyptus_regnans
+    ro:0002081 qualia:nothofagus_cunninghamii ,
+               qualia:dicksonia_antarctica ,
+               qualia:acacia_dealbata ;
+    ro:0002444 qualia:ectomycorrhizal_fungi ;
+    ro:0002434 qualia:gymnobelideus_leadbeateri ,
+               qualia:petauroides_volans ,
+               qualia:menura_novaehollandiae ;
+    q42:biome envo:01000221 , envo:00000446 ;
+    rdfs:comment "Forms emergent wet-sclerophyll overstorey above Acacia dealbata, Dicksonia antarctica, and Nothofagus cunninghamii rainforest understorey; 120-400 yr veteran hollows provide obligate denning habitat for Gymnobelideus leadbeateri (Leadbeater's Possum) and Petauroides volans, while moist litter supports Menura novaehollandiae."@en ;
+    prov:wasDerivedFrom src:vicflora , src:ala .
+
+# ==============================================================================
+# 7. BIOCULTURAL CUSTODIANSHIP & COUNTRY ATTRIBUTION (SPC / LOCAL CONTEXTS)
+# ==============================================================================
+
+qualia:eucalyptus_regnans
+    tk:custodial_country "Wurundjeri Country (Yarra Ranges, Upper Yarra & Central Highlands, VIC)" ,
+                         "Taungurung Country (North-Central Highlands & Goulburn Catchment, VIC)" ,
+                         "Boonwurrung Country (Dandenong Ranges & Western Port Foothills, VIC)" ,
+                         "GunaiKurnai Country (Strzelecki Ranges, Baw Baw & Gippsland, VIC)" ,
+                         "Gadubanud / Eastern Maar Country (Otway Ranges, VIC)" ,
+                         "Palawa / Lutruwita Country (Huon, Derwent & North-East Valleys, TAS)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" ;
+    rdfs:comment "Country attribution spans Wurundjeri, Taungurung, Boonwurrung, GunaiKurnai, and Gadubanud / Eastern Maar Country across Victoria, alongside Palawa / Lutruwita Country in Tasmania. Local Contexts TK/BC notices record biocultural provenance without asserting community-authored TK labels absent direct First Nations co-design."@en .

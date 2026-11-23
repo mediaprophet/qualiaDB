@@ -1,0 +1,48 @@
+# Callistemon sieberi (River Bottlebrush) — Taxon, Biocultural, Kinetics & Multi-Scale Ontology (ECO-WP-FLORA-02)
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c))
+# under the Social Permissive Commons (SPC) inalienable living-world commons model.
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+
+qualia:callistemon_sieberi a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:callistemon_sieberi> , <https://www.gbif.org/species/3182358> ;
+    dct:identifier <urn:qualia:taxon:callistemon_sieberi> , <did:q42:taxon:callistemon_sieberi> ;
+    rdfs:label "River Bottlebrush"@en , "Callistemon sieberi"@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:family "Myrtaceae" ;
+    dwc:scientificName "Callistemon sieberi" ;
+    dwc:vernacularName "River Bottlebrush"@en ;
+    dwc:taxonRank "species" ;
+    dwc:taxonID "GBIF:3182358" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/name/apni/60187> ;
+    dcat:landingPage <https://github.com/intenteco/callistemon-sieberi> ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:naturalSwayFreqHz "1.35"^^xsd:decimal ;
+    q42:hasAnimationClip "riparian_wind_oscillation" , "flood_current_streamline_bend" , "spring_stamen_anthesis_unfold" , "nectarivore_perch_rebound" ;
+    q42:ecologicalRole "Riparian stream banks, gravel bars, and seasonally inundated floodplains." ;
+    tk:custodial_country "Wiradjuri Country" , "Ngarigo Country" , "Ngunnawal Country" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" .
+
+qualia:callistemon_sieberiShape a sh:NodeShape ;
+    sh:targetNode qualia:callistemon_sieberi ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path dwc:taxonID ; sh:minCount 1 ] .

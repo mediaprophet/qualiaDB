@@ -1,0 +1,128 @@
+# Civic Knowledge Cooperative Rammed-Earth & Timber Pavilion (community-civic-hall) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-BLD-02 | Organization: github.com/qualia-poiesis/community-civic-hall
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:community-civic-hall:> .
+@prefix part:   <urn:qualia:design:community-civic-hall:part:> .
+@prefix port:   <urn:qualia:design:community-civic-hall:port:> .
+
+design:rev1 a made:Artefact , made:CivicBuilding , dcat:Dataset ;
+    owl:sameAs <did:q42:design:community_civic_hall> ;
+    dct:identifier <urn:qualia:design:community-civic-hall:rev1> , <did:q42:design:community_civic_hall> ;
+    rdfs:label "Civic Knowledge Cooperative Rammed-Earth & Timber Pavilion"@en ;
+    dct:title "Civic Knowledge Cooperative Rammed-Earth & Timber Pavilion — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/community-civic-hall> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "civic_bell_cupola_peal_oscillation" , "double_entry_doors_welcome_open" , "solar_skylight_louvre_modulation" , "verandah_planter_foliage_breeze" ;
+    made:lengthM "5.200"^^xsd:decimal ;
+    made:widthM "4.400"^^xsd:decimal ;
+    made:heightM "4.550"^^xsd:decimal ;
+    made:curbMassKg "14200.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "3.4"^^xsd:decimal ;
+    made:totalAuthoredParts "34"^^xsd:integer ;
+    made:hasComponent part:stone-foundation-plinth , part:verandah-timber-deck , part:front-entry-steps , part:rammed-earth-hall , part:verandah-column-0 , part:verandah-column-1 , part:verandah-column-2 , part:verandah-column-3 , part:verandah-column-4 , part:verandah-column-5 , part:verandah-header-beam , part:entry-door-leaf-left , part:front-window-left , part:side-panoramic-window-left , part:entry-planter-pot-left , part:entry-shrub-crown-left , part:entry-door-leaf-right , part:front-window-right ;
+    made:hasPort port:community-ac-microgrid , port:civic-mesh-uplink .
+
+part:stone-foundation-plinth a made:FoundationPlinth , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-stone-foundation-plinth> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stone Foundation Plinth"@en .
+part:verandah-timber-deck a made:VerandahDeck , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-timber-deck> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Timber Deck"@en .
+part:front-entry-steps a made:EntrySteps , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-front-entry-steps> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Entry Steps"@en .
+part:rammed-earth-hall a made:BuildingEnvelope , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-rammed-earth-hall> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rammed Earth Hall"@en .
+part:verandah-column-0 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 0"@en .
+part:verandah-column-1 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 1"@en .
+part:verandah-column-2 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 2"@en .
+part:verandah-column-3 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 3"@en .
+part:verandah-column-4 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-4> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 4"@en .
+part:verandah-column-5 a made:VerandahColumn , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-column-5> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Column 5"@en .
+part:verandah-header-beam a made:VerandahBeam , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-verandah-header-beam> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Verandah Header Beam"@en .
+part:entry-door-leaf-left a made:EntryDoor , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-entry-door-leaf-left> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Entry Door Leaf Left"@en .
+part:front-window-left a made:Window , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-front-window-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Window Left"@en .
+part:side-panoramic-window-left a made:Window , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-side-panoramic-window-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Panoramic Window Left"@en .
+part:entry-planter-pot-left a made:PlanterPot , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-entry-planter-pot-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Entry Planter Pot Left"@en .
+part:entry-shrub-crown-left a PO:0025034 , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-entry-shrub-crown-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Entry Shrub Crown Left"@en .
+part:entry-door-leaf-right a made:EntryDoor , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-entry-door-leaf-right> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Entry Door Leaf Right"@en .
+part:front-window-right a made:Window , made:Component ;
+    dct:identifier <did:q42:design:community_civic_hall#part-front-window-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Window Right"@en .
+
+port:community-ac-microgrid a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_civic_hall#port-community-ac-microgrid> ;
+    made:portMedium "electrical_ac" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "15000.0"^^xsd:decimal .
+port:civic-mesh-uplink a made:FunctionalPort ;
+    dct:identifier <did:q42:design:community_civic_hall#port-civic-mesh-uplink> ;
+    made:portMedium "optical_data" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:BitPerSecond ;
+    made:ratedCapacity "10000000000.0"^^xsd:decimal .

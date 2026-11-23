@@ -1,0 +1,86 @@
+# Poa labillardierei Steud. (Common Tussock-grass)
+# Taxon concept, anatomical subsystems (PO:*), InstanceState64 ontogeny,
+# ecological interactions (RO:*), and SE Australian Biocultural Country provenance (SPC / Local Contexts).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc:    <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix po:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro:     <http://purl.obolibrary.org/obo/RO_> .
+@prefix envo:   <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix tk:     <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix aunsl:  <https://biodiversity.org.au/voc/taxa/> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix sp:     <urn:qualia:taxon:poa_labillardierei:> .
+@prefix organ:  <urn:qualia:taxon:poa_labillardierei:organ:> .
+@prefix stage:  <urn:qualia:taxon:poa_labillardierei:stage:> .
+
+qualia:poa_labillardierei a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs <did:q42:taxon:poa_labillardierei> , <did:q42:taxon:poa-labillardierei> ;
+    dct:identifier <urn:qualia:taxon:poa_labillardierei> , <did:q42:taxon:poa_labillardierei> ;
+    rdfs:label "Common Tussock-grass"@en , "Poa labillardierei Steud."@la ;
+    dwc:scientificName "Poa labillardierei Steud." ;
+    dwc:scientificNameAuthorship "Steud." ;
+    dwc:kingdom "Plantae" ;
+    dwc:phylum "Tracheophyta" ;
+    dwc:class "Liliopsida" ;
+    dwc:order "Poales" ;
+    dwc:family "Poaceae" ;
+    dwc:genus "Poa" ;
+    dwc:specificEpithet "labillardierei" ;
+    dwc:taxonRank "species" ;
+    dwc:vernacularName "River Tussock-grass"@en , "Large Tussock-grass"@en , "Blue Tussock-grass"@en ;
+    dwc:scientificNameID <https://id.biodiversity.org.au/name/apni/67198> ;
+    aunsl:lsid <https://id.biodiversity.org.au/node/apni/2896600> ;
+    q42:ecologicalRole "Riparian floodplains, moist grassy valleys & damp sclerophyll understorey (SE Australia)" ;
+    q42:mycorrhizalAssociation "Arbuscular mycorrhizal (AMF)" ;
+    q42:naturalSwayFreqHz "1.35"^^xsd:decimal ;
+    dcat:landingPage <https://github.com/intenteco/poa-labillardierei> ;
+    dct:license <https://spdx.org/licenses/CC-BY-4.0.html> ;
+    q42:commonsFramework "SPC" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/name/apni/67198> , <https://id.biodiversity.org.au/node/apni/2896600> , <https://www.gbif.org/species/2704228> , <https://vicflora.rbg.vic.gov.au/flora/taxon/3772b3e3-8c1e-4391-9b96-37447ec7432a> .
+
+<did:q42:taxon:poa_labillardierei> a dwc:Taxon ;
+    owl:sameAs qualia:poa_labillardierei ;
+    rdfs:label "DID Q42 Locator — Poa labillardierei Steud."@en .
+
+organ:rhizosphere_root_base a po:0025025 , po:0000042 ;
+    rdfs:label "Fibrous Root Crown / Rhizosphere & AMF Hyphal Network (-0.68 m)"@en .
+
+organ:photosynthetic_canopy a po:0025034 , po:0009047 ;
+    rdfs:label "Photosynthetic Foliage & Reproductive Inflorescence Canopy (0.80..1.30 m)"@en .
+
+qualia:poa_labillardierei
+    ro:0002180 organ:rhizosphere_root_base , organ:photosynthetic_canopy ;
+    tk:custodial_country "Ngunnawal & Ngambri Country (Canberra / Southern Tablelands, ACT/NSW)" ,
+                         "Wurundjeri Country (Yarra Catchment, VIC)" ,
+                         "Wiradjuri Country (Murray-Darling Slopes & Plains, NSW)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    tk:noticeRef <https://localcontexts.org/labels/traditional-knowledge-labels/> ;
+    q42:commonsGovernance "Social Permissive Commons (SPC)" .
+
+sp:InstanceState64 a q42:StateBufferSchema ;
+    q42:byteSize 64 ;
+    q42:hasStage stage:seedling_tussock , stage:establishing_clump , stage:mature_reproductive , stage:senescent_resprouter .
+
+stage:seedling_tussock a q42:OntogeneticStage ;
+    q42:ageNormMin "0.00"^^xsd:decimal ;
+    q42:ageNormMax "0.15"^^xsd:decimal .
+
+stage:establishing_clump a q42:OntogeneticStage ;
+    q42:ageNormMin "0.15"^^xsd:decimal ;
+    q42:ageNormMax "0.45"^^xsd:decimal .
+
+stage:mature_reproductive a q42:OntogeneticStage ;
+    q42:ageNormMin "0.45"^^xsd:decimal ;
+    q42:ageNormMax "0.80"^^xsd:decimal .
+
+stage:senescent_resprouter a q42:OntogeneticStage ;
+    q42:ageNormMin "0.80"^^xsd:decimal ;
+    q42:ageNormMax "1.00"^^xsd:decimal .

@@ -1,0 +1,635 @@
+# Phascolarctos cinereus (Goldfuss, 1817) — Koala Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-06A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:phascolarctos_cinereus:> .
+@prefix stage:     <urn:qualia:stage:phascolarctos_cinereus:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:phascolarctos-cinereus:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers (with Latitudinal Cline Notes)
+# ============================================================================
+
+qualia:phascolarctos_cinereus a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:phascolarctos_cinereus ;
+    dct:identifier <urn:qualia:taxon:phascolarctos_cinereus> ,
+                   <did:q42:taxon:phascolarctos_cinereus> ;
+    rdfs:label "Koala"@en ;
+    dwc:scientificName "Phascolarctos cinereus (Goldfuss, 1817)" ;
+    dwc:scientificNameAuthorship "Goldfuss, 1817" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Diprotodontia" ;
+    dwc:family "Phascolarctidae" ;
+    dwc:genus "Phascolarctos" ;
+    dwc:specificEpithet "cinereus" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Koala"@en , "Borobi"@mis , "Dunggirr"@mis , "Gula"@mis , "Kur-bo-roo"@mis ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/e9d6fbbd-1505-4073-990a-dc66c930dad6> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/e9d6fbbd-1505-4073-990a-dc66c930dad6> ;
+    dwc:taxonID "GBIF:2440012" ;
+    q42:gbifSpeciesKey "2440012"^^xsd:integer ;
+    q42:gbifGenusKey "2440011"^^xsd:integer ;
+    q42:gbifFamilyKey "9373"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_38626> ;
+    q42:ncbiGenusTaxon <http://purl.obolibrary.org/obo/NCBITaxon_38625> ;
+    q42:spratTaxonID "85104"^^xsd:integer ;
+    q42:nswBioNetSpeciesID "10616"^^xsd:integer ;
+    q42:monotypicFamily true ;
+    q42:monotypicGenus true ;
+    q42:karyotype "2n=16" ;
+    q42:epbcStatus "Endangered (combined populations of Qld, NSW and the ACT)" ;
+    q42:nswStatus "Endangered" ;
+    q42:morphologicalCline "Continuous north-south latitudinal cline across SE Australia: larger body mass (up to 14.0 kg) and longer, thicker cinnamon-grey/brown-grey pelage in Victoria and Southern NSW (historical victor cline) vs smaller body mass (6.5-9.0 kg) and shorter, paler silver-grey pelage in Northern Rivers and SEQ (historical adustus cline)."@en ;
+    dcat:landingPage <https://github.com/intenteco/phascolarctos-cinereus> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/e9d6fbbd-1505-4073-990a-dc66c930dad6> ,
+                 <https://www.gbif.org/species/2440012> ,
+                 <https://www.environment.gov.au/cgi-bin/sprat/public/publicspecies.pl?taxon_id=85104> ,
+                 <https://www.environment.nsw.gov.au/threatenedspeciesapp/profile.aspx?id=10616> ,
+                 <https://www.wildlife.vic.gov.au/our-wildlife/koalas> ;
+    prov:wasDerivedFrom src:afd-phascolarctos-cinereus ,
+                        src:ala-phascolarctos-cinereus ,
+                        src:gbif-2440012 ,
+                        src:ncbi-38626 ,
+                        src:sprat-85104 ,
+                        src:nsw-bionet-10616 ,
+                        src:vic-deeca-koalas ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:bundjalung_country ,
+                         country:gumbaynggirr_country ,
+                         country:dharug_gadigal_country ,
+                         country:yuin_country ,
+                         country:ngarigo_country ,
+                         country:wiradjuri_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country ,
+                         country:gadubanud_country .
+
+q42taxon:phascolarctos_cinereus a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:phascolarctos_cinereus> ;
+    owl:sameAs qualia:phascolarctos_cinereus ;
+    rdfs:label "Phascolarctos cinereus Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Biodiversity Sources
+src:afd-phascolarctos-cinereus a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/e9d6fbbd-1505-4073-990a-dc66c930dad6> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Phascolarctos cinereus (Goldfuss, 1817)" .
+
+src:ala-phascolarctos-cinereus a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/e9d6fbbd-1505-4073-990a-dc66c930dad6> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Phascolarctos cinereus species profile" .
+
+src:gbif-2440012 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2440012> ;
+    rdfs:label "GBIF Backbone Taxonomy — Phascolarctos cinereus (Goldfuss, 1817) [speciesKey 2440012]" .
+
+src:ncbi-38626 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/38626/> ;
+    rdfs:label "NCBI Taxonomy — Phascolarctos cinereus (TaxID 38626; genus TaxID 38625)" .
+
+src:sprat-85104 a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.gov.au/cgi-bin/sprat/public/publicspecies.pl?taxon_id=85104> ;
+    rdfs:label "DCCEEW SPRAT Profile — Phascolarctos cinereus (taxon_id 85104, EPBC Endangered QLD/NSW/ACT)" .
+
+src:nsw-bionet-10616 a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/threatenedspeciesapp/profile.aspx?id=10616> ;
+    rdfs:label "NSW BioNet / Threatened Species Profile — Koala (Phascolarctos cinereus, id 10616)" .
+
+src:vic-deeca-koalas a dct:BibliographicResource ;
+    dct:identifier <https://www.wildlife.vic.gov.au/our-wildlife/koalas> ;
+    rdfs:label "Victorian DEECA Wildlife — Koalas in Victoria & Victorian Biodiversity Atlas (VBA)" .
+
+claim:sole-extant-phascolarctidae a rdf:Statement ;
+    rdf:subject qualia:phascolarctos_cinereus ;
+    rdf:predicate q42:monotypicFamily ;
+    rdf:object true ;
+    rdfs:comment "Phascolarctos cinereus is the sole extant member of family Phascolarctidae (suborder Vombatiformes), sister to Vombatidae (wombats) with shared backward-opening pouch and vestigial tail."@en .
+
+claim:latitudinal-cline-continuity a rdf:Statement ;
+    rdf:subject qualia:phascolarctos_cinereus ;
+    rdf:predicate q42:morphologicalCline ;
+    rdf:object "Bergmann clinal mass and pelage insulation gradient across 28S to 39S"@en ;
+    rdfs:comment "Southern (Victoria / Southern NSW) individuals exhibit greater adult mass (up to 14.0 kg) and longer, thicker cinnamon-grey dorsal pelage than smaller, silver-grey Northern Rivers / SEQ individuals; modeled continuously via InstanceState64 rather than split taxa."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Osteology, Myology, Pelage, Visceral)
+# ============================================================================
+
+# --- Layer 0: Osteology (UBERON:0001434) ---
+anat:skeletal_system a uberon:0001434 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    rdfs:label "Skeletal System (24-Joint Arboreal Vombatiform Osteology)"@en .
+
+anat:cranium_mandible a uberon:0003129 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003129" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Broad Cranium and Deeply Flanged Mandible"@en ;
+    rdfs:comment "Compact, high-crowned skull with wide zygomatic arches supporting powerful masseteric attachment and small cranial endocast (~40% of cranial cavity filled by cerebrospinal fluid cushion)."@en .
+
+anat:diprotodont_dentition a uberon:0001759 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001759" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:cranium_mandible ;
+    rdfs:label "Diprotodont Incisors, Wide Diastema, and Selenodont Shearing Molars"@en ;
+    rdfs:comment "Three pairs of upper incisors, single procumbent pair of lower incisors for leaf-nipping, wide post-incisor diastema, and four crescent-ridged (selenodont) molars per quadrant for fine shearing of fibrous eucalypt leaves."@en .
+
+anat:axial_spine a uberon:0001130 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Cervical, Thoracic and Lumbar Vertebral Column"@en .
+
+anat:vestigial_coccygeal_tail a uberon:0001353 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001353" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:caudalVertebraeCount "7"^^xsd:integer ;
+    rdfs:label "Vestigial Coccygeal Tail and Cartilaginous Branch-Fork Rump Pad"@en ;
+    rdfs:comment "Externally absent tail comprising ~7 fused/reduced coccygeal vertebrae coupled with a dense fibro-cartilaginous rump cushion for 18-20 hr/day upright sitting in eucalypt branch forks."@en .
+
+anat:ribcage_sternum a uberon:0002228 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002228" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:ribPairCount "11"^^xsd:integer ;
+    rdfs:label "Compact 11-Pair Thoracic Ribcage and Sternum"@en .
+
+anat:pectoral_girdle_clavicle a uberon:0001421 , uberon:0002102 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001421" ;
+    q42:forelimbCurie "UBERON:0002102" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Robust Curved Clavicle, Scapula and Elongated Arboreal Forelimb Skeleton"@en .
+
+anat:pelvic_girdle a uberon:0001271 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001271" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Pelvic Girdle (Ilium, Ischium, Pubis)"@en .
+
+anat:epipubic_bones a uberon:0003661 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003661" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:pelvic_girdle ;
+    rdfs:label "Marsupial Epipubic Bones Supporting Backward-Opening Pouch"@en .
+
+anat:hindlimb_skeleton a uberon:0000981 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000981" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    rdfs:label "Hindlimb Femur, Tibia and Rotatable Fibula for Trunk Clasping"@en .
+
+anat:schizodactylous_manus a uberon:0002398 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002398" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:opposableDigitPair "Digits I + II opposing Digits III + IV + V (schizodactylous 2-vs-3 forceps grip)" ;
+    q42:clawMorphology "Long, laterally compressed, strongly curved keratinous climbing claws on all 5 manual digits" ;
+    q42:dermalPads "Rough papillose friction pads on palmar surfaces" ;
+    rdfs:label "Schizodactylous Manus (Digits I-II Opposing III-IV-V)"@en .
+
+anat:hind_pes a uberon:0002387 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:halluxDigit "Clawless, broad, strongly opposable Digit I (hallux) for branch clasping" ;
+    q42:syndactylGroomingDigits "Fused syndactylous grooming Digits II-III (UBERON:0001452) with paired claws" ;
+    q42:lateralClawedDigits "Digits IV-V large, stout, bearing curved climbing claws" ;
+    rdfs:label "Grasping Hind Pes with Clawless Opposable Hallux and Syndactylous Digits II-III"@en .
+
+# --- Layer 1: Myology (UBERON:0001630) ---
+anat:muscular_system a uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    rdfs:label "Muscular System (Arboreal Trunk-Climbing & Isometric Fork-Clinging Myology)"@en .
+
+anat:masticatory_cervical_myology a uberon:0003662 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003662" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Hypertrophied Masseter, Temporalis and Cervical Musculature"@en .
+
+anat:climbing_forelimb_latissimus_myology a uberon:0003663 , uberon:0002356 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003663" ;
+    q42:pectoralCurie "UBERON:0002356" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    q42:keyClimbingMuscles "Hypertrophied biceps brachii, brachioradialis, latissimus dorsi, pectoralis, and deep digital flexors" ;
+    rdfs:label "Climbing Forelimb Flexors, Biceps, Brachioradialis and Latissimus Dorsi"@en ;
+    rdfs:comment "High slow-twitch oxidative muscle fiber fraction supporting sustained isometric gripping and vertical trunk-bounding propulsion."@en .
+
+anat:epaxial_erector_spinae a uberon:0002255 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002255" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Epaxial Erector Spinae and Lumbar Flexor-Extensor Musculature"@en .
+
+anat:hindlimb_adductor_propulsors a uberon:0001377 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001377" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:muscular_system ;
+    rdfs:label "Gluteal, Adductor Magnus and Hindlimb Trunk-Clasping Musculature"@en .
+
+# --- Layer 2: Integument, Head, Rhinarium, Scent Gland & Pinnae ---
+anat:pelage_integument a uberon:0002416 , uberon:0002099 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002416" ;
+    q42:integumentCurie "UBERON:0002099" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:dorsalCoat "Dense woolly water-repellent ash-grey to cinnamon-brown dorsal pelage (thicker and darker in southern Victoria/NSW cline; shorter silver-grey in northern NSW/SEQ)" ;
+    q42:ventralCoat "White chin, throat, chest, and ventral belly pelage" ;
+    q42:rumpPatch "Diagnostic mottled/dappled white-and-grey rump fur surrounding dense fork-sitting rump pad" ;
+    q42:hairDensityPerCm2 "55"^^xsd:integer ;
+    rdfs:label "Dense Woolly Water-Repellent Dorsal Pelage, White Ventrum and Dappled Rump Patch"@en .
+
+anat:head_rhinarium_sternal_gland a uberon:0001756 , uberon:0004096 , uberon:0000029 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001756" ;
+    q42:rhinariumCurie "UBERON:0004096" ;
+    q42:sternalGlandCurie "UBERON:0000029" ;
+    q42:anatomyLayer "integument_and_sensory" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:rhinariumForm "Prominent broad, oval, dark leathery curved rhinarium/nose pad sensitive to eucalypt leaf terpene volatiles" ;
+    q42:sternalGlandForm "Dark, bare, oily holocrine sternal scent gland on adult male chest used for rubbing and scent-marking trunk bark" ;
+    q42:ocularForm "Small forward-angled amber-brown eyes with vertical slit pupils" ;
+    rdfs:label "Broad Round Head with Leathery Curved Rhinarium and Male Sternal Scent Gland"@en .
+
+anat:furry_tufted_pinnae a uberon:0001757 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001757" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:pinnaForm "Large round thickly furred external pinnae with prominent long white marginal and inner ear hair tufts" ;
+    rdfs:label "Large Round Furry Ears with Long White Hair Tufts"@en .
+
+# --- Visceral, Detoxification & Acoustic Subsystems ---
+anat:caecum_hindgut_fermentation a uberon:0001153 , uberon:0002107 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001153" ;
+    q42:liverCurie "UBERON:0002107" ;
+    q42:anatomyLayer "visceral_physiology" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:caecumLengthM "2.0"^^xsd:decimal ;
+    q42:hepaticDetoxification "Expanded cytochrome P450 CYP2C monooxygenase gene family in liver (UBERON:0002107) clearing eucalypt monoterpenes (1,8-cineole) and formylated phloroglucinol compounds (FPCs)" ;
+    q42:microbiomeSymbiont "Lonepinella koalarum (tannin-protein-complex-degrading enterobacterium in caecum)" ;
+    rdfs:label "Specialized 2-Metre Caecum and Hepatic CYP2C Eucalypt Detoxification System"@en .
+
+anat:velar_vocal_apparatus a uberon:0001737 , uberon:0001734 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001737" ;
+    q42:softPalateCurie "UBERON:0001734" ;
+    q42:anatomyLayer "respiratory_acoustic" ;
+    ro:0002131 qualia:phascolarctos_cinereus ;
+    q42:acousticMechanism "Descended larynx coupled with specialized extralaryngeal velar vocal folds in the soft palate generating low-frequency male bellows (25-60 Hz) during inhalation/exhalation"@en ;
+    rdfs:label "Descended Larynx and Velar Vocal Folds"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Kinematic Parameters
+# ============================================================================
+
+qualia:phascolarctos_cinereus
+    q42:headBodyLengthMinM "0.60"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "0.85"^^xsd:decimal ;
+    q42:adultMassMinKg "6.5"^^xsd:decimal ;
+    q42:adultMassMaxKg "14.0"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "6.5 to 10.5 (cline: smaller northern NSW, larger VIC)" ;
+    q42:adultMaleMassRangeKg "8.5 to 14.0 (cline: smaller northern NSW, larger VIC)" ;
+    q42:bmrWatts "12.8"^^xsd:decimal ;
+    q42:bmrRelativeToPlacentalPct "50.0"^^xsd:decimal ;
+    q42:bodyTempC "36.1"^^xsd:decimal ;
+    q42:thermoregulation "endotherm_energy_conserving" ;
+    q42:allometricBmrEquation "BMR(M) = 2.02 * M^0.75 [W]; at M=11.7 kg -> 12.8 W (~50% of placental mammal mean)" ;
+    q42:allometricSegmentEquation "L_forearm = 0.095 * M^0.33 [m]; L_caecum = 0.88 * M^0.35 [m] (~2.0 m); Mass(lat) = 4.2 + 0.25 * abs(lat_deg)" ;
+    q42:restingDurationHoursPerDay "18.0 to 20.0" ;
+    q42:restingPosture "Arboreal upright fork-resting posture wedged securely on cartilaginous rump pad with forelimbs draped or clasping branch" ;
+    q42:climbingGait "Vertical trunk-bounding climbing gait (0.3-1.8 m/s) alternating schizodactylous forepaw anchors with synchronized hind-pes thrust" ;
+    q42:terrestrialGait "Low quadrupedal bound/walk (0.5-2.8 m/s) between isolated feed trees" ;
+    q42:activityCycle "nocturnal_crepuscular_arboreal_foraging" ;
+    q42:dietGuild "obligate_eucalypt_folivore" ;
+    q42:dailyLeafIntakeKg "0.40 to 0.70" ;
+    q42:reproductionStrategy "Seasonal spring-summer breeding; 34-36 day gestation; 6-7 month pouch residency followed by 5-6 month back-riding" ;
+    sosa:callName "Male territorial inhalation/exhalation snore-bellow via velar vocal folds; female/joey high-pitched alarm squeak" ;
+    sosa:callFundamentalHzMin "25.0"^^xsd:decimal ;
+    sosa:callFundamentalHzMax "60.0"^^xsd:decimal ;
+    sosa:callFundamentalHz "32.0"^^xsd:decimal ;
+    envo:habitatStratum "arboreal_eucalypt_canopy" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1300"^^xsd:integer ;
+    prov:wasDerivedFrom src:sprat-85104 , src:nsw-bionet-10616 , src:vic-deeca-koalas .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (Radians)
+# ============================================================================
+
+rom:shoulder a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "shoulder" ;
+    q42:anatomicalTarget anat:pectoral_girdle_clavicle , anat:climbing_forelimb_latissimus_myology ;
+    q42:primaryAxis "overhead_reach_and_trunk_embrace" ;
+    q42:healthyMinRad "-0.70"^^xsd:decimal ;
+    q42:healthyMaxRad "2.25"^^xsd:decimal ;
+    q42:abductionMinRad "-0.35"^^xsd:decimal ;
+    q42:abductionMaxRad "1.55"^^xsd:decimal ;
+    q42:injuryThresholdRad "2.48"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Glenohumeral Shoulder Joint ROM (Phascolarctos cinereus)"@en .
+
+rom:elbow a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "elbow" ;
+    q42:anatomicalTarget anat:pectoral_girdle_clavicle , anat:climbing_forelimb_latissimus_myology ;
+    q42:primaryAxis "flexion_extension_and_pronation" ;
+    q42:healthyMinRad "-2.10"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.12"^^xsd:decimal ;
+    q42:injuryThresholdRad "-2.30"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Elbow Joint ROM (Phascolarctos cinereus)"@en .
+
+rom:wrist a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "wrist" ;
+    q42:anatomicalTarget anat:schizodactylous_manus ;
+    q42:primaryAxis "palmar_flexion_dorsiflexion_and_ulnar_deviation" ;
+    q42:healthyMinRad "-1.15"^^xsd:decimal ;
+    q42:healthyMaxRad "1.05"^^xsd:decimal ;
+    q42:radialUlnarDeviationMaxRad "0.62"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.30"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Wrist Radiocarpal & Schizodactylous Manus ROM (Phascolarctos cinereus)"@en .
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:pelvic_girdle , anat:hindlimb_skeleton ;
+    q42:primaryAxis "flexion_extension_and_trunk_abduction" ;
+    q42:healthyMinRad "-0.50"^^xsd:decimal ;
+    q42:healthyMaxRad "1.68"^^xsd:decimal ;
+    q42:abductionMinRad "-0.25"^^xsd:decimal ;
+    q42:abductionMaxRad "1.25"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.90"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Hip Joint ROM (Phascolarctos cinereus)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:hindlimb_skeleton ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.95"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.15"^^xsd:decimal ;
+    q42:injuryThresholdRad "-2.15"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Knee Stifle Joint ROM (Phascolarctos cinereus)"@en .
+
+rom:ankle a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "ankle" ;
+    q42:anatomicalTarget anat:hind_pes ;
+    q42:primaryAxis "dorsiflexion_inversion_branch_clasp" ;
+    q42:healthyMinRad "-0.98"^^xsd:decimal ;
+    q42:healthyMaxRad "1.10"^^xsd:decimal ;
+    q42:inversionMaxRad "0.78"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.32"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Ankle Tarsocrural & Inversion Clasp ROM (Phascolarctos cinereus)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:axial_spine , anat:epaxial_erector_spinae ;
+    q42:primaryAxis "thoracolumbar_curl_and_climbing_extension" ;
+    q42:healthyMinRad "-0.38"^^xsd:decimal ;
+    q42:healthyMaxRad "0.95"^^xsd:decimal ;
+    q42:lateralBendMaxRad "0.45"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.12"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveCurledGuardPosture" ;
+    rdfs:label "Thoracolumbar Spine Joint ROM (Phascolarctos cinereus)"@en .
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:axial_spine , anat:cranium_mandible ;
+    q42:primaryAxis "cervical_bellow_elevation_and_browse_reach" ;
+    q42:healthyMinRad "-0.65"^^xsd:decimal ;
+    q42:healthyMaxRad "0.85"^^xsd:decimal ;
+    q42:yawMaxRad "0.88"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.05"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveCurledGuardPosture" ;
+    rdfs:label "Cervical Neck Joint ROM (Phascolarctos cinereus)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:phascolarctos_cinereus_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, pouch_occupancy_flag:u8, latitudinal_cline_01:f32, coat_cinnamon_shift:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.10 to 1.18" ;
+    q42:siteVigorRange "0.40 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00 (heatwave_dehydration, chlamydia_conjunctivitis_index, wildfire_smoke_char, habitat_fragmentation)" ;
+    q42:latitudinalClineRange "0.00 (Northern Rivers silver-grey) to 1.00 (Victoria / Southern NSW thick cinnamon-grey)" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Phascolarctos cinereus"@en .
+
+stage:pouch_joey a q42:OntogeneticStage ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:stageId "pouch_joey" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.16"^^xsd:decimal ;
+    q42:heightScaleMin "0.08"^^xsd:decimal ;
+    q42:heightScaleMax "0.30"^^xsd:decimal ;
+    q42:massRangeKg "0.0005 to 0.50" ;
+    q42:independentLocomotion false ;
+    rdfs:label "Pouch Joey (0-6.5 months, backward-opening pouch & pap transition)"@en .
+
+stage:back_riding_juvenile a q42:OntogeneticStage ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:stageId "back_riding_juvenile" ;
+    q42:ontogeneticAgeNormMin "0.16"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.36"^^xsd:decimal ;
+    q42:heightScaleMin "0.30"^^xsd:decimal ;
+    q42:heightScaleMax "0.58"^^xsd:decimal ;
+    q42:massRangeKg "0.50 to 2.8" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Back-Riding Juvenile (6.5-12 months, maternal clinging & leaf weaning)"@en .
+
+stage:subadult_disperser a q42:OntogeneticStage ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:stageId "subadult_disperser" ;
+    q42:ontogeneticAgeNormMin "0.36"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.60"^^xsd:decimal ;
+    q42:heightScaleMin "0.58"^^xsd:decimal ;
+    q42:heightScaleMax "0.84"^^xsd:decimal ;
+    q42:massRangeKg "2.8 to 6.4" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Subadult Disperser (12-24 months, terrestrial tree-to-tree dispersal)"@en .
+
+stage:adult_female a q42:OntogeneticStage ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:stageId "adult_female" ;
+    q42:ontogeneticAgeNormMin "0.60"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.84"^^xsd:decimal ;
+    q42:heightScaleMax "1.02"^^xsd:decimal ;
+    q42:massRangeKg "6.5 to 10.5" ;
+    q42:headBodyLengthMinM "0.60"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "0.75"^^xsd:decimal ;
+    q42:supportsPouchOccupancy true ;
+    q42:sternalScentGlandActive false ;
+    rdfs:label "Adult Female (backward-opening pouch, narrower skull, lacking active sternal gland)"@en .
+
+stage:adult_male a q42:OntogeneticStage ;
+    q42:appliesTo qualia:phascolarctos_cinereus ;
+    q42:stageId "adult_male" ;
+    q42:ontogeneticAgeNormMin "0.60"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.92"^^xsd:decimal ;
+    q42:heightScaleMax "1.18"^^xsd:decimal ;
+    q42:massRangeKg "8.5 to 14.0" ;
+    q42:headBodyLengthMinM "0.70"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "0.85"^^xsd:decimal ;
+    q42:supportsPouchOccupancy false ;
+    q42:sternalScentGlandActive true ;
+    q42:velarBellowCapable true ;
+    rdfs:label "Adult Male (broader cranium, active dark sternal scent gland, 25-60 Hz bellow)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Obligate Eucalypt Folivory & Canopy Stratum)
+# ============================================================================
+
+qualia:eucalyptus_camaldulensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus camaldulensis Dehnh." ;
+    rdfs:label "River Red Gum"@en .
+
+qualia:eucalyptus_viminalis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus viminalis Labill." ;
+    rdfs:label "Manna Gum / Ribbon Gum"@en .
+
+qualia:eucalyptus_tereticornis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus tereticornis Sm." ;
+    rdfs:label "Forest Red Gum"@en .
+
+qualia:eucalyptus_dalrympleana a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus dalrympleana Maiden" ;
+    rdfs:label "Mountain White Gum"@en .
+
+qualia:eucalyptus_punctata a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus punctata DC." ;
+    rdfs:label "Grey Gum"@en .
+
+qualia:eucalyptus_globulus a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus globulus Labill." ;
+    rdfs:label "Southern Blue Gum"@en .
+
+qualia:eucalyptus_ovata a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus ovata Labill." ;
+    rdfs:label "Swamp Gum"@en .
+
+qualia:phascolarctos_cinereus
+    ro:0002470 qualia:eucalyptus_camaldulensis ,
+               qualia:eucalyptus_viminalis ,
+               qualia:eucalyptus_tereticornis ,
+               qualia:eucalyptus_dalrympleana ,
+               qualia:eucalyptus_punctata ,
+               qualia:eucalyptus_globulus ,
+               qualia:eucalyptus_ovata ;
+    rorel:trophically_interacts_with qualia:eucalyptus_camaldulensis ,
+                                     qualia:eucalyptus_viminalis ,
+                                     qualia:eucalyptus_tereticornis ,
+                                     qualia:eucalyptus_dalrympleana ,
+                                     qualia:eucalyptus_punctata ,
+                                     qualia:eucalyptus_globulus ,
+                                     qualia:eucalyptus_ovata ;
+    ro:0002303 envo:01000220 ;
+    q42:ecologicalFunction "Specialized arboreal eucalypt folivore relying on high-foliar-nitrogen, low-FPC Eucalyptus trees for both hydration and nutrition across SE Australian sclerophyll forests and riparian corridors."@en ;
+    rdfs:comment "Northern populations (QLD, NSW, ACT) are EPBC Endangered due to clearing, drought, wildfire, and Chlamydia pecorum; southern Victorian populations exhibit localized high densities on manna gum (E. viminalis) and swamp gum (E. ovata)."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers & Border Ranges, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:vernacular_taxon_name "Borobi" ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" .
+
+country:gumbaynggirr_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gumbaynggirr Country (Mid-North Coast, Bellinger & Dorrigo, NSW)"@en ;
+    tk:language_group "Gumbaynggirr" ;
+    tk:vernacular_taxon_name "Dunggirr" ;
+    tk:care_governance "CARE Principles" .
+
+country:dharug_gadigal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharug & Gadigal Country (Sydney Basin, Hawkesbury-Nepean & Blue Mountains, NSW)"@en ;
+    tk:language_group "Dharug / Gadigal" ;
+    tk:vernacular_taxon_name "Gula / Koala" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Monaro Tablelands & Snowy River Escarpment, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Central-Western Slopes, Tablelands & Riverina, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Gippsland Plains, Strzelecki Ranges & East Gippsland, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges, Dandenongs & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:vernacular_taxon_name "Kur-bo-roo" ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Port Phillip, Mornington Peninsula & French/Phillip Island, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .
+
+country:gadubanud_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gadubanud Country (Cape Otway Ranges & Southwest Coast, VIC)"@en ;
+    tk:language_group "Gadubanud" ;
+    tk:care_governance "CARE Principles" .

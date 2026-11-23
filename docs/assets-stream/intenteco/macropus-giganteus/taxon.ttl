@@ -1,0 +1,641 @@
+# Macropus giganteus Shaw, 1790 — Eastern Grey Kangaroo Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-11A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:macropus_giganteus:> .
+@prefix stage:     <urn:qualia:stage:macropus_giganteus:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:macropus-giganteus:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers
+# ============================================================================
+
+qualia:macropus_giganteus a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:macropus_giganteus ;
+    dct:identifier <urn:qualia:taxon:macropus_giganteus> ,
+                   <did:q42:taxon:macropus_giganteus> ;
+    rdfs:label "Eastern Grey Kangaroo"@en ;
+    dwc:scientificName "Macropus giganteus Shaw, 1790" ;
+    dwc:scientificNameAuthorship "Shaw, 1790" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Diprotodontia" ;
+    dwc:family "Macropodidae" ;
+    dwc:genus "Macropus" ;
+    dwc:specificEpithet "giganteus" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Eastern Grey Kangaroo"@en ,
+                       "Great Grey Kangaroo"@en ,
+                       "Forester Kangaroo"@en ,
+                       "Bandaarr"@qaa-x-nsw ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/f2f43ef9-89fd-4f89-8b06-0842e86cfe06> ;
+    dwc:taxonConceptID <https://biodiversity.org.au/afd/taxa/f2f43ef9-89fd-4f89-8b06-0842e86cfe06> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/537e5eca-5485-4565-80cd-c2a68c3ec83c> ;
+    dwc:taxonID "GBIF:5219981" ;
+    q42:gbifSpeciesKey "5219981"^^xsd:integer ;
+    q42:gbifGenusKey "2440171"^^xsd:integer ;
+    q42:gbifFamilyKey "9372"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9317> ;
+    q42:ncbiSubspeciesNominal <http://purl.obolibrary.org/obo/NCBITaxon_39422> ;
+    q42:iNaturalistTaxonId "42888"^^xsd:integer ;
+    q42:karyotype "2n=16 (XX/XY)" ;
+    q42:iucnStatus "LC" ;
+    q42:mainlandSubspecies "Macropus giganteus giganteus Shaw, 1790" ;
+    q42:tasmanianSubspecies "Macropus giganteus tasmaniensis Le Souef, 1923" ;
+    dcat:landingPage <https://github.com/intenteco/macropus-giganteus> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/f2f43ef9-89fd-4f89-8b06-0842e86cfe06> ,
+                 <https://www.gbif.org/species/5219981> ,
+                 <https://australian.museum/learn/animals/mammals/eastern-grey-kangaroo/> ,
+                 <https://www.environment.nsw.gov.au/topics/animals-and-plants/native-animals/native-animal-facts/kangaroos-and-wallabies> ,
+                 <https://vba.biodiversity.vic.gov.au/> ,
+                 <https://www.inaturalist.org/taxa/42888-Macropus-giganteus> ;
+    prov:wasDerivedFrom src:afd-macropus-giganteus ,
+                        src:ala-macropus-giganteus ,
+                        src:gbif-5219981 ,
+                        src:ncbi-9317 ,
+                        src:australian-museum-eastern-grey ,
+                        src:nsw-dpe-kangaroos ,
+                        src:vba-victoria ,
+                        src:inaturalist-42888 ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:bundjalung_country ,
+                         country:gumbaynggirr_country ,
+                         country:gadigal_country ,
+                         country:dharug_country ,
+                         country:yuin_country ,
+                         country:ngarigo_country ,
+                         country:walgalu_country ,
+                         country:wiradjuri_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country ,
+                         country:wadawurrung_country .
+
+q42taxon:macropus_giganteus a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:macropus_giganteus> ;
+    owl:sameAs qualia:macropus_giganteus ;
+    rdfs:label "Macropus giganteus Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Biodiversity Sources
+src:afd-macropus-giganteus a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/f2f43ef9-89fd-4f89-8b06-0842e86cfe06> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Macropus giganteus Shaw, 1790" .
+
+src:ala-macropus-giganteus a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/f2f43ef9-89fd-4f89-8b06-0842e86cfe06> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Macropus giganteus species profile" .
+
+src:gbif-5219981 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/5219981> ;
+    rdfs:label "GBIF Backbone Taxonomy — Macropus giganteus Shaw, 1790 [speciesKey 5219981]" .
+
+src:ncbi-9317 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9317/> ;
+    rdfs:label "NCBI Taxonomy — Macropus giganteus (TaxID 9317)" .
+
+src:australian-museum-eastern-grey a dct:BibliographicResource ;
+    dct:identifier <https://australian.museum/learn/animals/mammals/eastern-grey-kangaroo/> ;
+    rdfs:label "Australian Museum — Eastern Grey Kangaroo (Macropus giganteus) morphology & ecology" .
+
+src:nsw-dpe-kangaroos a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/native-animals/native-animal-facts/kangaroos-and-wallabies> ;
+    rdfs:label "NSW Environment — Kangaroos and Wallabies native animal facts" .
+
+src:nsw-bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas — South-Eastern Australian occurrence repository" .
+
+src:vba-victoria a dct:BibliographicResource ;
+    dct:identifier <https://vba.biodiversity.vic.gov.au/> ;
+    rdfs:label "Victorian Biodiversity Atlas (DEECA) — Macropus giganteus occurrence dataset" .
+
+src:inaturalist-42888 a dct:BibliographicResource ;
+    dct:identifier <https://www.inaturalist.org/taxa/42888-Macropus-giganteus> ;
+    rdfs:label "iNaturalist AU — Macropus giganteus (taxon_id 42888)" .
+
+# Diagnostic Character & Non-Substitution Statement
+claim:diagnostic-haired-rhinarium a rdf:Statement ;
+    rdf:subject qualia:macropus_giganteus ;
+    rdf:predicate q42:diagnosticTrait ;
+    rdf:object "finely_haired_rhinarium_with_narrow_bare_black_nostril_rim" ;
+    prov:wasDerivedFrom src:australian-museum-eastern-grey , src:afd-macropus-giganteus ;
+    rdfs:comment "Finely haired skin between the nostrils leaving only a narrow bare black rim around each nostril separates Macropus giganteus from Osphranter rufus (bare black rhinarium) and Macropus fuliginosus (darker brown-grey pelage, more extensively dark muzzle)."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Cranial, Axial/Pelvic, Limb/Tendon & Pelage)
+# ============================================================================
+
+# --- Primary Diagnostic Anatomical Systems ---
+
+anat:cranial_and_facial_system a uberon:0000975 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000975" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 qualia:macropus_giganteus ;
+    q42:cranialProfile "Elongated, finely sculpted grazing macropodid skull with arched cranial vault, distinct forehead stop, and long slender tapering muzzle" ;
+    q42:diagnosticRhinarium "Finely haired rhinarium between the nostrils with only a narrow bare black rim around each nostril (UBERON:0001756)" ;
+    q42:ocularMorphology "Large dark liquid eyes set beneath pronounced supraorbital ridges (UBERON:0000970)" ;
+    q42:pinnaCurie "UBERON:0001757" ;
+    q42:pinnaForm "Tall, mobile, oval-pointed cupped external pinnae with pale grey-white inner fringe and dark-rimmed apex" ;
+    rdfs:label "Cranial and Facial System (Finely Haired Rhinarium & Tall Cupped Pinnae)"@en ;
+    prov:wasDerivedFrom src:australian-museum-eastern-grey .
+
+anat:external_pinnae a uberon:0001757 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001757" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 anat:cranial_and_facial_system ;
+    q42:pinnaLengthMinM "0.11"^^xsd:decimal ;
+    q42:pinnaLengthMaxM "0.15"^^xsd:decimal ;
+    q42:pinnaForm "Tall, independently swivelling oval-pointed cupped pinnae with deep concha bowl and fine pale interior guard hairs" ;
+    rdfs:label "Tall Mobile Oval-Pointed Cupped Pinnae"@en .
+
+anat:haired_rhinarium a uberon:0001756 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001756" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 anat:cranial_and_facial_system ;
+    q42:rhinariumForm "Finely haired nasal bridge and internarial septum with narrow bare black rim encircling each nostril" ;
+    rdfs:label "Finely Haired Rhinarium (Diagnostic Macropus giganteus Character)"@en .
+
+anat:bipedal_saltatorial_axial_and_pelvic_system a uberon:0001130 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:anatomyLayer "osteology_myology_reproductive" ;
+    ro:0002131 qualia:macropus_giganteus ;
+    q42:posturalEnvelope "Upright bipedal alert posture and low pentapedal grazing posture; slender neck and narrow sloping shoulders broadening into deep muscular lumbar/sacral spine" ;
+    q42:epipubicCurie "UBERON:0003661" ;
+    q42:marsupiumCurie "UBERON:0001831" ;
+    q42:tailCurie "UBERON:0002415" ;
+    rdfs:label "Bipedal Saltatorial Axial, Pelvic, Marsupial Pouch and Tail System"@en .
+
+anat:epipubic_bones a uberon:0003661 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0003661" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:bipedal_saltatorial_axial_and_pelvic_system ;
+    rdfs:label "Marsupial Epipubic Bones Supporting Forward-Opening Pouch"@en .
+
+anat:forward_opening_marsupium a uberon:0001831 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001831" ;
+    q42:anatomyLayer "integument_reproductive" ;
+    ro:0002131 anat:bipedal_saltatorial_axial_and_pelvic_system ;
+    q42:pouchOrientation "Anteriorly opening (forward-opening) abdominal marsupium in adult females with 4 teats" ;
+    q42:teatCount "4"^^xsd:integer ;
+    rdfs:label "Forward-Opening Female Marsupium Pouch"@en .
+
+anat:pentapedal_propulsive_tail a uberon:0002415 , uberon:0001095 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002415" ;
+    q42:osteologyCurie "UBERON:0001095" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 anat:bipedal_saltatorial_axial_and_pelvic_system ;
+    q42:lengthMinM "0.95"^^xsd:decimal ;
+    q42:lengthMaxM "1.15"^^xsd:decimal ;
+    q42:tailColoration "Silver-grey dorsal coat grading into a dark charcoal-tipped distal third" ;
+    q42:biomechanicalRole "Dynamic angular-momentum counterweight during high-speed bipedal hopping and load-bearing fifth propulsive strut during slow pentapedal grazing" ;
+    rdfs:label "Massive Muscular Tapered Pentapedal & Counterweight Tail"@en .
+
+anat:forelimb_and_elastic_tendon_hindlimb_system a uberon:0002102 , uberon:0002103 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002102" ;
+    q42:secondaryUberonCurie "UBERON:0002103" ;
+    q42:anatomyLayer "osteology_and_myology" ;
+    ro:0002131 qualia:macropus_giganteus ;
+    q42:forelimbFunction "5-clawed manus for pelage grooming, agonistic male boxing, pentapedal weight support, and evaporative thermoregulatory forearm-licking over dense superficial vascular plexus" ;
+    q42:hindlimbElasticTendons "Hypertrophied gluteal, quadriceps, and gastrocnemius/plantaris complex coupled to long elastic Achilles and plantaris tendons storing and returning strain energy" ;
+    q42:elasticStiffnessNm "62000.0"^^xsd:decimal ;
+    q42:maxElasticStrainPct "7.8"^^xsd:decimal ;
+    q42:elasticEnergyRecoveryPct "54.0"^^xsd:decimal ;
+    q42:elasticEnergyFormula "U = 0.5 * k_tendon * delta_L^2" ;
+    rdfs:label "Forelimb and Elastic-Tendon Hindlimb Saltatorial System"@en .
+
+anat:pectoral_forelimb_manus a uberon:0002102 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002102" ;
+    q42:anatomyLayer "osteology_myology_vascular" ;
+    ro:0002131 anat:forelimb_and_elastic_tendon_hindlimb_system ;
+    q42:digitCount "5"^^xsd:integer ;
+    q42:thermoregulatoryFeature "Dense ventral forearm superficial capillary plexus wetted by saliva licking under heat stress" ;
+    rdfs:label "5-Clawed Forelimb Manus and Thermoregulatory Vascular Forearm Plexus"@en .
+
+anat:gastrocnemius_plantaris_achilles_spring a uberon:0001388 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001388" ;
+    q42:anatomyLayer "myology_tendon" ;
+    ro:0002131 anat:forelimb_and_elastic_tendon_hindlimb_system ;
+    q42:elasticStiffnessNm "62000.0"^^xsd:decimal ;
+    q42:tendonYoungsModulusGPa "1.20"^^xsd:decimal ;
+    q42:maxElasticStrainPct "7.8"^^xsd:decimal ;
+    q42:elasticEnergyFormula "U = 0.5 * k_achilles * delta_L^2" ;
+    rdfs:label "Gastrocnemius & Plantaris Elastic Achilles Tendon Energy-Storage Spring"@en .
+
+anat:syndactylous_hind_pes a uberon:0002387 , uberon:0002389 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002387" ;
+    q42:syndactylCurie "UBERON:0002389" ;
+    q42:anatomyLayer "osteology_and_integument" ;
+    ro:0002131 anat:forelimb_and_elastic_tendon_hindlimb_system ;
+    q42:halluxState "absent_vestigial" ;
+    q42:syndactylGroomingDigits "II-III (UBERON:0002389, slender fused grooming digits)" ;
+    q42:hypertrophiedWeightBearingDigit "IV (massive elongated 4th metatarsal and central load-bearing clawed digit)" ;
+    q42:lateralDigit "V (lateral stabilizing clawed digit)" ;
+    rdfs:label "Elongated Syndactylous Hind Pes (Digits II-III, Massive Digit IV, Lateral Digit V)"@en .
+
+anat:osteology_myology_and_pelage a uberon:0001434 , uberon:0001630 , uberon:0002199 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:myologyCurie "UBERON:0001630" ;
+    q42:integumentCurie "UBERON:0002199" ;
+    q42:anatomyLayer "osteology_myology_integument" ;
+    ro:0002131 qualia:macropus_giganteus ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    q42:rigArchetype "macropodid_saltatorial" ;
+    q42:dentalFormula "I 3/1, C 0/0, PM 1/1, M 4/4 (adult functional grazing dentition with forward molar progression)" ;
+    q42:dorsalCoat "Soft woolly silver-grey to mouse-grey dorsal pelage" ;
+    q42:flankAndVentralCoat "Pale silver-buff flanks transitioning to white-cream chest and belly" ;
+    q42:extremitiesColor "Dark charcoal-brown to black forepaw/pes tips and distal third of tail" ;
+    rdfs:label "Skeletal, Muscular, Grazing Dentition and Woolly Silver-Grey Pelage System"@en .
+
+anat:skeletal_system a uberon:0001434 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:osteology_myology_and_pelage ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    q42:boneYoungsModulusGPa "18.0"^^xsd:decimal ;
+    q42:boneDensityKgM3 "1850.0"^^xsd:decimal ;
+    rdfs:label "Skeletal System (24-Joint Macropodid Saltatorial Osteology)"@en .
+
+anat:diprotodont_grazing_dentition a uberon:0001759 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001759" ;
+    q42:anatomyLayer "osteology" ;
+    ro:0002131 anat:skeletal_system ;
+    q42:dentalFormula "I 3/1, C 0/0, PM 1/1, M 4/4" ;
+    q42:molarProgression "Conveyor-like anterior molar progression replacing silica-worn mesial molars sequentially from the posterior arcade" ;
+    rdfs:label "Diprotodont Grazing Dentition with Molar Progression"@en .
+
+anat:muscular_system a uberon:0001630 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001630" ;
+    q42:anatomyLayer "myology" ;
+    ro:0002131 anat:osteology_myology_and_pelage ;
+    rdfs:label "Saltatorial, Pentapedal and Forearm-Alpha-Buck Muscular System"@en .
+
+anat:woolly_silver_grey_pelage a uberon:0002199 , uberon:0002416 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002199" ;
+    q42:integumentCurie "UBERON:0002416" ;
+    q42:anatomyLayer "integument" ;
+    ro:0002131 anat:osteology_myology_and_pelage ;
+    q42:dorsalCoat "Soft woolly silver-grey to mouse-grey pelage" ;
+    q42:ventralCoat "White-cream chest and belly with pale silver-buff flanks" ;
+    q42:extremitiesColor "Dark charcoal-tipped paws, pes digits, ear margins, and distal tail third" ;
+    rdfs:label "Woolly Silver-Grey Countershaded Pelage Integument"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Kinematic Parameters
+# ============================================================================
+
+qualia:macropus_giganteus
+    q42:headBodyLengthMinM "0.95"^^xsd:decimal ;
+    q42:headBodyLengthMaxM "1.50"^^xsd:decimal ;
+    q42:tailLengthMinM "0.95"^^xsd:decimal ;
+    q42:tailLengthMaxM "1.15"^^xsd:decimal ;
+    q42:erectStandingHeightMaxM "2.10"^^xsd:decimal ;
+    q42:adultFemaleStandingHeightRangeM "1.30 to 1.60" ;
+    q42:adultMaleStandingHeightRangeM "1.60 to 2.10" ;
+    q42:adultMassMinKg "24.0"^^xsd:decimal ;
+    q42:adultMassMaxKg "85.0"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "24.0 to 38.0" ;
+    q42:adultMaleMassRangeKg "50.0 to 85.0" ;
+    q42:bmrWatts "49.7"^^xsd:decimal ;
+    q42:bodyTempC "36.2"^^xsd:decimal ;
+    q42:thermoregulation "endotherm_forearm_evaporative_licking" ;
+    q42:allometricBmrEquation "BMR(M) = 2.86 * M^0.75 [W]; at M=45.0 kg -> 49.7 W; at M=66.0 kg -> 66.2 W (marsupial scaling)" ;
+    q42:allometricSegmentEquation "L_pes = 0.112 * M^0.34 [m]; L_tibia = 0.155 * M^0.35 [m]; L_femur = 0.089 * M^0.33 [m]; L_tail = 0.305 * M^0.32 [m]" ;
+    q42:pipeModelMuscleAreaScaling "A_muscle_tendon ~ M^0.78 (handling peak saltatorial landing impulses at high hop velocities)" ;
+    q42:pentapedalGait "Slow pentapedal grazing progression (0.4-1.2 m/s): weight supported on forelimbs and muscular tail while hindlimbs swing forward in unison" ;
+    q42:saltatorialGait "High-efficiency bipedal elastic-recoil hop (5.0-17.5 m/s; cruising 6.5-10.0 m/s with >=54% Achilles/plantaris elastic energy recovery)" ;
+    q42:activityCycle "crepuscular_nocturnal_early_morning_grazing" ;
+    q42:dietGuild "obligate_grass_grazing_macropodid" ;
+    q42:reproductionStrategy "Seasonal/facultative embryonic diapause, ~36 d gestation, ~9-10 mo pouch life, ~18 mo weaning" ;
+    sosa:callName "Low guttural cough/cluck, maternal soft clicking, and heavy double hind-foot alarm thump" ;
+    sosa:callFundamentalHz "165.0"^^xsd:decimal ;
+    envo:habitatStratum "terrestrial_grassy_woodland_and_open_sclerophyll_forest" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1800"^^xsd:integer ;
+    prov:wasDerivedFrom src:australian-museum-eastern-grey , src:nsw-dpe-kangaroos , src:vba-victoria .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (24-Joint PGA)
+# ============================================================================
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:forelimb_and_elastic_tendon_hindlimb_system ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-0.58"^^xsd:decimal ;
+    q42:healthyMaxRad "1.48"^^xsd:decimal ;
+    q42:abductionMinRad "-0.20"^^xsd:decimal ;
+    q42:abductionMaxRad "0.40"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.68"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Hip Joint ROM (Macropus giganteus)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:forelimb_and_elastic_tendon_hindlimb_system ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.78"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.10"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.98"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Knee Stifle Joint ROM (Macropus giganteus)"@en .
+
+rom:ankle a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "ankle" ;
+    q42:anatomicalTarget anat:gastrocnemius_plantaris_achilles_spring , anat:syndactylous_hind_pes ;
+    q42:primaryAxis "dorsiflexion_plantarflexion" ;
+    q42:healthyMinRad "-1.02"^^xsd:decimal ;
+    q42:healthyMaxRad "1.24"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.42"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Ankle Tarsocrural & Elastic Achilles Spring ROM (Macropus giganteus)"@en .
+
+rom:pes_digit_iv a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "pes_digit_iv" ;
+    q42:anatomicalTarget anat:syndactylous_hind_pes ;
+    q42:primaryAxis "metatarsophalangeal_pushoff_flexion" ;
+    q42:healthyMinRad "-0.62"^^xsd:decimal ;
+    q42:healthyMaxRad "0.85"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.05"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Metatarsophalangeal Digit IV Push-Off Joint ROM (Macropus giganteus)"@en .
+
+rom:shoulder a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "shoulder" ;
+    q42:anatomicalTarget anat:pectoral_forelimb_manus ;
+    q42:primaryAxis "flexion_extension_reach_and_boxing" ;
+    q42:healthyMinRad "-0.70"^^xsd:decimal ;
+    q42:healthyMaxRad "1.22"^^xsd:decimal ;
+    q42:abductionMinRad "-0.32"^^xsd:decimal ;
+    q42:abductionMaxRad "0.65"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.42"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Glenohumeral Shoulder Joint ROM (Macropus giganteus)"@en .
+
+rom:elbow a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "elbow" ;
+    q42:anatomicalTarget anat:pectoral_forelimb_manus ;
+    q42:primaryAxis "flexion_extension_sagittal" ;
+    q42:healthyMinRad "-1.68"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.08"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.88"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Elbow Joint ROM (Macropus giganteus)"@en .
+
+rom:wrist a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "wrist" ;
+    q42:anatomicalTarget anat:pectoral_forelimb_manus ;
+    q42:primaryAxis "palmar_dorsal_pentapedal_flexion" ;
+    q42:healthyMinRad "-0.85"^^xsd:decimal ;
+    q42:healthyMaxRad "0.70"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.05"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForepawProtectiveGuarding" ;
+    rdfs:label "Carpal Wrist Joint ROM (Macropus giganteus)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:bipedal_saltatorial_axial_and_pelvic_system ;
+    q42:primaryAxis "thoracolumbar_erect_vs_graze_pitch" ;
+    q42:healthyMinRad "-0.55"^^xsd:decimal ;
+    q42:healthyMaxRad "0.68"^^xsd:decimal ;
+    q42:lateralBendMaxRad "0.35"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.85"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveEarPinBack" ;
+    rdfs:label "Thoracolumbar Spine Joint ROM (Macropus giganteus)"@en .
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:cranial_and_facial_system , anat:bipedal_saltatorial_axial_and_pelvic_system ;
+    q42:primaryAxis "cervical_upright_alert_vs_graze_pitch" ;
+    q42:healthyMinRad "-0.78"^^xsd:decimal ;
+    q42:healthyMaxRad "0.68"^^xsd:decimal ;
+    q42:yawMaxRad "0.82"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.96"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateNociceptiveEarPinBack" ;
+    rdfs:label "Cervical Neck Joint ROM (Macropus giganteus)"@en .
+
+rom:tail a q42:JointROM ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:romJoint "tail" ;
+    q42:anatomicalTarget anat:pentapedal_propulsive_tail ;
+    q42:primaryAxis "caudal_base_mid_tip_pitch" ;
+    q42:healthyMinRad "-0.68"^^xsd:decimal ;
+    q42:healthyMaxRad "0.82"^^xsd:decimal ;
+    q42:lateralSweepMaxRad "0.42"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.98"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricLimpGait" ;
+    rdfs:label "Caudal Pentapedal Tail Articulated Chain ROM (Macropus giganteus)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:macropus_giganteus_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, pouch_occupancy_flag:u8, pelage_silver_shift:f32, forelimb_hypertrophy_01:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.10 to 1.25" ;
+    q42:siteVigorRange "0.45 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Macropus giganteus"@en .
+
+stage:pouch_joey a q42:OntogeneticStage ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:stageId "pouch_joey" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.22"^^xsd:decimal ;
+    q42:heightScaleMin "0.10"^^xsd:decimal ;
+    q42:heightScaleMax "0.32"^^xsd:decimal ;
+    q42:massRangeKg "0.0008 to 4.5" ;
+    q42:independentLocomotion false ;
+    rdfs:label "Pouch Joey (0-9 months, inside forward-opening marsupium)"@en .
+
+stage:young_at_foot a q42:OntogeneticStage ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:stageId "young_at_foot" ;
+    q42:ontogeneticAgeNormMin "0.22"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.42"^^xsd:decimal ;
+    q42:heightScaleMin "0.32"^^xsd:decimal ;
+    q42:heightScaleMax "0.58"^^xsd:decimal ;
+    q42:massRangeKg "4.5 to 14.0" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Young-at-Foot (9-18 months, grazing beside doe while nursing)"@en .
+
+stage:subadult_flyer a q42:OntogeneticStage ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:stageId "subadult_flyer" ;
+    q42:ontogeneticAgeNormMin "0.42"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.65"^^xsd:decimal ;
+    q42:heightScaleMin "0.58"^^xsd:decimal ;
+    q42:heightScaleMax "0.84"^^xsd:decimal ;
+    q42:massRangeKg "14.0 to 26.0" ;
+    q42:independentLocomotion true ;
+    rdfs:label "Subadult Flyer (18-30 months, slender fast-moving young kangaroo)"@en .
+
+stage:adult_doe a q42:OntogeneticStage ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:stageId "adult_doe" ;
+    q42:ontogeneticAgeNormMin "0.65"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.80"^^xsd:decimal ;
+    q42:heightScaleMax "0.96"^^xsd:decimal ;
+    q42:massRangeKg "24.0 to 38.0" ;
+    q42:standingHeightMinM "1.30"^^xsd:decimal ;
+    q42:standingHeightMaxM "1.60"^^xsd:decimal ;
+    q42:karyotype "2n=16 (XX)" ;
+    q42:supportsPouchOccupancy true ;
+    rdfs:label "Adult Doe (2n=16 XX, forward-opening marsupium)"@en .
+
+stage:alpha_boomer_buck a q42:OntogeneticStage ;
+    q42:appliesTo qualia:macropus_giganteus ;
+    q42:stageId "alpha_boomer_buck" ;
+    q42:ontogeneticAgeNormMin "0.65"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.96"^^xsd:decimal ;
+    q42:heightScaleMax "1.25"^^xsd:decimal ;
+    q42:massRangeKg "66.0 to 85.0" ;
+    q42:standingHeightMinM "1.75"^^xsd:decimal ;
+    q42:standingHeightMaxM "2.10"^^xsd:decimal ;
+    q42:karyotype "2n=16 (XY)" ;
+    q42:supportsPouchOccupancy false ;
+    rdfs:label "Alpha Boomer Buck (2n=16 XY, up to 2.1 m tall / 66-85 kg, hypertrophied pectoral & forelimb musculature)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Grassy Woodland Grazer & Habitat Associations)
+# ============================================================================
+
+qualia:poa_labillardierei a dwc:Taxon ;
+    dwc:scientificName "Poa labillardierei Steud." ;
+    rdfs:label "Common Tussock-Grass"@en .
+
+qualia:themeda_triandra a dwc:Taxon ;
+    dwc:scientificName "Themeda triandra Forssk." ;
+    rdfs:label "Kangaroo Grass"@en .
+
+qualia:microlaena_stipoides a dwc:Taxon ;
+    dwc:scientificName "Microlaena stipoides (Labill.) R.Br." ;
+    rdfs:label "Weeping Grass"@en .
+
+qualia:eucalyptus_melliodora a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus melliodora A.Cunn. ex Schauer" ;
+    rdfs:label "Yellow Box"@en .
+
+qualia:eucalyptus_camaldulensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus camaldulensis Dehnh." ;
+    rdfs:label "River Red Gum"@en .
+
+qualia:macropus_giganteus
+    ro:0002470 qualia:poa_labillardierei ,
+               qualia:themeda_triandra ,
+               qualia:microlaena_stipoides ;
+    rorel:trophically_interacts_with qualia:poa_labillardierei ,
+                                     qualia:themeda_triandra ,
+                                     qualia:microlaena_stipoides ;
+    ro:0002303 envo:01000220 ,
+               qualia:eucalyptus_melliodora ,
+               qualia:eucalyptus_camaldulensis ;
+    q42:ecologicalFunction "Dominant social native grazing herbivore of South-Eastern Australian Eucalyptus melliodora grassy box-gum woodlands, E. camaldulensis floodplain woodlands, and open sclerophyll forests, maintaining herbaceous sward heterogeneity and nutrient cycling."@en ;
+    rdfs:comment "Forms cohesive social mobs foraging crepuscularly and nocturnally across open grassy woodland glades and sheltering in adjacent eucalypt woodland cover during midday heat."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers & Border Ranges, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" .
+
+country:gumbaynggirr_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gumbaynggirr Country (Mid-North Coast & Dorrigo Escarpment, NSW)"@en ;
+    tk:language_group "Gumbaynggirr" ;
+    tk:vernacularName "Bandaarr"@qaa-x-nsw ;
+    tk:care_governance "CARE Principles" .
+
+country:gadigal_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gadigal Country (Sydney Harbour Sandstone Basin, Eora Nation, NSW)"@en ;
+    tk:language_group "Gadigal / Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:dharug_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharug Country (Hawkesbury-Nepean & Cumberland Plain Grassy Woodlands, NSW)"@en ;
+    tk:language_group "Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (South Coast & Illawarra Escarpment, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Monaro Tablelands & Snowy High Plains, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:walgalu_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Walgalu Country (Tumut, Talbingo & Northern Kosciuszko, NSW)"@en ;
+    tk:language_group "Walgalu / Wolgalu" ;
+    tk:care_governance "CARE Principles" .
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Central & South-Western Slopes Box-Gum Woodlands, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Gippsland Plains, Strzelecki & East Gippsland, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra Ranges, Plenty Gorge & Central Highlands, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Port Phillip, Mornington Peninsula & Western Port, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .
+
+country:wadawurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wadawurrung Country (You Yangs, Moorabool & Western Victorian Grassy Woodlands, VIC)"@en ;
+    tk:language_group "Wadawurrung" ;
+    tk:care_governance "CARE Principles" .

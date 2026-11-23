@@ -1,0 +1,134 @@
+# Vintage Brushed-Aluminum & Expedition Restoration Camper Trailer (foldout-camp-shelter-trailer) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-CAMP-01 | Organization: github.com/qualia-poiesis/foldout-camp-shelter-trailer
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:foldout-camp-shelter-trailer:> .
+@prefix part:   <urn:qualia:design:foldout-camp-shelter-trailer:part:> .
+@prefix port:   <urn:qualia:design:foldout-camp-shelter-trailer:port:> .
+
+design:rev1 a made:Artefact , made:CampTrailer , dcat:Dataset ;
+    owl:sameAs <did:q42:design:foldout_camp_shelter_trailer> ;
+    dct:identifier <urn:qualia:design:foldout-camp-shelter-trailer:rev1> , <did:q42:design:foldout_camp_shelter_trailer> ;
+    rdfs:label "Vintage Brushed-Aluminum & Expedition Restoration Camper Trailer"@en ;
+    dct:title "Vintage Brushed-Aluminum & Expedition Restoration Camper Trailer — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/foldout-camp-shelter-trailer> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "camp_setup_awning_and_stabilizer_jacks" , "trailing_axle_suspension_and_drawbar_pitch" , "roof_vent_hatch_and_solar_tilt" , "outdoor_education_desk_deploy" ;
+    made:lengthM "3.160"^^xsd:decimal ;
+    made:widthM "2.380"^^xsd:decimal ;
+    made:heightM "2.020"^^xsd:decimal ;
+    made:curbMassKg "920.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "1.75"^^xsd:decimal ;
+    made:totalAuthoredParts "39"^^xsd:integer ;
+    made:hasComponent part:trailer-chassis , part:drawbar-arm-left , part:drawbar-arm-right , part:jockey-wheel-post , part:jockey-wheel-roller , part:lpg-gas-cylinder-left , part:lpg-gas-cylinder-right , part:stabilizer-jack-0 , part:stabilizer-jack-1 , part:stabilizer-jack-2 , part:stabilizer-jack-3 , part:caravan-main-shell , part:amber-waist-stripe , part:aluminum-rub-rail , part:front-panoramic-window , part:rear-panoramic-window , part:front-clearance-lamp-0 , part:front-clearance-lamp-1 ;
+    made:hasPort port:trailer-coupler-50mm , port:camp-microgrid-plug-24v , port:lpg-dual-regulator-manifold .
+
+part:trailer-chassis a made:TrailerChassis , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-trailer-chassis> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Trailer Chassis"@en .
+part:drawbar-arm-left a made:Drawbar , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-drawbar-arm-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Drawbar Arm Left"@en .
+part:drawbar-arm-right a made:Drawbar , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-drawbar-arm-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Drawbar Arm Right"@en .
+part:jockey-wheel-post a made:JockeyPost , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-jockey-wheel-post> ;
+    made:jointKind "prismatic" ;
+    rdfs:label "Jockey Wheel Post"@en .
+part:jockey-wheel-roller a made:JockeyWheel , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-jockey-wheel-roller> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Jockey Wheel Roller"@en .
+part:lpg-gas-cylinder-left a made:GasCylinder , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-lpg-gas-cylinder-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lpg Gas Cylinder Left"@en .
+part:lpg-gas-cylinder-right a made:GasCylinder , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-lpg-gas-cylinder-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lpg Gas Cylinder Right"@en .
+part:stabilizer-jack-0 a made:StabilizerJack , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-stabilizer-jack-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stabilizer Jack 0"@en .
+part:stabilizer-jack-1 a made:StabilizerJack , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-stabilizer-jack-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stabilizer Jack 1"@en .
+part:stabilizer-jack-2 a made:StabilizerJack , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-stabilizer-jack-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stabilizer Jack 2"@en .
+part:stabilizer-jack-3 a made:StabilizerJack , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-stabilizer-jack-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stabilizer Jack 3"@en .
+part:caravan-main-shell a made:CaravanBody , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-caravan-main-shell> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Caravan Main Shell"@en .
+part:amber-waist-stripe a made:AccentStripe , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-amber-waist-stripe> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Amber Waist Stripe"@en .
+part:aluminum-rub-rail a made:TrimStrip , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-aluminum-rub-rail> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Aluminum Rub Rail"@en .
+part:front-panoramic-window a made:FrontWindow , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-front-panoramic-window> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Panoramic Window"@en .
+part:rear-panoramic-window a made:RearWindow , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-rear-panoramic-window> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Panoramic Window"@en .
+part:front-clearance-lamp-0 a made:ClearanceLight , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-front-clearance-lamp-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Clearance Lamp 0"@en .
+part:front-clearance-lamp-1 a made:ClearanceLight , made:Component ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#part-front-clearance-lamp-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Clearance Lamp 1"@en .
+
+port:trailer-coupler-50mm a made:FunctionalPort ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#port-trailer-coupler-50mm> ;
+    made:portMedium "mechanical_coupling" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Newton ;
+    made:ratedCapacity "18000.0"^^xsd:decimal .
+port:camp-microgrid-plug-24v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#port-camp-microgrid-plug-24v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "1500.0"^^xsd:decimal .
+port:lpg-dual-regulator-manifold a made:FunctionalPort ;
+    dct:identifier <did:q42:design:foldout_camp_shelter_trailer#port-lpg-dual-regulator-manifold> ;
+    made:portMedium "pneumatic_gas" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:Kilopascal ;
+    made:ratedCapacity "2.75"^^xsd:decimal .

@@ -1,0 +1,128 @@
+# Corridor Touring Sedan & Field Station Wagon (station-wagon-field-car) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-VEH-02 | Organization: github.com/qualia-poiesis/station-wagon-field-car
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:station-wagon-field-car:> .
+@prefix part:   <urn:qualia:design:station-wagon-field-car:part:> .
+@prefix port:   <urn:qualia:design:station-wagon-field-car:port:> .
+
+design:rev1 a made:Artefact , made:PassengerVehicle , dcat:Dataset ;
+    owl:sameAs <did:q42:design:station_wagon_field_car> ;
+    dct:identifier <urn:qualia:design:station-wagon-field-car:rev1> , <did:q42:design:station_wagon_field_car> ;
+    rdfs:label "Corridor Touring Sedan & Field Station Wagon"@en ;
+    dct:title "Corridor Touring Sedan & Field Station Wagon — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/station-wagon-field-car> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "corridor_cruising_wheel_and_damper_cycle" , "front_steering_and_cornering_roll" , "hood_and_tailgate_inspection_open" , "rooftop_telemetry_pod_calibration" ;
+    made:lengthM "3.040"^^xsd:decimal ;
+    made:widthM "1.780"^^xsd:decimal ;
+    made:heightM "1.420"^^xsd:decimal ;
+    made:curbMassKg "1620.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "1.6"^^xsd:decimal ;
+    made:totalAuthoredParts "43"^^xsd:integer ;
+    made:hasComponent part:chassis-underbody , part:lower-wagon-body , part:front-hood-deck , part:wheel-arch-trim-0 , part:wheel-arch-trim-1 , part:wheel-arch-trim-2 , part:wheel-arch-trim-3 , part:wagon-greenhouse , part:front-windshield , part:rear-tailgate-window , part:door-glass-front-left , part:door-glass-mid-left , part:cargo-glass-rear-left , part:side-mirror-left , part:door-glass-front-right , part:door-glass-mid-right , part:cargo-glass-rear-right , part:side-mirror-right ;
+    made:hasPort port:aux-dc-bus-12v , port:rear-trailer-hitch .
+
+part:chassis-underbody a made:VehicleChassis , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-chassis-underbody> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Chassis Underbody"@en .
+part:lower-wagon-body a made:BodyShell , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-lower-wagon-body> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Lower Wagon Body"@en .
+part:front-hood-deck a made:EngineHood , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-front-hood-deck> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Front Hood Deck"@en .
+part:wheel-arch-trim-0 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-wheel-arch-trim-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wheel Arch Trim 0"@en .
+part:wheel-arch-trim-1 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-wheel-arch-trim-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wheel Arch Trim 1"@en .
+part:wheel-arch-trim-2 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-wheel-arch-trim-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wheel Arch Trim 2"@en .
+part:wheel-arch-trim-3 a made:FenderFlare , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-wheel-arch-trim-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wheel Arch Trim 3"@en .
+part:wagon-greenhouse a made:VehicleCabin , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-wagon-greenhouse> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Wagon Greenhouse"@en .
+part:front-windshield a made:Windshield , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-front-windshield> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Windshield"@en .
+part:rear-tailgate-window a made:RearWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-rear-tailgate-window> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rear Tailgate Window"@en .
+part:door-glass-front-left a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-door-glass-front-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Glass Front Left"@en .
+part:door-glass-mid-left a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-door-glass-mid-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Glass Mid Left"@en .
+part:cargo-glass-rear-left a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-cargo-glass-rear-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cargo Glass Rear Left"@en .
+part:side-mirror-left a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-side-mirror-left> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Mirror Left"@en .
+part:door-glass-front-right a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-door-glass-front-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Glass Front Right"@en .
+part:door-glass-mid-right a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-door-glass-mid-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Door Glass Mid Right"@en .
+part:cargo-glass-rear-right a made:SideWindow , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-cargo-glass-rear-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cargo Glass Rear Right"@en .
+part:side-mirror-right a made:WingMirror , made:Component ;
+    dct:identifier <did:q42:design:station_wagon_field_car#part-side-mirror-right> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Side Mirror Right"@en .
+
+port:aux-dc-bus-12v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:station_wagon_field_car#port-aux-dc-bus-12v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "1200.0"^^xsd:decimal .
+port:rear-trailer-hitch a made:FunctionalPort ;
+    dct:identifier <did:q42:design:station_wagon_field_car#port-rear-trailer-hitch> ;
+    made:portMedium "mechanical_coupling" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:Newton ;
+    made:ratedCapacity "18000.0"^^xsd:decimal .

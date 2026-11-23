@@ -1,0 +1,128 @@
+# Solar-Electric Catchment Canal Skiff & Water-Quality Survey Boat (electric-canal-narrowboat) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-MAR-01 | Organization: github.com/qualia-poiesis/electric-canal-narrowboat
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:electric-canal-narrowboat:> .
+@prefix part:   <urn:qualia:design:electric-canal-narrowboat:part:> .
+@prefix port:   <urn:qualia:design:electric-canal-narrowboat:port:> .
+
+design:rev1 a made:Artefact , made:Watercraft , dcat:Dataset ;
+    owl:sameAs <did:q42:design:electric_canal_narrowboat> ;
+    dct:identifier <urn:qualia:design:electric-canal-narrowboat:rev1> , <did:q42:design:electric_canal_narrowboat> ;
+    rdfs:label "Solar-Electric Catchment Canal Skiff & Water-Quality Survey Boat"@en ;
+    dct:title "Solar-Electric Catchment Canal Skiff & Water-Quality Survey Boat — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/electric-canal-narrowboat> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "hydrostatic_heave_pitch_and_roll" , "tiller_and_rudder_steering_sweep" , "canopy_marine_solar_trim" , "mooring_bollard_docking_surge" ;
+    made:lengthM "3.650"^^xsd:decimal ;
+    made:widthM "1.480"^^xsd:decimal ;
+    made:heightM "1.620"^^xsd:decimal ;
+    made:curbMassKg "640.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "0.95"^^xsd:decimal ;
+    made:totalAuthoredParts "21"^^xsd:integer ;
+    made:hasComponent part:boat-hull-shell , part:cockpit-floor-deck , part:gunwale-timber-port , part:rub-strake-teal-port , part:gunwale-timber-starboard , part:rub-strake-teal-starboard , part:bow-foredeck , part:bow-brass-mooring-post , part:stern-transom-deck , part:thwart-bench-0 , part:thwart-bench-1 , part:thwart-bench-2 , part:canopy-stanchion-0 , part:canopy-stanchion-1 , part:canopy-stanchion-2 , part:canopy-stanchion-3 , part:sun-canopy-roof , part:marine-solar-array ;
+    made:hasPort port:marine-dc-charge-port-48v , port:electric-outboard-thrust .
+
+part:boat-hull-shell a made:BoatHull , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-boat-hull-shell> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Boat Hull Shell"@en .
+part:cockpit-floor-deck a made:BoatDeck , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-cockpit-floor-deck> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Cockpit Floor Deck"@en .
+part:gunwale-timber-port a made:Gunwale , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-gunwale-timber-port> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Gunwale Timber Port"@en .
+part:rub-strake-teal-port a made:RubStrake , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-rub-strake-teal-port> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rub Strake Teal Port"@en .
+part:gunwale-timber-starboard a made:Gunwale , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-gunwale-timber-starboard> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Gunwale Timber Starboard"@en .
+part:rub-strake-teal-starboard a made:RubStrake , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-rub-strake-teal-starboard> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Rub Strake Teal Starboard"@en .
+part:bow-foredeck a made:Foredeck , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-bow-foredeck> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bow Foredeck"@en .
+part:bow-brass-mooring-post a made:MooringBollard , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-bow-brass-mooring-post> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Bow Brass Mooring Post"@en .
+part:stern-transom-deck a made:SternDeck , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-stern-transom-deck> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Stern Transom Deck"@en .
+part:thwart-bench-0 a made:ThwartSeat , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-thwart-bench-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Thwart Bench 0"@en .
+part:thwart-bench-1 a made:ThwartSeat , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-thwart-bench-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Thwart Bench 1"@en .
+part:thwart-bench-2 a made:ThwartSeat , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-thwart-bench-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Thwart Bench 2"@en .
+part:canopy-stanchion-0 a made:CanopyStanchion , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-canopy-stanchion-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Stanchion 0"@en .
+part:canopy-stanchion-1 a made:CanopyStanchion , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-canopy-stanchion-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Stanchion 1"@en .
+part:canopy-stanchion-2 a made:CanopyStanchion , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-canopy-stanchion-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Stanchion 2"@en .
+part:canopy-stanchion-3 a made:CanopyStanchion , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-canopy-stanchion-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Stanchion 3"@en .
+part:sun-canopy-roof a made:BoatCanopy , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-sun-canopy-roof> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Sun Canopy Roof"@en .
+part:marine-solar-array a made:SolarPanel , made:Component ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#part-marine-solar-array> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Marine Solar Array"@en .
+
+port:marine-dc-charge-port-48v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#port-marine-dc-charge-port-48v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "3000.0"^^xsd:decimal .
+port:electric-outboard-thrust a made:FunctionalPort ;
+    dct:identifier <did:q42:design:electric_canal_narrowboat#port-electric-outboard-thrust> ;
+    made:portMedium "mechanical_propulsion" ;
+    made:portDirection "output" ;
+    qudt:unit qudt:Newton ;
+    made:ratedCapacity "1200.0"^^xsd:decimal .

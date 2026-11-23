@@ -1,0 +1,54 @@
+# Rytidosperma caespitosum (Gaudich.) Connor & Edgar (Common Wallaby Grass) - WEB-WP-16G groundcover cohort
+# Identifiers from ALA name matching and GBIF backbone (see groundcover-pipeline/sources). Morphology = registry estimates.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dwc: <http://rs.tdwg.org/dwc/terms/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix po: <http://purl.obolibrary.org/obo/PO_> .
+@prefix ro: <http://purl.obolibrary.org/obo/RO_> .
+@prefix tk: <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix q42: <urn:qualia:ontology:> .
+@prefix qualia: <urn:qualia:taxon:> .
+@prefix organ: <urn:qualia:taxon:rytidosperma_caespitosum:organ:> .
+
+qualia:rytidosperma_caespitosum a dwc:Taxon ;
+    owl:sameAs <did:q42:taxon:rytidosperma_caespitosum> , <did:q42:taxon:rytidosperma-caespitosum> ;
+    rdfs:label "Common Wallaby Grass"@en , "Rytidosperma caespitosum (Gaudich.) Connor & Edgar"@la ;
+    dwc:kingdom "Plantae" ;
+    dwc:scientificName "Rytidosperma caespitosum (Gaudich.) Connor & Edgar" ;
+    dwc:family "Poaceae" ;
+    dwc:vernacularName "Common Wallaby Grass"@en ;
+    dwc:establishmentMeans "native" ;
+    q42:groundcoverGroup "grass" ;
+    q42:ecologicalRole "Grassy woodlands, native pastures and roadsides on the tablelands and plains" ;
+    q42:naturalSwayFreqHz "1.9"^^xsd:decimal ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:morphologyStatus "registry-estimate-unverified" ;
+    dwc:taxonConceptID <https://id.biodiversity.org.au/node/apni/2900814> ;
+    q42:alaMatch "Rytidosperma caespitosum [species/exactMatch/None]" ;
+    owl:sameAs <https://www.gbif.org/species/4136604> ;
+    q42:alaOccurrenceRecords "26071"^^xsd:integer ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "New South Wales" ; q42:count "8061"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Victoria" ; q42:count "7389"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Australian Capital Territory" ; q42:count "390"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "Tasmania" ; q42:count "1039"^^xsd:integer ] ;
+    q42:alaOccurrenceRecordsIn [ q42:stateProvince "South Australia" ; q42:count "7429"^^xsd:integer ] ;
+    prov:generatedAtTime "2026-11-19T23:33:11.981589+00:00"^^xsd:dateTime ;
+    tk:custodial_country "Ngunnawal & Ngambri Country (Southern Tablelands, ACT/NSW)" , "Wurundjeri Country (VIC)" ;
+    tk:noticeType "TK_Notice_Open_To_Collaborate" , "BC_Notice_Biocultural_Provenance" ;
+    rdfs:seeAlso <https://id.biodiversity.org.au/node/apni/2900814> , <https://www.gbif.org/species/4136604> , <https://bie.ala.org.au/search?q=Rytidosperma+caespitosum> , <https://vicflora.rbg.vic.gov.au/flora/search?q=Rytidosperma+caespitosum> , <https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Rytidosperma+caespitosum> ;
+    ro:0002180 organ:root_system , organ:shoot_system , organ:reproductive_system .
+
+organ:root_system a po:0025025 ; rdfs:label "Root system"@en .
+organ:shoot_system a po:0009006 ; rdfs:label "Shoot system (leaves, stems, stolons)"@en .
+organ:reproductive_system a po:0009049 ; rdfs:label "Inflorescence / flowers"@en .
+
+qualia:rytidosperma_caespitosumShape a sh:NodeShape ;
+    sh:targetNode qualia:rytidosperma_caespitosum ;
+    sh:property [ sh:path dwc:scientificName ; sh:minCount 1 ] ;
+    sh:property [ sh:path ro:0002180 ; sh:minCount 3 ] .

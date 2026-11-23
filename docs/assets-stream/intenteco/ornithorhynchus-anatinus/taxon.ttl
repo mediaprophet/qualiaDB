@@ -1,0 +1,590 @@
+# Ornithorhynchus anatinus (Shaw, 1799) — Platypus Taxon & Biophysical Ontology
+# Work-Packet: ECO-WP-12A (IntentEco South-Eastern Australia Species Cohort)
+# Compliant with W3C Turtle 1.1, Darwin Core (dwc), UBERON, RO, ENVO, PROV-O, Local Contexts TK/BC, ODRL 2.2.
+# Note: Taxon concept, organism template, synthetic instance, and regional locality records are kept distinct.
+
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:       <http://purl.org/dc/terms/> .
+@prefix dcat:      <http://www.w3.org/ns/dcat#> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix dwc:       <http://rs.tdwg.org/dwc/terms/> .
+@prefix ro:        <http://purl.obolibrary.org/obo/RO_> .
+@prefix rorel:     <http://purl.obolibrary.org/obo/ro.owl#> .
+@prefix envo:      <http://purl.obolibrary.org/obo/ENVO_> .
+@prefix uberon:    <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix ncbitaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix sosa:      <http://www.w3.org/ns/sosa/> .
+@prefix tk:        <https://localcontexts.org/ontology/tk-bc.ttl#> .
+@prefix odrl:      <http://www.w3.org/ns/odrl/2/> .
+@prefix aunsl:     <https://biodiversity.org.au/voc/taxa/> .
+@prefix qualia:    <urn:qualia:taxon:> .
+@prefix q42taxon:  <did:q42:taxon:> .
+@prefix q42:       <urn:qualia:q42:> .
+@prefix rom:       <urn:qualia:q42:rom:> .
+@prefix inst64:    <urn:qualia:q42:instancestate64:> .
+@prefix anat:      <urn:qualia:anatomy:ornithorhynchus_anatinus:> .
+@prefix stage:     <urn:qualia:stage:ornithorhynchus_anatinus:> .
+@prefix country:   <urn:qualia:biocultural:> .
+@prefix src:       <urn:qualia:source:> .
+@prefix claim:     <urn:qualia:claim:ornithorhynchus-anatinus:> .
+
+# ============================================================================
+# 1. Taxon Concept & Authoritative Identifiers
+# ============================================================================
+
+qualia:ornithorhynchus_anatinus a dwc:Taxon , rdfs:Class , dcat:Dataset ;
+    owl:sameAs q42taxon:ornithorhynchus_anatinus ;
+    dct:identifier <urn:qualia:taxon:ornithorhynchus_anatinus> ,
+                   <did:q42:taxon:ornithorhynchus_anatinus> ;
+    rdfs:label "Platypus"@en ;
+    dwc:scientificName "Ornithorhynchus anatinus (Shaw, 1799)" ;
+    dwc:scientificNameAuthorship "Shaw, 1799" ;
+    dwc:originalNameUsage "Platypus anatinus Shaw, 1799" ;
+    q42:historicalSynonym "Ornithorhynchus paradoxus Blumenbach, 1800" ;
+    dwc:kingdom "Animalia" ;
+    dwc:phylum "Chordata" ;
+    dwc:class "Mammalia" ;
+    dwc:order "Monotremata" ;
+    dwc:family "Ornithorhynchidae" ;
+    dwc:genus "Ornithorhynchus" ;
+    dwc:specificEpithet "anatinus" ;
+    dwc:taxonRank "species" ;
+    dwc:taxonomicStatus "accepted" ;
+    dwc:vernacularName "Platypus"@en ,
+                       "Duck-billed Platypus"@en ,
+                       "Biladurang"@qaa-x-wrh ,
+                       "Mallangong"@qaa-x-nsw-se ,
+                       "Tambreet"@qaa-x-nsw-se ,
+                       "Boonaburra"@qaa-x-nsw-se ,
+                       "Gaya-dari"@qaa-x-eora ;
+    aunsl:lsid <https://biodiversity.org.au/afd/taxa/ac61fd14-4950-4566-b384-304bd99ca75f> ;
+    dwc:scientificNameID <https://biodiversity.org.au/afd/taxa/ac61fd14-4950-4566-b384-304bd99ca75f> ;
+    dwc:taxonID "GBIF:2433376" ;
+    q42:gbifSpeciesKey "2433376"^^xsd:integer ;
+    q42:gbifGenusKey "2433375"^^xsd:integer ;
+    q42:gbifFamilyKey "5940"^^xsd:integer ;
+    q42:gbifOrderKey "791"^^xsd:integer ;
+    q42:ncbiTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9258> ;
+    q42:ncbiGenusTaxon <http://purl.obolibrary.org/obo/NCBITaxon_9257> ;
+    q42:monotypicFamily true ;
+    q42:monotypicGenus true ;
+    q42:karyotype "2n=52 (21 autosome pairs + 10 sex chromosomes: X1Y1X2Y2X3Y3X4Y4X5Y5 male / 10X female)" ;
+    q42:iucnStatus "NT" ;
+    q42:vicFfgStatus "Vulnerable (Flora and Fauna Guarantee Act 1988, Victoria)" ;
+    dcat:landingPage <https://github.com/intenteco/ornithorhynchus-anatinus> ;
+    rdfs:seeAlso <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/ac61fd14-4950-4566-b384-304bd99ca75f> ,
+                 <https://www.gbif.org/species/2433376> ,
+                 <https://www.environment.nsw.gov.au/topics/animals-and-plants/native-animals/native-animal-facts/platypus> ,
+                 <https://vba.biodiversity.vic.gov.au/> ,
+                 <https://platypus.asn.au/> ;
+    prov:wasDerivedFrom src:afd-ornithorhynchus-anatinus ,
+                        src:ala-ornithorhynchus-anatinus ,
+                        src:gbif-2433376 ,
+                        src:ncbi-9258 ,
+                        src:nsw-dpe-platypus ,
+                        src:vic-biodiversity-atlas ,
+                        src:australian-platypus-conservancy ;
+    odrl:hasPolicy "SocialPermissiveCommons" ;
+    q42:commonsLicence "SPC" ;
+    tk:custodial_country country:bundjalung_country ,
+                         country:gumbaynggirr_country ,
+                         country:dharug_country ,
+                         country:gundungurra_country ,
+                         country:yuin_country ,
+                         country:ngarigo_country ,
+                         country:walgalu_country ,
+                         country:wiradjuri_country ,
+                         country:gunaikurnai_country ,
+                         country:wurundjeri_country ,
+                         country:boonwurrung_country ,
+                         country:wadawurrung_country .
+
+q42taxon:ornithorhynchus_anatinus a dwc:Taxon ;
+    dct:identifier <did:q42:taxon:ornithorhynchus_anatinus> ;
+    owl:sameAs qualia:ornithorhynchus_anatinus ;
+    rdfs:label "Ornithorhynchus anatinus Q42 DID Taxon Locator"@en .
+
+# Authoritative Bibliographic & Biodiversity Sources
+src:afd-ornithorhynchus-anatinus a dct:BibliographicResource ;
+    dct:identifier <https://biodiversity.org.au/afd/taxa/ac61fd14-4950-4566-b384-304bd99ca75f> ;
+    rdfs:label "Australian Faunal Directory (AFD) — Ornithorhynchus anatinus (Shaw, 1799)" .
+
+src:ala-ornithorhynchus-anatinus a dct:BibliographicResource ;
+    dct:identifier <https://bie.ala.org.au/species/https://biodiversity.org.au/afd/taxa/ac61fd14-4950-4566-b384-304bd99ca75f> ;
+    rdfs:label "Atlas of Living Australia (ALA) — Ornithorhynchus anatinus species profile" .
+
+src:gbif-2433376 a dct:BibliographicResource ;
+    dct:identifier <https://www.gbif.org/species/2433376> ;
+    rdfs:label "GBIF Backbone Taxonomy — Ornithorhynchus anatinus (Shaw, 1799) [speciesKey 2433376]" .
+
+src:ncbi-9258 a dct:BibliographicResource ;
+    dct:identifier <https://www.ncbi.nlm.nih.gov/datasets/taxonomy/9258/> ;
+    rdfs:label "NCBI Taxonomy — Ornithorhynchus anatinus (TaxID 9258)" .
+
+src:nsw-dpe-platypus a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/native-animals/native-animal-facts/platypus> ;
+    rdfs:label "NSW DCCEEW — Native Animal Facts: Platypus" .
+
+src:nsw-bionet a dct:BibliographicResource ;
+    dct:identifier <https://www.environment.nsw.gov.au/topics/animals-and-plants/biodiversity/nsw-bionet> ;
+    rdfs:label "NSW BioNet Atlas" .
+
+src:vic-biodiversity-atlas a dct:BibliographicResource ;
+    dct:identifier <https://vba.biodiversity.vic.gov.au/> ;
+    rdfs:label "Victorian Biodiversity Atlas (DEECA) — Ornithorhynchus anatinus occurrence dataset" .
+
+src:vic-wildlife-other-mammals a dct:BibliographicResource ;
+    dct:identifier <https://www.wildlife.vic.gov.au/our-wildlife/other-mammals> ;
+    rdfs:label "DEECA Wildlife Victoria — Platypus (FFG Act 1988 Vulnerable) profile" .
+
+src:australian-platypus-conservancy a dct:BibliographicResource ;
+    dct:identifier <https://platypus.asn.au/> ;
+    rdfs:label "Australian Platypus Conservancy (APC) — Biology, Electroreception & Riparian Conservation" .
+
+claim:sole-extant-ornithorhynchid a rdf:Statement ;
+    rdf:subject qualia:ornithorhynchus_anatinus ;
+    rdf:predicate q42:functionalGuild ;
+    rdf:object "semi_aquatic_oviparous_electrosensory_monotreme" ;
+    rdfs:comment "Ornithorhynchus anatinus is the sole extant member of family Ornithorhynchidae (order Monotremata), distinguished by its pliable electrosensory duck-like bill, dense dual-layer waterproof pelage, fan-webbed rowing forepaws, beaver-like fat-storing paddle tail, oviparous reproduction, and crural venom gland/calcaneal spur in males."@en .
+
+# ============================================================================
+# 2. Anatomical Subsystems (UBERON: Bill/Cranium, Torso/Tail, Limbs, Osteology & Myology)
+# ============================================================================
+
+# --- Subsystem A: Electrosensory Duck Bill & Cranium (UBERON:0000975 & UBERON:0001456) ---
+
+anat:electrosensory_duck_bill_and_cranium a uberon:0000975 , uberon:0001456 , uberon:0003129 , uberon:0004096 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0000975" ;
+    q42:secondaryUberonCurie "UBERON:0001456" ;
+    q42:cranialUberonCurie "UBERON:0003129" ;
+    q42:rostrumUberonCurie "UBERON:0004096" ;
+    q42:subsystemId "electrosensory_duck_bill_and_cranium" ;
+    q42:anatomyLayer "integument_sensory_and_cranium" ;
+    ro:0002131 qualia:ornithorhynchus_anatinus ;
+    q42:billLengthMm "60.0"^^xsd:decimal ;
+    q42:billWidthMm "50.0"^^xsd:decimal ;
+    q42:billSurface "Pliable, smooth, leathery slate-black dorsal bill shield and paler mottled lower mandibular bill with backward-extending frontal and mandibular cutaneous shield flaps at the bill base" ;
+    q42:nostrilPlacement "Paired dorsal sub-terminal slit nostrils near tip of upper bill, closing during dives" ;
+    q42:electroreceptorCount "40000"^^xsd:integer ;
+    q42:electroreceptorType "ampullary_electroreceptor (modified mucous glands)" ;
+    q42:electroreceptorSensitivityUvCmMin "50.0"^^xsd:decimal ;
+    q42:electroreceptorSensitivityUvCmMax "250.0"^^xsd:decimal ;
+    q42:mechanoreceptorCount "60000"^^xsd:integer ;
+    q42:mechanoreceptorType "push_rod_mechanoreceptor (20 um displacement threshold)" ;
+    q42:receptorArrayGeometry "Parasagittal longitudinal stripes across dorsal and ventral bill skin enabling bimodal electrolocation and hydrodynamic wave time-delay ranging" ;
+    q42:oralApparatus "Expansible cheek pouches storing benthic prey underwater + four keratinous horny grinding pads replacing shed deciduous juvenile molars" ;
+    q42:ocularAuricularFurrow "Combined eye-and-ear facial groove (ocular_auricular_furrow) lacking external pinnae that closes watertight during underwater foraging, bordered ventrally by pale buff-cream suborbital eye spots" ;
+    rdfs:label "Electrosensory Duck Bill, Cutaneous Shield Flaps, Cranium & Ocular-Auricular Furrow"@en ;
+    prov:wasDerivedFrom src:australian-platypus-conservancy , src:nsw-dpe-platypus .
+
+anat:ampullary_electroreceptor a uberon:0001456 , q42:SensoryOrgan ;
+    q42:uberonCurie "UBERON:0001456" ;
+    q42:subsystemId "ampullary_electroreceptor" ;
+    ro:0002131 anat:electrosensory_duck_bill_and_cranium ;
+    q42:receptorCount "40000"^^xsd:integer ;
+    q42:sensitivityRangeUvCm "50 to 250" ;
+    q42:histologicalOrigin "Modified bill-skin mucous glands innervated by trigeminal ophthalmic and maxillary branches" ;
+    rdfs:label "Bill Mucous-Gland Electroreceptors (~40,000)"@en .
+
+anat:push_rod_mechanoreceptor a uberon:0001456 , q42:SensoryOrgan ;
+    q42:uberonCurie "UBERON:0001456" ;
+    q42:subsystemId "push_rod_mechanoreceptor" ;
+    ro:0002131 anat:electrosensory_duck_bill_and_cranium ;
+    q42:receptorCount "60000"^^xsd:integer ;
+    q42:displacementThresholdUm "20.0"^^xsd:decimal ;
+    rdfs:label "Bill Push-Rod Mechanoreceptors (~60,000)"@en .
+
+# --- Subsystem B: Hydrodynamic Torpedo Torso & Paddle Tail (UBERON:0001130 & UBERON:0002415) ---
+
+anat:hydrodynamic_torpedo_torso_and_paddle_tail a uberon:0001130 , uberon:0002415 , uberon:0002416 , uberon:0002099 , uberon:0000162 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001130" ;
+    q42:tailUberonCurie "UBERON:0002415" ;
+    q42:integumentUberonCurie "UBERON:0002416" ;
+    q42:pelageUberonCurie "UBERON:0002099" ;
+    q42:cloacaUberonCurie "UBERON:0000162" ;
+    q42:subsystemId "hydrodynamic_torpedo_torso_and_paddle_tail" ;
+    q42:anatomyLayer "torso_tail_integument_pelage" ;
+    ro:0002131 qualia:ornithorhynchus_anatinus ;
+    q42:bodyPlan "Dorsoventrally streamlined low-slung semi-aquatic torpedo torso (~0.45-0.55 m typical total length; 0.39-0.60 m full adult range)" ;
+    q42:pelageDensityHairsPerMm2Min "800"^^xsd:integer ;
+    q42:pelageDensityHairsPerMm2Max "900"^^xsd:integer ;
+    q42:pelageStructure "Dual-layer waterproof coat (coarse flattened guard hairs overlying dense kinked underfur) trapping an insulating air boundary layer underwater" ;
+    q42:coatColorPattern "Rich dark umber-brown dorsum, warm chestnut-brown flanks, and silvery-amber to ochre-cream ventrum" ;
+    q42:tailMorphology "Broad, dorsoventrally flattened beaver-like paddle tail storing ~40-50% of body lipid reserves and acting as a hydrodynamic stabilizer/rudder during dives" ;
+    q42:tailLengthMinM "0.10"^^xsd:decimal ;
+    q42:tailLengthMaxM "0.15"^^xsd:decimal ;
+    q42:cloacalAnatomy "Single posterior monotreme cloaca (UBERON:0000162) serving urinary, fecal, and oviparous reproductive tracts" ;
+    rdfs:label "Hydrodynamic Torpedo Torso, Dual-Layer Waterproof Pelage, Fat-Storing Paddle Tail & Cloaca"@en ;
+    prov:wasDerivedFrom src:vic-wildlife-other-mammals , src:australian-platypus-conservancy .
+
+# --- Subsystem C: Webbed Rowing Forelimbs & Venom-Spurred Hindlimbs (UBERON:0002102 & UBERON:0002103) ---
+
+anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs a uberon:0002102 , uberon:0002103 , uberon:0002398 , uberon:0002387 , uberon:0001465 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002102" ;
+    q42:secondaryUberonCurie "UBERON:0002103" ;
+    q42:manusUberonCurie "UBERON:0002398" ;
+    q42:pesUberonCurie "UBERON:0002387" ;
+    q42:clawUberonCurie "UBERON:0001465" ;
+    q42:subsystemId "webbed_rowing_forelimbs_and_venom_spurred_hindlimbs" ;
+    q42:anatomyLayer "appendicular_locomotion_and_venom_apparatus" ;
+    ro:0002131 qualia:ornithorhynchus_anatinus ;
+    q42:pectoralGirdleMechanics "Sprawled monotreme pectoral girdle (T-shaped interclavicle, coracoids, epicoracoids, curved scapulae) supporting figure-eight alternating forelimb rowing strokes" ;
+    q42:forepawWebbing "Fan-webbed 5-digit forepaws: leathery swimming membrane extends ~10-15 mm beyond the 5 curved digging claws underwater and folds backward beneath the palm on land to expose claws for burrow excavation" ;
+    q42:hindlimbFunction "Partially webbed 5-clawed steering hind feet rotated posteriorly as hydrodynamic rudders and braking stabilizers underwater, plantigrade-knuckle crawl on land" ;
+    q42:venomApparatusId "calcaneal_venom_spur" ;
+    q42:venomApparatusDescription "Hollow keratinous tarsal/calcaneal spur (~15 mm) on medial hind ankle connected via duct to crural venom gland beneath thigh musculature; functional in adult males (seasonal breeding peak) and regresses in females by ~12 months" ;
+    rdfs:label "Alternating-Stroke Fan-Webbed Forepaws & Calcaneal Venom-Spurred Hindlimbs"@en ;
+    prov:wasDerivedFrom src:nsw-dpe-platypus , src:australian-platypus-conservancy .
+
+anat:calcaneal_venom_spur a uberon:0002103 , uberon:0002387 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0002103" ;
+    q42:subsystemId "calcaneal_venom_spur" ;
+    ro:0002131 anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs ;
+    q42:spurLengthMm "15.0"^^xsd:decimal ;
+    q42:sexExpression "Functional in adult males; vestigial sheath shed in juvenile females (~8-12 months)" ;
+    q42:venomDelivery "Crural gland (dorsal thigh) -> crural duct -> hollow keratinous calcaneal spur (defensin-like peptides, C-type natriuretic peptides, nerve growth factor)" ;
+    rdfs:label "Male Calcaneal Venom Spur & Crural Gland Apparatus (calcaneal_venom_spur)"@en .
+
+# --- Subsystem D: Osteology & Myology (UBERON:0001434 & UBERON:0001630, 24-Joint PGA Rig) ---
+
+anat:osteology_and_myology a uberon:0001434 , uberon:0001630 , uberon:0002228 , uberon:0003661 , uberon:0000976 , uberon:0000981 , uberon:0002356 , uberon:0001498 , q42:AnatomicalSubsystem ;
+    q42:uberonCurie "UBERON:0001434" ;
+    q42:myologyUberonCurie "UBERON:0001630" ;
+    q42:ribUberonCurie "UBERON:0002228" ;
+    q42:epipubicUberonCurie "UBERON:0003661" ;
+    q42:humerusUberonCurie "UBERON:0000976" ;
+    q42:femurUberonCurie "UBERON:0000981" ;
+    q42:pectoralisUberonCurie "UBERON:0002356" ;
+    q42:latissimusUberonCurie "UBERON:0001498" ;
+    q42:subsystemId "osteology_and_myology" ;
+    q42:anatomyLayer "osteology_and_myology" ;
+    ro:0002131 qualia:ornithorhynchus_anatinus ;
+    q42:rigArchetype "ornithorhynchid_semiaquatic" ;
+    q42:rigJointCount "24"^^xsd:integer ;
+    q42:thoracicRibCount "17"^^xsd:integer ;
+    q42:cervicalRibTrait "Retains unfused ancestral cervical ribs on C2-C7 vertebrae" ;
+    q42:monotremeSkeletalTraits "Splayed premaxilla/maxilla bill rostrum framing cartilaginous bill plate, T-shaped interclavicle with coracoid-epicoracoid pectoral strut, broad flared humeral condyles for rotational swimming, paired epipubic bones on pelvis" ;
+    q42:swimmingMyology "Hypertrophied latissimus dorsi, pectoralis, teres major, and triceps driving horizontal-to-ventral humeral rotation during alternating forelimb rowing, plus femoral abductor/rotator steering musculature" ;
+    rdfs:label "Monotreme Osteology (17 Thoracic Ribs, T-Interclavicle, Epipubic Bones) & Rotational Swimmer Myology (24-Joint PGA Rig)"@en .
+
+# ============================================================================
+# 3. Biophysical, Morphometric, Allometric & Hydrodynamic Parameters
+# ============================================================================
+
+qualia:ornithorhynchus_anatinus
+    q42:totalLengthMinM "0.39"^^xsd:decimal ;
+    q42:totalLengthMaxM "0.60"^^xsd:decimal ;
+    q42:typicalTotalLengthRangeM "0.45 to 0.55" ;
+    q42:femaleTotalLengthMeanM "0.43"^^xsd:decimal ;
+    q42:maleTotalLengthMeanM "0.50"^^xsd:decimal ;
+    q42:bodyHeightWaterlineM "0.11"^^xsd:decimal ;
+    q42:adultMassMinKg "0.70"^^xsd:decimal ;
+    q42:adultMassMaxKg "3.00"^^xsd:decimal ;
+    q42:adultFemaleMassRangeKg "0.70 to 1.70" ;
+    q42:adultMaleMassRangeKg "1.20 to 3.00" ;
+    q42:bmrWattsMin "1.90"^^xsd:decimal ;
+    q42:bmrWattsMax "2.15"^^xsd:decimal ;
+    q42:bodyTempC "32.0"^^xsd:decimal ;
+    q42:bodyTempRangeC "31.0 to 35.0" ;
+    q42:thermoregulation "endotherm_monotreme_hypometabolic_aquatic" ;
+    q42:allometricBmrEquation "BMR(M) = 1.68 * M^0.75 [W]; at M=1.25 kg -> 1.99 W (~50-65% placental mean; conserved by 800-900 hairs/mm2 trapped air pelage)" ;
+    q42:allometricBodyEquation "L_total = 0.44 * M^0.32 [m]; L_bill = 0.056 * M^0.28 [m]; L_tail = 0.118 * M^0.33 [m]" ;
+    q42:allometricLimbEquation "L_humerus = 0.038 * M^0.33 [m]; L_radius = 0.036 * M^0.33 [m]; L_femur = 0.044 * M^0.33 [m]; A_foreweb = 0.0028 * M^0.66 [m^2]" ;
+    q42:pipeModelHydrodynamicNotes "Streamlined body fineness ratio L/D ~ 5.2; sprawled humeral rowing sweeps at 1.5-2.6 Hz stroke frequency" ;
+    q42:swimSpeedCruiseMs "0.55"^^xsd:decimal ;
+    q42:swimSpeedBurstMs "1.35"^^xsd:decimal ;
+    q42:diveDurationTypicalSec "30 to 140" ;
+    q42:diveDurationMaxSec "600"^^xsd:integer ;
+    q42:burrowTunnelLengthMinM "5.0"^^xsd:decimal ;
+    q42:burrowTunnelLengthMaxM "20.0"^^xsd:decimal ;
+    q42:activityCycle "crepuscular_nocturnal_cool_overcast_diurnal" ;
+    q42:dietGuild "benthic_macroinvertebrate_electro_forager" ;
+    q42:dailyFoodIntakeFraction "0.20 to 0.50 of body mass per 24 h" ;
+    q42:reproductionStrategy "Oviparous monotreme: 1-3 leathery eggs (~16 x 14 mm) incubated ~10 d in grass/leaf-lined nesting burrow; 3-4 mo puggle burrow lactation from abdominal mammary patches (no teats)" ;
+    sosa:callName "Soft low growl when disturbed in burrow or handled; normally silent underwater" ;
+    sosa:callFundamentalHz "145.0"^^xsd:decimal ;
+    envo:habitatStratum "freshwater_lotic_creek_river_pool_and_riparian_earth_bank" ;
+    envo:elevationMinM "0"^^xsd:integer ;
+    envo:elevationMaxM "1600"^^xsd:integer ;
+    prov:wasDerivedFrom src:nsw-dpe-platypus , src:vic-wildlife-other-mammals , src:australian-platypus-conservancy .
+
+# ============================================================================
+# 4. Joint Range-of-Motion (ROM) & Injury Threshold Assertions (Radians)
+# ============================================================================
+
+rom:shoulder a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "shoulder" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs , anat:osteology_and_myology ;
+    q42:primaryAxis "horizontal_rotational_rowing_sweep" ;
+    q42:healthyMinRad "-1.15"^^xsd:decimal ;
+    q42:healthyMaxRad "1.25"^^xsd:decimal ;
+    q42:abductionMinRad "-0.45"^^xsd:decimal ;
+    q42:abductionMaxRad "0.95"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.45"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbRowingUnloadAndBankRetreat" ;
+    rdfs:label "Sprawled Glenohumeral Shoulder Joint ROM (Ornithorhynchus anatinus)"@en .
+
+rom:elbow a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "elbow" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs ;
+    q42:primaryAxis "flexion_extension_and_pronation" ;
+    q42:healthyMinRad "-1.75"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.15"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.98"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbRowingUnloadAndBankRetreat" ;
+    rdfs:label "Elbow Joint ROM (Ornithorhynchus anatinus)"@en .
+
+rom:wrist a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "wrist" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs ;
+    q42:primaryAxis "paddle_feather_and_terrestrial_web_fold" ;
+    q42:healthyMinRad "-1.22"^^xsd:decimal ;
+    q42:healthyMaxRad "0.72"^^xsd:decimal ;
+    q42:pronationSupinationMaxRad "0.68"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.42"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateForelimbRowingUnloadAndBankRetreat" ;
+    rdfs:label "Carpal Wrist Joint ROM (Web Extension & Terrestrial Palm Fold)"@en .
+
+rom:hip a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "hip" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs ;
+    q42:primaryAxis "posterior_rudder_abduction_and_crawl" ;
+    q42:healthyMinRad "-0.78"^^xsd:decimal ;
+    q42:healthyMaxRad "1.05"^^xsd:decimal ;
+    q42:abductionMinRad "-0.35"^^xsd:decimal ;
+    q42:abductionMaxRad "0.85"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.28"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricSwimAndBurrowRest" ;
+    rdfs:label "Hip Joint ROM (Ornithorhynchus anatinus)"@en .
+
+rom:knee a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "knee" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs ;
+    q42:primaryAxis "flexion_extension_rudder_trim" ;
+    q42:healthyMinRad "-1.62"^^xsd:decimal ;
+    q42:healthyMaxRad "-0.12"^^xsd:decimal ;
+    q42:injuryThresholdRad "-1.82"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricSwimAndBurrowRest" ;
+    rdfs:label "Knee Stifle Joint ROM (Ornithorhynchus anatinus)"@en .
+
+rom:ankle a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "ankle" ;
+    q42:anatomicalTarget anat:webbed_rowing_forelimbs_and_venom_spurred_hindlimbs , anat:calcaneal_venom_spur ;
+    q42:primaryAxis "rudder_steering_and_male_spur_strike" ;
+    q42:healthyMinRad "-0.88"^^xsd:decimal ;
+    q42:healthyMaxRad "0.96"^^xsd:decimal ;
+    q42:inversionMaxRad "0.55"^^xsd:decimal ;
+    q42:injuryThresholdRad "1.18"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricSwimAndBurrowRest" ;
+    rdfs:label "Ankle Tarsocrural Joint ROM (Steering & Calcaneal Spur Strike)"@en .
+
+rom:spine a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "spine" ;
+    q42:anatomicalTarget anat:hydrodynamic_torpedo_torso_and_paddle_tail ;
+    q42:primaryAxis "dorsoventral_dive_pitch_and_lateral_turn" ;
+    q42:healthyMinRad "-0.48"^^xsd:decimal ;
+    q42:healthyMaxRad "0.52"^^xsd:decimal ;
+    q42:lateralBendMaxRad "0.58"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.75"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateBurrowShelterRetreat" ;
+    rdfs:label "Thoracolumbar Spine Joint ROM (Ornithorhynchus anatinus)"@en .
+
+rom:neck a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "neck" ;
+    q42:anatomicalTarget anat:electrosensory_duck_bill_and_cranium , anat:osteology_and_myology ;
+    q42:primaryAxis "lateral_bill_electrosweep_and_pitch" ;
+    q42:healthyMinRad "-0.55"^^xsd:decimal ;
+    q42:healthyMaxRad "0.48"^^xsd:decimal ;
+    q42:yawMaxRad "0.78"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.95"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateBurrowShelterRetreat" ;
+    rdfs:label "Cervical Neck Joint ROM (Benthic Bill Electrosweep)"@en .
+
+rom:tail a q42:JointROM ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:romJoint "tail" ;
+    q42:anatomicalTarget anat:hydrodynamic_torpedo_torso_and_paddle_tail ;
+    q42:primaryAxis "hydrodynamic_paddle_pitch_stabilizer" ;
+    q42:healthyMinRad "-0.58"^^xsd:decimal ;
+    q42:healthyMaxRad "0.48"^^xsd:decimal ;
+    q42:lateralSweepMaxRad "0.42"^^xsd:decimal ;
+    q42:injuryThresholdRad "0.72"^^xsd:decimal ;
+    q42:obligatePostInjuryBehavior "q42:obligateInjuredAsymmetricSwimAndBurrowRest" ;
+    rdfs:label "Paddle Tail Stabilizer Joint ROM (Ornithorhynchus anatinus)"@en .
+
+# ============================================================================
+# 5. InstanceState64 Ontogenetic Stages & 64-Byte Phenotype Parameter Bounds
+# ============================================================================
+
+inst64:ornithorhynchus_anatinus_layout a q42:InstanceState64Schema ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:byteSize "64"^^xsd:integer ;
+    q42:fields "seed:u64, ontogenetic_age_norm:f32, height_scale:f32, site_vigor:f32, environmental_stress:f32[4], sex_dimorphism_flag:u8, calcaneal_spur_active:u8, web_deploy_01:f32, tail_fat_reserve_01:f32" ;
+    q42:seedRange "0 to 18446744073709551615" ;
+    q42:ontogeneticAgeNormRange "0.00 to 1.00" ;
+    q42:heightScaleRange "0.18 to 1.15" ;
+    q42:siteVigorRange "0.45 to 1.25" ;
+    q42:environmentalStressRange "0.00 to 1.00 (drought_low_flow, siltation_turbidity, entanglement_stress, thermal_stress)" ;
+    rdfs:label "InstanceState64 Phenotype Parameter Layout for Ornithorhynchus anatinus"@en .
+
+stage:burrow_hatchling_puggle a q42:OntogeneticStage ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:stageId "burrow_hatchling_puggle" ;
+    q42:ontogeneticAgeNormMin "0.00"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.20"^^xsd:decimal ;
+    q42:heightScaleMin "0.18"^^xsd:decimal ;
+    q42:heightScaleMax "0.52"^^xsd:decimal ;
+    q42:massRangeKg "0.002 to 0.38" ;
+    q42:independentLocomotion false ;
+    q42:dentitionState "deciduous_molar_caps_present_pre_keratin_pad" ;
+    rdfs:label "Burrow Hatchling Puggle (0-4 months, blind, hairless-to-velvet inside maternal nesting chamber)"@en .
+
+stage:juvenile_emergent a q42:OntogeneticStage ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:stageId "juvenile_emergent" ;
+    q42:ontogeneticAgeNormMin "0.20"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "0.48"^^xsd:decimal ;
+    q42:heightScaleMin "0.52"^^xsd:decimal ;
+    q42:heightScaleMax "0.84"^^xsd:decimal ;
+    q42:massRangeKg "0.38 to 0.85" ;
+    q42:independentLocomotion true ;
+    q42:dentitionState "deciduous_molars_shedding_to_keratinous_pads" ;
+    rdfs:label "Juvenile Emergent (4-12 months, first stream emergence, electro-foraging & dispersal)"@en .
+
+stage:adult_female a q42:OntogeneticStage ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:stageId "adult_female" ;
+    q42:ontogeneticAgeNormMin "0.48"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.82"^^xsd:decimal ;
+    q42:heightScaleMax "0.98"^^xsd:decimal ;
+    q42:massRangeKg "0.70 to 1.70" ;
+    q42:totalLengthRangeM "0.39 to 0.49" ;
+    q42:karyotype "2n=52 (10X)" ;
+    q42:calcanealSpurPresent false ;
+    rdfs:label "Adult Female (2n=52 10X, spur absent/regressed, nesting burrow excavator)"@en .
+
+stage:spurred_adult_male a q42:OntogeneticStage ;
+    q42:appliesTo qualia:ornithorhynchus_anatinus ;
+    q42:stageId "spurred_adult_male" ;
+    q42:ontogeneticAgeNormMin "0.48"^^xsd:decimal ;
+    q42:ontogeneticAgeNormMax "1.00"^^xsd:decimal ;
+    q42:heightScaleMin "0.92"^^xsd:decimal ;
+    q42:heightScaleMax "1.15"^^xsd:decimal ;
+    q42:massRangeKg "1.20 to 3.00" ;
+    q42:totalLengthRangeM "0.45 to 0.60" ;
+    q42:karyotype "2n=52 (X1Y1X2Y2X3Y3X4Y4X5Y5)" ;
+    q42:calcanealSpurPresent true ;
+    rdfs:label "Spurred Adult Male (2n=52 X1-5Y1-5, functional crural venom gland & calcaneal_venom_spur)"@en .
+
+# ============================================================================
+# 6. Ecological Interactions (Freshwater Benthic Electro-Forager & Riparian Corridor)
+# ============================================================================
+
+qualia:benthic_macroinvertebrates a dwc:Taxon ;
+    rdfs:label "Freshwater Benthic Macroinvertebrates (Trichoptera, Ephemeroptera, Diptera larvae, Odonata nymphs, Oligochaeta)"@en .
+
+qualia:paratya_australiensis a dwc:Taxon ;
+    dwc:scientificName "Paratya australiensis Kemp, 1917" ;
+    rdfs:label "Australian Glass Shrimp"@en .
+
+qualia:cherax_destructor a dwc:Taxon ;
+    dwc:scientificName "Cherax destructor Clark, 1936" ;
+    rdfs:label "Common Yabby"@en .
+
+qualia:eucalyptus_camaldulensis a dwc:Taxon ;
+    dwc:scientificName "Eucalyptus camaldulensis Dehnh." ;
+    rdfs:label "River Red Gum (riparian bank stabilizer)"@en .
+
+qualia:dicksonia_antarctica a dwc:Taxon ;
+    dwc:scientificName "Dicksonia antarctica Labill." ;
+    rdfs:label "Soft Tree Fern (cool-temperate gully riparian canopy)"@en .
+
+qualia:ornithorhynchus_anatinus
+    ro:0002470 qualia:benthic_macroinvertebrates ,
+               qualia:paratya_australiensis ,
+               qualia:cherax_destructor ;
+    rorel:trophically_interacts_with qualia:benthic_macroinvertebrates ,
+                                     qualia:paratya_australiensis ,
+                                     qualia:cherax_destructor ;
+    ro:0002303 envo:01000253 , envo:00000022 ;
+    rorel:ecologically_related_to qualia:eucalyptus_camaldulensis ,
+                                  qualia:dicksonia_antarctica ;
+    q42:ecologicalFunction "Apex benthic macroinvertebrate electro-forager in permanent freshwater creeks and rivers along Eucalyptus camaldulensis floodplain and Dicksonia antarctica gully riparian corridors; indicator of stream bank stability, flow continuity, and benthic invertebrate diversity."@en ;
+    rdfs:comment "Australian Platypus Conservancy, NSW DCCEEW, and Victorian Biodiversity Atlas document Ornithorhynchus anatinus across eastern Australian waterways from Northern Rivers / Clarence / Hunter through Snowy / Tumut / Murrumbidgee to the Yarra and Goulburn catchments."@en .
+
+# ============================================================================
+# 7. Biocultural Custodianship & Country Provenance (SE Australia Corridor)
+# ============================================================================
+
+country:bundjalung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Bundjalung Country (Northern Rivers, Richmond & Clarence Catchments, NSW)"@en ;
+    tk:language_group "Bundjalung" ;
+    tk:care_governance "CARE Principles (Collective Benefit, Authority to Control, Responsibility, Ethics)" .
+
+country:gumbaynggirr_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gumbaynggirr Country (Mid North Coast, Bellinger, Nambucca & Clarence Rivers, NSW)"@en ;
+    tk:language_group "Gumbaynggirr" ;
+    tk:care_governance "CARE Principles" .
+
+country:dharug_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Dharug Country (Hawkesbury-Nepean & Blue Mountains Creeks, NSW)"@en ;
+    tk:language_group "Dharug" ;
+    tk:care_governance "CARE Principles" .
+
+country:gundungurra_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Gundungurra Country (Wollondilly, Wingecarribee & Southern Blue Mountains Rivers, NSW)"@en ;
+    tk:language_group "Gundungurra" ;
+    tk:care_governance "CARE Principles" .
+
+country:yuin_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Yuin Country (Shoalhaven, Clyde, Moruya & Bega River Catchments, NSW)"@en ;
+    tk:language_group "Yuin" ;
+    tk:care_governance "CARE Principles" .
+
+country:ngarigo_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Ngarigo Country (Snowy River, Bombala & Monaro Tablelands Waterways, NSW)"@en ;
+    tk:language_group "Ngarigo" ;
+    tk:care_governance "CARE Principles" .
+
+country:walgalu_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Walgalu Country (Tumut, Goodradigbee & Upper Murrumbidgee Rivers, NSW)"@en ;
+    tk:language_group "Walgalu / Wolgalu" ;
+    tk:care_governance "CARE Principles" .
+
+country:wiradjuri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wiradjuri Country (Macquarie, Lachlan, Murrumbidgee & Murray Waterways, NSW)"@en ;
+    tk:language_group "Wiradjuri" ;
+    tk:vernacularName "Biladurang"@qaa-x-wrh ;
+    tk:care_governance "CARE Principles" .
+
+country:gunaikurnai_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "GunaiKurnai Country (Latrobe, Thomson, Mitchell, Tambo & Snowy Rivers, VIC)"@en ;
+    tk:language_group "GunaiKurnai" ;
+    tk:care_governance "CARE Principles" .
+
+country:wurundjeri_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wurundjeri Country (Yarra / Birrarung & Plenty River Catchments, VIC)"@en ;
+    tk:language_group "Woi-wurrung (Wurundjeri)" ;
+    tk:care_governance "CARE Principles" .
+
+country:boonwurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Boonwurrung Country (Bunyip, Tarago & Western Port Catchments, VIC)"@en ;
+    tk:language_group "Boonwurrung" ;
+    tk:care_governance "CARE Principles" .
+
+country:wadawurrung_country a tk:CustodialCountry , rdfs:Class ;
+    rdfs:label "Wadawurrung Country (Moorabool, Barwon & Leigh River Catchments, VIC)"@en ;
+    tk:language_group "Wadawurrung" ;
+    tk:care_governance "CARE Principles" .

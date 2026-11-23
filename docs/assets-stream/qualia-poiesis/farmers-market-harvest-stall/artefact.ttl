@@ -1,0 +1,128 @@
+# Community Nursery, Seed Exchange & Harvest Commons Market Stall (farmers-market-harvest-stall) — Made-World Design, BOM, Kinetics, QUDT Physics & Permissive Commons Ontology
+# Work-Packet: POIESIS-WP-CIV-02 | Organization: github.com/qualia-poiesis/farmers-market-harvest-stall
+# Protecting the moral and material interests of the author (UDHR Article 27(2) / ICESCR Article 15(1)(c)).
+
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix dcat:   <http://www.w3.org/ns/dcat#> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix odrl:   <http://www.w3.org/ns/odrl/2/> .
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix qudt:   <http://qudt.org/schema/qudt/> .
+@prefix PO:     <http://purl.obolibrary.org/obo/PO_> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix log:    <http://www.w3.org/2000/10/swap/log#> .
+@prefix made:   <urn:qualia:made:> .
+@prefix q42:    <urn:qualia:ontology:> .
+@prefix design: <urn:qualia:design:farmers-market-harvest-stall:> .
+@prefix part:   <urn:qualia:design:farmers-market-harvest-stall:part:> .
+@prefix port:   <urn:qualia:design:farmers-market-harvest-stall:port:> .
+
+design:rev1 a made:Artefact , made:CivicAmenity , dcat:Dataset ;
+    owl:sameAs <did:q42:design:farmers_market_harvest_stall> ;
+    dct:identifier <urn:qualia:design:farmers-market-harvest-stall:rev1> , <did:q42:design:farmers_market_harvest_stall> ;
+    rdfs:label "Community Nursery, Seed Exchange & Harvest Commons Market Stall"@en ;
+    dct:title "Community Nursery, Seed Exchange & Harvest Commons Market Stall — Holographic 10D v2 & Hypermedia (.hmc) Digital Twin"@en ;
+    dcat:landingPage <https://github.com/qualia-poiesis/farmers-market-harvest-stall> ;
+    odrl:hasPolicy "PermissiveCommons" ;
+    q42:inalienableMoralRights "true"^^xsd:boolean ;
+    q42:embodimentFormat "holographic-10d-v2" ;
+    q42:multiscaleHierarchy "L0..L6 (L6QuantumPhysics)" ;
+    q42:hasAnimationClip "barrel_canopy_and_valance_breeze_billow" , "organic_harvest_crate_and_basket_restock" , "reclaimed_material_rack_and_seed_chest_access" , "compost_tea_barrel_draw_off" ;
+    made:lengthM "3.900"^^xsd:decimal ;
+    made:widthM "2.200"^^xsd:decimal ;
+    made:heightM "2.650"^^xsd:decimal ;
+    made:curbMassKg "410.0"^^xsd:decimal ;
+    made:modalSwayFreqHz "2.2"^^xsd:decimal ;
+    made:totalAuthoredParts "29"^^xsd:integer ;
+    made:hasComponent part:market-stall-counter , part:front-display-ledge , part:canopy-corner-post-0 , part:canopy-corner-post-1 , part:canopy-corner-post-2 , part:canopy-corner-post-3 , part:barrel-vault-canopy , part:canopy-valance-stripe-0 , part:canopy-valance-stripe-1 , part:canopy-valance-stripe-2 , part:display-basket-0 , part:harvest-crate-0 , part:display-basket-1 , part:harvest-crate-1 , part:display-basket-2 , part:harvest-crate-2 , part:organic-harvest-gourds , part:organic-leafy-greens ;
+    made:hasPort port:stall-led-strip-12v , port:produce-weigh-scale-bus .
+
+part:market-stall-counter a made:MarketCounter , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-market-stall-counter> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Market Stall Counter"@en .
+part:front-display-ledge a made:DisplayShelf , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-front-display-ledge> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Front Display Ledge"@en .
+part:canopy-corner-post-0 a made:CanopyPost , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-corner-post-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Corner Post 0"@en .
+part:canopy-corner-post-1 a made:CanopyPost , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-corner-post-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Corner Post 1"@en .
+part:canopy-corner-post-2 a made:CanopyPost , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-corner-post-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Corner Post 2"@en .
+part:canopy-corner-post-3 a made:CanopyPost , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-corner-post-3> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Canopy Corner Post 3"@en .
+part:barrel-vault-canopy a made:MarketCanopy , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-barrel-vault-canopy> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Barrel Vault Canopy"@en .
+part:canopy-valance-stripe-0 a made:CanopyValance , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-valance-stripe-0> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Canopy Valance Stripe 0"@en .
+part:canopy-valance-stripe-1 a made:CanopyValance , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-valance-stripe-1> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Canopy Valance Stripe 1"@en .
+part:canopy-valance-stripe-2 a made:CanopyValance , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-canopy-valance-stripe-2> ;
+    made:jointKind "hinge" ;
+    rdfs:label "Canopy Valance Stripe 2"@en .
+part:display-basket-0 a made:ProduceBasket , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-display-basket-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Display Basket 0"@en .
+part:harvest-crate-0 a made:HarvestCrate , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-harvest-crate-0> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Harvest Crate 0"@en .
+part:display-basket-1 a made:ProduceBasket , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-display-basket-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Display Basket 1"@en .
+part:harvest-crate-1 a made:HarvestCrate , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-harvest-crate-1> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Harvest Crate 1"@en .
+part:display-basket-2 a made:ProduceBasket , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-display-basket-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Display Basket 2"@en .
+part:harvest-crate-2 a made:HarvestCrate , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-harvest-crate-2> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Harvest Crate 2"@en .
+part:organic-harvest-gourds a made:HarvestProduce , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-organic-harvest-gourds> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Organic Harvest Gourds"@en .
+part:organic-leafy-greens a made:HarvestProduce , made:Component ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#part-organic-leafy-greens> ;
+    made:jointKind "fixed" ;
+    rdfs:label "Organic Leafy Greens"@en .
+
+port:stall-led-strip-12v a made:FunctionalPort ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#port-stall-led-strip-12v> ;
+    made:portMedium "electrical_dc" ;
+    made:portDirection "input" ;
+    qudt:unit qudt:Watt ;
+    made:ratedCapacity "60.0"^^xsd:decimal .
+port:produce-weigh-scale-bus a made:FunctionalPort ;
+    dct:identifier <did:q42:design:farmers_market_harvest_stall#port-produce-weigh-scale-bus> ;
+    made:portMedium "serial_telemetry" ;
+    made:portDirection "bidirectional" ;
+    qudt:unit qudt:BitPerSecond ;
+    made:ratedCapacity "115200.0"^^xsd:decimal .
