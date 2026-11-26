@@ -132,7 +132,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          rustup target add ${{ matrix.rust_target }}
+          "$HOME/.cargo/bin/rustup" target add ${{ matrix.rust_target }}
 
       - name: Build qualia-cli (Debian native, no gpu-native-dx12)
         env:
