@@ -128,6 +128,16 @@ privacy-he = ["dep:fhe", "dep:fhe-traits", "dep:rand09"]
 
 # Native Qualia Decentralized Network Fabric (QDNF / QPR). Does not pull libp2p.
 qdnf = []
+
+# Canonical Webizen Debian native feature bundles (PLAN-WEBIZEN-DEBIAN-NATIVE-PROFILES-2026-11-26).
+# None of these enable `gpu-native-dx12`; Debian / non-Windows hosts stay on `gpu-native-portable`.
+webizen-native-host = ["profile_target_1024", "qdnf", "sanctuary-crypto", "zk-culling", "privacy-he"]
+webizen-native-desktop = ["profile_accelerated", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "tensor-10d", "tensor-gpu", "qdnf", "sanctuary-crypto", "zk-culling", "privacy-he"]
+webizen-native-subsystem = ["profile_accelerated", "gpu-runtime", "gpu-native-portable", "wgsl-forge", "tensor-10d", "tensor-gpu", "qdnf", "sanctuary-crypto", "zk-culling", "privacy-he"]
+webizen-native-mobile = ["profile_minimal_512", "gpu-runtime", "gpu-native-portable", "tensor-10d", "qdnf", "sanctuary-crypto"]
+webizen-native-iot-headless = ["profile_minimal_512", "qdnf", "sanctuary-crypto"]
+webizen-native-iot-display = ["profile_minimal_512", "gpu-runtime", "gpu-native-portable", "tensor-10d", "qdnf", "sanctuary-crypto"]
+
 # Inherited libp2p transition stack (LIG). Native Independent is the default
 # daemon path (E20.2). Opt in with `--features libp2p-compat`.
 libp2p-compat = ["dep:libp2p"]

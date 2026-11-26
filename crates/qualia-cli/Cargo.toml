@@ -12,10 +12,15 @@ path = "src/bin/q42_comparative_bench.rs"
 
 [features]
 mock-agent = []
+webizen-native-host = ["qualia-core-db/webizen-native-host"]
+webizen-native-desktop = ["qualia-core-db/webizen-native-desktop"]
+webizen-native-subsystem = ["qualia-core-db/webizen-native-subsystem"]
+webizen-native-mobile = ["qualia-core-db/webizen-native-mobile"]
+webizen-native-iot-headless = ["qualia-core-db/webizen-native-iot-headless"]
+webizen-native-iot-display = ["qualia-core-db/webizen-native-iot-display"]
 
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
-qualia-core-db = { workspace = true, default-features = true }
 qualia-mcp = { workspace = true }
 qualia-client-core = { workspace = true }
 qualia-solid-bridge = { workspace = true }
@@ -49,6 +54,12 @@ spargebra = "0.4"
 
 [dev-dependencies]
 tempfile = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+qualia-core-db = { workspace = true, default-features = true }
+
+[target.'cfg(not(windows))'.dependencies]
+qualia-core-db = { workspace = true, default-features = false, features = ["profile_target_1024", "qdnf", "sanctuary-crypto"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = "0.7.12"

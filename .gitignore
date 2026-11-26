@@ -175,6 +175,8 @@ scripts/*
 !scripts/device-harness-build.mjs
 !scripts/serve-device-harness.mjs
 !scripts/serve-device-harness.test.mjs
+!scripts/cross-linux/
+!scripts/cross-linux/build-debian.ps1
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json

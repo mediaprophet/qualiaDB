@@ -24,9 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            artifact: target/release/qualia-cli
-            asset_name: qualia-cli-linux-x86_64
           - os: windows-latest
             artifact: target/release/qualia-cli.exe
             asset_name: qualia-cli-windows-x86_64.exe
@@ -56,12 +53,6 @@ jobs:
           key: ${{ runner.os }}-cargo-cli-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-cli-
 
-      - name: Linux system dependencies
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
-
       - name: Build qualia-cli
         run: cargo build --release -p qualia-cli
 
@@ -85,3 +76,100 @@ jobs:
           files: vendor/directml/bin/x64-win/DirectML.dll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux-debian:
+    name: CLI Debian bookworm ${{ matrix.arch }} ${{ matrix.cargo_profile }}
+    runs-on: ${{ matrix.runner }}
+    container: debian:bookworm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+            rust_target: x86_64-unknown-linux-gnu
+            cargo_profile: webizen-host
+            features: webizen-native-host
+            verify_profile: webizen-host
+            extra_apt: ""
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            rust_target: aarch64-unknown-linux-gnu
+            cargo_profile: webizen-host
+            features: webizen-native-host
+            verify_profile: webizen-host
+            extra_apt: ""
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            rust_target: aarch64-unknown-linux-gnu
+            cargo_profile: webizen-iot-headless
+            features: webizen-native-iot-headless
+            verify_profile: webizen-iot-headless
+            extra_apt: ""
+          - runner: ubuntu-latest
+            arch: armhf
+            rust_target: armv7-unknown-linux-gnueabihf
+            cargo_profile: webizen-iot-headless
+            features: webizen-native-iot-headless
+            verify_profile: webizen-iot-headless
+            extra_apt: gcc-arm-linux-gnueabihf
+    steps:
+      - name: Install Debian bookworm build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl git build-essential pkg-config \
+            libssl-dev binutils file dpkg-dev ${{ matrix.extra_apt }}
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/checkout@v5
+        with:
+          repository: mediaprophet/qap-compiler
+          path: qap-compiler
+
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          rustup target add ${{ matrix.rust_target }}
+
+      - name: Build qualia-cli (Debian native, no gpu-native-dx12)
+        env:
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+        run: |
+          cargo build -p qualia-cli --profile ${{ matrix.cargo_profile }} \
+            --no-default-features --features ${{ matrix.features }} \
+            --target ${{ matrix.rust_target }} \
+            --target-dir target-debian-profiles
+
+      - name: Verify Debian glibc 2.36 baseline
+        run: |
+          BIN="target-debian-profiles/${{ matrix.rust_target }}/${{ matrix.cargo_profile }}/qualia-cli"
+          bash qap-compiler/packaging/debian/verify-debian-binary.sh --profile ${{ matrix.verify_profile }} --bin "$BIN"
+
+      - name: Package .deb
+        run: |
+          BIN="target-debian-profiles/${{ matrix.rust_target }}/${{ matrix.cargo_profile }}/qualia-cli"
+          VERSION="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          mkdir -p dist
+          bash qap-compiler/packaging/debian/build-deb.sh \
+            --profile ${{ matrix.verify_profile }} \
+            --arch ${{ matrix.arch }} \
+            --pkg-name qualia-cli \
+            --version "$VERSION" \
+            --bin "$BIN" \
+            --out-dir dist
+          cp "$BIN" "qualia-cli-linux-${{ matrix.arch }}-${{ matrix.cargo_profile }}"
+
+      - name: Upload CLI and .deb to release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: |
+            qualia-cli-linux-${{ matrix.arch }}-${{ matrix.cargo_profile }}
+            dist/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

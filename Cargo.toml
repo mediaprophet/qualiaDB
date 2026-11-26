@@ -174,6 +174,57 @@ incremental = false
 [profile.test]
 debug = 1
 
+# Canonical Webizen Debian native Cargo profiles (PLAN-WEBIZEN-DEBIAN-NATIVE-PROFILES-2026-11-26).
+[profile.webizen-host]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+incremental = false
+
+[profile.webizen-desktop]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+incremental = false
+
+[profile.webizen-subsystem]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+incremental = false
+
+[profile.webizen-mobile]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = "symbols"
+incremental = false
+
+[profile.webizen-iot-headless]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+incremental = false
+
+[profile.webizen-iot-display]
+inherits = "release"
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+incremental = false
+
+
 # Vendored imap-proto 0.10.2 with the trailing-semicolon-in-macro future-incompat lint fixed
 # (upstream imap 2.4.1 pins imap-proto ^0.10.0; the fix hasn't been published to crates.io for
 # the 0.10.x line, so we vendor + patch locally). Remove when imap publishes a 0.10.x fix or when
