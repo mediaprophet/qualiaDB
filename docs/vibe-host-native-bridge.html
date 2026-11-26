@@ -440,6 +440,75 @@ pub struct Crt256Residue {
                     </div>
                 </div>
             </div>
+
+            <!-- Section 5: Six Canonical Webizen Native Debian Profiles & qapc check-env Matrix -->
+            <div class="bridge-section" id="debian-native-profiles">
+                <h2>5. Six Canonical Webizen Native Debian Profiles &amp; <code>qapc check-env</code> Capability Gates</h2>
+                <p>
+                    In addition to browser WASM and paired loopback daemon execution, <code>qap-compiler</code> (<code>qapc</code>) and <code>qualia-core-db</code> enforce compile-time and activation-time capability contracts across <strong>Six Canonical Webizen Native Debian Profiles</strong> (<code>debian:bookworm</code>, <code>glibc &ge; 2.36</code> baseline). Running <code>qapc check-env &lt;workspace&gt; --profile &lt;profile-slug&gt;</code> evaluates every required <code>Family.method</code> capability in <code>manifest/qap.q42.yaml</code> against the target profile's hardware and Sanctuary Keep invariants:
+                </p>
+
+                <div class="bridge-table-wrap">
+                    <table class="bridge-table">
+                        <thead>
+                            <tr>
+                                <th><code>qapc --profile</code> Slug</th>
+                                <th>Cargo Profile &amp; Target Arch</th>
+                                <th>Permitted Host Capabilities &amp; Hardware Contracts</th>
+                                <th>Fail-Closed Admission Gate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="text-emerald-400 font-semibold">debian-native-host</code></td>
+                                <td><code>--profile webizen-host</code><br><code>amd64</code>, <code>arm64</code></td>
+                                <td><code>GraphDatabase.*</code>, <code>SemanticLogic.*</code>, <code>QDNF.*</code>, <code>ChatGraph.verify_delegated_agent</code>, <code>IoTInstrument.pair_with_steward_host</code> (zero windowing/GUI libs).</td>
+                                <td>Rejects interactive windowing dependencies; emits deterministic CBOR-LD (<code>0xD9 0x05 0x01</code>) profile catalog at <code>GET /api/profiles/debian-native.cbor-ld</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-cyan-400 font-semibold">debian-native-desktop</code></td>
+                                <td><code>--profile webizen-desktop</code><br><code>amd64</code>, <code>arm64</code></td>
+                                <td>Full <code>aether-native</code> + <code>etalon</code> Vulkan GPU, <code>WgslForge.generate</code>, <code>Codecs.matrix</code>, 400 Hypermedia morphisms, local <code>.p64</code> LLM inference, and <code>IoTInstrument.pair_with_steward_host</code>.</td>
+                                <td>CI binary verifier (<code>verify-debian-binary.sh</code>) fails closed if <code>libwebkit2gtk</code> or <code>libjavascriptcoregtk</code> is linked or if <code>GLIBC_*</code> exceeds <code>2.36</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-violet-400 font-semibold">debian-native-subsystem</code></td>
+                                <td><code>--profile webizen-subsystem</code><br><code>amd64</code>, <code>arm64</code> (<code>.wsl</code> / Lima)</td>
+                                <td>All desktop capabilities + <code>SubsystemGuard.verify_ext4_sanctuary_isolation</code>, Mesa <code>dzn</code> Vulkan-on-D3D12 + automatic <code>vello-cpu-softbuffer</code> fallback, and WSL2 <code>networkingMode=mirrored</code> LAN IoT discovery.</td>
+                                <td>Fails closed at startup if Sanctuary Keep vaults reside on host-mounted DrvFS/9p/VirtioFS paths (<code>/mnt/c</code>, <code>/Users</code>) rather than the guest Linux <code>ext4.vhdx</code> disk.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-amber-400 font-semibold">debian-native-mobile</code></td>
+                                <td><code>--profile webizen-mobile</code><br><code>arm64</code> (AVF <code>pKVM</code> / Mobian)</td>
+                                <td>Wayland mobile shell + <code>etalon</code> Vulkan/GLES + <code>vello-cpu-softbuffer</code> fallback, biometric hardware enclave gate, and offline QR / BLE steward pairing.</td>
+                                <td>Enforces compact mobile RAM/thermal budgets and hardware enclave key custody.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-rose-400 font-semibold">debian-native-iot-headless</code></td>
+                                <td><code>--profile webizen-iot-headless</code><br><code>arm64</code>, <code>armhf</code>, <code>amd64</code></td>
+                                <td><code>IoTInstrument.pair_with_steward_host</code>, <code>IoTActuator.command_bus</code> (GPIO/PWM/I2C/SPI/Modbus/CAN), and <code>IoTSensing.bridge_observation</code> within the 42 MiB Sentinel (&le; 256 MiB RAM, <code>opt-level = "z"</code>).</td>
+                                <td>Fails closed with <code>IncompatibleApiSurfaceChange</code> when a package requests GPU shader synthesis (<code>WgslForge.generate</code> in <code>poet.qap</code>) or signage presentation (<code>IoTSignage.present_verified_hmc</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-sky-400 font-semibold">debian-native-iot-display</code></td>
+                                <td><code>--profile webizen-iot-display</code><br><code>arm64</code>, <code>amd64</code></td>
+                                <td><code>IoTInstrument.pair_with_steward_host</code>, <code>IoTSignage.present_verified_hmc</code>, <code>IoTSensing.bridge_observation</code>, and <code>etalon</code> Vulkan/GLES (<code>&lt; 32</code>-step <code>.10d</code> v2 <code>HOLO 0x0306</code> raymarching + <code>vello-cpu-softbuffer</code> fallback).</td>
+                                <td>Enforces Sanctuary Staging Quarantine (<code>collect != activate</code>): display playlists must carry a valid QECP (<code>Ed25519 + ML-DSA-87</code>) steward signature before activation.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bridge-code"><pre># Verify QAP package capability compatibility across all 6 Debian Native profiles:
+qapc check-env examples/iot-robotics-headless-qap --profile debian-native-iot-headless
+# -> Overall status: Compatible (can_compile_and_activate = true)
+
+qapc check-env examples/iot-shop-signage-display-qap --profile debian-native-iot-display
+# -> Overall status: Compatible (can_compile_and_activate = true, QECP collect != activate enforced)
+
+qapc check-env C:\github\poet --profile debian-native-iot-headless
+# -> Overall status: IncompatibleApiSurfaceChange (fails closed on missing GPU WgslForge.generate)</pre></div>
+            </div>
         </div>
     </main>
 

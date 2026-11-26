@@ -133,14 +133,19 @@
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
                     <div class="flex items-center gap-2 mb-1.5">
-                        <span class="font-semibold text-xl text-white">Native Webizen Habitat &amp; Qualia CLI</span>
+                        <span class="font-semibold text-xl text-white">Native Webizen Habitat, Second-OS Subsystem &amp; Local IoT Suite</span>
                         <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v0.0.41 RELEASE</span>
                     </div>
                     <div class="text-white/70 text-sm max-w-2xl leading-relaxed">
-                        Offline-first desktop shell, local semantic daemon (<code>:4242</code>), <code>.q42</code> v4 Unified Volumes, and 64 Hz multi-physics simulation. Organized around five human-centric stations—Talk, Mail, Directory, Library, and Settings—with encrypted local volume storage and hardware-backed key isolation.
+                        Offline-first native Aether + Etalon GPU shell, local semantic daemon (<code>:4242</code>), <code>.q42</code> v4 Unified Volumes, and <strong>Six Canonical Debian Native Profiles</strong> (<code>debian:bookworm</code>, <code>glibc &ge; 2.36</code>, zero WebKit2GTK): Bare-Metal Desktop, Windows 11 WSL2 <code>.wsl</code> &amp; macOS Lima Second-OS Guest Appliances (with <code>ext4.vhdx</code> Sanctuary Keep isolation), Android 16 AVF Mobile, Headless VPS/Home Server, and Raspberry Pi Local IoT Robotics, Homestead Automation &amp; Shop Window Display Signage.
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2.5 shrink-0">
+                    <a href="release-matrix.html#debian-native-profiles"
+                       class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-semibold text-xs flex items-center gap-x-2 transition shadow-lg shadow-rose-900/30">
+                        <i class="fa-brands fa-debian"></i>
+                        <span>Debian .deb / WSL2 .wsl / IoT (6 Profiles)</span>
+                    </a>
                     <a href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_x64-setup.exe"
                        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-semibold text-xs flex items-center gap-x-2 transition shadow-lg shadow-emerald-900/30">
                         <i class="fa-brands fa-windows"></i>
@@ -320,6 +325,17 @@
                     </div>
                     <p class="text-white/80 text-sm leading-relaxed">
                         Explore how <code>qualiaDB</code> (semantic graph &amp; governance), <code>etalon</code> (GPU, physics &amp; tensor execution), and <code>vibe-script</code> (checked language &amp; editor tooling) compose into a unified, verified ecosystem.
+                    </p>
+                </a>
+
+                <!-- Pillar G: 6 Canonical Debian Native Profiles, WSL2/Lima Second-OS & Local IoT Stewardship -->
+                <a href="release-matrix.html#debian-native-profiles" class="feature-card glass-strong rounded-3xl p-6 block border border-rose-500/40 bg-gradient-to-br from-rose-950/40 via-slate-900/60 to-zinc-900/60 md:col-span-2 lg:col-span-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="font-semibold text-xl text-rose-200"><i class="fa-brands fa-debian text-rose-400 mr-2"></i>Six Canonical Debian Native Profiles, WSL2/Lima Second-OS &amp; Local IoT Stewardship</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">DEBIAN BOOKWORM · GLIBC &ge; 2.36</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        Built natively on <code>debian:bookworm</code> with pure <code>aether-native</code> + <code>etalon</code> Vulkan/GLES (zero <code>libwebkit2gtk</code>): <code>webizen-native-host</code> (VPS/Home Server), <code>webizen-native-desktop</code> (Bare-Metal Workstation &amp; Synth Studio), <code>webizen-native-subsystem</code> (Windows 11 WSL2 <code>.wsl</code> &amp; macOS Lima Second-OS Appliance with <code>ext4.vhdx</code> Sanctuary mount guard rejecting <code>/mnt/c</code>), <code>webizen-native-mobile</code> (Android 16 AVF <code>pKVM</code> &amp; Mobian), <code>webizen-native-iot-headless</code> (Raspberry Pi robotics &amp; homestead automation hubs with GPIO/PWM/I2C/SPI/Modbus/CAN bus actuation), and <code>webizen-native-iot-display</code> (retail shop window display advertising &amp; interactive holographic kiosks enforcing QECP <code>collect != activate</code>).
                     </p>
                 </a>
             </div>

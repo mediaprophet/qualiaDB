@@ -117,22 +117,25 @@ cargo build --features sanctuary-crypto
 
 ### Cross-platform CI builds (recommended for releases)
 
-GitHub Actions (`.github/workflows/release.yml`) builds on tag push:
+GitHub Actions (`.github/workflows/release-cli.yml`, `release-desktop.yml`, `release-wasm.yml`) builds on tag push:
 
-- `qualia-cli` — Windows, macOS (Intel + Apple Silicon), Linux x86_64
-- Flutter desktop bundles — `.dmg` (macOS), AppImage + `.deb` (Linux), `.exe` + `.msi` (Windows)
+- `qualia-cli` Debian Native (`container: debian:bookworm`, `glibc >= 2.36`):
+  - `webizen-native-host` (`amd64`, `arm64`) -> `qualia-cli_<ver>_amd64.deb`, `qualia-cli_<ver>_arm64.deb`
+  - `webizen-native-iot-headless` (`arm64`, `armhf`, `opt-level = "z"`) -> `qualia-cli-iot-headless_<ver>_arm64.deb`, `qualia-cli-iot-headless_<ver>_armhf.deb`
+- `qualia-cli` Windows (`x86_64-pc-windows-msvc`) & macOS (`x86_64-apple-darwin`, `aarch64-apple-darwin`)
+- Six Canonical Webizen Native Debian Profiles (`[profile.webizen-host]`, `[profile.webizen-desktop]`, `[profile.webizen-subsystem]`, `[profile.webizen-mobile]`, `[profile.webizen-iot-headless]`, `[profile.webizen-iot-display]`)
 
 ```bash
-git tag v0.0.40
-git push origin v0.0.40
+git tag v0.0.41
+git push origin v0.0.41
 ```
 
-### Cross-compiling the CLI locally (Windows → Linux)
+### Cross-compiling the CLI locally (Windows → Debian Bookworm Linux)
 
 ```powershell
 cd scripts/cross-linux
-.\build-linux.ps1
-# Output: target/x86_64-unknown-linux-gnu/release/qualia
+.\build-debian.ps1 -Profile webizen-native-host -Arch amd64
+.\build-debian.ps1 -Profile webizen-native-iot-headless -Arch arm64
 ```
 
 ### Serve the local docs / API explorer

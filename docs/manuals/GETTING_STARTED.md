@@ -1,9 +1,9 @@
 # Getting Started with QualiaDB
 
-**Version:** 0.0.40
-**Last Updated:** 2026-09-08
+**Version:** 0.0.41
+**Last Updated:** 2026-11-26
 
-This guide will help you get up and running with QualiaDB, the human-centric semantic engine designed for personal devices and edge computing.
+This guide will help you get up and running with QualiaDB and Webizen, the human-centric semantic engine and operating habitat designed for personal devices, Second-OS subsystems (WSL2 / Lima), and local edge/IoT computing.
 
 ---
 
@@ -11,16 +11,24 @@ This guide will help you get up and running with QualiaDB, the human-centric sem
 
 ### Installation
 
-#### Option 1: Download Pre-built Binaries
+#### Option 1: Download Pre-built Binaries & Debian Native Packages
 
 1. Visit the [GitHub Releases page](https://github.com/mediaprophet/qualiaDB/releases)
-2. Download the appropriate binary for your platform:
-   - Windows: `qualia-windows-x64.exe`
-   - macOS (Intel): `qualia-macos-x64`
-   - macOS (Apple Silicon): `qualia-macos-arm64`
-   - Linux: `qualia-linux-x64`
-3. Make the binary executable (Linux/macOS):
+2. Download the appropriate package or binary for your platform and canonical profile:
+   - **Debian / Ubuntu / Raspberry Pi OS (`debian:bookworm`, `glibc >= 2.36`):**
+     - Host / Workstation CLI (`amd64` / `arm64`): `qualia-cli_0.0.41-1_amd64.deb`, `qualia-cli_0.0.41-1_arm64.deb`
+     - Headless Raspberry Pi & Robotics IoT (`arm64` / `armhf`): `qualia-cli-iot-headless_0.0.41-1_arm64.deb`, `qualia-cli-iot-headless_0.0.41-1_armhf.deb`
+     - Webizen Native Habitat & Appliance Suite: `webizen-desktop-appliance`, `webizen-subsystem-wsl`, `webizen-mobile-avf`, `webizen-hostd`, `webizen-iot-headless`, `webizen-iot-display`
+   - **Windows 11 Second-OS Subsystem (`.wsl` Appliance):**
+     - `webizen-debian-bookworm_0.0.41_amd64.wsl` (isolates Sanctuary Keep `.q42` volumes inside a dedicated Linux `ext4.vhdx` disk with `sanctuary-mount-guard.sh` rejecting `/mnt/c`)
+   - **macOS Second-OS Subsystem (Lima `Virtualization.framework`):**
+     - `limactl start deploy/profiles/lima-macos/webizen-lima.yaml`
+   - **Windows Native:** `qualia-cli-windows-x86_64.exe` / `Webizen_0.0.41_x64-setup.exe`
+   - **macOS Native (Apple Silicon / Intel):** `qualia-cli-macos-aarch64` / `Webizen_0.0.41_aarch64.dmg`
+3. Install a Debian `.deb` package or make the standalone binary executable:
    ```bash
+   sudo dpkg -i qualia-cli_0.0.41-1_amd64.deb
+   # Or for a standalone binary:
    chmod +x qualia
    ```
 

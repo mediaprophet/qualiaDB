@@ -231,6 +231,10 @@
                 <div class="val">384-Bit QSR</div>
                 <div class="lbl">Radix-16 source routing &amp; SHA-384 CSCP</div>
             </div>
+            <div class="metric-tile">
+                <div class="val">6 Debian Profiles</div>
+                <div class="lbl">debian:bookworm (glibc 2.36), WSL2/Lima &amp; Local IoT</div>
+            </div>
         </div>
 
         <section id="release-experiences" style="margin-bottom: 4rem;">
@@ -514,6 +518,47 @@ try {
             </ul>
         </section>
 
+        <!-- PILLAR 5: SIX CANONICAL DEBIAN NATIVE PROFILES, SECOND-OS SUBSYSTEM & LOCAL IOT STEWARDSHIP -->
+        <section id="debian-native-profiles" style="margin-bottom: 3rem; scroll-margin-top: 6rem;">
+            <span class="pillar-badge pillar-1">Pillar V · Debian Native Foundation, Second-OS Subsystem &amp; Local IoT Stewardship</span>
+            <h2>Six Canonical Webizen Native Profiles (<code>debian:bookworm</code>, <code>glibc &ge; 2.36</code>, Pure Aether Native + Etalon GPU)</h2>
+            <p>
+                Linux release workflows across <code>qualiaDB</code>, <code>webizen-os-shell</code>, <code>webizen-host</code>, <code>qap-compiler</code>, <code>synth</code>, <code>poet</code>, <code>wellfair</code>, and <code>cooperative-projects</code> compile inside <code>container: debian:bookworm</code> against the <code>glibc 2.36</code> ABI baseline—eliminating <code>libwebkit2gtk</code>/Wry WebView dependencies in favor of pure <code>aether-native</code> + <code>etalon</code> Vulkan/GLES rendering with automatic <code>vello-cpu-softbuffer</code> fallback.
+            </p>
+            <div class="grid">
+                <div class="card">
+                    <h3>1. Bare-Metal, Server &amp; Mobile Sanctuary Profiles</h3>
+                    <ul>
+                        <li><strong><code>webizen-native-host</code> (<code>amd64</code> / <code>arm64</code>):</strong> Headless VPS, Home/Office Server, Camper Van Rig, Cooperative Quorum Hub &amp; Namespace Lighthouse (<code>webizen-hostd</code> &amp; <code>qualia-cli</code> <code>.deb</code>, zero windowing dependencies, <code>GET /api/profiles/debian-native.cbor-ld</code>).</li>
+                        <li><strong><code>webizen-native-desktop</code> (<code>amd64</code> / <code>arm64</code>):</strong> Bare-metal Debian 12/13 workstation, Operator Console, and Poet / Synth 400-morphism Authoring Studio (<code>webizen-desktop-appliance</code> &amp; <code>webizen-ai-synth</code> <code>.deb</code>).</li>
+                        <li><strong><code>webizen-native-mobile</code> (<code>arm64</code>):</strong> Debian Mobile (Mobian / PureOS) &amp; Android 16 AVF (<code>pKVM</code> EL2) Pocket Sanctuary (<code>webizen-mobile-avf</code> <code>.deb</code>).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>2. Second-OS Guest Subsystem (<code>webizen-native-subsystem</code>)</h3>
+                    <p>
+                        Designed for users running Webizen as a dedicated <strong>Second OS</strong> alongside Windows 11 (WSL2 <code>webizen-debian-bookworm_*.wsl</code>), macOS (Lima <code>webizen-lima.yaml</code> on Apple Silicon/Intel), or Linux (Incus/Distrobox):
+                    </p>
+                    <ul>
+                        <li><strong><code>ext4.vhdx</code> Sanctuary Isolation:</strong> Keeps Sanctuary Keep <code>.q42</code> vaults and post-quantum keys inside the Linux <code>ext4</code> virtual disk, invisible to Windows Recall/OneDrive and macOS iCloud.</li>
+                        <li><strong>Fail-Closed Mount Guard:</strong> <code>sanctuary-mount-guard.sh</code> (<code>SubsystemGuard.verify_ext4_sanctuary_isolation</code>) inspects <code>/proc/mounts</code> and refuses to open Sanctuary vaults on <code>9p</code>, <code>drvfs</code>, <code>virtiofs</code>, or <code>/mnt/c</code>.</li>
+                        <li><strong>GPU &amp; Mirrored LAN:</strong> Negotiates WSLg Wayland + Mesa <code>dzn</code> Vulkan-on-D3D12 with <code>vello-cpu-softbuffer</code> fallback and <code>networkingMode=mirrored</code> for LAN mDNS IoT pairing.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>3. Local Human-Centric IoT Control (<code>iot-headless</code> &amp; <code>iot-display</code>)</h3>
+                    <p>
+                        Edge hardware operates under direct local Personal &amp; Family or Cooperative Quorum Stewardship—never vendor clouds or foreign blockchain tokens:
+                    </p>
+                    <ul>
+                        <li><strong><code>webizen-native-iot-headless</code> (<code>arm64</code> / <code>armhf</code> / <code>amd64</code>):</strong> Size-optimized (<code>opt-level = "z"</code>, &le; 256 MiB RAM) for Raspberry Pi Zero 2W/3/4/5 robotics controllers, rovers, and homestead automation hubs (GPIO/PWM/I2C/SPI/Modbus/CAN bus actuation via <code>IoTActuator.command_bus</code> + <code>IoTSensing.bridge_observation</code>). Fails closed on GPU packages (<code>WgslForge.generate</code> &rarr; <code>IncompatibleApiSurfaceChange</code>).</li>
+                        <li><strong><code>webizen-native-iot-display</code> (<code>arm64</code> / <code>amd64</code>):</strong> GPU-equipped kiosks and retail shop window display advertising (Raspberry Pi 4/5 <code>V3D</code> Vulkan &amp; Mini-PCs) rendering QECP-signed <code>.hmc</code> / <code>.10d</code> v2 (<code>HOLO 0x0306</code>) playlists via <code>IoTSignage.present_verified_hmc</code> (<code>collect != activate</code>).</li>
+                        <li><strong>Cryptographic Instrument Pairing:</strong> Every device boots in <code>SanctuaryInstrumentUnpaired</code> quarantine as a governed instrument (<code>did:q42:instrument:...</code>, never subclassing <code>owl:Thing</code>) and pairs locally via <code>did:qi</code> + post-quantum <code>ML-KEM-768</code> + <code>Ed25519</code> + <code>ZCAP-LD</code>.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
         <!-- AUTHORITATIVE 0.0.41 TRI-SOURCE ARCHITECTURE & QUALIFICATION SUMMARY -->
         <details id="migration-closeout" open style="margin: 3rem 0; scroll-margin-top: 6rem;">
             <summary style="cursor: pointer; font-size: 1.25rem; font-weight: 700; padding: 1rem 0;">0.0.41 Tri-Source Architecture &amp; Qualification Summary</summary>
@@ -561,6 +606,7 @@ try {
                     <tr><td><code>NET-22</code> – <code>NET-23</code> · Replication &amp; Egress Policy</td><td>Chunk-to-SuperBlock <code>.q42</code> v4 differential volume replication (<code>QSync</code>) and a 40-scenario egress policy matrix (<code>QPolicy</code>).</td><td>Fail-closed Sanctuary boundaries ensure private context graphs never leak across public or bilateral commons lanes.</td></tr>
                     <tr><td>QBDL mixed HMC streaming · in-tree source</td><td>Selective disclosure of a heterogeneous QBDL-profile Hyper Media Container over QDNF: Describe / DescriptorPage, planner mux of many entries per family, EMF/QAC/P64 stream views, Q42 authenticated HTTP Range, native IPC plus labelled HTTP/WSS bearers.</td><td>ProtectedSession 17/17 cargo-proven. Mixed mux, Range, and <code>write_leaf</code> stage-drop await the next locked <code>qualia-core-db --lib</code> pass. ZIP <code>.hmc</code> and PhysicalNetwork two-host stay later. See <a href="qbdl-streaming.html">QBDL streaming</a>.</td></tr>
                     <tr><td><code>EVAL-24</code> · Tri-Source Suite &amp; Browser Harness</td><td>End-to-end verification across the <code>etalon</code> test suite (4,810 passed tests), native Vulkan/DX12 GPU lifecycle checks, locked 29-crate <code>qualiaDB</code> workspace compilation, and isolated browser device diagnostics.</td><td>Interactive browser verification is available via the <a href="playground/etalon-vibe-harness.html">Etalon + Vibe Device Harness</a>, <a href="qdnf-status.html">QDNF Status Matrix</a>, and <a href="release-matrix.html">0.0.41 Release Matrix</a>.</td></tr>
+                    <tr><td><code>DEBIAN-01</code> – <code>DEBIAN-06</code> · Six Canonical Debian Native Profiles &amp; Local IoT</td><td>6 Cargo <code>[profile.webizen-*]</code> &amp; <code>webizen-native-*</code> feature bundles, <code>qapc check-env --profile</code> 6-profile capability matrix, <code>webizen-ua-os</code> 6-target <code>.deb</code> tree synthesis (<code>Depends: libc6 (&ge; 2.36)</code>), <code>.wsl</code> Second-OS rootfs builder, and local <code>PairedIotEdgeInstrumentRecord</code> GPIO/CAN/signage stewardship.</td><td>Verified across all 18 QAP profile compatibility cells (<code>wellfair.qap</code>, <code>cooperative-projects.qap</code>, <code>poet.qap</code>, <code>iot-robotics-headless.qap</code>, and <code>iot-shop-signage-display.qap</code>) and 107/107 <code>webizen-os-shell</code> tests. See <a href="release-matrix.html#debian-native-profiles">6 Debian Profiles</a>.</td></tr>
                 </tbody>
             </table></div>
 

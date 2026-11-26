@@ -72,13 +72,13 @@
       </article>
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Webizen</p>
-        <h2 class="text-2xl font-semibold mb-3">Habitat + 4-Plane DID + QDNF</h2>
-        <p class="text-sm text-white/65 mb-4">Five-station desktop shell, Four-Plane Identifier Fabric (<code>Entity</code>, <code>Claim</code>, <code>Handle</code>, <code>Instrument</code>), QDNF 384-bit QSR source routing, and Omni-Scale Coordinate System (<code>OCS</code>) geospatial streaming.</p>
+        <h2 class="text-2xl font-semibold mb-3">Habitat + 6 Debian Profiles + QDNF</h2>
+        <p class="text-sm text-white/65 mb-4">Five-station native shell, Six Canonical Debian Native Profiles (<code class="q-mono">debian:bookworm</code>, <code class="q-mono">glibc 2.36</code>), WSL2/Lima Second-OS Appliance, Local IoT Stewardship, Four-Plane Identifier Fabric, and QDNF 384-bit QSR.</p>
         <ul class="text-sm text-white/70 space-y-2">
-          <li><span class="q-mono text-violet-300">webizen-desktop</span> — Tauri habitat (signed Windows NSIS, macOS, Linux)</li>
+          <li><span class="q-mono text-violet-300">webizen-os-shell</span> — Aether Native + Etalon GPU (<code class="q-mono">.deb</code>, <code class="q-mono">.wsl</code>, Lima, Windows, macOS)</li>
+          <li><span class="q-mono text-violet-300">iot-headless &amp; iot-display</span> — Local Raspberry Pi robotics, homestead &amp; shop signage</li>
           <li><span class="q-mono text-violet-300">qualia-geospatial</span> — OCS 27 opcodes, GeoTIFF M64, Hilbert 3D</li>
-          <li>Ontology MCP — N3, Quin query, SHACL, modal kernels in an 800 KiB kernel</li>
-          <li><a class="q-link" href="spatial.html">Spatial &amp; OCS</a> · <a class="q-link" href="playground/anatomy.html">3D anatomy</a> · <a class="q-link" href="qdnf.html">QDNF fabric</a></li>
+          <li><a class="q-link" href="#debian-native-profiles">6 Debian Profiles</a> · <a class="q-link" href="spatial.html">Spatial &amp; OCS</a> · <a class="q-link" href="qdnf.html">QDNF fabric</a></li>
         </ul>
       </article>
       <article class="q-card p-7">
@@ -193,8 +193,168 @@
                 <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Verified</span>
               </td>
             </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-emerald-300 block font-medium">Debian Native 6-Profile Suite &amp; Local IoT</strong>
+                <span class="text-xs text-white/45 font-mono">qap-compiler, webizen-host, webizen-ua-os &amp; qualia-core-db</span>
+              </td>
+              <td class="p-3.5 align-top font-medium text-white/90">
+                Debian Bookworm (<code class="q-mono">glibc 2.36</code>), WSL2/Lima Second-OS &amp; Edge IoT
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Six canonical profiles (<code class="q-mono">host</code>, <code class="q-mono">desktop</code>, <code class="q-mono">subsystem</code>, <code class="q-mono">mobile</code>, <code class="q-mono">iot-headless</code>, <code class="q-mono">iot-display</code>), pure <code class="q-mono">aether-native</code> + <code class="q-mono">etalon</code> Vulkan/GLES (zero WebKit2GTK), <code class="q-mono">ext4.vhdx</code> Sanctuary mount guard, and local <code class="q-mono">did:qi</code> + <code class="q-mono">ML-KEM-768</code> + <code class="q-mono">ZCAP-LD</code> Raspberry Pi robotics, homestead &amp; shop signage stewardship.
+              </td>
+              <td class="p-3.5 align-top">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Verified</span>
+              </td>
+            </tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- Six Canonical Webizen Native Debian Profiles & Local IoT Stewardship -->
+    <section id="debian-native-profiles" class="q-card p-7 sm:p-8 mb-14 border border-cyan-500/30 bg-cyan-950/15" style="scroll-margin-top: 5rem;">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <p class="q-kicker text-cyan-300">Debian Native Foundation · Second-OS Subsystem · Local IoT Stewardship</p>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-200 border border-cyan-500/30">
+          <i class="fa-brands fa-debian"></i> debian:bookworm · glibc &ge; 2.36 · Zero WebKit2GTK
+        </span>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-3">Six Canonical Webizen Native Debian Profiles</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-4">
+        Every Linux release binary, <code class="q-mono">.deb</code> package, and <code class="q-mono">.wsl</code> Second-OS rootfs appliance is compiled inside <code class="q-mono">debian:bookworm</code> against <code class="q-mono">glibc 2.36</code>—guaranteeing forward binary compatibility across Debian 12 (<code class="q-mono">bookworm</code>), Debian 13 (<code class="q-mono">trixie</code>), Raspberry Pi OS (<code class="q-mono">arm64</code> &amp; <code class="q-mono">armhf</code>), Mobian (<code class="q-mono">arm64</code>), Windows 11 WSL2 Debian, macOS Lima (<code class="q-mono">Virtualization.framework</code>), and Ubuntu 22.04/24.04+. GUI profiles render through pure <code class="q-mono">aether-native</code> + <code class="q-mono">etalon</code> (Vulkan/GLES with automatic <code class="q-mono">vello-cpu-softbuffer</code> fallback) with zero <code class="q-mono">libwebkit2gtk</code> or V8/JavaScript runtime dependencies.
+      </p>
+
+      <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/30 mb-6">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 bg-white/5 text-xs uppercase tracking-wider text-white/60">
+              <th class="p-3.5 font-semibold">Canonical Profile &amp; Cargo Flag</th>
+              <th class="p-3.5 font-semibold">Arch &amp; Debian Package</th>
+              <th class="p-3.5 font-semibold">Target Hardware &amp; Deployment Role</th>
+              <th class="p-3.5 font-semibold">Rendering, Hardware Bus &amp; Sanctuary Guards</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 text-white/80 text-xs sm:text-sm">
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-emerald-300 block font-mono">webizen-native-host</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-host</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                amd64 · arm64<br>
+                <span class="text-white/60">webizen-hostd_0.0.41-1_*.deb</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                Headless Debian VPS, Home/Office Server, Camper Van Rig, Cooperative Quorum Hub &amp; Namespace Lighthouse.
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Zero windowing/GUI dependencies (<code class="q-mono">Depends: libc6 (&ge; 2.36), ca-certificates, nftables</code>); <code class="q-mono">systemd</code> hardening, QDNF 384-bit QSR routing, and <code class="q-mono">/api/profiles/debian-native.cbor-ld</code> (<code class="q-mono">0xD9 0x05 0x01</code>).
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-cyan-300 block font-mono">webizen-native-desktop</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-desktop</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                amd64 · arm64<br>
+                <span class="text-white/60">webizen-desktop-appliance_*.deb</span><br>
+                <span class="text-white/60">webizen-ai-synth_*.deb</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                Bare-Metal Debian 12/13 Workstation, Operator Console, and Poet / Synth 400-Morphism Authoring Studio.
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Wayland/X11 + <code class="q-mono">etalon</code> hardware Vulkan, <code class="q-mono">WgslForge.generate</code> shader certification, local <code class="q-mono">.p64</code> LLM inference, and <code class="q-mono">AdminVolume</code> 6-profile fleet &amp; IoT stewardship bay.
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-violet-300 block font-mono">webizen-native-subsystem</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-subsystem</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                amd64 · arm64<br>
+                <span class="text-white/60">webizen-subsystem-wsl_*.deb</span><br>
+                <span class="text-white/60">webizen-debian-bookworm_*.wsl</span><br>
+                <span class="text-white/60">webizen-lima.yaml</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                <strong>Second-OS Guest Appliance</strong> running alongside Windows 11 (WSL2), macOS (Lima <code class="q-mono">Virtualization.framework</code>), or Linux (Incus/Distrobox).
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Isolates Sanctuary Keep vaults inside an encrypted Linux <code class="q-mono">ext4.vhdx</code> disk invisible to Windows Recall/OneDrive or macOS iCloud. Enforces <code class="q-mono">SubsystemGuard.verify_ext4_sanctuary_isolation</code> (rejecting <code class="q-mono">/mnt/c</code>, <code class="q-mono">9p</code>, <code class="q-mono">drvfs</code>, <code class="q-mono">virtiofs</code>), Mesa <code class="q-mono">dzn</code> Vulkan-on-D3D12 + <code class="q-mono">vello-cpu-softbuffer</code> fallback, and <code class="q-mono">networkingMode=mirrored</code> LAN IoT pairing.
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-amber-300 block font-mono">webizen-native-mobile</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-mobile</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                arm64<br>
+                <span class="text-white/60">webizen-mobile-avf_*.deb</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                Debian Mobile (Mobian / PureOS) &amp; Android 16 AVF (<code class="q-mono">pKVM</code> EL2) Pocket Sanctuary.
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Wayland mobile composer + <code class="q-mono">etalon</code> Vulkan/GLES + <code class="q-mono">vello-cpu-softbuffer</code> fallback, biometric hardware enclave gate, and offline QR / Bluetooth LE steward pairing.
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-rose-300 block font-mono">webizen-native-iot-headless</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-iot-headless</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                arm64 · armhf · amd64<br>
+                <span class="text-white/60">webizen-iot-headless_*.deb</span><br>
+                <span class="text-white/60">iot-robotics-headless.qap</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                Raspberry Pi (Zero 2W, 3, 4, 5), Robotics Controllers, Autonomous Rovers &amp; Homestead Automation Hubs.
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Size-optimized (<code class="q-mono">opt-level = "z"</code>, &le; 256 MiB RAM, 42 MiB Sentinel), zero X11/Wayland/Vulkan libs, fail-closed rejection of GPU packages (<code class="q-mono">WgslForge.generate</code> &rarr; <code class="q-mono">IncompatibleApiSurfaceChange</code>), GPIO/PWM/I2C/SPI/Modbus/CAN bus actuation (<code class="q-mono">IoTActuator.command_bus</code>) &amp; <code class="q-mono">IoTSensing.bridge_observation</code>.
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-sky-300 block font-mono">webizen-native-iot-display</strong>
+                <span class="text-xs text-white/45 font-mono">--profile webizen-iot-display</span>
+              </td>
+              <td class="p-3.5 align-top font-mono text-xs text-cyan-200">
+                arm64 · amd64<br>
+                <span class="text-white/60">webizen-iot-display_*.deb</span><br>
+                <span class="text-white/60">iot-shop-signage-display.qap</span>
+              </td>
+              <td class="p-3.5 align-top text-white/75">
+                GPU-Equipped IoT Kiosks, Retail Shop Window Display Advertising &amp; Interactive Smart Panels (Raspberry Pi 4/5 <code class="q-mono">V3D</code> / Mini-PC).
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                <code class="q-mono">aether-native</code> + <code class="q-mono">etalon</code> Vulkan/GLES (<code class="q-mono">&lt; 32</code>-step raymarching of <code class="q-mono">.10d</code> v2 <code class="q-mono">HOLO 0x0306</code> assets) with automatic <code class="q-mono">vello-cpu-softbuffer</code> fallback and QECP-signed playlist verification (<code class="q-mono">IoTSignage.present_verified_hmc</code>, enforcing <code class="q-mono">collect != activate</code>).
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <div class="rounded-xl border border-violet-500/30 bg-violet-950/20 p-5">
+          <h3 class="text-base font-semibold text-violet-200 mb-2"><i class="fa-solid fa-layer-group mr-1.5"></i>Why Install Webizen as a Second-OS Subsystem (<code class="q-mono">WSL2</code> / <code class="q-mono">Lima</code>)?</h3>
+          <p class="text-white/70 leading-relaxed">
+            Running Webizen inside the dedicated <code class="q-mono">webizen-native-subsystem</code> appliance on a Windows 11 or macOS laptop keeps all Sanctuary Keep <code class="q-mono">.q42</code> volumes and <code class="q-mono">ML-DSA-87</code> post-quantum keys inside a dedicated Linux <code class="q-mono">ext4.vhdx</code> virtual disk—shielded from host cloud sync (OneDrive/iCloud) and OS screen/file indexers—while delivering full Linux <code class="q-mono">io-uring</code>, <code class="q-mono">nftables</code>, <code class="q-mono">systemd</code>, and mirrored LAN mDNS discovery for local Raspberry Pi IoT devices.
+          </p>
+        </div>
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-5">
+          <h3 class="text-base font-semibold text-emerald-200 mb-2"><i class="fa-solid fa-microchip mr-1.5"></i>Local Human-Centric IoT Control (Zero Vendor Cloud)</h3>
+          <p class="text-white/70 leading-relaxed">
+            Robotics controllers, homestead sensors, and shop window display kiosks are governed instruments (<code class="q-mono">did:q42:instrument:...</code>)—never independent legal peers and never subclassing <code class="q-mono">owl:Thing</code>. Every device boots in <code class="q-mono">SanctuaryInstrumentUnpaired</code> quarantine, pairs locally with the steward's Desktop, WSL2 Second-OS, or Home Server via <code class="q-mono">did:qi</code> + post-quantum <code class="q-mono">ML-KEM-768</code> + <code class="q-mono">Ed25519</code> + <code class="q-mono">ZCAP-LD</code> capability delegation, and records 48-byte <code class="q-mono">NQuin48</code> actuation receipts with zero external cloud or foreign token dependency.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -230,23 +390,23 @@
       </p>
       <div class="grid md:grid-cols-2 gap-4">
         <article class="q-card p-6">
-          <h3 class="text-lg font-semibold mb-2">Qualia CLI</h3>
-          <p class="text-sm text-white/60 mb-3">Query, ingest <code>.q42</code> v4 volumes, certify shaders, and convert P64 models on Linux, Windows, and macOS.</p>
-          <p class="text-xs text-white/45 q-mono mb-2">release-cli.yml</p>
+          <h3 class="text-lg font-semibold mb-2">Qualia CLI &amp; Debian Native Packages</h3>
+          <p class="text-sm text-white/60 mb-3">Query, ingest <code>.q42</code> v4 volumes, certify shaders, and run headless edge/IoT nodes across Debian (<code>amd64</code>, <code>arm64</code>, <code>armhf</code>), Windows, and macOS.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-cli.yml · container: debian:bookworm (glibc &ge; 2.36)</p>
           <ul class="text-sm text-white/70 space-y-2">
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-windows-x86_64.exe"><i class="fa-brands fa-windows text-cyan-400 mr-1.5"></i>qualia-cli-windows-x86_64.exe</a></li>
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-macos-aarch64"><i class="fa-brands fa-apple text-emerald-400 mr-1.5"></i>qualia-cli-macos-aarch64</a></li>
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-linux-x86_64"><i class="fa-brands fa-linux text-amber-400 mr-1.5"></i>qualia-cli-linux-x86_64</a></li>
+            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases"><i class="fa-brands fa-debian text-rose-400 mr-1.5"></i>qualia-cli_0.0.41-1_amd64.deb &amp; arm64.deb (webizen-native-host)</a></li>
+            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases"><i class="fa-solid fa-microchip text-amber-400 mr-1.5"></i>qualia-cli-iot-headless_0.0.41-1_arm64.deb &amp; armhf.deb (Raspberry Pi)</a></li>
+            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-windows-x86_64.exe"><i class="fa-brands fa-windows text-cyan-400 mr-1.5"></i>qualia-cli-windows-x86_64.exe</a> · <a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/qualia-cli-macos-aarch64"><i class="fa-brands fa-apple text-emerald-400 mr-1.5"></i>macos-aarch64</a></li>
           </ul>
         </article>
         <article class="q-card p-6">
-          <h3 class="text-lg font-semibold mb-2">Webizen desktop</h3>
-          <p class="text-sm text-white/60 mb-3">Signed habitat installers with the local daemon and encrypted volume stores.</p>
-          <p class="text-xs text-white/45 q-mono mb-2">release-desktop.yml</p>
+          <h3 class="text-lg font-semibold mb-2">Webizen Native Habitat, Second-OS &amp; IoT Suite</h3>
+          <p class="text-sm text-white/60 mb-3">Six canonical Debian Native appliances (pure Aether Native + Etalon GPU, zero WebKit2GTK), WSL2/Lima Second-OS bundles, and signed Windows/macOS installers.</p>
+          <p class="text-xs text-white/45 q-mono mb-2">release-debian.yml · release-desktop.yml · qap-ci-and-release.yml</p>
           <ul class="text-sm text-white/70 space-y-2">
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_x64-setup.exe"><i class="fa-brands fa-windows text-cyan-400 mr-1.5"></i>Windows — Webizen_0.0.40_x64-setup.exe</a></li>
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_aarch64.dmg"><i class="fa-brands fa-apple text-emerald-400 mr-1.5"></i>macOS — Webizen_0.0.40_aarch64.dmg</a></li>
-            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40"><i class="fa-brands fa-linux text-violet-400 mr-1.5"></i>Linux — Source &amp; Habitat bundles</a></li>
+            <li><a class="q-link font-mono" href="#debian-native-profiles"><i class="fa-brands fa-debian text-emerald-400 mr-1.5"></i>Debian .deb Suite — desktop, subsystem-wsl, mobile-avf, hostd, iot-headless, iot-display</a></li>
+            <li><a class="q-link font-mono" href="#debian-native-profiles"><i class="fa-solid fa-layer-group text-violet-400 mr-1.5"></i>Second-OS — webizen-debian-bookworm_0.0.41_amd64.wsl &amp; webizen-lima.yaml</a></li>
+            <li><a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_x64-setup.exe"><i class="fa-brands fa-windows text-cyan-400 mr-1.5"></i>Windows (.exe)</a> · <a class="q-link font-mono" href="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.40/Webizen_0.0.40_aarch64.dmg"><i class="fa-brands fa-apple text-emerald-400 mr-1.5"></i>macOS (.dmg)</a></li>
           </ul>
         </article>
         <article class="q-card p-6">
